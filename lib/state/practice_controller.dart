@@ -2,74 +2,24 @@
 //
 // Triad Trainer — Practice Controller (v1)
 //
-// IMPORTANT (stability contract):
-// This controller intentionally exposes the exact API that PracticeScreen
-// is currently calling (per your build errors):
-// - getters: pattern, focus, instrument, mode, timer, bpm, clickEnabled
-// - methods: generateNext(), restartSame(), bpmStep(), toggleClick()
-// - types: InstrumentContextV1, PracticeModeV1, PatternFocus, PracticeTimerState
+// Responsibilities:
+// - Own practice session state (mode/instrument/kit/bpm/click/timer).
+// - Own generator tuning state (phraseType/repeats/chainCells/accentRule/coverage).
+// - Generate patterns via PatternEngine.
+// - Notify listeners.
 //
-// This keeps PracticeScreen stable while we modularize UI in follow-up files.
-//
-// NOTE: This controller does NOT rely on non-existent helpers like
-// GenrePreset.v1Core() or PhraseType.cells().
+// IMPORTANT:
+// - This file MUST NOT define PracticeModeV1 / InstrumentContextV1 / PatternFocus / PracticeTimerState.
+//   Those are canonical in core/*.
 
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../core/instrument/instrument_context_v1.dart';
 import '../core/pattern/pattern_engine.dart';
-
-/* ----------------------------- v1 UI Domain Types -------------------------- */
-
-/// v1: Mode is intent (Training vs Flow).
-enum PracticeModeV1 { training, flow }
-
-/// v1: Instrument context is physical setup (Pad default).
-enum InstrumentContextV1 { pad, padKick, kit }
-
-/// Small “why this matters” copy that the card/header can show.
-class PatternFocus {
-  final String title;
-  final String detail;
-
-  const PatternFocus({required this.title, required this.detail});
-
-  static const PatternFocus padDefault = PatternFocus(
-    title: 'Pad fundamentals',
-    detail: 'Lock in hands-only triad motion with clean phrasing.',
-  );
-}
-
-/// Timer model the UI can read.
-class PracticeTimerState {
-  final Duration? target;
-  final Duration elapsed;
-  final bool running;
-
-  const PracticeTimerState({
-    required this.target,
-    required this.elapsed,
-    required this.running,
-  });
-
-  PracticeTimerState copyWith({
-    Duration? target,
-    Duration? elapsed,
-    bool? running,
-  }) {
-    return PracticeTimerState(
-      target: target ?? this.target,
-      elapsed: elapsed ?? this.elapsed,
-      running: running ?? this.running,
-    );
-  }
-
-  static const PracticeTimerState idle =
-      PracticeTimerState(target: null, elapsed: Duration.zero, running: false);
-}
-
-/* ------------------------------ Controller -------------------------------- */
+import '../core/practice/practice_mode_defaults.dart';
+import '../core/practice/practice_models.dart';
 
 class PracticeController extends ChangeNotifier {
   PracticeController() {
@@ -77,20 +27,25 @@ class PracticeController extends ChangeNotifier {
     _genres = GenrePreset.builtIns();
     _genre = _genres.values.isNotEmpty ? _genres.values.first : null;
 
-    // v1 defaults (per docs + your “Pad should be default”):
-    _instrument = InstrumentContextV1.pad;
-    _mode = PracticeModeV1.training;
+    // Canonical v1 session defaults
+    _mode = PracticeDefaultsV1.defaultMode;
+    _instrument = PracticeDefaultsV1.defaultInstrument;
+    _kit = KitPresetV1.defaultRightHanded;
 
-    _focus = PatternFocus.padDefault;
-    _timerState = PracticeTimerState.idle;
-
+    _timerState = PracticeTimerState.initial;
     _bpm = 92;
     _clickEnabled = true;
     _coverageMode = true;
 
-    // generator tuning defaults (kept simple for v1)
-    _infiniteRepeat = true; // training leans ∞
+    // v1 generator defaults per mode
+    final ModeDefaultsV1 d = PracticeDefaultsV1.forMode(_mode);
+    _phraseType = d.phraseType;
+    _chainCells = d.chainCells;
+    _repeats = d.repeats;
+    _accentRule = d.accentRule;
+    _infiniteRepeat = d.infiniteRepeat;
 
+    _updateFocus();
     generateNext();
   }
 
@@ -105,24 +60,30 @@ class PracticeController extends ChangeNotifier {
   PracticeModeV1 get mode => _mode;
   InstrumentContextV1 get instrument => _instrument;
 
+  /// Needed by PatternCard.
+  KitPresetV1 get kit => _kit;
+
   int get bpm => _bpm;
   bool get clickEnabled => _clickEnabled;
 
   PracticeTimerState get timer => _timerState;
 
-  /// Current pattern (what PracticeScreen expects).
+  /// What PracticeScreen expects.
   Pattern? get pattern => _last?.pattern;
 
-  /// Current focus copy (what PracticeScreen expects).
+  /// What PracticeScreen expects.
   PatternFocus get focus => _focus;
 
   /// For restartSame()
   int? get lastSeed => _lastSeed;
 
+  bool get coverageMode => _coverageMode;
+
   /* ---------------------------- Internal State ----------------------------- */
 
   PracticeModeV1 _mode = PracticeModeV1.training;
   InstrumentContextV1 _instrument = InstrumentContextV1.pad;
+  KitPresetV1 _kit = KitPresetV1.defaultRightHanded;
 
   int _bpm = 92;
   bool _clickEnabled = true;
@@ -138,9 +99,9 @@ class PracticeController extends ChangeNotifier {
   PatternResult? _last;
   int? _lastSeed;
 
-  PatternFocus _focus = PatternFocus.padDefault;
+  PatternFocus _focus = PatternFocus.defaultFocus;
 
-  PracticeTimerState _timerState = PracticeTimerState.idle;
+  PracticeTimerState _timerState = PracticeTimerState.initial;
   Timer? _timerTicker;
 
   /* -------------------------- Mode / Instrument ---------------------------- */
@@ -149,25 +110,29 @@ class PracticeController extends ChangeNotifier {
     if (_mode == next) return;
     _mode = next;
 
-    // v1 default behavior: training encourages ∞, flow does not.
-    if (_mode == PracticeModeV1.training) {
-      _infiniteRepeat = true;
-    } else {
-      _infiniteRepeat = false;
-    }
+    final ModeDefaultsV1 d = PracticeDefaultsV1.forMode(_mode);
+    // v1 behavior: mode switches reset “feel” knobs
+    _phraseType = d.phraseType;
+    _chainCells = d.chainCells;
+    _repeats = d.repeats;
+    _accentRule = d.accentRule;
+    _infiniteRepeat = d.infiniteRepeat;
 
     _updateFocus();
     generateNext();
-    notifyListeners();
   }
 
   void setInstrument(InstrumentContextV1 next) {
     if (_instrument == next) return;
     _instrument = next;
 
-    // v1: Pad default implies hands-only. Others allow kick.
     _updateFocus();
     generateNext();
+  }
+
+  void setKit(KitPresetV1 next) {
+    if (_kit == next) return;
+    _kit = next;
     notifyListeners();
   }
 
@@ -212,7 +177,6 @@ class PracticeController extends ChangeNotifier {
   void stopTimer() {
     if (!_timerState.running) return;
     _timerState = _timerState.copyWith(running: false);
-    // keep ticker allocated; it’s cheap and gated by running flag
     notifyListeners();
   }
 
@@ -259,8 +223,7 @@ class PracticeController extends ChangeNotifier {
   }
 
   void restartSame() {
-    final int? seed = _lastSeed;
-    _generate(seed: seed);
+    _generate(seed: _lastSeed);
     notifyListeners();
   }
 
@@ -291,7 +254,7 @@ class PracticeController extends ChangeNotifier {
     _repeats = null;
     _chainCells = null;
     _accentRule = null;
-    // keep _infiniteRepeat as current mode preference
+    // keep infiniteRepeat as the current mode preference
     generateNext();
   }
 
@@ -305,7 +268,8 @@ class PracticeController extends ChangeNotifier {
 
     final int computedSeed = seed ?? DateTime.now().microsecondsSinceEpoch;
 
-    final GeneratorConstraints tunedConstraints = _effectiveConstraints(g.constraints);
+    final GeneratorConstraints tunedConstraints =
+        _effectiveConstraints(g.constraints);
 
     final GenrePreset tunedGenre = g.copyWith(constraints: tunedConstraints);
 
@@ -327,14 +291,11 @@ class PracticeController extends ChangeNotifier {
   }
 
   GeneratorConstraints _effectiveConstraints(GeneratorConstraints base) {
-    // Derive limb scope from instrument context (per docs)
-    final LimbScope scope = switch (_instrument) {
-      InstrumentContextV1.pad => LimbScope.handsOnly,
-      InstrumentContextV1.padKick => LimbScope.handsAndKick,
-      InstrumentContextV1.kit => LimbScope.handsAndKick,
-    };
+    final LimbScope scope = PracticeDefaultsV1.scopeForInstrument(_instrument);
 
-    final bool requireKick = (scope == LimbScope.handsAndKick) && base.requireKick;
+    // If hands-only, requireKick must be false.
+    final bool requireKick =
+        (scope == LimbScope.handsAndKick) && base.requireKick;
 
     return base.copyWith(scope: scope, requireKick: requireKick);
   }
@@ -342,7 +303,6 @@ class PracticeController extends ChangeNotifier {
   /* ------------------------------ Focus Copy -------------------------------- */
 
   void _updateFocus() {
-    // v1: safe copy only; later we’ll drive from canonical tags.
     if (_instrument == InstrumentContextV1.pad) {
       _focus = const PatternFocus(
         title: 'Pad fundamentals',
@@ -358,7 +318,6 @@ class PracticeController extends ChangeNotifier {
       return;
     }
 
-    // kit
     _focus = const PatternFocus(
       title: 'Kit movement',
       detail: 'Move the idea around the kit while staying physically honest.',

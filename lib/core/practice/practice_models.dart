@@ -1,96 +1,36 @@
-// lib/core/practice_models.dart
+// lib/core/practice/practice_models.dart
 //
 // Triad Trainer — Core Practice Models (v1)
 //
 // Purpose:
-// - Centralize the “domain” types used across UI + controller + generator.
-// - Prevent circular edits where PracticeScreen and PracticeController keep
-//   redefining enums and drifting.
-// - Keep v1 intentionally small: two practice modes + three instrument contexts.
+// - Single source of truth for practice-domain types shared by UI + controller.
+// - Keep models UI-agnostic (no Widgets). `foundation.dart` is allowed for @immutable.
 //
-// This file should NOT import Flutter UI (no widgets). Pure Dart types only.
+// Canonical owners:
+// - InstrumentContextV1 / KitPresetV1 / DrumSurfaceV1 live in:
+//   lib/core/instrument/instrument_context_v1.dart
+// - Pattern engine types live in:
+//   lib/core/pattern/pattern_engine.dart
 
 import 'package:flutter/foundation.dart';
-import 'package:traid_trainer/core/instrument/instrument_context_v1.dart';
+
+import '../instrument/instrument_context_v1.dart';
+
+/* -------------------------------------------------------------------------- */
+/* Practice mode                                                               */
+/* -------------------------------------------------------------------------- */
 
 /// The user’s *intent* for the current practice session.
-///
-/// V1 ships with exactly two modes.
 enum PracticeModeV1 {
   training,
   flow,
 }
 
-/// The user’s *physical setup*.
-///
-/// This is separate from mode:
-/// - Instrument answers “what am I practicing on?”
-/// - Mode answers “what kind of practice do I want?”
-// enum InstrumentContextV1 {
-//   /// Hands only, single surface. Treated as snare in UI (“S”).
-//   pad,
+/* -------------------------------------------------------------------------- */
+/* Focus / “why this matters”                                                  */
+/* -------------------------------------------------------------------------- */
 
-//   /// Hands + kick pad. Still a single hand surface (“S”), plus kick.
-//   padKick,
-
-//   /// Full kit: voice assignment / orchestration enabled.
-//   kit,
-// }
-
-extension InstrumentContextText on InstrumentContextV1 {
-  String get label => switch (this) {
-        InstrumentContextV1.pad => 'Pad only',
-        InstrumentContextV1.padKick => 'Pad + Kick',
-        InstrumentContextV1.kit => 'Kit',
-      };
-}
-
-enum Handedness {
-  right,
-  left,
-}
-
-enum Brass {
-  none,
-  hh,
-  hhRide,
-}
-
-/// V1 kit configuration. Only meaningful when [InstrumentContextV1.kit].
-@immutable
-class KitPreset {
-  final int pieces; // 2..7
-  final Handedness handedness;
-  final Brass brass;
-
-  const KitPreset({
-    required this.pieces,
-    required this.handedness,
-    required this.brass,
-  });
-
-  KitPreset copyWith({
-    int? pieces,
-    Handedness? handedness,
-    Brass? brass,
-  }) {
-    return KitPreset(
-      pieces: pieces ?? this.pieces,
-      handedness: handedness ?? this.handedness,
-      brass: brass ?? this.brass,
-    );
-  }
-
-  static const KitPreset defaultKit = KitPreset(
-    pieces: 4,
-    handedness: Handedness.right,
-    brass: Brass.hh,
-  );
-}
-
-/// A short “why this pattern matters” message.
-///
-/// This is the minimal v1 version of “the card should tell me why this pattern is valuable”.
+/// Short “why this pattern matters” message.
 @immutable
 class PatternFocus {
   final String title;
@@ -107,20 +47,23 @@ class PatternFocus {
   );
 }
 
-/// Metronome/click state (v1: on/off only).
+/* -------------------------------------------------------------------------- */
+/* Click / timer                                                               */
+/* -------------------------------------------------------------------------- */
+
 @immutable
 class ClickState {
   final bool enabled;
 
   const ClickState({required this.enabled});
 
-  ClickState copyWith({bool? enabled}) => ClickState(enabled: enabled ?? this.enabled);
+  ClickState copyWith({bool? enabled}) =>
+      ClickState(enabled: enabled ?? this.enabled);
 
   static const ClickState off = ClickState(enabled: false);
   static const ClickState on = ClickState(enabled: true);
 }
 
-/// Practice timer state (v1: optional target, start/stop/reset).
 @immutable
 class PracticeTimerState {
   final Duration elapsed;
@@ -152,21 +95,25 @@ class PracticeTimerState {
   );
 }
 
-/// Root practice session state. Controller owns this; UI reads it.
+/* -------------------------------------------------------------------------- */
+/* Session state (optional convenience container)                              */
+/* -------------------------------------------------------------------------- */
+
+/// Root session state container. Controller may choose to use this or not.
+/// Keeping it here helps avoid “random fields everywhere” in UI/Controller.
 @immutable
 class PracticeSessionState {
   final PracticeModeV1 mode;
   final InstrumentContextV1 instrument;
 
-  /// Only used when instrument == kit. Still stored always to keep state simple.
-  final KitPreset kit;
+  /// Only meaningful when instrument == kit, but stored always for simplicity.
+  final KitPresetV1 kit;
 
   final int bpm;
   final bool isPlaying;
   final ClickState click;
   final PracticeTimerState timer;
 
-  /// “Why this pattern matters” hint shown above the pattern card.
   final PatternFocus focus;
 
   const PracticeSessionState({
@@ -183,7 +130,7 @@ class PracticeSessionState {
   PracticeSessionState copyWith({
     PracticeModeV1? mode,
     InstrumentContextV1? instrument,
-    KitPreset? kit,
+    KitPresetV1? kit,
     int? bpm,
     bool? isPlaying,
     ClickState? click,
@@ -205,11 +152,11 @@ class PracticeSessionState {
   static PracticeSessionState v1Default() {
     return const PracticeSessionState(
       mode: PracticeModeV1.training,
-      instrument: InstrumentContextV1.pad, // per your request: default pad
-      kit: KitPreset.defaultKit,
+      instrument: InstrumentContextV1.pad,
+      kit: KitPresetV1.defaultRightHanded,
       bpm: 92,
       isPlaying: false,
-      click: ClickState.off,
+      click: ClickState.on, // controller can override; v1 feels better with click on
       timer: PracticeTimerState.initial,
       focus: PatternFocus.defaultFocus,
     );

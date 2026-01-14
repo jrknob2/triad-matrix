@@ -1,4 +1,4 @@
-// lib/core/practice_mode_defaults.dart
+// lib/core/practice/practice_mode_defaults.dart
 //
 // Triad Trainer — Mode & Defaults (v1)
 //
@@ -6,26 +6,18 @@
 // No UI, no controller, no side effects.
 //
 // This file owns:
-// - PracticeModeV1 (Training / Flow)
 // - Default generator knobs per mode
 // - Default instrument context (Pad as startup default)
+//
+// IMPORTANT:
+// - This file MUST NOT define PracticeModeV1 or InstrumentContextV1.
+//   Those are canonical in:
+//   - core/practice/practice_models.dart (PracticeModeV1)
+//   - core/instrument/instrument_context_v1.dart (InstrumentContextV1)
 
+import '../instrument/instrument_context_v1.dart';
 import '../pattern/pattern_engine.dart';
-
-/* -------------------------------------------------------------------------- */
-/* Enums                                                                      */
-/* -------------------------------------------------------------------------- */
-
-enum PracticeModeV1 {
-  training,
-  flow,
-}
-
-enum InstrumentContextV1 {
-  padOnly,
-  padPlusKick,
-  kit,
-}
+import 'practice_models.dart';
 
 /* -------------------------------------------------------------------------- */
 /* Defaults Model                                                              */
@@ -56,16 +48,14 @@ class PracticeDefaultsV1 {
   static const PracticeModeV1 defaultMode = PracticeModeV1.training;
 
   /// Startup instrument context (per your direction)
-  static const InstrumentContextV1 defaultInstrument =
-      InstrumentContextV1.padOnly;
+  static const InstrumentContextV1 defaultInstrument = InstrumentContextV1.pad;
 
   /// Instrument context → limb scope.
-  /// (Scope can still be overridden later in Kit if you decide, but v1 keeps it simple.)
   static LimbScope scopeForInstrument(InstrumentContextV1 ctx) {
     switch (ctx) {
-      case InstrumentContextV1.padOnly:
+      case InstrumentContextV1.pad:
         return LimbScope.handsOnly;
-      case InstrumentContextV1.padPlusKick:
+      case InstrumentContextV1.padKick:
         return LimbScope.handsAndKick;
       case InstrumentContextV1.kit:
         return LimbScope.handsAndKick;
