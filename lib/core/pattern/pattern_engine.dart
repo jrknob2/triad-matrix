@@ -49,15 +49,15 @@ extension SubdivisionText on Subdivision {
 /* ------------------------------- Phrase Type ------------------------------ */
 
 enum PhraseType {
-  singleCell, // (LRR → LLR) × 4
-  twoCell, // (A → B → A → B) × 2 (v1 chooses 2 unique cells, repeats)
-  chain, // N cells in a row (v1 chooses N unique cells if possible)
+  singleCell, // (A → B) × N
+  twoCell, // (A → B → A → B) × N
+  chain, // N cells in a row
 }
 
 class PhraseTypeDefaults {
   static int defaultCellCount(PhraseType t) => switch (t) {
-        PhraseType.singleCell => 2, // A → B
-        PhraseType.twoCell => 4, // A → B → A → B
+        PhraseType.singleCell => 2,
+        PhraseType.twoCell => 4,
         PhraseType.chain => 8,
       };
 }
@@ -118,7 +118,6 @@ class GeneratorConstraints {
   final bool requireKick;
 
   /// If false, excludes "KKK" and any triad where the last two are KK etc.
-  /// (kept simple; can be expanded later)
   final bool allowKickDoubles;
 
   const GeneratorConstraints({
@@ -147,11 +146,7 @@ class GeneratorConstraints {
 
 enum AccentStrategy {
   off,
-
-  /// Accent the first note of every cell in the phrase.
   cellStart,
-
-  /// Accent every Nth note (e.g., every 3rd note).
   everyNth,
 }
 
@@ -203,18 +198,16 @@ class AccentRule {
 /* ------------------------------ Genre Presets ------------------------------ */
 
 class GenrePreset {
-  final String id; // stable key for persistence (e.g., "rock", "funk_linear")
-  final String name; // UI label
+  final String id;
+  final String name;
 
-  // Defaults
   final Subdivision defaultSubdivision;
   final PhraseType defaultPhraseType;
-  final int defaultRepeats; // × 4, × 2, etc.
-  final int defaultChainCells; // used only when phraseType == chain
+  final int defaultRepeats;
+  final int defaultChainCells;
   final AccentRule defaultAccentRule;
   final String defaultOrchestrationPresetId;
 
-  // Constraints (bias the generator)
   final GeneratorConstraints constraints;
 
   const GenrePreset({
@@ -345,7 +338,6 @@ class GenrePreset {
 class PatternRequest {
   final GenrePreset genre;
 
-  // Overrides (nullable means "use genre defaults")
   final Subdivision? subdivision;
   final PhraseType? phraseType;
   final int? repeats;
@@ -353,11 +345,14 @@ class PatternRequest {
   final AccentRule? accentRule;
   final String? orchestrationPresetId;
 
-  // Coverage + randomness controls
   final bool coverageMode;
 
   /// If set, the engine uses this seed to make generation deterministic.
   final int? seed;
+
+  /// UI flag: show ∞ instead of ×N in the rendered output.
+  /// Engine still uses repeats for expansion unless the UI chooses otherwise.
+  final bool infiniteRepeat;
 
   const PatternRequest({
     required this.genre,
@@ -369,6 +364,7 @@ class PatternRequest {
     this.orchestrationPresetId,
     required this.coverageMode,
     this.seed,
+    this.infiniteRepeat = false,
   });
 
   Subdivision get resolvedSubdivision => subdivision ?? genre.defaultSubdivision;
@@ -386,19 +382,20 @@ class PatternRequest {
 }
 
 class Pattern {
-  final String id; // uuid later; v1 uses derived id for easy storage.
+  final String id;
   final GenrePreset genre;
   final Subdivision subdivision;
   final PhraseType phraseType;
   final int repeats;
 
-  /// The phrase cells before repeats are applied (e.g., [A, B] for "A → B").
+  /// If true, UI can display "∞" instead of "× N".
+  /// MUST be non-nullable; default false to avoid runtime type errors.
+  final bool infiniteRepeat;
+
   final List<TriadCell> phrase;
 
-  /// Accent note indices in the expanded pattern (phrase repeated).
   final List<int> accentNoteIndices;
 
-  /// Orchestration preset key to resolve limb->voice in UI/audio.
   final String orchestrationPresetId;
 
   const Pattern({
@@ -407,12 +404,12 @@ class Pattern {
     required this.subdivision,
     required this.phraseType,
     required this.repeats,
+    required this.infiniteRepeat,
     required this.phrase,
     required this.accentNoteIndices,
     required this.orchestrationPresetId,
   });
 
-  /// Expanded sequence of limbs across repeats (useful for audio scheduling).
   List<Limb> expandedLimbs() {
     final List<Limb> out = <Limb>[];
     for (int r = 0; r < repeats; r++) {
@@ -423,21 +420,18 @@ class Pattern {
     return out;
   }
 
-  /// Simple text display, e.g. "(LRR → LLR) × 4"
   String displayText() {
-    final String arrow = ' \u2192 '; // →
+    final String arrow = ' \u2192 ';
     final String phraseText = phrase.map((c) => c.id).join(arrow);
-    return '($phraseText) \u00D7 $repeats'; // ×
+    final String rep = infiniteRepeat ? '\u221E' : '\u00D7 $repeats';
+    return '$phraseText $rep';
   }
 }
 
 /* ------------------------------- Coverage State ---------------------------- */
 
 class CoverageState {
-  /// Remaining eligible triad ids for the current constraint set.
   final Set<String> remaining;
-
-  /// Stable signature of the active constraint set.
   final String signature;
 
   const CoverageState({
@@ -484,14 +478,13 @@ class PatternEngine {
   CoverageState get coverageState => _coverage;
 
   PatternResult generateNext(PatternRequest req) {
-    final Random rng = Random(req.seed);
+    final Random rng = (req.seed == null) ? Random() : Random(req.seed);
 
     final GenrePreset genre = req.genre;
     final GeneratorConstraints constraints = genre.constraints;
 
     final String signature = _signatureFor(constraints);
 
-    // Rebuild eligible set if signature changed or empty.
     if (_coverage.signature != signature || _coverage.remaining.isEmpty) {
       final Set<String> eligible =
           Set<String>.from(_buildEligibleTriads(constraints).map((c) => c.id));
@@ -523,7 +516,6 @@ class PatternEngine {
       repeats: repeats,
     );
 
-    // Derive a stable-ish id (replace with UUID in persistence layer later).
     final String id = _derivePatternId(
       genreId: genre.id,
       phraseType: phraseType,
@@ -532,6 +524,7 @@ class PatternEngine {
       phrase: phrase,
       accentRule: accents,
       orch: req.resolvedOrchestrationPresetId,
+      infinite: req.infiniteRepeat,
     );
 
     final Pattern pattern = Pattern(
@@ -540,6 +533,7 @@ class PatternEngine {
       subdivision: req.resolvedSubdivision,
       phraseType: phraseType,
       repeats: repeats,
+      infiniteRepeat: req.infiniteRepeat,
       phrase: phrase,
       accentNoteIndices: accentNoteIndices,
       orchestrationPresetId: req.resolvedOrchestrationPresetId,
@@ -557,27 +551,22 @@ class PatternEngine {
     required int targetCells,
     required PhraseType phraseType,
   }) {
-    // Build an eligible pool in cell form for selection.
     final List<TriadCell> eligibleCells = _buildEligibleTriads(constraints);
 
     if (eligibleCells.isEmpty) {
-      // Should never happen with sane constraints; guard anyway.
       return const <TriadCell>[
         TriadCell(Limb.r, Limb.l, Limb.r),
         TriadCell(Limb.l, Limb.r, Limb.l),
       ];
     }
 
-    // Helper to pick a triad id based on coverage or random.
     TriadCell pickOne(Set<String> bannedIds) {
       if (coverageMode) {
-        // Choose from remaining that aren't banned; if none, refill remaining.
         final List<String> candidates = _coverage.remaining
             .where((id) => !bannedIds.contains(id))
             .toList(growable: false);
 
         if (candidates.isEmpty) {
-          // Refill remaining (new pass) while keeping signature stable.
           final Set<String> refill =
               Set<String>.from(eligibleCells.map((c) => c.id));
           _coverage = _coverage.copyWith(remaining: refill);
@@ -599,17 +588,12 @@ class PatternEngine {
         return TriadCell.parse(chosenId);
       }
 
-      // Non-coverage: random from eligible, avoid banned if possible.
       final List<TriadCell> filtered =
           eligibleCells.where((c) => !bannedIds.contains(c.id)).toList();
       final List<TriadCell> pool = filtered.isNotEmpty ? filtered : eligibleCells;
       return pool[rng.nextInt(pool.length)];
     }
 
-    // v1 phrase generation rules:
-    // - singleCell: pick A and B (A→B)
-    // - twoCell: pick A,B then mirror (A→B→A→B) for musical repetition
-    // - chain: pick N cells (unique if coverage allows), no additional structure
     switch (phraseType) {
       case PhraseType.singleCell: {
         final Set<String> banned = <String>{};
@@ -629,7 +613,7 @@ class PatternEngine {
 
       case PhraseType.chain: {
         final List<TriadCell> out = <TriadCell>[];
-        final Set<String> banned = <String>{}; // ban repeats within phrase
+        final Set<String> banned = <String>{};
         for (int i = 0; i < targetCells; i++) {
           final TriadCell next = pickOne(banned);
           out.add(next);
@@ -656,9 +640,7 @@ class PatternEngine {
           final TriadCell cell = TriadCell(a, b, d);
 
           if (!c.includeDoubles && _hasAnyDouble(cell)) continue;
-
           if (c.requireKick && !cell.limbs.contains(Limb.k)) continue;
-
           if (!c.allowKickDoubles && _hasKickDouble(cell)) continue;
 
           out.add(cell);
@@ -683,7 +665,6 @@ class PatternEngine {
   }
 
   String _signatureFor(GeneratorConstraints c) {
-    // Must change if eligibility changes.
     return [
       'scope=${c.scope.name}',
       'doubles=${c.includeDoubles ? 1 : 0}',
@@ -708,6 +689,7 @@ class PatternEngine {
     required List<TriadCell> phrase,
     required AccentRule accentRule,
     required String orch,
+    required bool infinite,
   }) {
     final String phraseText = phrase.map((c) => c.id).join('-');
     final String a = switch (accentRule.strategy) {
@@ -719,31 +701,10 @@ class PatternEngine {
       genreId,
       'pt=${phraseType.name}',
       'sub=${subdivision.name}',
-      'x=$repeats',
+      infinite ? 'x=inf' : 'x=$repeats',
       a,
       'orch=$orch',
       phraseText,
     ].join('|');
   }
 }
-
-/* --------------------------------- Example ---------------------------------
-
-final presets = GenrePreset.builtIns();
-final engine = PatternEngine();
-
-final req = PatternRequest(
-  genre: presets['funk_linear']!,
-  coverageMode: true,
-  // overrides optional:
-  // phraseType: PhraseType.singleCell,
-  // repeats: 4,
-  // seed: 123,
-);
-
-final res = engine.generateNext(req);
-print(res.pattern.displayText());
-print('Accents at note indices: ${res.pattern.accentNoteIndices}');
-print('Coverage remaining: ${res.coverageState.remaining.length}');
-
------------------------------------------------------------------------------- */
