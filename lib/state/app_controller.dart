@@ -151,7 +151,10 @@ class AppController extends ChangeNotifier {
   }
 
   bool isInRoutine(String itemId) {
-    return _routine.entries.any((entry) => entry.practiceItemId == itemId);
+    return _routine.entries.any((entry) {
+      if (entry.practiceItemId == itemId) return true;
+      return _entryContainsItem(entry.practiceItemId, itemId);
+    });
   }
 
   List<PracticeItemV1> get routineItems {
@@ -162,7 +165,7 @@ class AppController extends ChangeNotifier {
 
   PracticeSessionLogV1? lastSessionForItem(String itemId) {
     for (final PracticeSessionLogV1 session in recentSessions) {
-      if (session.practiceItemIds.contains(itemId)) return session;
+      if (_sessionContainsItem(session, itemId)) return session;
     }
     return null;
   }
@@ -176,7 +179,7 @@ class AppController extends ChangeNotifier {
     Duration total = Duration.zero;
 
     for (final PracticeSessionLogV1 session in _sessions) {
-      if (itemId != null && !session.practiceItemIds.contains(itemId)) continue;
+      if (itemId != null && !_sessionContainsItem(session, itemId)) continue;
       if (family != null && session.family != family) continue;
       if (context != null && session.context != context) continue;
       if (intent != null && session.intent != intent) continue;
@@ -281,6 +284,30 @@ class AppController extends ChangeNotifier {
     required String itemId,
   }) {
     return combinationById(comboId).itemIds.contains(itemId);
+  }
+
+  bool _sessionContainsItem(PracticeSessionLogV1 session, String itemId) {
+    for (final String sessionItemId in session.practiceItemIds) {
+      if (sessionItemId == itemId) return true;
+      if (_entryContainsItem(sessionItemId, itemId)) return true;
+    }
+    return false;
+  }
+
+  bool _entryContainsItem(String entryItemId, String itemId) {
+    final PracticeItemV1? entryItem = itemByIdOrNull(entryItemId);
+    if (entryItem == null || !entryItem.isCombo) return false;
+
+    final PracticeCombinationV1? combo = _combinationByIdOrNull(entryItemId);
+    if (combo == null) return false;
+    return combo.itemIds.contains(itemId);
+  }
+
+  PracticeCombinationV1? _combinationByIdOrNull(String id) {
+    for (final PracticeCombinationV1 combo in _combinations) {
+      if (combo.id == id) return combo;
+    }
+    return null;
   }
 
   int weakHandNoteCount(String itemId) {
