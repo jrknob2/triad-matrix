@@ -10,89 +10,50 @@ import 'package:flutter/foundation.dart';
 /* Enums                                                                      */
 /* -------------------------------------------------------------------------- */
 
-enum HandednessV1 {
-  right,
-  left,
-}
+enum HandednessV1 { right, left }
 
-enum PlayerSelfRankV1 {
-  beginner,
-  developing,
-  intermediate,
-  advanced,
-}
+enum PlayerSelfRankV1 { beginner, developing, intermediate, advanced }
 
-enum MaterialFamilyV1 {
-  triad,
-  fiveNote,
-  custom,
-  combo,
-}
+enum MaterialFamilyV1 { triad, fiveNote, custom, combo }
 
-enum PracticeIntentV1 {
-  coreSkills,
-  flow,
-}
+enum PracticeIntentV1 { coreSkills, flow }
 
-enum PracticeContextV1 {
-  singleSurface,
-  kit,
-}
+enum PracticeContextV1 { singleSurface, kit }
 
-enum PracticeItemSourceV1 {
-  builtIn,
-  userDefined,
-  generated,
-}
+enum PracticeItemSourceV1 { builtIn, userDefined, generated }
 
-enum ComboIntentTagV1 {
-  coreSkills,
-  flow,
-  both,
-}
+enum ComboIntentTagV1 { coreSkills, flow, both }
 
-enum CompetencyLevelV1 {
-  notStarted,
-  learning,
-  comfortable,
-  reliable,
-  musical,
-}
+enum CompetencyLevelV1 { notStarted, learning, comfortable, reliable, musical }
 
-enum ReflectionRatingV1 {
-  easy,
-  okay,
-  hard,
-}
+enum ReflectionRatingV1 { easy, okay, hard }
 
-enum TimerPresetV1 {
-  none,
-  minutes5,
-  minutes10,
-  minutes20,
-  minutes30,
-}
+enum TimerPresetV1 { none, minutes5, minutes10, minutes20, minutes30 }
 
-enum FlowFillLengthV1 {
-  oneBeat,
-  twoBeats,
-  oneBar,
-  twoBars,
-}
+enum FlowFillLengthV1 { oneBeat, twoBeats, oneBar, twoBars }
 
-enum FlowLandingRuleV1 {
-  beat1,
-}
+enum FlowLandingRuleV1 { beat1 }
 
-enum GrooveFrameV1 {
-  fourFourSixteenthGrid,
-}
+enum GrooveFrameV1 { fourFourSixteenthGrid }
 
-enum TriadMatrixViewModeV1 {
+enum TriadMatrixViewModeV1 { competency, lead, handsOnly, weakHand }
+
+enum TriadMatrixFilterPaletteV1 { defaultView, coaching, technique, combos }
+
+enum TriadMatrixFilterV1 {
   competency,
+  inRoutine,
+  needsAttention,
+  underPracticed,
+  closeToToolkit,
+  recent,
+  unseen,
   lead,
-  handsOnly,
   weakHand,
+  handsOnly,
+  hasKick,
+  mirror,
+  doubles,
 }
 
 /* -------------------------------------------------------------------------- */
@@ -269,15 +230,9 @@ class RoutineEntryV1 {
   final String practiceItemId;
   final DateTime addedAt;
 
-  const RoutineEntryV1({
-    required this.practiceItemId,
-    required this.addedAt,
-  });
+  const RoutineEntryV1({required this.practiceItemId, required this.addedAt});
 
-  RoutineEntryV1 copyWith({
-    String? practiceItemId,
-    DateTime? addedAt,
-  }) {
+  RoutineEntryV1 copyWith({String? practiceItemId, DateTime? addedAt}) {
     return RoutineEntryV1(
       practiceItemId: practiceItemId ?? this.practiceItemId,
       addedAt: addedAt ?? this.addedAt,

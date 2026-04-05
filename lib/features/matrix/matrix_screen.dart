@@ -22,9 +22,9 @@ class MatrixScreen extends StatefulWidget {
 }
 
 class _MatrixScreenState extends State<MatrixScreen> {
-  final Set<TriadMatrixViewModeV1> _modes = <TriadMatrixViewModeV1>{
-    TriadMatrixViewModeV1.competency,
-  };
+  TriadMatrixFilterPaletteV1 _palette = TriadMatrixFilterPaletteV1.defaultView;
+  final Set<TriadMatrixFilterV1> _filters = <TriadMatrixFilterV1>{};
+  final Set<String> _selectedComboIds = <String>{};
   final Set<String> _selectedRows = <String>{};
   final Set<String> _selectedColumns = <String>{};
 
@@ -37,10 +37,7 @@ class _MatrixScreenState extends State<MatrixScreen> {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: <Color>[
-            Color(0xFFF5EEE1),
-            Color(0xFFF8F6F1),
-          ],
+          colors: <Color>[Color(0xFFF5EEE1), Color(0xFFF8F6F1)],
         ),
       ),
       child: Column(
@@ -60,28 +57,28 @@ class _MatrixScreenState extends State<MatrixScreen> {
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
-                    children: TriadMatrixViewModeV1.values
+                    children: TriadMatrixFilterPaletteV1.values
                         .map(
-                          (mode) => Padding(
+                          (palette) => Padding(
                             padding: const EdgeInsets.only(right: 8),
-                            child: FilterChip(
-                              label: Text(mode.label),
-                              selected: _modes.contains(mode),
-                              onSelected: (bool selected) {
-                                setState(() {
-                                  if (selected) {
-                                    _modes.add(mode);
-                                  } else {
-                                    _modes.remove(mode);
-                                  }
-                                });
-                              },
+                            child: ChoiceChip(
+                              label: Text(palette.label),
+                              selected: _palette == palette,
+                              onSelected: (_) => _setPalette(palette),
                             ),
                           ),
                         )
                         .toList(growable: false),
                   ),
                 ),
+                if (_palette !=
+                    TriadMatrixFilterPaletteV1.defaultView) ...<Widget>[
+                  const SizedBox(height: 10),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(children: _buildPaletteFilters()),
+                  ),
+                ],
               ],
             ),
           ),
@@ -91,7 +88,8 @@ class _MatrixScreenState extends State<MatrixScreen> {
               child: SingleChildScrollView(
                 child: TriadMatrixGrid(
                   controller: widget.controller,
-                  modes: _modes,
+                  filters: _filters,
+                  selectedComboIds: _selectedComboIds,
                   selectedRows: _selectedRows,
                   selectedColumns: _selectedColumns,
                   onToggleRow: _toggleRow,
@@ -124,6 +122,89 @@ class _MatrixScreenState extends State<MatrixScreen> {
       } else {
         _selectedColumns.add(columnLabel);
       }
+    });
+  }
+
+  List<Widget> _buildPaletteFilters() {
+    if (_palette == TriadMatrixFilterPaletteV1.combos) {
+      return widget.controller.triadCombinations
+          .map((combo) {
+            final String comboId = combo.id;
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: FilterChip(
+                label: Text(
+                  widget.controller.matrixLabelForCombination(comboId),
+                ),
+                selected: _selectedComboIds.contains(comboId),
+                onSelected: (bool selected) {
+                  setState(() {
+                    if (selected) {
+                      _selectedComboIds.add(comboId);
+                    } else {
+                      _selectedComboIds.remove(comboId);
+                    }
+                  });
+                },
+              ),
+            );
+          })
+          .toList(growable: false);
+    }
+
+    return _paletteFilters(_palette)
+        .map((filter) {
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: FilterChip(
+              label: Text(filter.label),
+              selected: _filters.contains(filter),
+              onSelected: (bool selected) {
+                setState(() {
+                  if (selected) {
+                    _filters.add(filter);
+                  } else {
+                    _filters.remove(filter);
+                  }
+                });
+              },
+            ),
+          );
+        })
+        .toList(growable: false);
+  }
+
+  List<TriadMatrixFilterV1> _paletteFilters(
+    TriadMatrixFilterPaletteV1 palette,
+  ) {
+    return switch (palette) {
+      TriadMatrixFilterPaletteV1.defaultView => const <TriadMatrixFilterV1>[],
+      TriadMatrixFilterPaletteV1.coaching => const <TriadMatrixFilterV1>[
+        TriadMatrixFilterV1.competency,
+        TriadMatrixFilterV1.inRoutine,
+        TriadMatrixFilterV1.needsAttention,
+        TriadMatrixFilterV1.underPracticed,
+        TriadMatrixFilterV1.closeToToolkit,
+        TriadMatrixFilterV1.recent,
+        TriadMatrixFilterV1.unseen,
+      ],
+      TriadMatrixFilterPaletteV1.technique => const <TriadMatrixFilterV1>[
+        TriadMatrixFilterV1.lead,
+        TriadMatrixFilterV1.weakHand,
+        TriadMatrixFilterV1.handsOnly,
+        TriadMatrixFilterV1.hasKick,
+        TriadMatrixFilterV1.mirror,
+        TriadMatrixFilterV1.doubles,
+      ],
+      TriadMatrixFilterPaletteV1.combos => const <TriadMatrixFilterV1>[],
+    };
+  }
+
+  void _setPalette(TriadMatrixFilterPaletteV1 palette) {
+    setState(() {
+      _palette = palette;
+      _filters.clear();
+      _selectedComboIds.clear();
     });
   }
 }

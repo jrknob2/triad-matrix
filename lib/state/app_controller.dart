@@ -29,8 +29,9 @@ class AppController extends ChangeNotifier {
       _profile.handedness == HandednessV1.right ? 'Right' : 'Left';
 
   List<PracticeSessionLogV1> get recentSessions {
-    final List<PracticeSessionLogV1> copy =
-        List<PracticeSessionLogV1>.from(_sessions);
+    final List<PracticeSessionLogV1> copy = List<PracticeSessionLogV1>.from(
+      _sessions,
+    );
     copy.sort((a, b) => b.endedAt.compareTo(a.endedAt));
     return List<PracticeSessionLogV1>.unmodifiable(copy);
   }
@@ -42,27 +43,31 @@ class AppController extends ChangeNotifier {
   }
 
   TodayBriefingV1 buildTodayBriefing() {
-    final List<PracticeItemV1> weakHandItems = triadMatrixItems
-        .where(_isWeakHandLead)
-        .toList(growable: false)
-      ..sort(_compareByNeed);
+    final List<PracticeItemV1> weakHandItems =
+        triadMatrixItems.where(_isWeakHandLead).toList(growable: false)
+          ..sort(_compareByNeed);
 
     final List<PracticeItemV1> neglectedTriads = triadMatrixItems.toList()
       ..sort(_compareByNeed);
 
-    final List<PracticeItemV1> almostReady = triadMatrixItems
-        .where((item) {
-          final CompetencyLevelV1 competency = competencyFor(item.id);
-          return competency == CompetencyLevelV1.comfortable ||
-              competency == CompetencyLevelV1.reliable;
-        })
-        .toList(growable: false)
-      ..sort((a, b) => totalTime(itemId: b.id).compareTo(totalTime(itemId: a.id)));
+    final List<PracticeItemV1> almostReady =
+        triadMatrixItems
+            .where((item) {
+              final CompetencyLevelV1 competency = competencyFor(item.id);
+              return competency == CompetencyLevelV1.comfortable ||
+                  competency == CompetencyLevelV1.reliable;
+            })
+            .toList(growable: false)
+          ..sort(
+            (a, b) =>
+                totalTime(itemId: b.id).compareTo(totalTime(itemId: a.id)),
+          );
 
-    final List<PracticeItemV1> accentItems = triadMatrixItems
-        .where((item) => item.hasAccents && !usesKick(item.id))
-        .toList(growable: false)
-      ..sort(_compareByNeed);
+    final List<PracticeItemV1> accentItems =
+        triadMatrixItems
+            .where((item) => item.hasAccents && !usesKick(item.id))
+            .toList(growable: false)
+          ..sort(_compareByNeed);
 
     return TodayBriefingV1(
       headline: 'Today leans toward control, touch, and flow.',
@@ -73,14 +78,19 @@ class AppController extends ChangeNotifier {
           title: 'Weak Hand',
           detail:
               '$weakHandLabel-hand lead is under-practiced. Start there while your hands are fresh.',
-          suggestedItemIds: weakHandItems.take(2).map((item) => item.id).toList(),
+          suggestedItemIds: weakHandItems
+              .take(2)
+              .map((item) => item.id)
+              .toList(),
         ),
         CoachCueV1(
           title: 'New Ground',
           detail:
               'A few triads have barely been touched lately. Add one new cell to the routine.',
-          suggestedItemIds:
-              neglectedTriads.take(2).map((item) => item.id).toList(),
+          suggestedItemIds: neglectedTriads
+              .take(2)
+              .map((item) => item.id)
+              .toList(),
         ),
         CoachCueV1(
           title: 'Close To Toolkit',
@@ -99,8 +109,9 @@ class AppController extends ChangeNotifier {
   }
 
   List<PracticeItemV1> itemsByFamily(MaterialFamilyV1 family) {
-    final List<PracticeItemV1> filtered =
-        _items.where((item) => item.family == family).toList(growable: false);
+    final List<PracticeItemV1> filtered = _items
+        .where((item) => item.family == family)
+        .toList(growable: false);
     filtered.sort((a, b) => a.name.compareTo(b.name));
     return filtered;
   }
@@ -175,7 +186,10 @@ class AppController extends ChangeNotifier {
     return total;
   }
 
-  bool usesKick(String itemId) => _normalizedSticking(itemById(itemId)).contains('K');
+  bool usesKick(String itemId) =>
+      _normalizedSticking(itemById(itemId)).contains('K');
+
+  bool hasKick(String itemId) => usesKick(itemId);
 
   bool handsOnly(String itemId) => !usesKick(itemId);
 
@@ -185,9 +199,95 @@ class AppController extends ChangeNotifier {
 
   bool leadsWithWeakHand(String itemId) => _isWeakHandLead(itemById(itemId));
 
+  bool hasDoubles(String itemId) {
+    final String normalized = _normalizedSticking(itemById(itemId));
+    for (int index = 0; index < normalized.length - 1; index++) {
+      if (normalized[index] == normalized[index + 1]) return true;
+    }
+    return false;
+  }
+
+  String? mirrorItemId(String itemId) {
+    final PracticeItemV1 item = itemById(itemId);
+    if (!item.isTriad) return null;
+
+    final String mirrored = _normalizedSticking(item).split('').map((ch) {
+      return switch (ch) {
+        'R' => 'L',
+        'L' => 'R',
+        _ => ch,
+      };
+    }).join();
+
+    final PracticeItemV1? mirror = triadItemForCell(mirrored);
+    return mirror?.id;
+  }
+
+  bool isUnseen(String itemId) => lastSessionForItem(itemId) == null;
+
+  bool isRecent(String itemId) {
+    final PracticeSessionLogV1? session = lastSessionForItem(itemId);
+    if (session == null) return false;
+    return DateTime.now().difference(session.endedAt) <=
+        const Duration(days: 7);
+  }
+
+  bool isUnderPracticed(String itemId) {
+    return totalTime(itemId: itemId) < const Duration(minutes: 12);
+  }
+
+  bool isCloseToToolkit(String itemId) {
+    final CompetencyLevelV1 level = competencyFor(itemId);
+    final bool strongCompetency =
+        level == CompetencyLevelV1.comfortable ||
+        level == CompetencyLevelV1.reliable;
+    return strongCompetency &&
+        totalTime(itemId: itemId) >= const Duration(minutes: 10);
+  }
+
+  bool needsAttention(String itemId) {
+    final CompetencyLevelV1 level = competencyFor(itemId);
+    final bool weakCompetency =
+        level == CompetencyLevelV1.notStarted ||
+        level == CompetencyLevelV1.learning;
+    final bool stale = !isRecent(itemId);
+    final bool lightTime =
+        totalTime(itemId: itemId) < const Duration(minutes: 8);
+    return weakCompetency && (stale || lightTime);
+  }
+
+  List<PracticeCombinationV1> get triadCombinations {
+    final List<PracticeCombinationV1> combos = _combinations
+        .where((combo) {
+          return combo.itemIds.isNotEmpty &&
+              combo.itemIds.every((itemId) => itemById(itemId).isTriad);
+        })
+        .toList(growable: false);
+    combos.sort((a, b) => a.name.compareTo(b.name));
+    return combos;
+  }
+
+  PracticeCombinationV1 combinationById(String id) {
+    return _combinations.firstWhere((combo) => combo.id == id);
+  }
+
+  String matrixLabelForCombination(String comboId) {
+    final PracticeCombinationV1 combo = combinationById(comboId);
+    return combo.itemIds.map((itemId) => itemById(itemId).name).join('-');
+  }
+
+  bool combinationContainsItem({
+    required String comboId,
+    required String itemId,
+  }) {
+    return combinationById(comboId).itemIds.contains(itemId);
+  }
+
   int weakHandNoteCount(String itemId) {
     final String weak = _profile.handedness == HandednessV1.right ? 'L' : 'R';
-    return _normalizedSticking(itemById(itemId)).split('').where((ch) => ch == weak).length;
+    return _normalizedSticking(
+      itemById(itemId),
+    ).split('').where((ch) => ch == weak).length;
   }
 
   String accentPatternLabelFor(String itemId) {
@@ -304,10 +404,7 @@ class AppController extends ChangeNotifier {
       _routine = _routine.copyWith(
         entries: <RoutineEntryV1>[
           ..._routine.entries,
-          RoutineEntryV1(
-            practiceItemId: itemId,
-            addedAt: DateTime.now(),
-          ),
+          RoutineEntryV1(practiceItemId: itemId, addedAt: DateTime.now()),
         ],
       );
     }
@@ -381,13 +478,15 @@ class AppController extends ChangeNotifier {
   }
 
   void updateSessionReflection(String sessionId, ReflectionRatingV1? rating) {
-    _sessions = _sessions.map((session) {
-      if (session.id != sessionId) return session;
-      return session.copyWith(
-        reflection: rating,
-        clearReflection: rating == null,
-      );
-    }).toList(growable: false);
+    _sessions = _sessions
+        .map((session) {
+          if (session.id != sessionId) return session;
+          return session.copyWith(
+            reflection: rating,
+            clearReflection: rating == null,
+          );
+        })
+        .toList(growable: false);
     notifyListeners();
   }
 
@@ -420,15 +519,15 @@ class AppController extends ChangeNotifier {
       }
 
       if (options.focusUnderPracticedItems || !options.focusWeakItems) {
-        final int timeCompare =
-            totalTime(itemId: a.id).compareTo(totalTime(itemId: b.id));
+        final int timeCompare = totalTime(
+          itemId: a.id,
+        ).compareTo(totalTime(itemId: b.id));
         if (timeCompare != 0) return timeCompare;
       }
 
-      final int competencyCompare =
-          _competencyScore(competencyFor(a.id)).compareTo(
-        _competencyScore(competencyFor(b.id)),
-      );
+      final int competencyCompare = _competencyScore(
+        competencyFor(a.id),
+      ).compareTo(_competencyScore(competencyFor(b.id)));
       if (competencyCompare != 0) return competencyCompare;
 
       return a.name.compareTo(b.name);
@@ -438,20 +537,22 @@ class AppController extends ChangeNotifier {
   }
 
   int _compareByNeed(PracticeItemV1 a, PracticeItemV1 b) {
-    final int competencyCompare =
-        _competencyScore(competencyFor(a.id)).compareTo(
-      _competencyScore(competencyFor(b.id)),
-    );
+    final int competencyCompare = _competencyScore(
+      competencyFor(a.id),
+    ).compareTo(_competencyScore(competencyFor(b.id)));
     if (competencyCompare != 0) return competencyCompare;
 
-    final int timeCompare =
-        totalTime(itemId: a.id).compareTo(totalTime(itemId: b.id));
+    final int timeCompare = totalTime(
+      itemId: a.id,
+    ).compareTo(totalTime(itemId: b.id));
     if (timeCompare != 0) return timeCompare;
 
     final DateTime aDate =
-        lastSessionForItem(a.id)?.endedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+        lastSessionForItem(a.id)?.endedAt ??
+        DateTime.fromMillisecondsSinceEpoch(0);
     final DateTime bDate =
-        lastSessionForItem(b.id)?.endedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+        lastSessionForItem(b.id)?.endedAt ??
+        DateTime.fromMillisecondsSinceEpoch(0);
     return aDate.compareTo(bDate);
   }
 
@@ -585,6 +686,28 @@ class AppController extends ChangeNotifier {
         tags: <String>['combo', 'core'],
         saved: true,
       ),
+      const PracticeItemV1(
+        id: 'combo_mirror_builder',
+        family: MaterialFamilyV1.combo,
+        name: 'Mirror Builder',
+        sticking: 'LRR → LLR',
+        noteCount: 6,
+        accentedNoteIndices: <int>[0, 3],
+        source: PracticeItemSourceV1.userDefined,
+        tags: <String>['combo', 'core'],
+        saved: true,
+      ),
+      const PracticeItemV1(
+        id: 'combo_split_flow',
+        family: MaterialFamilyV1.combo,
+        name: 'Split Flow',
+        sticking: 'RLR → KRL',
+        noteCount: 6,
+        accentedNoteIndices: <int>[0, 3],
+        source: PracticeItemSourceV1.userDefined,
+        tags: <String>['combo', 'flow'],
+        saved: true,
+      ),
     ];
 
     _combinations = const <PracticeCombinationV1>[
@@ -593,6 +716,18 @@ class AppController extends ChangeNotifier {
         name: 'Double Builder',
         itemIds: <String>['triad_rll', 'triad_rrl'],
         intentTag: ComboIntentTagV1.coreSkills,
+      ),
+      PracticeCombinationV1(
+        id: 'combo_mirror_builder',
+        name: 'Mirror Builder',
+        itemIds: <String>['triad_lrr', 'triad_llr'],
+        intentTag: ComboIntentTagV1.coreSkills,
+      ),
+      PracticeCombinationV1(
+        id: 'combo_split_flow',
+        name: 'Split Flow',
+        itemIds: <String>['triad_rlr', 'triad_krl'],
+        intentTag: ComboIntentTagV1.flow,
       ),
     ];
 
@@ -613,6 +748,10 @@ class AppController extends ChangeNotifier {
           addedAt: DateTime.now().subtract(const Duration(days: 7)),
         ),
         RoutineEntryV1(
+          practiceItemId: 'combo_mirror_builder',
+          addedAt: DateTime.now().subtract(const Duration(days: 6)),
+        ),
+        RoutineEntryV1(
           practiceItemId: 'five_rlrlk',
           addedAt: DateTime.now().subtract(const Duration(days: 4)),
         ),
@@ -622,7 +761,9 @@ class AppController extends ChangeNotifier {
     _sessions = <PracticeSessionLogV1>[
       PracticeSessionLogV1(
         id: 'session_seed_1',
-        startedAt: DateTime.now().subtract(const Duration(days: 1, minutes: 18)),
+        startedAt: DateTime.now().subtract(
+          const Duration(days: 1, minutes: 18),
+        ),
         endedAt: DateTime.now().subtract(const Duration(days: 1)),
         duration: const Duration(minutes: 18),
         practiceItemIds: const <String>['triad_rll'],
@@ -636,7 +777,9 @@ class AppController extends ChangeNotifier {
       ),
       PracticeSessionLogV1(
         id: 'session_seed_2',
-        startedAt: DateTime.now().subtract(const Duration(days: 2, minutes: 16)),
+        startedAt: DateTime.now().subtract(
+          const Duration(days: 2, minutes: 16),
+        ),
         endedAt: DateTime.now().subtract(const Duration(days: 2)),
         duration: const Duration(minutes: 16),
         practiceItemIds: const <String>['triad_llr'],
@@ -650,7 +793,9 @@ class AppController extends ChangeNotifier {
       ),
       PracticeSessionLogV1(
         id: 'session_seed_3',
-        startedAt: DateTime.now().subtract(const Duration(days: 3, minutes: 12)),
+        startedAt: DateTime.now().subtract(
+          const Duration(days: 3, minutes: 12),
+        ),
         endedAt: DateTime.now().subtract(const Duration(days: 3)),
         duration: const Duration(minutes: 12),
         practiceItemIds: const <String>['combo_double_builder'],
@@ -658,6 +803,22 @@ class AppController extends ChangeNotifier {
         intent: PracticeIntentV1.coreSkills,
         context: PracticeContextV1.singleSurface,
         bpm: 92,
+        clickEnabled: true,
+        routineId: 'main_routine',
+        reflection: ReflectionRatingV1.okay,
+      ),
+      PracticeSessionLogV1(
+        id: 'session_seed_3b',
+        startedAt: DateTime.now().subtract(
+          const Duration(days: 4, minutes: 10),
+        ),
+        endedAt: DateTime.now().subtract(const Duration(days: 4)),
+        duration: const Duration(minutes: 10),
+        practiceItemIds: const <String>['combo_mirror_builder'],
+        family: MaterialFamilyV1.combo,
+        intent: PracticeIntentV1.coreSkills,
+        context: PracticeContextV1.singleSurface,
+        bpm: 88,
         clickEnabled: true,
         routineId: 'main_routine',
         reflection: ReflectionRatingV1.okay,
@@ -678,7 +839,9 @@ class AppController extends ChangeNotifier {
       ),
       PracticeSessionLogV1(
         id: 'session_seed_5',
-        startedAt: DateTime.now().subtract(const Duration(days: 6, minutes: 11)),
+        startedAt: DateTime.now().subtract(
+          const Duration(days: 6, minutes: 11),
+        ),
         endedAt: DateTime.now().subtract(const Duration(days: 6)),
         duration: const Duration(minutes: 11),
         practiceItemIds: const <String>['triad_rlr'],
@@ -691,8 +854,26 @@ class AppController extends ChangeNotifier {
         reflection: ReflectionRatingV1.okay,
       ),
       PracticeSessionLogV1(
+        id: 'session_seed_5b',
+        startedAt: DateTime.now().subtract(
+          const Duration(days: 9, minutes: 13),
+        ),
+        endedAt: DateTime.now().subtract(const Duration(days: 9)),
+        duration: const Duration(minutes: 13),
+        practiceItemIds: const <String>['combo_split_flow'],
+        family: MaterialFamilyV1.combo,
+        intent: PracticeIntentV1.flow,
+        context: PracticeContextV1.kit,
+        bpm: 98,
+        clickEnabled: true,
+        routineId: null,
+        reflection: ReflectionRatingV1.hard,
+      ),
+      PracticeSessionLogV1(
         id: 'session_seed_6',
-        startedAt: DateTime.now().subtract(const Duration(days: 8, minutes: 14)),
+        startedAt: DateTime.now().subtract(
+          const Duration(days: 8, minutes: 14),
+        ),
         endedAt: DateTime.now().subtract(const Duration(days: 8)),
         duration: const Duration(minutes: 14),
         practiceItemIds: const <String>['custom_linear_break'],
