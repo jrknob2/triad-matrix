@@ -105,7 +105,6 @@ extension TriadMatrixViewModeLabel on TriadMatrixViewModeV1 {
   String get label => switch (this) {
         TriadMatrixViewModeV1.competency => 'Competency',
         TriadMatrixViewModeV1.lead => 'Lead Hand',
-        TriadMatrixViewModeV1.accents => 'Accents',
         TriadMatrixViewModeV1.handsOnly => 'Hands Only',
         TriadMatrixViewModeV1.weakHand => 'Weak Hand',
       };

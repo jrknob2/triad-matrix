@@ -25,6 +25,8 @@ class _MatrixScreenState extends State<MatrixScreen> {
   final Set<TriadMatrixViewModeV1> _modes = <TriadMatrixViewModeV1>{
     TriadMatrixViewModeV1.competency,
   };
+  final Set<String> _selectedRows = <String>{};
+  final Set<String> _selectedColumns = <String>{};
 
   @override
   Widget build(BuildContext context) {
@@ -55,26 +57,30 @@ class _MatrixScreenState extends State<MatrixScreen> {
                   ),
                 ),
                 const SizedBox(height: 10),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: TriadMatrixViewModeV1.values
-                      .map(
-                        (mode) => FilterChip(
-                          label: Text(mode.label),
-                          selected: _modes.contains(mode),
-                          onSelected: (bool selected) {
-                            setState(() {
-                              if (selected) {
-                                _modes.add(mode);
-                              } else {
-                                _modes.remove(mode);
-                              }
-                            });
-                          },
-                        ),
-                      )
-                      .toList(growable: false),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: TriadMatrixViewModeV1.values
+                        .map(
+                          (mode) => Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: FilterChip(
+                              label: Text(mode.label),
+                              selected: _modes.contains(mode),
+                              onSelected: (bool selected) {
+                                setState(() {
+                                  if (selected) {
+                                    _modes.add(mode);
+                                  } else {
+                                    _modes.remove(mode);
+                                  }
+                                });
+                              },
+                            ),
+                          ),
+                        )
+                        .toList(growable: false),
+                  ),
                 ),
               ],
             ),
@@ -86,6 +92,10 @@ class _MatrixScreenState extends State<MatrixScreen> {
                 child: TriadMatrixGrid(
                   controller: widget.controller,
                   modes: _modes,
+                  selectedRows: _selectedRows,
+                  selectedColumns: _selectedColumns,
+                  onToggleRow: _toggleRow,
+                  onToggleColumn: _toggleColumn,
                   onOpenItem: widget.onOpenItem,
                   onPracticeItem: widget.onPracticeItem,
                 ),
@@ -95,5 +105,25 @@ class _MatrixScreenState extends State<MatrixScreen> {
         ],
       ),
     );
+  }
+
+  void _toggleRow(String rowLabel) {
+    setState(() {
+      if (_selectedRows.contains(rowLabel)) {
+        _selectedRows.remove(rowLabel);
+      } else {
+        _selectedRows.add(rowLabel);
+      }
+    });
+  }
+
+  void _toggleColumn(String columnLabel) {
+    setState(() {
+      if (_selectedColumns.contains(columnLabel)) {
+        _selectedColumns.remove(columnLabel);
+      } else {
+        _selectedColumns.add(columnLabel);
+      }
+    });
   }
 }

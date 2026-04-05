@@ -7,6 +7,10 @@ import '../../../state/app_controller.dart';
 class TriadMatrixGrid extends StatelessWidget {
   final AppController controller;
   final Set<TriadMatrixViewModeV1> modes;
+  final Set<String> selectedRows;
+  final Set<String> selectedColumns;
+  final ValueChanged<String> onToggleRow;
+  final ValueChanged<String> onToggleColumn;
   final ValueChanged<String> onOpenItem;
   final ValueChanged<String> onPracticeItem;
 
@@ -14,6 +18,10 @@ class TriadMatrixGrid extends StatelessWidget {
     super.key,
     required this.controller,
     required this.modes,
+    required this.selectedRows,
+    required this.selectedColumns,
+    required this.onToggleRow,
+    required this.onToggleColumn,
     required this.onOpenItem,
     required this.onPracticeItem,
   });
@@ -35,12 +43,24 @@ class TriadMatrixGrid extends StatelessWidget {
           },
           defaultVerticalAlignment: TableCellVerticalAlignment.middle,
           children: <TableRow>[
-            const TableRow(
+            TableRow(
               children: <Widget>[
-                SizedBox.shrink(),
-                _MatrixAxisLabel(label: 'R'),
-                _MatrixAxisLabel(label: 'L'),
-                _MatrixAxisLabel(label: 'K'),
+                const SizedBox.shrink(),
+                _MatrixAxisLabel(
+                  label: 'R',
+                  selected: selectedColumns.contains('R'),
+                  onTap: () => onToggleColumn('R'),
+                ),
+                _MatrixAxisLabel(
+                  label: 'L',
+                  selected: selectedColumns.contains('L'),
+                  onTap: () => onToggleColumn('L'),
+                ),
+                _MatrixAxisLabel(
+                  label: 'K',
+                  selected: selectedColumns.contains('K'),
+                  onTap: () => onToggleColumn('K'),
+                ),
               ],
             ),
             for (int rowIndex = 0; rowIndex < 9; rowIndex++)
@@ -48,7 +68,8 @@ class TriadMatrixGrid extends StatelessWidget {
                 children: <Widget>[
                   _MatrixAxisLabel(
                     label: cells[rowIndex * 3].id.substring(1),
-                    alignRight: true,
+                    selected: selectedRows.contains(cells[rowIndex * 3].id.substring(1)),
+                    onTap: () => onToggleRow(cells[rowIndex * 3].id.substring(1)),
                   ),
                   for (final TriadMatrixCell cell
                       in cells.skip(rowIndex * 3).take(3))
@@ -58,6 +79,10 @@ class TriadMatrixGrid extends StatelessWidget {
                         controller: controller,
                         cell: cell,
                         modes: modes,
+                        rowSelected: selectedRows.contains(cell.id.substring(1)),
+                        columnSelected: selectedColumns.contains(cell.id.substring(0, 1)),
+                        rowFilterActive: selectedRows.isNotEmpty,
+                        columnFilterActive: selectedColumns.isNotEmpty,
                         onOpenItem: onOpenItem,
                         onPracticeItem: onPracticeItem,
                       ),
@@ -73,29 +98,40 @@ class TriadMatrixGrid extends StatelessWidget {
 
 class _MatrixAxisLabel extends StatelessWidget {
   final String label;
-  final bool alignRight;
+  final bool selected;
+  final VoidCallback onTap;
 
   const _MatrixAxisLabel({
     required this.label,
-    this.alignRight = false,
+    required this.selected,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(
-        right: alignRight ? 4 : 0,
+      padding: const EdgeInsets.only(
         top: 2,
         bottom: 2,
       ),
-      child: Align(
-        alignment: alignRight ? Alignment.centerRight : Alignment.center,
-        child: Text(
-          label,
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w900,
-                color: const Color(0xFF101010),
-              ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Container(
+          height: 34,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: selected ? const Color(0xFFE4DED1) : Colors.transparent,
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w900,
+                  color: const Color(0xFF101010),
+                ),
+          ),
         ),
       ),
     );
@@ -106,6 +142,10 @@ class _TriadCellButton extends StatelessWidget {
   final AppController controller;
   final TriadMatrixCell cell;
   final Set<TriadMatrixViewModeV1> modes;
+  final bool rowSelected;
+  final bool columnSelected;
+  final bool rowFilterActive;
+  final bool columnFilterActive;
   final ValueChanged<String> onOpenItem;
   final ValueChanged<String> onPracticeItem;
 
@@ -113,6 +153,10 @@ class _TriadCellButton extends StatelessWidget {
     required this.controller,
     required this.cell,
     required this.modes,
+    required this.rowSelected,
+    required this.columnSelected,
+    required this.rowFilterActive,
+    required this.columnFilterActive,
     required this.onOpenItem,
     required this.onPracticeItem,
   });
@@ -167,8 +211,13 @@ class _TriadCellButton extends StatelessWidget {
         modes.contains(TriadMatrixViewModeV1.handsOnly) && !handsOnly;
     final bool filteredOutByWeakHand =
         modes.contains(TriadMatrixViewModeV1.weakHand) && !weakHandLead;
+    final bool filteredOutByRow = rowFilterActive && !rowSelected;
+    final bool filteredOutByColumn = columnFilterActive && !columnSelected;
 
-    if (filteredOutByHandsOnly || filteredOutByWeakHand) {
+    if (filteredOutByHandsOnly ||
+        filteredOutByWeakHand ||
+        filteredOutByRow ||
+        filteredOutByColumn) {
       return const _CellDecorationStyle(
         backgroundColor: Color(0xFFE0DDD8),
         borderColor: Color(0x22000000),
@@ -185,14 +234,6 @@ class _TriadCellButton extends StatelessWidget {
         CompetencyLevelV1.reliable => const Color(0xFFF4E4C8),
         CompetencyLevelV1.musical => const Color(0xFFF4D8DC),
       };
-    }
-
-    if (modes.contains(TriadMatrixViewModeV1.accents) && hasAccents) {
-      backgroundColor = modes.contains(TriadMatrixViewModeV1.competency)
-          ? backgroundColor
-          : const Color(0xFFDDF0E6);
-      borderColor = const Color(0xFF2F7D57);
-      borderWidth = 2;
     }
 
     if (modes.contains(TriadMatrixViewModeV1.lead)) {
@@ -212,6 +253,10 @@ class _TriadCellButton extends StatelessWidget {
     if (modes.contains(TriadMatrixViewModeV1.weakHand) && weakHandLead) {
       borderColor = const Color(0xFF9A4A33);
       borderWidth = borderWidth < 3 ? 3 : borderWidth;
+    }
+
+    if (hasAccents && !modes.contains(TriadMatrixViewModeV1.lead)) {
+      borderColor = borderWidth > 1 ? borderColor : const Color(0x33000000);
     }
 
     return _CellDecorationStyle(

@@ -91,7 +91,6 @@ enum GrooveFrameV1 {
 enum TriadMatrixViewModeV1 {
   competency,
   lead,
-  accents,
   handsOnly,
   weakHand,
 }
