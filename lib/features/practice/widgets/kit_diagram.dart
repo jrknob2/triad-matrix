@@ -64,50 +64,47 @@ class KitDiagram extends StatelessWidget {
     super.key,
     required this.surfaces,
     this.title,
-    this.compact = false
+    this.compact = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    // Use theme colors; keep it calm.
     final ColorScheme cs = Theme.of(context).colorScheme;
 
     final double height = compact ? 92 : 116;
 
-    return Card(
-      elevation: 1,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            if (title != null) ...<Widget>[
-              Row(
-                children: <Widget>[
-                  Text(
-                    title!,
-                    style: Theme.of(context).textTheme.titleSmall,
-                  ),
-                  const Spacer(),
-                ],
-              ),
-              const SizedBox(height: 10),
-            ],
-            SizedBox(
-              height: height,
-              width: double.infinity,
-              child: CustomPaint(
-                painter: _KitDiagramPainter(
-                  surfaces: surfaces,
-                  onSurface: cs.onSurface,
-                  outline: cs.outlineVariant,
-                  fill: cs.surface,
-                  emphasizedFill: cs.surfaceContainerHighest,
+    // IMPORTANT: no Card/background. We want it to feel "painted" on the screen.
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          if (title != null) ...<Widget>[
+            Row(
+              children: <Widget>[
+                Text(
+                  title!,
+                  style: Theme.of(context).textTheme.titleSmall,
                 ),
+                const Spacer(),
+              ],
+            ),
+            const SizedBox(height: 10),
+          ],
+          SizedBox(
+            height: height,
+            width: double.infinity,
+            child: CustomPaint(
+              painter: _KitDiagramPainter(
+                surfaces: surfaces,
+                onSurface: cs.onSurface,
+                outline: cs.outlineVariant,
+                fill: cs.onSurface.withValues(alpha: 0.06),
+                emphasizedFill: cs.onSurface.withValues(alpha: 0.10),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -138,13 +135,10 @@ class _KitDiagramPainter extends CustomPainter {
       ..strokeWidth = 1.2
       ..color = outline;
 
-    // Slightly different fill when emphasized
     Paint fillPaint(bool emphasized) => Paint()
       ..style = PaintingStyle.fill
       ..color = emphasized ? emphasizedFill : fill;
 
-    // Layout: a simple “kit map” that adapts to what surfaces are present.
-    // We compute anchor positions for each kind and then draw only what's included.
     final Map<KitSurfaceKind, Offset> pos = _positions(size);
     final Map<KitSurfaceKind, double> r = _radii(size);
 
@@ -162,15 +156,23 @@ class _KitDiagramPainter extends CustomPainter {
 
       final Rect bounds = Rect.fromCircle(center: c, radius: rad);
 
-      // Surface body
-      canvas.drawOval(bounds, fillPaint(s.emphasized));
-      canvas.drawOval(bounds, borderPaint);
+      final bool isPadSurface = _isPadOnlySurface(s);
 
-      // Label centered
-      _drawCenteredText(canvas, bounds, s.label, labelStyle);
+      if (isPadSurface) {
+        // Pad should be octagonal (your requirement).
+        final Path oct = _octagonPath(bounds, cutFactor: 0.22);
+        canvas.drawPath(oct, fillPaint(s.emphasized));
+        canvas.drawPath(oct, borderPaint);
+        _drawCenteredText(canvas, bounds, s.label, labelStyle);
+      } else {
+        // Default: oval/circle for kit pieces.
+        canvas.drawOval(bounds, fillPaint(s.emphasized));
+        canvas.drawOval(bounds, borderPaint); // <-- uses borderPaint (fixes warning)
+        _drawCenteredText(canvas, bounds, s.label, labelStyle);
+      }
     }
 
-    // Subtle “stand” line under kick if kick exists (nice touch, still calm)
+    // Subtle “stand” line under kick if kick exists.
     if (surfaces.any((s) => s.kind == KitSurfaceKind.kick)) {
       final Offset c = pos[KitSurfaceKind.kick]!;
       final double rad = r[KitSurfaceKind.kick]!;
@@ -180,25 +182,60 @@ class _KitDiagramPainter extends CustomPainter {
         ..color = outline;
 
       final double y = c.dy + rad + 6;
-      canvas.drawLine(Offset(c.dx - rad * 0.65, y), Offset(c.dx + rad * 0.65, y), stand);
+      canvas.drawLine(
+        Offset(c.dx - rad * 0.65, y),
+        Offset(c.dx + rad * 0.65, y),
+        stand,
+      );
     }
+  }
+
+  bool _isPadOnlySurface(KitSurfaceSpec s) {
+    // In pad mode we pass a single snare surface with id 'pad' (from PracticeScreen).
+    // That's the one we want to render as an octagon.
+    if (s.id == 'pad') return true;
+
+    // Defensive: if someone passes ONLY snare and labels it as pad, still octagon.
+    // But do NOT octagon snare in a full kit.
+    if (surfaces.length == 1 && s.kind == KitSurfaceKind.snare) return true;
+
+    return false;
+  }
+
+  Path _octagonPath(Rect bounds, {required double cutFactor}) {
+    final double w = bounds.width;
+    final double h = bounds.height;
+    final double cut = (w < h ? w : h) * cutFactor;
+
+    final double x1 = bounds.left;
+    final double y1 = bounds.top;
+    final double x2 = bounds.right;
+    final double y2 = bounds.bottom;
+
+    return Path()
+      ..moveTo(x1 + cut, y1)
+      ..lineTo(x2 - cut, y1)
+      ..lineTo(x2, y1 + cut)
+      ..lineTo(x2, y2 - cut)
+      ..lineTo(x2 - cut, y2)
+      ..lineTo(x1 + cut, y2)
+      ..lineTo(x1, y2 - cut)
+      ..lineTo(x1, y1 + cut)
+      ..close();
   }
 
   Map<KitSurfaceKind, Offset> _positions(Size size) {
     final double w = size.width;
     final double h = size.height;
 
-    // Top row
     final Offset hh = Offset(w * 0.22, h * 0.30);
     final Offset ride = Offset(w * 0.78, h * 0.30);
     final Offset tom1 = Offset(w * 0.42, h * 0.28);
     final Offset tom2 = Offset(w * 0.58, h * 0.28);
 
-    // Middle row
     final Offset snare = Offset(w * 0.38, h * 0.62);
     final Offset floor = Offset(w * 0.66, h * 0.62);
 
-    // Bottom
     final Offset kick = Offset(w * 0.52, h * 0.86);
 
     return <KitSurfaceKind, Offset>{
@@ -261,7 +298,10 @@ class _KitDiagramPainter extends CustomPainter {
     for (int i = 0; i < surfaces.length; i++) {
       final a = oldDelegate.surfaces[i];
       final b = surfaces[i];
-      if (a.kind != b.kind || a.label != b.label || a.emphasized != b.emphasized) return true;
+      if (a.kind != b.kind || a.label != b.label || a.emphasized != b.emphasized) {
+        return true;
+      }
+      if (a.id != b.id) return true;
     }
     return false;
   }

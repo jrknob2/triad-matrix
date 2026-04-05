@@ -4,20 +4,23 @@
 //
 // Pure configuration layer for "how it should feel".
 // No UI, no controller, no side effects.
-//
-// This file owns:
-// - Default generator knobs per mode
-// - Default instrument context (Pad as startup default)
-//
-// IMPORTANT:
-// - This file MUST NOT define PracticeModeV1 or InstrumentContextV1.
-//   Those are canonical in:
-//   - core/practice/practice_models.dart (PracticeModeV1)
-//   - core/instrument/instrument_context_v1.dart (InstrumentContextV1)
 
-import '../instrument/instrument_context_v1.dart';
 import '../pattern/pattern_engine.dart';
-import 'practice_models.dart';
+
+/* -------------------------------------------------------------------------- */
+/* Enums                                                                      */
+/* -------------------------------------------------------------------------- */
+
+enum PracticeModeV1 {
+  training,
+  flow,
+}
+
+enum InstrumentContextV1 {
+  padOnly,
+  padPlusKick,
+  kit,
+}
 
 /* -------------------------------------------------------------------------- */
 /* Defaults Model                                                              */
@@ -47,15 +50,16 @@ class PracticeDefaultsV1 {
   /// Startup defaults (v1 intent)
   static const PracticeModeV1 defaultMode = PracticeModeV1.training;
 
-  /// Startup instrument context (per your direction)
-  static const InstrumentContextV1 defaultInstrument = InstrumentContextV1.pad;
+  /// Startup instrument context
+  static const InstrumentContextV1 defaultInstrument =
+      InstrumentContextV1.padOnly;
 
   /// Instrument context → limb scope.
   static LimbScope scopeForInstrument(InstrumentContextV1 ctx) {
     switch (ctx) {
-      case InstrumentContextV1.pad:
+      case InstrumentContextV1.padOnly:
         return LimbScope.handsOnly;
-      case InstrumentContextV1.padKick:
+      case InstrumentContextV1.padPlusKick:
         return LimbScope.handsAndKick;
       case InstrumentContextV1.kit:
         return LimbScope.handsAndKick;
@@ -66,23 +70,19 @@ class PracticeDefaultsV1 {
   static ModeDefaultsV1 forMode(PracticeModeV1 mode) {
     switch (mode) {
       case PracticeModeV1.training:
-        return const ModeDefaultsV1(
-          // shorter, more repeatable
+        return ModeDefaultsV1(
           phraseType: PhraseType.chain,
           chainCells: 2,
           repeats: 6,
-          // accents should make phrasing obvious, not busy
           accentRule: AccentRule.cellStart(),
           infiniteRepeat: true,
         );
 
       case PracticeModeV1.flow:
-        return const ModeDefaultsV1(
-          // longer, more musical continuity
+        return ModeDefaultsV1(
           phraseType: PhraseType.chain,
           chainCells: 4,
           repeats: 2,
-          // phrase-ish accents; keep it sparse
           accentRule: AccentRule.everyNth(3),
           infiniteRepeat: false,
         );

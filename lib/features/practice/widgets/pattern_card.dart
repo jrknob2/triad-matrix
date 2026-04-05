@@ -9,11 +9,13 @@
 // - Optionally show a calm kit diagram above the pattern.
 // - Render the pattern in a mono, fixed-grid style.
 // - Show the v1 footer copy with the correct separator: `○` (NOT the letter O).
+// - Provide *UI affordance* for previous/next traversal without owning state.
 //
 // Non-responsibilities:
 // - No controller/state logic.
 // - No audio/click.
 // - No generator tuning UI.
+// - No matrix traversal logic (wired from PracticeScreen via callbacks).
 //
 // Imports assume these exist (you already referenced them):
 // - lib/core/pattern/pattern_engine.dart (Pattern, TriadCell, Limb)
@@ -52,6 +54,15 @@ class PatternCard extends StatelessWidget {
   /// In v1, you may prefer diagram-only and keep the pattern clean.
   final bool showVoiceRow;
 
+  /// UI callbacks for deterministic traversal (matrix prev/next).
+  /// These are *wiring points only*; PatternCard does not own navigation logic.
+  final VoidCallback? onPrev;
+  final VoidCallback? onNext;
+
+  /// Optional label between prev/next (e.g., "RRL (12/27)" or "12 / 27").
+  /// If null/empty, the label space is omitted.
+  final String? positionLabel;
+
   const PatternCard({
     super.key,
     required this.pattern,
@@ -61,6 +72,9 @@ class PatternCard extends StatelessWidget {
     required this.voiceLabels,
     this.showKitDiagram = true,
     this.showVoiceRow = false,
+    this.onPrev,
+    this.onNext,
+    this.positionLabel,
   });
 
   static const String _arrow = ' \u2192 '; // →
@@ -94,6 +108,9 @@ class PatternCard extends StatelessWidget {
     );
 
     final String benefit = _resolveBenefitText(focus);
+
+    final String posLabel = (positionLabel ?? '').trim();
+    final bool showNavRow = onPrev != null || onNext != null || posLabel.isNotEmpty;
 
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints c) {
@@ -132,6 +149,14 @@ class PatternCard extends StatelessWidget {
                   const SizedBox(height: 10),
                 ],
                 _BenefitPill(text: benefit),
+                if (showNavRow) ...<Widget>[
+                  const SizedBox(height: 10),
+                  _NavRow(
+                    onPrev: onPrev,
+                    onNext: onNext,
+                    label: posLabel.isEmpty ? null : posLabel,
+                  ),
+                ],
                 const SizedBox(height: 14),
                 for (int i = 0; i < lines.length; i++) ...<Widget>[
                   Center(
@@ -292,7 +317,11 @@ class PatternCard extends StatelessWidget {
 
       String lineText = lineCells.map((c) => c.id).join(_arrow);
       if (isLast) {
-        lineText = infinite ? '$lineText \u221E' : '$lineText \u00D7 $repeats';
+        // UI cleanup: do NOT show the infinity symbol.
+        // Infinite repeat is still allowed internally; it just isn't displayed.
+        if (!infinite) {
+          lineText = '$lineText \u00D7 $repeats';
+        }
       }
 
       final List<String> phraseChars = _toChars(lineText);
@@ -402,7 +431,7 @@ class PatternCard extends StatelessWidget {
       if (cells.isEmpty) return 0;
       final int ids = cells.fold<int>(0, (n, c) => n + c.id.length);
       final int arrows = (cells.length - 1) * arrow.length;
-      return ids + arrows + 4; // room for trailing "× N" or "∞"
+      return ids + arrows + 4; // room for trailing "× N" (∞ is hidden)
     }
 
     final List<List<TriadCell>> lines = <List<TriadCell>>[];
@@ -439,6 +468,85 @@ class PatternCard extends StatelessWidget {
       if (ch == 'R' || ch == 'L' || ch == 'K') cols.add(i);
     }
     return cols;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Navigation row (prev / label / next)                                        */
+/* -------------------------------------------------------------------------- */
+
+class _NavRow extends StatelessWidget {
+  final VoidCallback? onPrev;
+  final VoidCallback? onNext;
+  final String? label;
+
+  const _NavRow({
+    required this.onPrev,
+    required this.onNext,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme cs = theme.colorScheme;
+
+    final bool prevEnabled = onPrev != null;
+    final bool nextEnabled = onNext != null;
+
+    Widget navButton({
+      required IconData icon,
+      required VoidCallback? onPressed,
+      required String tooltip,
+    }) {
+      return IconButton(
+        onPressed: onPressed,
+        tooltip: tooltip,
+        icon: Icon(icon),
+        style: IconButton.styleFrom(
+          foregroundColor: cs.onSurface,
+          backgroundColor: cs.surfaceContainerHighest.withValues(alpha: 0.25),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    }
+
+    return Row(
+      children: <Widget>[
+        navButton(
+          icon: Icons.chevron_left,
+          onPressed: prevEnabled ? onPrev : null,
+          tooltip: 'Previous',
+        ),
+        const SizedBox(width: 10),
+        if (label != null && label!.trim().isNotEmpty) ...<Widget>[
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: cs.outlineVariant),
+                color: cs.surfaceContainerHighest.withValues(alpha: 0.12),
+              ),
+              child: Text(
+                label!,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+        ] else
+          const Spacer(),
+        navButton(
+          icon: Icons.chevron_right,
+          onPressed: nextEnabled ? onNext : null,
+          tooltip: 'Next',
+        ),
+      ],
+    );
   }
 }
 
