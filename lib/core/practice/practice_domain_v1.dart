@@ -92,7 +92,7 @@ enum TriadMatrixViewModeV1 {
   competency,
   lead,
   accents,
-  surface,
+  handsOnly,
   weakHand,
 }
 

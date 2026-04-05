@@ -106,7 +106,7 @@ extension TriadMatrixViewModeLabel on TriadMatrixViewModeV1 {
         TriadMatrixViewModeV1.competency => 'Competency',
         TriadMatrixViewModeV1.lead => 'Lead Hand',
         TriadMatrixViewModeV1.accents => 'Accents',
-        TriadMatrixViewModeV1.surface => 'Surface',
+        TriadMatrixViewModeV1.handsOnly => 'Hands Only',
         TriadMatrixViewModeV1.weakHand => 'Weak Hand',
       };
 }
