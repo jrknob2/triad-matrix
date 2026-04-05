@@ -88,6 +88,14 @@ enum GrooveFrameV1 {
   fourFourSixteenthGrid,
 }
 
+enum TriadMatrixViewModeV1 {
+  competency,
+  lead,
+  accents,
+  surface,
+  weakHand,
+}
+
 /* -------------------------------------------------------------------------- */
 /* Value Objects                                                              */
 /* -------------------------------------------------------------------------- */
@@ -152,6 +160,9 @@ class PracticeItemV1 {
   /// Number of notes in the base grouping or phrase.
   final int noteCount;
 
+  /// Zero-based note indices that should be accented in the default guided view.
+  final List<int> accentedNoteIndices;
+
   final PracticeItemSourceV1 source;
   final List<String> tags;
   final bool saved;
@@ -162,6 +173,7 @@ class PracticeItemV1 {
     required this.name,
     required this.sticking,
     required this.noteCount,
+    required this.accentedNoteIndices,
     required this.source,
     required this.tags,
     required this.saved,
@@ -171,6 +183,7 @@ class PracticeItemV1 {
   bool get isFiveNote => family == MaterialFamilyV1.fiveNote;
   bool get isCustom => family == MaterialFamilyV1.custom;
   bool get isCombo => family == MaterialFamilyV1.combo;
+  bool get hasAccents => accentedNoteIndices.isNotEmpty;
 
   PracticeItemV1 copyWith({
     String? id,
@@ -178,6 +191,7 @@ class PracticeItemV1 {
     String? name,
     String? sticking,
     int? noteCount,
+    List<int>? accentedNoteIndices,
     PracticeItemSourceV1? source,
     List<String>? tags,
     bool? saved,
@@ -188,11 +202,38 @@ class PracticeItemV1 {
       name: name ?? this.name,
       sticking: sticking ?? this.sticking,
       noteCount: noteCount ?? this.noteCount,
+      accentedNoteIndices: accentedNoteIndices ?? this.accentedNoteIndices,
       source: source ?? this.source,
       tags: tags ?? this.tags,
       saved: saved ?? this.saved,
     );
   }
+}
+
+@immutable
+class CoachCueV1 {
+  final String title;
+  final String detail;
+  final List<String> suggestedItemIds;
+
+  const CoachCueV1({
+    required this.title,
+    required this.detail,
+    required this.suggestedItemIds,
+  });
+}
+
+@immutable
+class TodayBriefingV1 {
+  final String headline;
+  final String summary;
+  final List<CoachCueV1> cues;
+
+  const TodayBriefingV1({
+    required this.headline,
+    required this.summary,
+    required this.cues,
+  });
 }
 
 @immutable

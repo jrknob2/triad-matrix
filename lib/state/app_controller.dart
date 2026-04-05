@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../core/pattern/triad_matrix.dart';
 import '../core/practice/practice_domain_v1.dart';
 import '../features/app/app_formatters.dart';
 
@@ -21,11 +22,80 @@ class AppController extends ChangeNotifier {
       List<PracticeCombinationV1>.unmodifiable(_combinations);
   PracticeRoutineV1 get routine => _routine;
 
+  String get weakHandLabel =>
+      _profile.handedness == HandednessV1.right ? 'Left' : 'Right';
+
+  String get strongHandLabel =>
+      _profile.handedness == HandednessV1.right ? 'Right' : 'Left';
+
   List<PracticeSessionLogV1> get recentSessions {
     final List<PracticeSessionLogV1> copy =
         List<PracticeSessionLogV1>.from(_sessions);
     copy.sort((a, b) => b.endedAt.compareTo(a.endedAt));
     return List<PracticeSessionLogV1>.unmodifiable(copy);
+  }
+
+  List<PracticeItemV1> get triadMatrixItems {
+    return triadMatrixAll()
+        .map((cell) => itemById(_triadItemId(cell.id)))
+        .toList(growable: false);
+  }
+
+  TodayBriefingV1 buildTodayBriefing() {
+    final List<PracticeItemV1> weakHandItems = triadMatrixItems
+        .where(_isWeakHandLead)
+        .toList(growable: false)
+      ..sort(_compareByNeed);
+
+    final List<PracticeItemV1> neglectedTriads = triadMatrixItems.toList()
+      ..sort(_compareByNeed);
+
+    final List<PracticeItemV1> almostReady = triadMatrixItems
+        .where((item) {
+          final CompetencyLevelV1 competency = competencyFor(item.id);
+          return competency == CompetencyLevelV1.comfortable ||
+              competency == CompetencyLevelV1.reliable;
+        })
+        .toList(growable: false)
+      ..sort((a, b) => totalTime(itemId: b.id).compareTo(totalTime(itemId: a.id)));
+
+    final List<PracticeItemV1> accentItems = triadMatrixItems
+        .where((item) => item.hasAccents && !usesKick(item.id))
+        .toList(growable: false)
+      ..sort(_compareByNeed);
+
+    return TodayBriefingV1(
+      headline: 'Today leans toward control, touch, and flow.',
+      summary:
+          '$weakHandLabel-hand lead needs attention, a few triads are close to toolkit status, and there is room for fresh material.',
+      cues: <CoachCueV1>[
+        CoachCueV1(
+          title: 'Weak Hand',
+          detail:
+              '$weakHandLabel-hand lead is under-practiced. Start there while your hands are fresh.',
+          suggestedItemIds: weakHandItems.take(2).map((item) => item.id).toList(),
+        ),
+        CoachCueV1(
+          title: 'New Ground',
+          detail:
+              'A few triads have barely been touched lately. Add one new cell to the routine.',
+          suggestedItemIds:
+              neglectedTriads.take(2).map((item) => item.id).toList(),
+        ),
+        CoachCueV1(
+          title: 'Close To Toolkit',
+          detail:
+              'These are nearly reliable. Tighten them up and they can move into your toolkit.',
+          suggestedItemIds: almostReady.take(2).map((item) => item.id).toList(),
+        ),
+        CoachCueV1(
+          title: 'Accent Focus',
+          detail:
+              'Accent placement matters. These cells are good candidates for deliberate accent work.',
+          suggestedItemIds: accentItems.take(2).map((item) => item.id).toList(),
+        ),
+      ],
+    );
   }
 
   List<PracticeItemV1> itemsByFamily(MaterialFamilyV1 family) {
@@ -52,6 +122,10 @@ class AppController extends ChangeNotifier {
       if (item.id == id) return item;
     }
     return null;
+  }
+
+  PracticeItemV1? triadItemForCell(String cellId) {
+    return itemByIdOrNull(_triadItemId(cellId));
   }
 
   PracticeSessionLogV1? sessionById(String id) {
@@ -101,25 +175,33 @@ class AppController extends ChangeNotifier {
     return total;
   }
 
+  bool usesKick(String itemId) => _normalizedSticking(itemById(itemId)).contains('K');
+
+  bool handsOnly(String itemId) => !usesKick(itemId);
+
+  bool leadsWithRight(String itemId) => _firstHandChar(itemId) == 'R';
+
+  bool leadsWithLeft(String itemId) => _firstHandChar(itemId) == 'L';
+
+  bool leadsWithWeakHand(String itemId) => _isWeakHandLead(itemById(itemId));
+
+  int weakHandNoteCount(String itemId) {
+    final String weak = _profile.handedness == HandednessV1.right ? 'L' : 'R';
+    return _normalizedSticking(itemById(itemId)).split('').where((ch) => ch == weak).length;
+  }
+
+  String accentPatternLabelFor(String itemId) {
+    final PracticeItemV1 item = itemById(itemId);
+    final Set<int> accented = item.accentedNoteIndices.toSet();
+    return List<String>.generate(
+      item.noteCount,
+      (index) => accented.contains(index) ? '^' : '·',
+    ).join();
+  }
+
   List<PracticeItemV1> itemsNeedingPractice(MaterialFamilyV1 family) {
     final List<PracticeItemV1> candidates = itemsByFamily(family);
-    candidates.sort((a, b) {
-      final int competencyCompare =
-          _competencyScore(competencyFor(a.id)).compareTo(
-        _competencyScore(competencyFor(b.id)),
-      );
-      if (competencyCompare != 0) return competencyCompare;
-
-      final int timeCompare =
-          totalTime(itemId: a.id).compareTo(totalTime(itemId: b.id));
-      if (timeCompare != 0) return timeCompare;
-
-      final DateTime aDate =
-          lastSessionForItem(a.id)?.endedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-      final DateTime bDate =
-          lastSessionForItem(b.id)?.endedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-      return aDate.compareTo(bDate);
-    });
+    candidates.sort(_compareByNeed);
     return candidates;
   }
 
@@ -151,6 +233,7 @@ class AppController extends ChangeNotifier {
       name: trimmedName,
       sticking: trimmedSticking,
       noteCount: _estimateNoteCount(trimmedSticking),
+      accentedNoteIndices: _defaultAccentIndicesForSticking(trimmedSticking),
       source: PracticeItemSourceV1.userDefined,
       tags: tags.where((tag) => tag.trim().isNotEmpty).toList(growable: false),
       saved: true,
@@ -183,12 +266,21 @@ class AppController extends ChangeNotifier {
       (sum, itemId) => sum + itemById(itemId).noteCount,
     );
 
+    final List<int> accented = <int>[];
+    int offset = 0;
+    for (final String itemId in itemIds) {
+      final PracticeItemV1 item = itemById(itemId);
+      accented.addAll(item.accentedNoteIndices.map((index) => index + offset));
+      offset += item.noteCount;
+    }
+
     final PracticeItemV1 comboItem = PracticeItemV1(
       id: id,
       family: MaterialFamilyV1.combo,
       name: name.trim(),
       sticking: sticking,
       noteCount: noteCount,
+      accentedNoteIndices: accented,
       source: PracticeItemSourceV1.userDefined,
       tags: <String>['combo', intentTag.name],
       saved: true,
@@ -322,11 +414,9 @@ class AppController extends ChangeNotifier {
 
     base.sort((a, b) {
       if (options.focusWeakItems) {
-        final int weakCompare =
-            _competencyScore(competencyFor(a.id)).compareTo(
-          _competencyScore(competencyFor(b.id)),
-        );
-        if (weakCompare != 0) return weakCompare;
+        final bool aWeak = _isWeakHandLead(a);
+        final bool bWeak = _isWeakHandLead(b);
+        if (aWeak != bWeak) return aWeak ? -1 : 1;
       }
 
       if (options.focusUnderPracticedItems || !options.focusWeakItems) {
@@ -335,10 +425,34 @@ class AppController extends ChangeNotifier {
         if (timeCompare != 0) return timeCompare;
       }
 
+      final int competencyCompare =
+          _competencyScore(competencyFor(a.id)).compareTo(
+        _competencyScore(competencyFor(b.id)),
+      );
+      if (competencyCompare != 0) return competencyCompare;
+
       return a.name.compareTo(b.name);
     });
 
     return base;
+  }
+
+  int _compareByNeed(PracticeItemV1 a, PracticeItemV1 b) {
+    final int competencyCompare =
+        _competencyScore(competencyFor(a.id)).compareTo(
+      _competencyScore(competencyFor(b.id)),
+    );
+    if (competencyCompare != 0) return competencyCompare;
+
+    final int timeCompare =
+        totalTime(itemId: a.id).compareTo(totalTime(itemId: b.id));
+    if (timeCompare != 0) return timeCompare;
+
+    final DateTime aDate =
+        lastSessionForItem(a.id)?.endedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+    final DateTime bDate =
+        lastSessionForItem(b.id)?.endedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+    return aDate.compareTo(bDate);
   }
 
   int _competencyScore(CompetencyLevelV1 level) {
@@ -351,6 +465,23 @@ class AppController extends ChangeNotifier {
     };
   }
 
+  bool _isWeakHandLead(PracticeItemV1 item) {
+    final String weak = _profile.handedness == HandednessV1.right ? 'L' : 'R';
+    return _firstHandChar(item.id) == weak;
+  }
+
+  String? _firstHandChar(String itemId) {
+    final String normalized = _normalizedSticking(itemById(itemId));
+    for (final String ch in normalized.split('')) {
+      if (ch == 'R' || ch == 'L') return ch;
+    }
+    return null;
+  }
+
+  String _normalizedSticking(PracticeItemV1 item) {
+    return item.sticking.replaceAll(RegExp(r'[^RLK]'), '');
+  }
+
   int _estimateNoteCount(String sticking) {
     final List<String> tokens = sticking
         .split(RegExp(r'\s+'))
@@ -359,86 +490,97 @@ class AppController extends ChangeNotifier {
     return tokens.isEmpty ? sticking.length : tokens.length;
   }
 
+  List<int> _defaultAccentIndicesForSticking(String sticking) {
+    final int notes = _estimateNoteCount(sticking);
+    if (notes <= 0) return const <int>[];
+    return notes >= 3 ? const <int>[0, 2] : const <int>[0];
+  }
+
+  String _triadItemId(String cellId) => 'triad_${cellId.toLowerCase()}';
+
+  List<String> _tagsForTriadCell(TriadMatrixCell cell) {
+    final List<String> tags = <String>['matrix'];
+    if (cell.handsOnly) {
+      tags.add('hands');
+    } else {
+      tags.add('kit');
+    }
+    if (cell.hasHandDouble) tags.add('double');
+    if (cell.hasKickDouble) tags.add('kick-double');
+    if (cell.id.startsWith('R')) tags.add('lead-right');
+    if (cell.id.startsWith('L')) tags.add('lead-left');
+    if (cell.id.startsWith('K')) tags.add('lead-kick');
+    return tags;
+  }
+
+  List<int> _accentIndicesForTriadCell(TriadMatrixCell cell) {
+    if (cell.handsOnly && !cell.hasHandDouble) return const <int>[1];
+    if (cell.hasKickDouble || cell.hasHandDouble) return const <int>[0];
+    if (cell.usesKick) return const <int>[0, 2];
+    return const <int>[0];
+  }
+
   void _seed() {
     _profile = UserProfileV1.initial;
 
-    _items = const <PracticeItemV1>[
-      PracticeItemV1(
-        id: 'triad_rll',
-        family: MaterialFamilyV1.triad,
-        name: 'RLL',
-        sticking: 'RLL',
-        noteCount: 3,
-        source: PracticeItemSourceV1.builtIn,
-        tags: <String>['double', 'core'],
-        saved: true,
-      ),
-      PracticeItemV1(
-        id: 'triad_rrl',
-        family: MaterialFamilyV1.triad,
-        name: 'RRL',
-        sticking: 'RRL',
-        noteCount: 3,
-        source: PracticeItemSourceV1.builtIn,
-        tags: <String>['double', 'core'],
-        saved: true,
-      ),
-      PracticeItemV1(
-        id: 'triad_lrr',
-        family: MaterialFamilyV1.triad,
-        name: 'LRR',
-        sticking: 'LRR',
-        noteCount: 3,
-        source: PracticeItemSourceV1.builtIn,
-        tags: <String>['lead-shift'],
-        saved: true,
-      ),
-      PracticeItemV1(
-        id: 'triad_rlr',
-        family: MaterialFamilyV1.triad,
-        name: 'RLR',
-        sticking: 'RLR',
-        noteCount: 3,
-        source: PracticeItemSourceV1.builtIn,
-        tags: <String>['alternating'],
-        saved: true,
-      ),
-      PracticeItemV1(
+    final List<PracticeItemV1> triadItems = triadMatrixAll()
+        .map(
+          (cell) => PracticeItemV1(
+            id: _triadItemId(cell.id),
+            family: MaterialFamilyV1.triad,
+            name: cell.id,
+            sticking: cell.id,
+            noteCount: 3,
+            accentedNoteIndices: _accentIndicesForTriadCell(cell),
+            source: PracticeItemSourceV1.builtIn,
+            tags: _tagsForTriadCell(cell),
+            saved: true,
+          ),
+        )
+        .toList(growable: false);
+
+    _items = <PracticeItemV1>[
+      ...triadItems,
+      const PracticeItemV1(
         id: 'five_rlrlk',
         family: MaterialFamilyV1.fiveNote,
         name: 'RLRLK',
         sticking: 'RLRLK',
         noteCount: 5,
+        accentedNoteIndices: <int>[0],
         source: PracticeItemSourceV1.builtIn,
         tags: <String>['5s', 'flow'],
         saved: true,
       ),
-      PracticeItemV1(
+      const PracticeItemV1(
         id: 'five_rllrl',
         family: MaterialFamilyV1.fiveNote,
         name: 'RLLRL',
         sticking: 'RLLRL',
         noteCount: 5,
+        accentedNoteIndices: <int>[0, 3],
         source: PracticeItemSourceV1.builtIn,
         tags: <String>['5s', 'core'],
         saved: true,
       ),
-      PracticeItemV1(
+      const PracticeItemV1(
         id: 'custom_linear_break',
         family: MaterialFamilyV1.custom,
         name: 'Linear Break',
         sticking: 'R K L R L',
         noteCount: 5,
+        accentedNoteIndices: <int>[0, 3],
         source: PracticeItemSourceV1.userDefined,
         tags: <String>['custom', 'linear'],
         saved: true,
       ),
-      PracticeItemV1(
+      const PracticeItemV1(
         id: 'combo_double_builder',
         family: MaterialFamilyV1.combo,
         name: 'Double Builder',
         sticking: 'RLL → RRL',
         noteCount: 6,
+        accentedNoteIndices: <int>[0, 3],
         source: PracticeItemSourceV1.userDefined,
         tags: <String>['combo', 'core'],
         saved: true,
@@ -461,6 +603,10 @@ class AppController extends ChangeNotifier {
         RoutineEntryV1(
           practiceItemId: 'triad_rll',
           addedAt: DateTime.now().subtract(const Duration(days: 10)),
+        ),
+        RoutineEntryV1(
+          practiceItemId: 'triad_llr',
+          addedAt: DateTime.now().subtract(const Duration(days: 8)),
         ),
         RoutineEntryV1(
           practiceItemId: 'combo_double_builder',
@@ -490,6 +636,20 @@ class AppController extends ChangeNotifier {
       ),
       PracticeSessionLogV1(
         id: 'session_seed_2',
+        startedAt: DateTime.now().subtract(const Duration(days: 2, minutes: 16)),
+        endedAt: DateTime.now().subtract(const Duration(days: 2)),
+        duration: const Duration(minutes: 16),
+        practiceItemIds: const <String>['triad_llr'],
+        family: MaterialFamilyV1.triad,
+        intent: PracticeIntentV1.coreSkills,
+        context: PracticeContextV1.singleSurface,
+        bpm: 78,
+        clickEnabled: true,
+        routineId: 'main_routine',
+        reflection: ReflectionRatingV1.hard,
+      ),
+      PracticeSessionLogV1(
+        id: 'session_seed_3',
         startedAt: DateTime.now().subtract(const Duration(days: 3, minutes: 12)),
         endedAt: DateTime.now().subtract(const Duration(days: 3)),
         duration: const Duration(minutes: 12),
@@ -503,7 +663,7 @@ class AppController extends ChangeNotifier {
         reflection: ReflectionRatingV1.okay,
       ),
       PracticeSessionLogV1(
-        id: 'session_seed_3',
+        id: 'session_seed_4',
         startedAt: DateTime.now().subtract(const Duration(days: 5, minutes: 9)),
         endedAt: DateTime.now().subtract(const Duration(days: 5)),
         duration: const Duration(minutes: 9),
@@ -517,7 +677,21 @@ class AppController extends ChangeNotifier {
         reflection: ReflectionRatingV1.hard,
       ),
       PracticeSessionLogV1(
-        id: 'session_seed_4',
+        id: 'session_seed_5',
+        startedAt: DateTime.now().subtract(const Duration(days: 6, minutes: 11)),
+        endedAt: DateTime.now().subtract(const Duration(days: 6)),
+        duration: const Duration(minutes: 11),
+        practiceItemIds: const <String>['triad_rlr'],
+        family: MaterialFamilyV1.triad,
+        intent: PracticeIntentV1.flow,
+        context: PracticeContextV1.kit,
+        bpm: 96,
+        clickEnabled: true,
+        routineId: null,
+        reflection: ReflectionRatingV1.okay,
+      ),
+      PracticeSessionLogV1(
+        id: 'session_seed_6',
         startedAt: DateTime.now().subtract(const Duration(days: 8, minutes: 14)),
         endedAt: DateTime.now().subtract(const Duration(days: 8)),
         duration: const Duration(minutes: 14),
@@ -542,6 +716,21 @@ class AppController extends ChangeNotifier {
         practiceItemId: 'triad_rrl',
         level: CompetencyLevelV1.learning,
         updatedAt: DateTime.now().subtract(const Duration(days: 6)),
+      ),
+      'triad_llr': CompetencyRecordV1(
+        practiceItemId: 'triad_llr',
+        level: CompetencyLevelV1.learning,
+        updatedAt: DateTime.now().subtract(const Duration(days: 4)),
+      ),
+      'triad_rlr': CompetencyRecordV1(
+        practiceItemId: 'triad_rlr',
+        level: CompetencyLevelV1.reliable,
+        updatedAt: DateTime.now().subtract(const Duration(days: 5)),
+      ),
+      'triad_lrr': CompetencyRecordV1(
+        practiceItemId: 'triad_lrr',
+        level: CompetencyLevelV1.comfortable,
+        updatedAt: DateTime.now().subtract(const Duration(days: 7)),
       ),
       'five_rlrlk': CompetencyRecordV1(
         practiceItemId: 'five_rlrlk',

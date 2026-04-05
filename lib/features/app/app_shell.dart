@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 
 import '../../state/app_controller.dart';
-import '../home/home_screen.dart';
+import '../matrix/matrix_screen.dart';
 import '../library/combination_builder_screen.dart';
 import '../library/custom_pattern_editor_screen.dart';
 import '../library/item_detail_screen.dart';
-import '../library/library_screen.dart';
 import '../practice/practice_setup_screen.dart';
 import '../progress/progress_screen.dart';
-import '../routine/routine_screen.dart';
 import '../settings/app_settings_screen.dart';
+import '../today/today_screen.dart';
+import '../toolkit/toolkit_screen.dart';
 
 class AppShell extends StatefulWidget {
   final AppController controller;
@@ -29,24 +29,23 @@ class _AppShellState extends State<AppShell> {
   @override
   Widget build(BuildContext context) {
     final List<Widget> tabs = <Widget>[
-      HomeScreen(
+      TodayScreen(
         controller: widget.controller,
-        onStartPractice: _openSetup,
-        onGeneratePractice: _openGeneratedSetup,
-        onContinueRoutine: () => setState(() => _currentIndex = 2),
+        onOpenMatrix: () => setState(() => _currentIndex = 1),
         onOpenItem: _openItemDetail,
+        onPracticeItem: _openSetupForItem,
       ),
-      LibraryScreen(
+      MatrixScreen(
+        controller: widget.controller,
+        onOpenItem: _openItemDetail,
+        onPracticeItem: _openSetupForItem,
+      ),
+      ToolkitScreen(
         controller: widget.controller,
         onOpenItem: _openItemDetail,
         onPracticeItem: _openSetupForItem,
         onBuildCombo: _openCombinationBuilder,
         onCreateCustomPattern: _openCustomPatternEditor,
-      ),
-      RoutineScreen(
-        controller: widget.controller,
-        onOpenItem: _openItemDetail,
-        onPracticeItem: _openSetupForItem,
       ),
       ProgressScreen(
         controller: widget.controller,
@@ -55,9 +54,9 @@ class _AppShellState extends State<AppShell> {
     ];
 
     final List<String> titles = <String>[
-      'Triad Trainer',
-      'Library',
-      'Routine',
+      'Today',
+      'Matrix',
+      'Toolkit',
       'Progress',
     ];
 
@@ -83,19 +82,19 @@ class _AppShellState extends State<AppShell> {
         },
         destinations: const <NavigationDestination>[
           NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Home',
+            icon: Icon(Icons.wb_sunny_outlined),
+            selectedIcon: Icon(Icons.wb_sunny),
+            label: 'Today',
           ),
           NavigationDestination(
-            icon: Icon(Icons.library_books_outlined),
-            selectedIcon: Icon(Icons.library_books),
-            label: 'Library',
+            icon: Icon(Icons.grid_view_outlined),
+            selectedIcon: Icon(Icons.grid_view_rounded),
+            label: 'Matrix',
           ),
           NavigationDestination(
-            icon: Icon(Icons.playlist_add_check_outlined),
-            selectedIcon: Icon(Icons.playlist_add_check),
-            label: 'Routine',
+            icon: Icon(Icons.backpack_outlined),
+            selectedIcon: Icon(Icons.backpack),
+            label: 'Toolkit',
           ),
           NavigationDestination(
             icon: Icon(Icons.bar_chart_outlined),
@@ -103,25 +102,6 @@ class _AppShellState extends State<AppShell> {
             label: 'Progress',
           ),
         ],
-      ),
-    );
-  }
-
-  void _openSetup() {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => PracticeSetupScreen(controller: widget.controller),
-      ),
-    );
-  }
-
-  void _openGeneratedSetup() {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => PracticeSetupScreen(
-          controller: widget.controller,
-          generated: true,
-        ),
       ),
     );
   }

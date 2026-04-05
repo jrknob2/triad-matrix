@@ -100,3 +100,13 @@ extension ReflectionLabel on ReflectionRatingV1 {
         ReflectionRatingV1.hard => 'Hard',
       };
 }
+
+extension TriadMatrixViewModeLabel on TriadMatrixViewModeV1 {
+  String get label => switch (this) {
+        TriadMatrixViewModeV1.competency => 'Competency',
+        TriadMatrixViewModeV1.lead => 'Lead Hand',
+        TriadMatrixViewModeV1.accents => 'Accents',
+        TriadMatrixViewModeV1.surface => 'Surface',
+        TriadMatrixViewModeV1.weakHand => 'Weak Hand',
+      };
+}
