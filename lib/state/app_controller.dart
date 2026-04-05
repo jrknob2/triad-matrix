@@ -417,8 +417,10 @@ class AppController extends ChangeNotifier {
         break;
       case PatternNoteMarkingV1.accent:
         accents.add(noteIndex);
+        break;
       case PatternNoteMarkingV1.ghost:
         ghosts.add(noteIndex);
+        break;
     }
 
     _items = _items.map((entry) {
