@@ -55,10 +55,7 @@ class _CombinationBuilderScreenState extends State<CombinationBuilderScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Text(
-                    'Combo',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
+                  Text('Combo', style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 8),
                   Text(
                     hasSelection

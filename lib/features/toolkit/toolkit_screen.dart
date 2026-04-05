@@ -4,11 +4,7 @@ import '../../core/practice/practice_domain_v1.dart';
 import '../../features/app/app_formatters.dart';
 import '../../state/app_controller.dart';
 
-enum _ToolkitSection {
-  routine,
-  combos,
-  custom,
-}
+enum _ToolkitSection { routine, combos, custom }
 
 class ToolkitScreen extends StatefulWidget {
   final AppController controller;
@@ -95,30 +91,30 @@ class _ToolkitScreenState extends State<ToolkitScreen> {
   Widget _buildBody() {
     return switch (_section) {
       _ToolkitSection.routine => _ToolkitList(
-          title: widget.controller.routine.name,
-          items: widget.controller.routineItems,
-          controller: widget.controller,
-          onOpenItem: widget.onOpenItem,
-          onPracticeItem: widget.onPracticeItem,
-          trailingFor: (item) => IconButton(
-            icon: const Icon(Icons.remove_circle_outline),
-            onPressed: () => widget.controller.toggleRoutineItem(item.id),
-          ),
+        title: widget.controller.routine.name,
+        items: widget.controller.routineItems,
+        controller: widget.controller,
+        onOpenItem: widget.onOpenItem,
+        onPracticeItem: widget.onPracticeItem,
+        trailingFor: (item) => IconButton(
+          icon: const Icon(Icons.remove_circle_outline),
+          onPressed: () => widget.controller.toggleRoutineItem(item.id),
         ),
+      ),
       _ToolkitSection.combos => _ToolkitList(
-          title: 'Saved Combos',
-          items: widget.controller.itemsByFamily(MaterialFamilyV1.combo),
-          controller: widget.controller,
-          onOpenItem: widget.onOpenItem,
-          onPracticeItem: widget.onPracticeItem,
-        ),
+        title: 'Saved Combos',
+        items: widget.controller.itemsByFamily(MaterialFamilyV1.combo),
+        controller: widget.controller,
+        onOpenItem: widget.onOpenItem,
+        onPracticeItem: widget.onPracticeItem,
+      ),
       _ToolkitSection.custom => _ToolkitList(
-          title: 'Custom Patterns',
-          items: widget.controller.itemsByFamily(MaterialFamilyV1.custom),
-          controller: widget.controller,
-          onOpenItem: widget.onOpenItem,
-          onPracticeItem: widget.onPracticeItem,
-        ),
+        title: 'Custom Patterns',
+        items: widget.controller.itemsByFamily(MaterialFamilyV1.custom),
+        controller: widget.controller,
+        onOpenItem: widget.onOpenItem,
+        onPracticeItem: widget.onPracticeItem,
+      ),
     };
   }
 }
@@ -166,7 +162,9 @@ class _ToolkitList extends StatelessWidget {
           const Card(
             child: Padding(
               padding: EdgeInsets.all(16),
-              child: Text('Nothing here yet. Add material from the matrix or custom editor.'),
+              child: Text(
+                'Nothing here yet. Add material from the matrix or custom editor.',
+              ),
             ),
           )
         else

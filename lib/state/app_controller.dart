@@ -423,13 +423,15 @@ class AppController extends ChangeNotifier {
         break;
     }
 
-    _items = _items.map((entry) {
-      if (entry.id != itemId) return entry;
-      return entry.copyWith(
-        accentedNoteIndices: accents.toList()..sort(),
-        ghostNoteIndices: ghosts.toList()..sort(),
-      );
-    }).toList(growable: false);
+    _items = _items
+        .map((entry) {
+          if (entry.id != itemId) return entry;
+          return entry.copyWith(
+            accentedNoteIndices: accents.toList()..sort(),
+            ghostNoteIndices: ghosts.toList()..sort(),
+          );
+        })
+        .toList(growable: false);
     notifyListeners();
   }
 
@@ -786,7 +788,7 @@ class AppController extends ChangeNotifier {
         sticking: 'RLRLK',
         noteCount: 5,
         accentedNoteIndices: <int>[0],
-        ghostNoteIndices: const <int>[],
+        ghostNoteIndices: <int>[],
         source: PracticeItemSourceV1.builtIn,
         tags: <String>['5s', 'flow'],
         saved: true,
@@ -822,7 +824,7 @@ class AppController extends ChangeNotifier {
         sticking: 'RLL-RRL',
         noteCount: 6,
         accentedNoteIndices: <int>[0, 3],
-        ghostNoteIndices: const <int>[],
+        ghostNoteIndices: <int>[],
         source: PracticeItemSourceV1.userDefined,
         tags: <String>['combo', 'core'],
         saved: true,
@@ -834,7 +836,7 @@ class AppController extends ChangeNotifier {
         sticking: 'LRR-LLR',
         noteCount: 6,
         accentedNoteIndices: <int>[0, 3],
-        ghostNoteIndices: const <int>[],
+        ghostNoteIndices: <int>[],
         source: PracticeItemSourceV1.userDefined,
         tags: <String>['combo', 'core'],
         saved: true,

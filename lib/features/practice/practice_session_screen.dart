@@ -1,7 +1,8 @@
 import 'dart:async';
 
+import 'package:audio_session/audio_session.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:just_audio/just_audio.dart';
 
 import '../../features/app/app_formatters.dart';
 import '../../state/app_controller.dart';
@@ -25,6 +26,7 @@ class PracticeSessionScreen extends StatefulWidget {
 
 class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   final Stopwatch _stopwatch = Stopwatch();
+  final AudioPlayer _clickPlayer = AudioPlayer();
   Timer? _elapsedTicker;
   Timer? _beatTicker;
   bool _running = false;
@@ -37,12 +39,14 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     super.initState();
     _bpm = widget.setup.bpm;
     _clickEnabled = widget.setup.clickEnabled;
+    _configureAudio();
   }
 
   @override
   void dispose() {
     _elapsedTicker?.cancel();
     _beatTicker?.cancel();
+    _clickPlayer.dispose();
     super.dispose();
   }
 
@@ -261,7 +265,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   }
 
   void _playClick() {
-    SystemSound.play(SystemSoundType.click);
+    unawaited(_triggerClick());
   }
 
   void _updateBpm(int bpm) {
@@ -276,5 +280,21 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
       _clickEnabled = value;
       _restartBeatTicker();
     });
+  }
+
+  Future<void> _configureAudio() async {
+    final AudioSession session = await AudioSession.instance;
+    await session.configure(const AudioSessionConfiguration.music());
+    await _clickPlayer.setAsset('assets/audio/metronome_beep.wav');
+    await _clickPlayer.setVolume(1.0);
+  }
+
+  Future<void> _triggerClick() async {
+    try {
+      await _clickPlayer.seek(Duration.zero);
+      await _clickPlayer.play();
+    } catch (_) {
+      // Ignore transient playback errors during rapid BPM changes.
+    }
   }
 }
