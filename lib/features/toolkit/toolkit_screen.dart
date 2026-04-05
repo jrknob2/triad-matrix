@@ -177,7 +177,7 @@ class _ToolkitList extends StatelessWidget {
                 contentPadding: const EdgeInsets.all(16),
                 title: Text(item.name),
                 subtitle: Text(
-                  '${item.sticking}\n'
+                  '${controller.markedPatternTextFor(item.id)}\n'
                   '${controller.competencyFor(item.id).label} · '
                   '${formatDuration(controller.totalTime(itemId: item.id))}',
                 ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/practice/practice_domain_v1.dart';
 import '../../features/app/app_formatters.dart';
+import '../practice/widgets/pattern_marking_editor.dart';
 import '../../state/app_controller.dart';
 
 class ItemDetailScreen extends StatelessWidget {
@@ -47,7 +48,7 @@ class ItemDetailScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                       Text(
-                        item.sticking,
+                        controller.markedPatternTextFor(item.id),
                         style: Theme.of(context).textTheme.headlineMedium,
                       ),
                       const SizedBox(height: 8),
@@ -83,6 +84,26 @@ class ItemDetailScreen extends StatelessWidget {
                           ),
                         )
                         .toList(growable: false),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        'Accents & Ghosts',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 10),
+                      PatternMarkingEditor(
+                        controller: controller,
+                        itemId: item.id,
+                      ),
+                    ],
                   ),
                 ),
               ),

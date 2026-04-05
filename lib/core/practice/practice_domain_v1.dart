@@ -56,6 +56,8 @@ enum TriadMatrixFilterV1 {
   doubles,
 }
 
+enum PatternNoteMarkingV1 { normal, accent, ghost }
+
 /* -------------------------------------------------------------------------- */
 /* Value Objects                                                              */
 /* -------------------------------------------------------------------------- */
@@ -123,6 +125,9 @@ class PracticeItemV1 {
   /// Zero-based note indices that should be accented in the default guided view.
   final List<int> accentedNoteIndices;
 
+  /// Zero-based note indices that should be ghosted in the guided view.
+  final List<int> ghostNoteIndices;
+
   final PracticeItemSourceV1 source;
   final List<String> tags;
   final bool saved;
@@ -134,6 +139,7 @@ class PracticeItemV1 {
     required this.sticking,
     required this.noteCount,
     required this.accentedNoteIndices,
+    required this.ghostNoteIndices,
     required this.source,
     required this.tags,
     required this.saved,
@@ -144,6 +150,7 @@ class PracticeItemV1 {
   bool get isCustom => family == MaterialFamilyV1.custom;
   bool get isCombo => family == MaterialFamilyV1.combo;
   bool get hasAccents => accentedNoteIndices.isNotEmpty;
+  bool get hasGhostNotes => ghostNoteIndices.isNotEmpty;
 
   PracticeItemV1 copyWith({
     String? id,
@@ -152,6 +159,7 @@ class PracticeItemV1 {
     String? sticking,
     int? noteCount,
     List<int>? accentedNoteIndices,
+    List<int>? ghostNoteIndices,
     PracticeItemSourceV1? source,
     List<String>? tags,
     bool? saved,
@@ -163,6 +171,7 @@ class PracticeItemV1 {
       sticking: sticking ?? this.sticking,
       noteCount: noteCount ?? this.noteCount,
       accentedNoteIndices: accentedNoteIndices ?? this.accentedNoteIndices,
+      ghostNoteIndices: ghostNoteIndices ?? this.ghostNoteIndices,
       source: source ?? this.source,
       tags: tags ?? this.tags,
       saved: saved ?? this.saved,

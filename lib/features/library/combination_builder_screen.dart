@@ -24,7 +24,6 @@ class _CombinationBuilderScreenState extends State<CombinationBuilderScreen> {
   final List<String> _selectedItemIds = <String>[];
   final Set<String> _selectedRows = <String>{};
   final Set<String> _selectedColumns = <String>{};
-  ComboIntentTagV1 _intentTag = ComboIntentTagV1.coreSkills;
 
   @override
   void initState() {
@@ -50,38 +49,6 @@ class _CombinationBuilderScreenState extends State<CombinationBuilderScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: <Widget>[
-          DropdownButtonFormField<ComboIntentTagV1>(
-            initialValue: _intentTag,
-            decoration: const InputDecoration(
-              labelText: 'Intent Tag',
-              border: OutlineInputBorder(),
-            ),
-            items: ComboIntentTagV1.values
-                .map(
-                  (tag) => DropdownMenuItem<ComboIntentTagV1>(
-                    value: tag,
-                    child: Text(_labelForIntentTag(tag)),
-                  ),
-                )
-                .toList(growable: false),
-            onChanged: (ComboIntentTagV1? value) {
-              if (value == null) return;
-              setState(() => _intentTag = value);
-            },
-          ),
-          const SizedBox(height: 16),
-          TriadMatrixGrid(
-            controller: widget.controller,
-            filters: const <TriadMatrixFilterV1>{},
-            selectedComboIds: const <String>{},
-            selectedItemIds: _selectedItemIds,
-            selectedRows: _selectedRows,
-            selectedColumns: _selectedColumns,
-            onToggleRow: _toggleRow,
-            onToggleColumn: _toggleColumn,
-            onTapItem: _toggleItemSelection,
-          ),
-          const SizedBox(height: 16),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -89,42 +56,74 @@ class _CombinationBuilderScreenState extends State<CombinationBuilderScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Text(
-                    'Selected Sequence',
+                    'Combo',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 8),
-                  if (!hasSelection)
-                    const Text('Tap triads on the matrix to build a combo.')
-                  else
-                    ReorderableListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: _selectedItemIds.length,
-                      onReorder: _onReorder,
-                      itemBuilder: (BuildContext context, int index) {
+                  Text(
+                    hasSelection
+                        ? widget.controller.comboDisplayName(_selectedItemIds)
+                        : 'Tap triads on the matrix to build a combo.',
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  if (hasSelection) ...<Widget>[
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: List<Widget>.generate(_selectedItemIds.length, (
+                        index,
+                      ) {
                         final String itemId = _selectedItemIds[index];
                         final PracticeItemV1 item = widget.controller.itemById(
                           itemId,
                         );
-                        return ListTile(
-                          key: ValueKey<String>('selected_$itemId$index'),
-                          leading: CircleAvatar(
-                            radius: 14,
-                            child: Text('${index + 1}'),
-                          ),
-                          title: Text(item.name),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.close),
-                            onPressed: () {
-                              setState(() => _selectedItemIds.removeAt(index));
-                            },
-                          ),
+                        return InputChip(
+                          label: Text('${index + 1}. ${item.name}'),
+                          onDeleted: () {
+                            setState(() => _selectedItemIds.removeAt(index));
+                          },
                         );
-                      },
+                      }),
                     ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: <Widget>[
+                        OutlinedButton(
+                          onPressed: _selectedItemIds.isEmpty
+                              ? null
+                              : () {
+                                  setState(() => _selectedItemIds.removeLast());
+                                },
+                          child: const Text('Undo'),
+                        ),
+                        const SizedBox(width: 8),
+                        OutlinedButton(
+                          onPressed: _selectedItemIds.isEmpty
+                              ? null
+                              : () {
+                                  setState(() => _selectedItemIds.clear());
+                                },
+                          child: const Text('Clear'),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
+          ),
+          const SizedBox(height: 16),
+          TriadMatrixGrid(
+            controller: widget.controller,
+            filters: const <TriadMatrixFilterV1>{},
+            selectedComboIds: const <String>{},
+            selectedItemIds: const <String>[],
+            selectedRows: _selectedRows,
+            selectedColumns: _selectedColumns,
+            onToggleRow: _toggleRow,
+            onToggleColumn: _toggleColumn,
+            onTapItem: _toggleItemSelection,
           ),
           const SizedBox(height: 16),
           Row(
@@ -158,11 +157,7 @@ class _CombinationBuilderScreenState extends State<CombinationBuilderScreen> {
 
   void _toggleItemSelection(String itemId) {
     setState(() {
-      if (_selectedItemIds.contains(itemId)) {
-        _selectedItemIds.remove(itemId);
-      } else {
-        _selectedItemIds.add(itemId);
-      }
+      _selectedItemIds.add(itemId);
     });
   }
 
@@ -186,19 +181,11 @@ class _CombinationBuilderScreenState extends State<CombinationBuilderScreen> {
     });
   }
 
-  void _onReorder(int oldIndex, int newIndex) {
-    setState(() {
-      if (newIndex > oldIndex) newIndex -= 1;
-      final String item = _selectedItemIds.removeAt(oldIndex);
-      _selectedItemIds.insert(newIndex, item);
-    });
-  }
-
   void _saveCombo() {
     if (_selectedItemIds.length < 2) return;
     widget.controller.createCombination(
       itemIds: _selectedItemIds,
-      intentTag: _intentTag,
+      intentTag: ComboIntentTagV1.both,
     );
     Navigator.of(context).pop();
   }
@@ -228,7 +215,10 @@ class _CombinationBuilderScreenState extends State<CombinationBuilderScreen> {
     if (_selectedItemIds.isEmpty) return null;
     if (_selectedItemIds.length == 1) return _selectedItemIds.first;
     return widget.controller
-        .createCombination(itemIds: _selectedItemIds, intentTag: _intentTag)
+        .createCombination(
+          itemIds: _selectedItemIds,
+          intentTag: ComboIntentTagV1.both,
+        )
         .id;
   }
 
@@ -241,13 +231,5 @@ class _CombinationBuilderScreenState extends State<CombinationBuilderScreen> {
             .combinationForItemIdsOrNull(_selectedItemIds)
             ?.id ??
         'combo_${_selectedItemIds.join('_')}';
-  }
-
-  String _labelForIntentTag(ComboIntentTagV1 tag) {
-    return switch (tag) {
-      ComboIntentTagV1.coreSkills => 'Core Skills',
-      ComboIntentTagV1.flow => 'Flow',
-      ComboIntentTagV1.both => 'Both',
-    };
   }
 }

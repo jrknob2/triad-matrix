@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../../features/app/app_formatters.dart';
 import '../../state/app_controller.dart';
 import '../../core/practice/practice_domain_v1.dart';
+import 'widgets/pattern_marking_editor.dart';
 import 'session_summary_screen.dart';
 
 class PracticeSessionScreen extends StatefulWidget {
@@ -75,8 +76,14 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    currentItem.sticking,
+                    widget.controller.markedPatternTextFor(currentItemId),
                     style: Theme.of(context).textTheme.displaySmall,
+                  ),
+                  const SizedBox(height: 12),
+                  PatternMarkingEditor(
+                    controller: widget.controller,
+                    itemId: currentItemId,
+                    editable: false,
                   ),
                   if (widget.setup.intent == PracticeIntentV1.flow) ...<Widget>[
                     const SizedBox(height: 12),

@@ -196,6 +196,35 @@ class AppController extends ChangeNotifier {
   bool usesKick(String itemId) =>
       _normalizedSticking(itemById(itemId)).contains('K');
 
+  List<String> noteTokensFor(String itemId) {
+    return _normalizedSticking(itemById(itemId)).split('');
+  }
+
+  List<PatternNoteMarkingV1> noteMarkingsFor(String itemId) {
+    final PracticeItemV1 item = itemById(itemId);
+    final Set<int> accents = item.accentedNoteIndices.toSet();
+    final Set<int> ghosts = item.ghostNoteIndices.toSet();
+
+    return List<PatternNoteMarkingV1>.generate(item.noteCount, (index) {
+      if (ghosts.contains(index)) return PatternNoteMarkingV1.ghost;
+      if (accents.contains(index)) return PatternNoteMarkingV1.accent;
+      return PatternNoteMarkingV1.normal;
+    });
+  }
+
+  String markedPatternTextFor(String itemId) {
+    final List<String> tokens = noteTokensFor(itemId);
+    final List<PatternNoteMarkingV1> markings = noteMarkingsFor(itemId);
+    return List<String>.generate(tokens.length, (index) {
+      final String token = tokens[index];
+      return switch (markings[index]) {
+        PatternNoteMarkingV1.normal => token,
+        PatternNoteMarkingV1.accent => "$token'",
+        PatternNoteMarkingV1.ghost => '($token)',
+      };
+    }).join(' ');
+  }
+
   bool hasKick(String itemId) => usesKick(itemId);
 
   bool handsOnly(String itemId) => !usesKick(itemId);
@@ -369,6 +398,39 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setNoteMarking({
+    required String itemId,
+    required int noteIndex,
+    required PatternNoteMarkingV1 marking,
+  }) {
+    final PracticeItemV1 item = itemById(itemId);
+    if (noteIndex < 0 || noteIndex >= item.noteCount) return;
+
+    final Set<int> accents = item.accentedNoteIndices.toSet();
+    final Set<int> ghosts = item.ghostNoteIndices.toSet();
+
+    accents.remove(noteIndex);
+    ghosts.remove(noteIndex);
+
+    switch (marking) {
+      case PatternNoteMarkingV1.normal:
+        break;
+      case PatternNoteMarkingV1.accent:
+        accents.add(noteIndex);
+      case PatternNoteMarkingV1.ghost:
+        ghosts.add(noteIndex);
+    }
+
+    _items = _items.map((entry) {
+      if (entry.id != itemId) return entry;
+      return entry.copyWith(
+        accentedNoteIndices: accents.toList()..sort(),
+        ghostNoteIndices: ghosts.toList()..sort(),
+      );
+    }).toList(growable: false);
+    notifyListeners();
+  }
+
   PracticeItemV1 createCustomPattern({
     required String sticking,
     List<String> tags = const <String>[],
@@ -390,6 +452,7 @@ class AppController extends ChangeNotifier {
       sticking: canonicalName,
       noteCount: _estimateNoteCount(trimmedSticking),
       accentedNoteIndices: _defaultAccentIndicesForSticking(trimmedSticking),
+      ghostNoteIndices: const <int>[],
       source: PracticeItemSourceV1.userDefined,
       tags: tags.where((tag) => tag.trim().isNotEmpty).toList(growable: false),
       saved: true,
@@ -425,10 +488,12 @@ class AppController extends ChangeNotifier {
     );
 
     final List<int> accented = <int>[];
+    final List<int> ghosted = <int>[];
     int offset = 0;
     for (final String itemId in itemIds) {
       final PracticeItemV1 item = itemById(itemId);
       accented.addAll(item.accentedNoteIndices.map((index) => index + offset));
+      ghosted.addAll(item.ghostNoteIndices.map((index) => index + offset));
       offset += item.noteCount;
     }
 
@@ -439,6 +504,7 @@ class AppController extends ChangeNotifier {
       sticking: comboName,
       noteCount: noteCount,
       accentedNoteIndices: accented,
+      ghostNoteIndices: ghosted,
       source: PracticeItemSourceV1.userDefined,
       tags: <String>['combo', intentTag.name],
       saved: true,
@@ -701,6 +767,7 @@ class AppController extends ChangeNotifier {
             sticking: cell.id,
             noteCount: 3,
             accentedNoteIndices: _accentIndicesForTriadCell(cell),
+            ghostNoteIndices: const <int>[],
             source: PracticeItemSourceV1.builtIn,
             tags: _tagsForTriadCell(cell),
             saved: true,
@@ -717,6 +784,7 @@ class AppController extends ChangeNotifier {
         sticking: 'RLRLK',
         noteCount: 5,
         accentedNoteIndices: <int>[0],
+        ghostNoteIndices: const <int>[],
         source: PracticeItemSourceV1.builtIn,
         tags: <String>['5s', 'flow'],
         saved: true,
@@ -728,6 +796,7 @@ class AppController extends ChangeNotifier {
         sticking: 'RLLRL',
         noteCount: 5,
         accentedNoteIndices: <int>[0, 3],
+        ghostNoteIndices: <int>[1],
         source: PracticeItemSourceV1.builtIn,
         tags: <String>['5s', 'core'],
         saved: true,
@@ -739,6 +808,7 @@ class AppController extends ChangeNotifier {
         sticking: 'R K L R L',
         noteCount: 5,
         accentedNoteIndices: <int>[0, 3],
+        ghostNoteIndices: <int>[2],
         source: PracticeItemSourceV1.userDefined,
         tags: <String>['custom', 'linear'],
         saved: true,
@@ -750,6 +820,7 @@ class AppController extends ChangeNotifier {
         sticking: 'RLL-RRL',
         noteCount: 6,
         accentedNoteIndices: <int>[0, 3],
+        ghostNoteIndices: const <int>[],
         source: PracticeItemSourceV1.userDefined,
         tags: <String>['combo', 'core'],
         saved: true,
@@ -761,6 +832,7 @@ class AppController extends ChangeNotifier {
         sticking: 'LRR-LLR',
         noteCount: 6,
         accentedNoteIndices: <int>[0, 3],
+        ghostNoteIndices: const <int>[],
         source: PracticeItemSourceV1.userDefined,
         tags: <String>['combo', 'core'],
         saved: true,
@@ -772,6 +844,7 @@ class AppController extends ChangeNotifier {
         sticking: 'RLR-KRL',
         noteCount: 6,
         accentedNoteIndices: <int>[0, 3],
+        ghostNoteIndices: <int>[2, 5],
         source: PracticeItemSourceV1.userDefined,
         tags: <String>['combo', 'flow'],
         saved: true,
