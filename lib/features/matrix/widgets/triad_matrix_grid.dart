@@ -359,7 +359,9 @@ class _TriadCellButton extends StatelessWidget {
 
     if (filters.contains(TriadMatrixFilterV1.mirror)) {
       final String pairKey = _mirrorPairKey(itemId);
-      borderColor = _mirrorColor(pairKey);
+      final Color mirrorColor = _mirrorColor(pairKey);
+      backgroundColor = mirrorColor;
+      borderColor = mirrorColor;
       borderWidth = borderWidth < 3 ? 3 : borderWidth;
     }
 
@@ -379,13 +381,13 @@ class _TriadCellButton extends StatelessWidget {
 
   Color _mirrorColor(String pairKey) {
     const List<Color> colors = <Color>[
-      Color(0xFF2F6690),
-      Color(0xFF8C5E58),
-      Color(0xFF7A8B3E),
-      Color(0xFF6E5A9E),
-      Color(0xFF8C6A2D),
-      Color(0xFF3C7A68),
-      Color(0xFF9A4A33),
+      Color(0xFFB8D4E8),
+      Color(0xFFD8BBB3),
+      Color(0xFFD0DDB1),
+      Color(0xFFD4C7EA),
+      Color(0xFFE7D3A7),
+      Color(0xFFBFE0D2),
+      Color(0xFFE5B9AA),
     ];
     return colors[pairKey.hashCode.abs() % colors.length];
   }

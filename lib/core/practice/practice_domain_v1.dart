@@ -38,7 +38,7 @@ enum GrooveFrameV1 { fourFourSixteenthGrid }
 
 enum TriadMatrixViewModeV1 { competency, lead, handsOnly, weakHand }
 
-enum TriadMatrixFilterPaletteV1 { defaultView, coaching, technique, combos }
+enum TriadMatrixFilterPaletteV1 { coaching, technique, combos }
 
 enum TriadMatrixFilterV1 {
   competency,

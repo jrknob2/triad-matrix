@@ -22,7 +22,7 @@ class MatrixScreen extends StatefulWidget {
 }
 
 class _MatrixScreenState extends State<MatrixScreen> {
-  TriadMatrixFilterPaletteV1 _palette = TriadMatrixFilterPaletteV1.defaultView;
+  TriadMatrixFilterPaletteV1? _palette;
   final Set<TriadMatrixFilterV1> _filters = <TriadMatrixFilterV1>{};
   final Set<String> _selectedComboIds = <String>{};
   final Set<String> _selectedRows = <String>{};
@@ -64,15 +64,14 @@ class _MatrixScreenState extends State<MatrixScreen> {
                             child: ChoiceChip(
                               label: Text(palette.label),
                               selected: _palette == palette,
-                              onSelected: (_) => _setPalette(palette),
+                              onSelected: (_) => _togglePalette(palette),
                             ),
                           ),
                         )
                         .toList(growable: false),
                   ),
                 ),
-                if (_palette !=
-                    TriadMatrixFilterPaletteV1.defaultView) ...<Widget>[
+                if (_palette != null) ...<Widget>[
                   const SizedBox(height: 10),
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
@@ -152,7 +151,9 @@ class _MatrixScreenState extends State<MatrixScreen> {
           .toList(growable: false);
     }
 
-    return _paletteFilters(_palette)
+    if (_palette == null) return const <Widget>[];
+
+    return _paletteFilters(_palette!)
         .map((filter) {
           return Padding(
             padding: const EdgeInsets.only(right: 8),
@@ -178,7 +179,6 @@ class _MatrixScreenState extends State<MatrixScreen> {
     TriadMatrixFilterPaletteV1 palette,
   ) {
     return switch (palette) {
-      TriadMatrixFilterPaletteV1.defaultView => const <TriadMatrixFilterV1>[],
       TriadMatrixFilterPaletteV1.coaching => const <TriadMatrixFilterV1>[
         TriadMatrixFilterV1.competency,
         TriadMatrixFilterV1.inRoutine,
@@ -200,9 +200,9 @@ class _MatrixScreenState extends State<MatrixScreen> {
     };
   }
 
-  void _setPalette(TriadMatrixFilterPaletteV1 palette) {
+  void _togglePalette(TriadMatrixFilterPaletteV1 palette) {
     setState(() {
-      _palette = palette;
+      _palette = _palette == palette ? null : palette;
       _filters.clear();
       _selectedComboIds.clear();
     });

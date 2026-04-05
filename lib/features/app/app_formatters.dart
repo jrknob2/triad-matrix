@@ -112,7 +112,6 @@ extension TriadMatrixViewModeLabel on TriadMatrixViewModeV1 {
 
 extension TriadMatrixFilterPaletteLabel on TriadMatrixFilterPaletteV1 {
   String get label => switch (this) {
-    TriadMatrixFilterPaletteV1.defaultView => 'Default',
     TriadMatrixFilterPaletteV1.coaching => 'Coaching',
     TriadMatrixFilterPaletteV1.technique => 'Technique',
     TriadMatrixFilterPaletteV1.combos => 'Combos',
