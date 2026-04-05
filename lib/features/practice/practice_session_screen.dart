@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../features/app/app_formatters.dart';
 import '../../state/app_controller.dart';
@@ -23,7 +24,8 @@ class PracticeSessionScreen extends StatefulWidget {
 
 class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   final Stopwatch _stopwatch = Stopwatch();
-  Timer? _ticker;
+  Timer? _elapsedTicker;
+  Timer? _beatTicker;
   bool _running = false;
   late int _bpm;
   late bool _clickEnabled;
@@ -38,7 +40,8 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
 
   @override
   void dispose() {
-    _ticker?.cancel();
+    _elapsedTicker?.cancel();
+    _beatTicker?.cancel();
     super.dispose();
   }
 
@@ -62,7 +65,10 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Text(currentItem.name, style: Theme.of(context).textTheme.titleLarge),
+                  Text(
+                    currentItem.name,
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
                   const SizedBox(height: 8),
                   Text(
                     '${widget.setup.intent.label} · ${widget.setup.context.label}',
@@ -89,7 +95,10 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: <Widget>[
-                  Text(timerText, style: Theme.of(context).textTheme.headlineMedium),
+                  Text(
+                    timerText,
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  ),
                   const SizedBox(height: 12),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -119,15 +128,22 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                   Row(
                     children: <Widget>[
                       Expanded(
-                        child: Text('BPM', style: Theme.of(context).textTheme.titleMedium),
+                        child: Text(
+                          'BPM',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
                       ),
                       IconButton(
-                        onPressed: _bpm <= 30 ? null : () => setState(() => _bpm -= 1),
+                        onPressed: _bpm <= 30
+                            ? null
+                            : () => _updateBpm(_bpm - 1),
                         icon: const Icon(Icons.remove),
                       ),
                       Text('$_bpm'),
                       IconButton(
-                        onPressed: _bpm >= 260 ? null : () => setState(() => _bpm += 1),
+                        onPressed: _bpm >= 260
+                            ? null
+                            : () => _updateBpm(_bpm + 1),
                         icon: const Icon(Icons.add),
                       ),
                     ],
@@ -136,7 +152,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                     contentPadding: EdgeInsets.zero,
                     title: const Text('Click'),
                     value: _clickEnabled,
-                    onChanged: (bool value) => setState(() => _clickEnabled = value),
+                    onChanged: _updateClickEnabled,
                   ),
                 ],
               ),
@@ -163,7 +179,9 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                       ),
                     ),
                     IconButton(
-                      onPressed: _currentItemIndex == widget.setup.practiceItemIds.length - 1
+                      onPressed:
+                          _currentItemIndex ==
+                              widget.setup.practiceItemIds.length - 1
                           ? null
                           : () => setState(() => _currentItemIndex += 1),
                       icon: const Icon(Icons.chevron_right),
@@ -183,13 +201,13 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
       if (_running) {
         _running = false;
         _stopwatch.stop();
-        _ticker?.cancel();
+        _elapsedTicker?.cancel();
+        _beatTicker?.cancel();
       } else {
         _running = true;
         _stopwatch.start();
-        _ticker ??= Timer.periodic(const Duration(seconds: 1), (_) {
-          if (mounted) setState(() {});
-        });
+        _startElapsedTicker();
+        _restartBeatTicker();
       }
     });
   }
@@ -197,15 +215,13 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   void _endSession() {
     if (_running) {
       _stopwatch.stop();
-      _ticker?.cancel();
+      _elapsedTicker?.cancel();
+      _beatTicker?.cancel();
       _running = false;
     }
 
     final PracticeSessionLogV1 session = widget.controller.completeSession(
-      widget.setup.copyWith(
-        bpm: _bpm,
-        clickEnabled: _clickEnabled,
-      ),
+      widget.setup.copyWith(bpm: _bpm, clickEnabled: _clickEnabled),
       _stopwatch.elapsed,
     );
 
@@ -217,5 +233,41 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
         ),
       ),
     );
+  }
+
+  void _startElapsedTicker() {
+    _elapsedTicker?.cancel();
+    _elapsedTicker = Timer.periodic(const Duration(milliseconds: 250), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  void _restartBeatTicker() {
+    _beatTicker?.cancel();
+    if (!_running || !_clickEnabled) return;
+
+    final int intervalMs = (60000 / _bpm).round().clamp(120, 2000);
+    _playClick();
+    _beatTicker = Timer.periodic(Duration(milliseconds: intervalMs), (_) {
+      _playClick();
+    });
+  }
+
+  void _playClick() {
+    SystemSound.play(SystemSoundType.click);
+  }
+
+  void _updateBpm(int bpm) {
+    setState(() {
+      _bpm = bpm.clamp(30, 260);
+      _restartBeatTicker();
+    });
+  }
+
+  void _updateClickEnabled(bool value) {
+    setState(() {
+      _clickEnabled = value;
+      _restartBeatTicker();
+    });
   }
 }

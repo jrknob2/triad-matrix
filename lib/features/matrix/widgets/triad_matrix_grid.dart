@@ -8,24 +8,24 @@ class TriadMatrixGrid extends StatelessWidget {
   final AppController controller;
   final Set<TriadMatrixFilterV1> filters;
   final Set<String> selectedComboIds;
+  final List<String> selectedItemIds;
   final Set<String> selectedRows;
   final Set<String> selectedColumns;
   final ValueChanged<String> onToggleRow;
   final ValueChanged<String> onToggleColumn;
-  final ValueChanged<String> onOpenItem;
-  final ValueChanged<String> onPracticeItem;
+  final ValueChanged<String> onTapItem;
 
   const TriadMatrixGrid({
     super.key,
     required this.controller,
     required this.filters,
     required this.selectedComboIds,
+    this.selectedItemIds = const <String>[],
     required this.selectedRows,
     required this.selectedColumns,
     required this.onToggleRow,
     required this.onToggleColumn,
-    required this.onOpenItem,
-    required this.onPracticeItem,
+    required this.onTapItem,
   });
 
   @override
@@ -91,8 +91,10 @@ class TriadMatrixGrid extends StatelessWidget {
                         ),
                         rowFilterActive: selectedRows.isNotEmpty,
                         columnFilterActive: selectedColumns.isNotEmpty,
-                        onOpenItem: onOpenItem,
-                        onPracticeItem: onPracticeItem,
+                        selectionIndex: selectedItemIds.indexOf(
+                          controller.triadItemForCell(cell.id)!.id,
+                        ),
+                        onTapItem: onTapItem,
                       ),
                     ),
                 ],
@@ -152,8 +154,8 @@ class _TriadCellButton extends StatelessWidget {
   final bool columnSelected;
   final bool rowFilterActive;
   final bool columnFilterActive;
-  final ValueChanged<String> onOpenItem;
-  final ValueChanged<String> onPracticeItem;
+  final int selectionIndex;
+  final ValueChanged<String> onTapItem;
 
   const _TriadCellButton({
     required this.controller,
@@ -164,8 +166,8 @@ class _TriadCellButton extends StatelessWidget {
     required this.columnSelected,
     required this.rowFilterActive,
     required this.columnFilterActive,
-    required this.onOpenItem,
-    required this.onPracticeItem,
+    required this.selectionIndex,
+    required this.onTapItem,
   });
 
   @override
@@ -177,8 +179,7 @@ class _TriadCellButton extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
-        onTap: () => onOpenItem(itemId),
-        onLongPress: () => onPracticeItem(itemId),
+        onTap: () => onTapItem(itemId),
         child: Ink(
           height: 56,
           decoration: BoxDecoration(
@@ -189,15 +190,40 @@ class _TriadCellButton extends StatelessWidget {
               width: style.borderWidth,
             ),
           ),
-          child: Center(
-            child: Text(
-              cell.id,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: style.textColor,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0.1,
+          child: Stack(
+            children: <Widget>[
+              Center(
+                child: Text(
+                  cell.id,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: style.textColor,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.1,
+                  ),
+                ),
               ),
-            ),
+              if (selectionIndex >= 0)
+                Positioned(
+                  top: 6,
+                  right: 6,
+                  child: Container(
+                    width: 18,
+                    height: 18,
+                    alignment: Alignment.center,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF101010),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      '${selectionIndex + 1}',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
       ),

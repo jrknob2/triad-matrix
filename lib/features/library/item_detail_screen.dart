@@ -46,7 +46,10 @@ class ItemDetailScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Text(item.sticking, style: Theme.of(context).textTheme.headlineMedium),
+                      Text(
+                        item.sticking,
+                        style: Theme.of(context).textTheme.headlineMedium,
+                      ),
                       const SizedBox(height: 8),
                       Wrap(
                         spacing: 8,
@@ -68,7 +71,9 @@ class ItemDetailScreen extends StatelessWidget {
                   trailing: DropdownButton<CompetencyLevelV1>(
                     value: competency,
                     onChanged: (CompetencyLevelV1? next) {
-                      if (next != null) controller.updateCompetency(item.id, next);
+                      if (next != null) {
+                        controller.updateCompetency(item.id, next);
+                      }
                     },
                     items: CompetencyLevelV1.values
                         .map(
@@ -118,7 +123,7 @@ class ItemDetailScreen extends StatelessWidget {
               OutlinedButton(
                 onPressed: () => controller.toggleRoutineItem(item.id),
                 child: Text(
-                  controller.isInRoutine(item.id)
+                  controller.isDirectRoutineEntry(item.id)
                       ? 'Remove from Routine'
                       : 'Add to Routine',
                 ),

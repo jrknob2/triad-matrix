@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../core/practice/practice_domain_v1.dart';
-import '../app/app_formatters.dart';
 import '../../state/app_controller.dart';
+import '../matrix/widgets/triad_matrix_grid.dart';
+import '../practice/practice_setup_screen.dart';
 
 class CombinationBuilderScreen extends StatefulWidget {
   final AppController controller;
@@ -20,39 +21,35 @@ class CombinationBuilderScreen extends StatefulWidget {
 }
 
 class _CombinationBuilderScreenState extends State<CombinationBuilderScreen> {
-  final TextEditingController _nameController = TextEditingController();
   final List<String> _selectedItemIds = <String>[];
+  final Set<String> _selectedRows = <String>{};
+  final Set<String> _selectedColumns = <String>{};
   ComboIntentTagV1 _intentTag = ComboIntentTagV1.coreSkills;
 
   @override
   void initState() {
     super.initState();
-    _selectedItemIds.addAll(widget.initialItemIds);
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    super.dispose();
+    _selectedItemIds.addAll(
+      widget.initialItemIds.where(
+        (itemId) => widget.controller.itemById(itemId).isTriad,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final List<PracticeItemV1> sourceItems = widget.controller.sourceItemsForBuilder();
+    final bool hasSelection = _selectedItemIds.isNotEmpty;
+    final bool canSaveCombo = _selectedItemIds.length > 1;
+    final String? routineItemId = _routineStatusItemId();
+    final bool inRoutine =
+        routineItemId != null &&
+        widget.controller.isDirectRoutineEntry(routineItemId);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Build Combo')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: <Widget>[
-          TextField(
-            controller: _nameController,
-            decoration: const InputDecoration(
-              labelText: 'Combo Name',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 12),
           DropdownButtonFormField<ComboIntentTagV1>(
             initialValue: _intentTag,
             decoration: const InputDecoration(
@@ -73,17 +70,31 @@ class _CombinationBuilderScreenState extends State<CombinationBuilderScreen> {
             },
           ),
           const SizedBox(height: 16),
+          TriadMatrixGrid(
+            controller: widget.controller,
+            filters: const <TriadMatrixFilterV1>{},
+            selectedComboIds: const <String>{},
+            selectedItemIds: _selectedItemIds,
+            selectedRows: _selectedRows,
+            selectedColumns: _selectedColumns,
+            onToggleRow: _toggleRow,
+            onToggleColumn: _toggleColumn,
+            onTapItem: _toggleItemSelection,
+          ),
+          const SizedBox(height: 16),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Text('Selected Sequence',
-                      style: Theme.of(context).textTheme.titleMedium),
+                  Text(
+                    'Selected Sequence',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                   const SizedBox(height: 8),
-                  if (_selectedItemIds.isEmpty)
-                    const Text('Select source items below.')
+                  if (!hasSelection)
+                    const Text('Tap triads on the matrix to build a combo.')
                   else
                     ReorderableListView.builder(
                       shrinkWrap: true,
@@ -92,11 +103,16 @@ class _CombinationBuilderScreenState extends State<CombinationBuilderScreen> {
                       onReorder: _onReorder,
                       itemBuilder: (BuildContext context, int index) {
                         final String itemId = _selectedItemIds[index];
-                        final PracticeItemV1 item = widget.controller.itemById(itemId);
+                        final PracticeItemV1 item = widget.controller.itemById(
+                          itemId,
+                        );
                         return ListTile(
                           key: ValueKey<String>('selected_$itemId$index'),
+                          leading: CircleAvatar(
+                            radius: 14,
+                            child: Text('${index + 1}'),
+                          ),
                           title: Text(item.name),
-                          subtitle: Text(item.sticking),
                           trailing: IconButton(
                             icon: const Icon(Icons.close),
                             onPressed: () {
@@ -111,43 +127,63 @@ class _CombinationBuilderScreenState extends State<CombinationBuilderScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text('Source Items', style: Theme.of(context).textTheme.titleMedium),
-                  const SizedBox(height: 8),
-                  ...sourceItems.map(
-                    (item) => CheckboxListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(item.name),
-                      subtitle: Text('${item.family.label} · ${item.sticking}'),
-                      value: _selectedItemIds.contains(item.id),
-                      onChanged: (bool? checked) {
-                        setState(() {
-                          if (checked ?? false) {
-                            _selectedItemIds.add(item.id);
-                          } else {
-                            _selectedItemIds.remove(item.id);
-                          }
-                        });
-                      },
-                    ),
-                  ),
-                ],
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: hasSelection ? _practiceNow : null,
+                  child: const Text('Practice Now'),
+                ),
               ),
-            ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton.tonal(
+                  onPressed: hasSelection ? _toggleRoutine : null,
+                  child: Text(
+                    inRoutine ? 'Remove From Routine' : 'Add To Routine',
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           FilledButton(
-            onPressed: _selectedItemIds.isEmpty ? null : _saveCombo,
+            onPressed: canSaveCombo ? _saveCombo : null,
             child: const Text('Save Combo'),
           ),
         ],
       ),
     );
+  }
+
+  void _toggleItemSelection(String itemId) {
+    setState(() {
+      if (_selectedItemIds.contains(itemId)) {
+        _selectedItemIds.remove(itemId);
+      } else {
+        _selectedItemIds.add(itemId);
+      }
+    });
+  }
+
+  void _toggleRow(String rowLabel) {
+    setState(() {
+      if (_selectedRows.contains(rowLabel)) {
+        _selectedRows.remove(rowLabel);
+      } else {
+        _selectedRows.add(rowLabel);
+      }
+    });
+  }
+
+  void _toggleColumn(String columnLabel) {
+    setState(() {
+      if (_selectedColumns.contains(columnLabel)) {
+        _selectedColumns.remove(columnLabel);
+      } else {
+        _selectedColumns.add(columnLabel);
+      }
+    });
   }
 
   void _onReorder(int oldIndex, int newIndex) {
@@ -159,14 +195,52 @@ class _CombinationBuilderScreenState extends State<CombinationBuilderScreen> {
   }
 
   void _saveCombo() {
-    final String rawName = _nameController.text.trim();
-    final String name = rawName.isEmpty ? 'New Combo' : rawName;
+    if (_selectedItemIds.length < 2) return;
     widget.controller.createCombination(
-      name: name,
       itemIds: _selectedItemIds,
       intentTag: _intentTag,
     );
     Navigator.of(context).pop();
+  }
+
+  void _practiceNow() {
+    final String? itemId = _selectionActionItemId();
+    if (itemId == null) return;
+
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => PracticeSetupScreen(
+          controller: widget.controller,
+          initialItemId: itemId,
+        ),
+      ),
+    );
+  }
+
+  void _toggleRoutine() {
+    final String? itemId = _routineActionItemId();
+    if (itemId == null) return;
+    widget.controller.toggleRoutineItem(itemId);
+    setState(() {});
+  }
+
+  String? _selectionActionItemId() {
+    if (_selectedItemIds.isEmpty) return null;
+    if (_selectedItemIds.length == 1) return _selectedItemIds.first;
+    return widget.controller
+        .createCombination(itemIds: _selectedItemIds, intentTag: _intentTag)
+        .id;
+  }
+
+  String? _routineActionItemId() => _selectionActionItemId();
+
+  String? _routineStatusItemId() {
+    if (_selectedItemIds.isEmpty) return null;
+    if (_selectedItemIds.length == 1) return _selectedItemIds.first;
+    return widget.controller
+            .combinationForItemIdsOrNull(_selectedItemIds)
+            ?.id ??
+        'combo_${_selectedItemIds.join('_')}';
   }
 
   String _labelForIntentTag(ComboIntentTagV1 tag) {

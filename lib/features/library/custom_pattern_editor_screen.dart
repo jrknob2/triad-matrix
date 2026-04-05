@@ -5,10 +5,7 @@ import '../../state/app_controller.dart';
 class CustomPatternEditorScreen extends StatefulWidget {
   final AppController controller;
 
-  const CustomPatternEditorScreen({
-    super.key,
-    required this.controller,
-  });
+  const CustomPatternEditorScreen({super.key, required this.controller});
 
   @override
   State<CustomPatternEditorScreen> createState() =>
@@ -16,13 +13,11 @@ class CustomPatternEditorScreen extends StatefulWidget {
 }
 
 class _CustomPatternEditorScreenState extends State<CustomPatternEditorScreen> {
-  final TextEditingController _nameController = TextEditingController();
   final TextEditingController _stickingController = TextEditingController();
   final TextEditingController _tagsController = TextEditingController();
 
   @override
   void dispose() {
-    _nameController.dispose();
     _stickingController.dispose();
     _tagsController.dispose();
     super.dispose();
@@ -38,14 +33,6 @@ class _CustomPatternEditorScreenState extends State<CustomPatternEditorScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: <Widget>[
-          TextField(
-            controller: _nameController,
-            decoration: const InputDecoration(
-              labelText: 'Pattern Name',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 12),
           TextField(
             controller: _stickingController,
             maxLines: 3,
@@ -68,10 +55,10 @@ class _CustomPatternEditorScreenState extends State<CustomPatternEditorScreen> {
           const SizedBox(height: 12),
           Card(
             child: ListTile(
-              title: const Text('Validation'),
+              title: const Text('Pattern'),
               subtitle: Text(
                 valid
-                    ? 'Pattern is ready to save.'
+                    ? 'This sticking becomes the saved pattern name. Duplicate stickings collapse to one pattern.'
                     : 'Enter a sticking pattern to continue.',
               ),
             ),
@@ -87,9 +74,6 @@ class _CustomPatternEditorScreenState extends State<CustomPatternEditorScreen> {
   }
 
   void _save() {
-    final String name = _nameController.text.trim().isEmpty
-        ? 'Custom Pattern'
-        : _nameController.text.trim();
     final List<String> tags = _tagsController.text
         .split(',')
         .map((tag) => tag.trim())
@@ -97,7 +81,6 @@ class _CustomPatternEditorScreenState extends State<CustomPatternEditorScreen> {
         .toList(growable: false);
 
     widget.controller.createCustomPattern(
-      name: name,
       sticking: _stickingController.text.trim(),
       tags: tags,
     );

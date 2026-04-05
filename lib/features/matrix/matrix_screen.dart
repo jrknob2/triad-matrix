@@ -9,12 +9,14 @@ class MatrixScreen extends StatefulWidget {
   final AppController controller;
   final ValueChanged<String> onOpenItem;
   final ValueChanged<String> onPracticeItem;
+  final ValueChanged<String> onBuildComboFromItem;
 
   const MatrixScreen({
     super.key,
     required this.controller,
     required this.onOpenItem,
     required this.onPracticeItem,
+    required this.onBuildComboFromItem,
   });
 
   @override
@@ -89,12 +91,12 @@ class _MatrixScreenState extends State<MatrixScreen> {
                   controller: widget.controller,
                   filters: _filters,
                   selectedComboIds: _selectedComboIds,
+                  selectedItemIds: const <String>[],
                   selectedRows: _selectedRows,
                   selectedColumns: _selectedColumns,
                   onToggleRow: _toggleRow,
                   onToggleColumn: _toggleColumn,
-                  onOpenItem: widget.onOpenItem,
-                  onPracticeItem: widget.onPracticeItem,
+                  onTapItem: _showItemActions,
                 ),
               ),
             ),
@@ -206,5 +208,64 @@ class _MatrixScreenState extends State<MatrixScreen> {
       _filters.clear();
       _selectedComboIds.clear();
     });
+  }
+
+  Future<void> _showItemActions(String itemId) async {
+    final PracticeItemV1 item = widget.controller.itemById(itemId);
+    final bool inRoutine = widget.controller.isDirectRoutineEntry(itemId);
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              ListTile(
+                title: Text(item.name),
+                subtitle: const Text('Choose an action'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.play_arrow),
+                title: const Text('Practice Now'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  widget.onPracticeItem(itemId);
+                },
+              ),
+              ListTile(
+                leading: Icon(
+                  inRoutine
+                      ? Icons.remove_circle_outline
+                      : Icons.add_circle_outline,
+                ),
+                title: Text(
+                  inRoutine ? 'Remove From Routine' : 'Add To Routine',
+                ),
+                onTap: () {
+                  widget.controller.toggleRoutineItem(itemId);
+                  Navigator.of(context).pop();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.linear_scale),
+                title: const Text('Build Combo From This'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  widget.onBuildComboFromItem(itemId);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.open_in_new),
+                title: const Text('View Details'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  widget.onOpenItem(itemId);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }

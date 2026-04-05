@@ -150,6 +150,10 @@ class AppController extends ChangeNotifier {
     return _competencyByItemId[itemId]?.level ?? CompetencyLevelV1.notStarted;
   }
 
+  bool isDirectRoutineEntry(String itemId) {
+    return _routine.entries.any((entry) => entry.practiceItemId == itemId);
+  }
+
   bool isInRoutine(String itemId) {
     return _routine.entries.any((entry) {
       if (entry.practiceItemId == itemId) return true;
@@ -274,9 +278,20 @@ class AppController extends ChangeNotifier {
     return _combinations.firstWhere((combo) => combo.id == id);
   }
 
+  PracticeCombinationV1? combinationForItemIdsOrNull(List<String> itemIds) {
+    for (final PracticeCombinationV1 combo in _combinations) {
+      if (_sameOrderedItemIds(combo.itemIds, itemIds)) return combo;
+    }
+    return null;
+  }
+
   String matrixLabelForCombination(String comboId) {
     final PracticeCombinationV1 combo = combinationById(comboId);
-    return combo.itemIds.map((itemId) => itemById(itemId).name).join('-');
+    return comboDisplayName(combo.itemIds);
+  }
+
+  String comboDisplayName(List<String> itemIds) {
+    return itemIds.map((itemId) => itemById(itemId).name).join('-');
   }
 
   bool combinationContainsItem({
@@ -308,6 +323,14 @@ class AppController extends ChangeNotifier {
       if (combo.id == id) return combo;
     }
     return null;
+  }
+
+  bool _sameOrderedItemIds(List<String> a, List<String> b) {
+    if (a.length != b.length) return false;
+    for (int index = 0; index < a.length; index++) {
+      if (a[index] != b[index]) return false;
+    }
+    return true;
   }
 
   int weakHandNoteCount(String itemId) {
@@ -347,18 +370,24 @@ class AppController extends ChangeNotifier {
   }
 
   PracticeItemV1 createCustomPattern({
-    required String name,
     required String sticking,
     List<String> tags = const <String>[],
   }) {
-    final String trimmedName = name.trim();
     final String trimmedSticking = sticking.trim();
+    final String canonicalName = _canonicalPatternName(trimmedSticking);
+    final String signature = _patternSignature(trimmedSticking);
+
+    for (final PracticeItemV1 item in _items) {
+      if (item.isCustom && _patternSignature(item.sticking) == signature) {
+        return item;
+      }
+    }
 
     final PracticeItemV1 item = PracticeItemV1(
-      id: 'custom_${DateTime.now().microsecondsSinceEpoch}',
+      id: 'custom_${signature.toLowerCase()}',
       family: MaterialFamilyV1.custom,
-      name: trimmedName,
-      sticking: trimmedSticking,
+      name: canonicalName,
+      sticking: canonicalName,
       noteCount: _estimateNoteCount(trimmedSticking),
       accentedNoteIndices: _defaultAccentIndicesForSticking(trimmedSticking),
       source: PracticeItemSourceV1.userDefined,
@@ -372,18 +401,20 @@ class AppController extends ChangeNotifier {
   }
 
   PracticeCombinationV1 createCombination({
-    required String name,
     required List<String> itemIds,
     required ComboIntentTagV1 intentTag,
   }) {
-    final String id = 'combo_${DateTime.now().microsecondsSinceEpoch}';
-    final String sticking = itemIds
-        .map((itemId) => itemById(itemId).name)
-        .join(' → ');
+    final String id = 'combo_${itemIds.join('_')}';
+    final String comboName = comboDisplayName(itemIds);
+
+    final PracticeCombinationV1? existing = combinationForItemIdsOrNull(
+      itemIds,
+    );
+    if (existing != null) return existing;
 
     final PracticeCombinationV1 combo = PracticeCombinationV1(
       id: id,
-      name: name.trim(),
+      name: comboName,
       itemIds: List<String>.from(itemIds),
       intentTag: intentTag,
     );
@@ -404,8 +435,8 @@ class AppController extends ChangeNotifier {
     final PracticeItemV1 comboItem = PracticeItemV1(
       id: id,
       family: MaterialFamilyV1.combo,
-      name: name.trim(),
-      sticking: sticking,
+      name: comboName,
+      sticking: comboName,
       noteCount: noteCount,
       accentedNoteIndices: accented,
       source: PracticeItemSourceV1.userDefined,
@@ -420,7 +451,7 @@ class AppController extends ChangeNotifier {
   }
 
   void toggleRoutineItem(String itemId) {
-    final bool alreadyInRoutine = isInRoutine(itemId);
+    final bool alreadyInRoutine = isDirectRoutineEntry(itemId);
     if (alreadyInRoutine) {
       _routine = _routine.copyWith(
         entries: _routine.entries
@@ -610,6 +641,16 @@ class AppController extends ChangeNotifier {
     return item.sticking.replaceAll(RegExp(r'[^RLK]'), '');
   }
 
+  String _patternSignature(String sticking) {
+    return sticking.toUpperCase().replaceAll(RegExp(r'[^RLK]'), '');
+  }
+
+  String _canonicalPatternName(String sticking) {
+    final String signature = _patternSignature(sticking);
+    if (signature.isEmpty) return sticking.trim().toUpperCase();
+    return signature.split('').join(' ');
+  }
+
   int _estimateNoteCount(String sticking) {
     final List<String> tokens = sticking
         .split(RegExp(r'\s+'))
@@ -694,7 +735,7 @@ class AppController extends ChangeNotifier {
       const PracticeItemV1(
         id: 'custom_linear_break',
         family: MaterialFamilyV1.custom,
-        name: 'Linear Break',
+        name: 'R K L R L',
         sticking: 'R K L R L',
         noteCount: 5,
         accentedNoteIndices: <int>[0, 3],
@@ -705,8 +746,8 @@ class AppController extends ChangeNotifier {
       const PracticeItemV1(
         id: 'combo_double_builder',
         family: MaterialFamilyV1.combo,
-        name: 'Double Builder',
-        sticking: 'RLL → RRL',
+        name: 'RLL-RRL',
+        sticking: 'RLL-RRL',
         noteCount: 6,
         accentedNoteIndices: <int>[0, 3],
         source: PracticeItemSourceV1.userDefined,
@@ -716,8 +757,8 @@ class AppController extends ChangeNotifier {
       const PracticeItemV1(
         id: 'combo_mirror_builder',
         family: MaterialFamilyV1.combo,
-        name: 'Mirror Builder',
-        sticking: 'LRR → LLR',
+        name: 'LRR-LLR',
+        sticking: 'LRR-LLR',
         noteCount: 6,
         accentedNoteIndices: <int>[0, 3],
         source: PracticeItemSourceV1.userDefined,
@@ -727,8 +768,8 @@ class AppController extends ChangeNotifier {
       const PracticeItemV1(
         id: 'combo_split_flow',
         family: MaterialFamilyV1.combo,
-        name: 'Split Flow',
-        sticking: 'RLR → KRL',
+        name: 'RLR-KRL',
+        sticking: 'RLR-KRL',
         noteCount: 6,
         accentedNoteIndices: <int>[0, 3],
         source: PracticeItemSourceV1.userDefined,
@@ -740,19 +781,19 @@ class AppController extends ChangeNotifier {
     _combinations = const <PracticeCombinationV1>[
       PracticeCombinationV1(
         id: 'combo_double_builder',
-        name: 'Double Builder',
+        name: 'RLL-RRL',
         itemIds: <String>['triad_rll', 'triad_rrl'],
         intentTag: ComboIntentTagV1.coreSkills,
       ),
       PracticeCombinationV1(
         id: 'combo_mirror_builder',
-        name: 'Mirror Builder',
+        name: 'LRR-LLR',
         itemIds: <String>['triad_lrr', 'triad_llr'],
         intentTag: ComboIntentTagV1.coreSkills,
       ),
       PracticeCombinationV1(
         id: 'combo_split_flow',
-        name: 'Split Flow',
+        name: 'RLR-KRL',
         itemIds: <String>['triad_rlr', 'triad_krl'],
         intentTag: ComboIntentTagV1.flow,
       ),

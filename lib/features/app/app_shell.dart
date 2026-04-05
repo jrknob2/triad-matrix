@@ -14,10 +14,7 @@ import '../toolkit/toolkit_screen.dart';
 class AppShell extends StatefulWidget {
   final AppController controller;
 
-  const AppShell({
-    super.key,
-    required this.controller,
-  });
+  const AppShell({super.key, required this.controller});
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -39,6 +36,7 @@ class _AppShellState extends State<AppShell> {
         controller: widget.controller,
         onOpenItem: _openItemDetail,
         onPracticeItem: _openSetupForItem,
+        onBuildComboFromItem: _openCombinationBuilderFromItem,
       ),
       ToolkitScreen(
         controller: widget.controller,
@@ -71,10 +69,7 @@ class _AppShellState extends State<AppShell> {
           ),
         ],
       ),
-      body: IndexedStack(
-        index: _currentIndex,
-        children: tabs,
-      ),
+      body: IndexedStack(index: _currentIndex, children: tabs),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (int index) {
@@ -152,7 +147,8 @@ class _AppShellState extends State<AppShell> {
   void _openCustomPatternEditor() {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => CustomPatternEditorScreen(controller: widget.controller),
+        builder: (_) =>
+            CustomPatternEditorScreen(controller: widget.controller),
       ),
     );
   }
