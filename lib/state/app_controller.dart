@@ -219,7 +219,7 @@ class AppController extends ChangeNotifier {
       final String token = tokens[index];
       return switch (markings[index]) {
         PatternNoteMarkingV1.normal => token,
-        PatternNoteMarkingV1.accent => "$token'",
+        PatternNoteMarkingV1.accent => '^$token',
         PatternNoteMarkingV1.ghost => '($token)',
       };
     }).join(' ');

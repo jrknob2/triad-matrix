@@ -114,7 +114,10 @@ class _PracticeSetupScreenState extends State<PracticeSetupScreen> {
                   .map(
                     (item) => DropdownMenuItem<String>(
                       value: item.id,
-                      child: Text('${item.name} · ${item.sticking}'),
+                      child: Text(
+                        '${item.name} · ${item.sticking}',
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
                     ),
                   )
                   .toList(growable: false),

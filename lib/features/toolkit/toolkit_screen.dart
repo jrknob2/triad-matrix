@@ -174,12 +174,24 @@ class _ToolkitList extends StatelessWidget {
               child: ListTile(
                 contentPadding: const EdgeInsets.all(16),
                 title: Text(item.name),
-                subtitle: Text(
-                  '${controller.markedPatternTextFor(item.id)}\n'
-                  '${controller.competencyFor(item.id).label} · '
-                  '${formatDuration(controller.totalTime(itemId: item.id))}',
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    const SizedBox(height: 4),
+                    Text(
+                      controller.markedPatternTextFor(item.id),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${controller.competencyFor(item.id).label} · '
+                      '${formatDuration(controller.totalTime(itemId: item.id))}',
+                    ),
+                  ],
                 ),
-                isThreeLine: true,
                 trailing: trailingFor?.call(item),
                 onTap: () => onOpenItem(item.id),
                 onLongPress: () => onPracticeItem(item.id),

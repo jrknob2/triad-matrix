@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../core/practice/practice_domain_v1.dart';
 import '../../features/app/app_formatters.dart';
-import '../practice/widgets/pattern_marking_editor.dart';
 import '../../state/app_controller.dart';
+import '../practice/widgets/pattern_marking_editor.dart';
 
 class ItemDetailScreen extends StatelessWidget {
   final AppController controller;
@@ -49,16 +49,11 @@ class ItemDetailScreen extends StatelessWidget {
                     children: <Widget>[
                       Text(
                         controller.markedPatternTextFor(item.id),
-                        style: Theme.of(context).textTheme.headlineMedium,
-                      ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: <Widget>[
-                          Chip(label: Text(item.family.label)),
-                          ...item.tags.map((tag) => Chip(label: Text(tag))),
-                        ],
+                        style: Theme.of(context).textTheme.headlineMedium
+                            ?.copyWith(
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -0.8,
+                            ),
                       ),
                     ],
                   ),

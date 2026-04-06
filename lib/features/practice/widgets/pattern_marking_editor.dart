@@ -53,7 +53,7 @@ class PatternMarkingEditor extends StatelessWidget {
         const SizedBox(height: 10),
         Text(
           editable
-              ? "Tap notes to cycle Normal -> Accent (') -> Ghost (( ))."
+              ? 'Tap notes to cycle Normal -> Accent (^) -> Ghost (( )).'
               : "Accent notes use a tick mark. Ghost notes use parentheses.",
           style: Theme.of(context).textTheme.bodySmall,
         ),
@@ -64,7 +64,7 @@ class PatternMarkingEditor extends StatelessWidget {
   String _labelFor(String token, PatternNoteMarkingV1 marking) {
     return switch (marking) {
       PatternNoteMarkingV1.normal => token,
-      PatternNoteMarkingV1.accent => "$token'",
+      PatternNoteMarkingV1.accent => '^$token',
       PatternNoteMarkingV1.ghost => '($token)',
     };
   }

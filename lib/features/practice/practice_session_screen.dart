@@ -81,7 +81,10 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                   const SizedBox(height: 12),
                   Text(
                     widget.controller.markedPatternTextFor(currentItemId),
-                    style: Theme.of(context).textTheme.displaySmall,
+                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -1.0,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   PatternMarkingEditor(
