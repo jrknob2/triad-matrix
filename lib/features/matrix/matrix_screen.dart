@@ -35,6 +35,7 @@ class _MatrixScreenState extends State<MatrixScreen> {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
+    final bool showBuildHeader = _showBuildHeader;
 
     return DecoratedBox(
       decoration: const BoxDecoration(
@@ -54,29 +55,68 @@ class _MatrixScreenState extends State<MatrixScreen> {
             ),
           ),
           const SizedBox(height: 10),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: TriadMatrixFilterPaletteV1.values
-                  .map(
-                    (palette) => Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
-                        label: Text(palette.label),
-                        selected: _palette == palette,
-                        onSelected: (_) => _togglePalette(palette),
+          if (showBuildHeader) ...<Widget>[
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: SizedBox(
+                height: 38,
+                child: Row(
+                  children: <Widget>[
+                    if (_selectedItemIds.length == 1)
+                      PatternDisplayText(
+                        tokens: widget.controller.noteTokensFor(
+                          _selectedItemIds.first,
+                        ),
+                        markings: widget.controller.noteMarkingsFor(
+                          _selectedItemIds.first,
+                        ),
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.6,
+                        ),
+                      )
+                    else
+                      Text(
+                        _selectedLabel,
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.6,
+                        ),
                       ),
-                    ),
-                  )
-                  .toList(growable: false),
+                  ],
+                ),
+              ),
             ),
-          ),
-          if (_palette != null) ...<Widget>[
             const SizedBox(height: 10),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              child: Row(children: _buildPaletteFilters()),
+              child: Row(children: _buildActionPills()),
             ),
+          ] else ...<Widget>[
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: TriadMatrixFilterPaletteV1.values
+                    .map(
+                      (palette) => Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: Text(palette.label),
+                          selected: _palette == palette,
+                          onSelected: (_) => _togglePalette(palette),
+                        ),
+                      ),
+                    )
+                    .toList(growable: false),
+              ),
+            ),
+            if (_palette != null) ...<Widget>[
+              const SizedBox(height: 10),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(children: _buildPaletteFilters()),
+              ),
+            ],
           ],
           const SizedBox(height: 12),
           TriadMatrixGrid(
@@ -91,78 +131,6 @@ class _MatrixScreenState extends State<MatrixScreen> {
             onTapItem: _toggleItemSelection,
             onRemoveItem: _removeSelectedItem,
           ),
-          if (_selectedItemIds.isNotEmpty) ...<Widget>[
-            const SizedBox(height: 16),
-            SafeArea(
-              top: false,
-              child: Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      if (_selectedItemIds.length == 1)
-                        PatternDisplayText(
-                          tokens: widget.controller.noteTokensFor(
-                            _selectedItemIds.first,
-                          ),
-                          markings: widget.controller.noteMarkingsFor(
-                            _selectedItemIds.first,
-                          ),
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -0.6,
-                          ),
-                        )
-                      else
-                        Text(
-                          _selectedLabel,
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -0.6,
-                          ),
-                        ),
-                      const SizedBox(height: 12),
-                      FilledButton(
-                        onPressed: _practiceSelection,
-                        child: const Text('Practice Now'),
-                      ),
-                      const SizedBox(height: 8),
-                      OutlinedButton(
-                        onPressed: _buildComboFromSelection,
-                        child: const Text('Build Combo'),
-                      ),
-                      const SizedBox(height: 8),
-                      OutlinedButton(
-                        onPressed: _toggleRoutineSelection,
-                        child: Text(
-                          _selectionIsInRoutine
-                              ? 'Remove from Routine'
-                              : 'Add to Routine',
-                        ),
-                      ),
-                      if (_selectedItemIds.length == 1) ...<Widget>[
-                        const SizedBox(height: 8),
-                        OutlinedButton(
-                          onPressed: () =>
-                              widget.onOpenItem(_selectedItemIds.first),
-                          child: const Text('View Details'),
-                        ),
-                      ],
-                      const SizedBox(height: 8),
-                      TextButton(
-                        onPressed: () {
-                          setState(() => _selectedItemIds.clear());
-                        },
-                        child: const Text('Clear Selection'),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
         ],
       ),
     );
@@ -239,6 +207,60 @@ class _MatrixScreenState extends State<MatrixScreen> {
         .toList(growable: false);
   }
 
+  List<Widget> _buildActionPills() {
+    final List<Widget> pills = <Widget>[
+      Padding(
+        padding: const EdgeInsets.only(right: 8),
+        child: ActionChip(
+          label: const Text('Practice Now'),
+          onPressed: _practiceSelection,
+        ),
+      ),
+      Padding(
+        padding: const EdgeInsets.only(right: 8),
+        child: ActionChip(
+          label: const Text('Build Combo'),
+          onPressed: _buildComboFromSelection,
+        ),
+      ),
+      Padding(
+        padding: const EdgeInsets.only(right: 8),
+        child: ActionChip(
+          label: Text(
+            _selectionIsInRoutine ? 'Remove from Routine' : 'Add to Routine',
+          ),
+          onPressed: _toggleRoutineSelection,
+        ),
+      ),
+    ];
+
+    if (_selectedItemIds.length == 1) {
+      pills.add(
+        Padding(
+          padding: const EdgeInsets.only(right: 8),
+          child: ActionChip(
+            label: const Text('View Details'),
+            onPressed: () => widget.onOpenItem(_selectedItemIds.first),
+          ),
+        ),
+      );
+    }
+
+    pills.add(
+      Padding(
+        padding: const EdgeInsets.only(right: 8),
+        child: ActionChip(
+          label: const Text('Clear'),
+          onPressed: () {
+            setState(() => _selectedItemIds.clear());
+          },
+        ),
+      ),
+    );
+
+    return pills;
+  }
+
   List<TriadMatrixFilterV1> _paletteFilters(
     TriadMatrixFilterPaletteV1 palette,
   ) {
@@ -272,6 +294,17 @@ class _MatrixScreenState extends State<MatrixScreen> {
       _selectedComboIds.clear();
     });
   }
+
+  bool get _hasActiveFilters {
+    return _palette != null ||
+        _filters.isNotEmpty ||
+        _selectedComboIds.isNotEmpty ||
+        _selectedRows.isNotEmpty ||
+        _selectedColumns.isNotEmpty;
+  }
+
+  bool get _showBuildHeader =>
+      _selectedItemIds.isNotEmpty && !_hasActiveFilters;
 
   String get _selectedLabel {
     if (_selectedItemIds.length == 1) {
