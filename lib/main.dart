@@ -4,30 +4,21 @@ import 'features/app/app_shell.dart';
 import 'features/onboarding/onboarding_screen.dart';
 import 'state/app_controller.dart';
 
-void main() {
-  runApp(const TriadTrainerApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final AppController controller = await AppController.create();
+  runApp(TriadTrainerApp(controller: controller));
 }
 
-class TriadTrainerApp extends StatefulWidget {
-  const TriadTrainerApp({super.key});
+class TriadTrainerApp extends StatelessWidget {
+  final AppController controller;
 
-  @override
-  State<TriadTrainerApp> createState() => _TriadTrainerAppState();
-}
-
-class _TriadTrainerAppState extends State<TriadTrainerApp> {
-  late final AppController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AppController();
-  }
+  const TriadTrainerApp({super.key, required this.controller});
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: _controller,
+      animation: controller,
       builder: (BuildContext context, _) {
         return MaterialApp(
           title: 'Triad Trainer',
@@ -37,9 +28,9 @@ class _TriadTrainerAppState extends State<TriadTrainerApp> {
               seedColor: const Color(0xFF194B7A),
             ),
           ),
-          home: _controller.onboardingComplete
-              ? AppShell(controller: _controller)
-              : OnboardingScreen(controller: _controller),
+          home: controller.onboardingComplete
+              ? AppShell(controller: controller)
+              : OnboardingScreen(controller: controller),
         );
       },
     );

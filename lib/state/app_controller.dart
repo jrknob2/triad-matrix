@@ -1,12 +1,24 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../core/pattern/triad_matrix.dart';
 import '../core/practice/practice_domain_v1.dart';
 import '../features/app/app_formatters.dart';
+import 'persistence/app_state_store.dart';
 
 class AppController extends ChangeNotifier {
-  AppController() {
+  AppController._(this._store) {
     _initializeFirstLightState();
+  }
+
+  final AppStateStore _store;
+
+  static Future<AppController> create() async {
+    final AppStateStore store = await AppStateStore.open();
+    final AppController controller = AppController._(store);
+    await controller._restorePersistedState();
+    return controller;
   }
 
   late UserProfileV1 _profile;
@@ -36,6 +48,44 @@ class AppController extends ChangeNotifier {
       !hasCustomPatterns &&
       !hasActiveWork &&
       _competencyByItemId.isEmpty;
+
+  Future<void> _restorePersistedState() async {
+    final AppStateSnapshotData? snapshot = await _store.load();
+    if (snapshot == null) return;
+
+    _profile = snapshot.profile;
+    _items = snapshot.items;
+    _combinations = snapshot.combinations;
+    _routine = snapshot.routine;
+    _sessions = snapshot.sessions;
+    _competencyByItemId = <String, CompetencyRecordV1>{
+      for (final CompetencyRecordV1 record in snapshot.competencyRecords)
+        record.practiceItemId: record,
+    };
+    _onboardingComplete = snapshot.onboardingComplete;
+  }
+
+  void _notifyChanged({bool bumpResetVersion = false}) {
+    if (bumpResetVersion) {
+      _resetVersion += 1;
+    }
+    unawaited(_persistState());
+    notifyListeners();
+  }
+
+  Future<void> _persistState() async {
+    await _store.save(
+      AppStateSnapshotData(
+        onboardingComplete: _onboardingComplete,
+        profile: _profile,
+        items: _items,
+        combinations: _combinations,
+        routine: _routine,
+        sessions: _sessions,
+        competencyRecords: _competencyByItemId.values.toList(growable: false),
+      ),
+    );
+  }
 
   String get weakHandLabel =>
       _profile.handedness == HandednessV1.right ? 'Left' : 'Right';
@@ -945,20 +995,19 @@ class AppController extends ChangeNotifier {
 
   void updateProfile(UserProfileV1 next) {
     _profile = next;
-    notifyListeners();
+    _notifyChanged();
   }
 
   void completeOnboarding(UserProfileV1 profile) {
     _profile = profile;
     _onboardingComplete = true;
-    notifyListeners();
+    _notifyChanged();
   }
 
   void clearAppData() {
     _initializeFirstLightState();
     _onboardingComplete = false;
-    _resetVersion += 1;
-    notifyListeners();
+    _notifyChanged(bumpResetVersion: true);
   }
 
   void updateCompetency(String itemId, CompetencyLevelV1 level) {
@@ -967,7 +1016,7 @@ class AppController extends ChangeNotifier {
       level: level,
       updatedAt: DateTime.now(),
     );
-    notifyListeners();
+    _notifyChanged();
   }
 
   void setNoteMarking({
@@ -1008,7 +1057,7 @@ class AppController extends ChangeNotifier {
           );
         })
         .toList(growable: false);
-    notifyListeners();
+    _notifyChanged();
   }
 
   void setNoteVoice({
@@ -1034,7 +1083,7 @@ class AppController extends ChangeNotifier {
           return _sanitizedItem(entry.copyWith(voiceAssignments: voices));
         })
         .toList(growable: false);
-    notifyListeners();
+    _notifyChanged();
   }
 
   PracticeItemV1 createCustomPattern({
@@ -1066,7 +1115,7 @@ class AppController extends ChangeNotifier {
     );
 
     _items = <PracticeItemV1>[..._items, _sanitizedItem(item)];
-    notifyListeners();
+    _notifyChanged();
     return item;
   }
 
@@ -1120,7 +1169,7 @@ class AppController extends ChangeNotifier {
 
     _combinations = <PracticeCombinationV1>[combo, ..._combinations];
     _items = <PracticeItemV1>[..._items, comboItem];
-    notifyListeners();
+    _notifyChanged();
     return combo;
   }
 
@@ -1140,7 +1189,7 @@ class AppController extends ChangeNotifier {
         ],
       );
     }
-    notifyListeners();
+    _notifyChanged();
   }
 
   PracticeSessionSetupV1 buildSessionForItem(
@@ -1181,7 +1230,7 @@ class AppController extends ChangeNotifier {
     );
 
     _sessions = <PracticeSessionLogV1>[session, ..._sessions];
-    notifyListeners();
+    _notifyChanged();
     return session;
   }
 
@@ -1195,7 +1244,7 @@ class AppController extends ChangeNotifier {
           );
         })
         .toList(growable: false);
-    notifyListeners();
+    _notifyChanged();
   }
 
   String recentSummaryForItem(String itemId) {
