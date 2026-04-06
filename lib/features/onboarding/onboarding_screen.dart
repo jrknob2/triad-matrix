@@ -85,7 +85,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     const Spacer(),
                     FilledButton(
                       onPressed: _step == 2 ? _finish : _next,
-                      child: Text(_step == 2 ? 'Start Practicing' : 'Next'),
+                      child: Text(_step == 2 ? 'Begin First Session' : 'Next'),
                     ),
                   ],
                 ),

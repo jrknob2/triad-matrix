@@ -170,7 +170,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
         return AlertDialog(
           title: const Text('Clear App Data'),
           content: const Text(
-            'This resets the app to a first-light state. Practice history, routine, competency, combos, custom patterns, and settings will be cleared.',
+            'This resets the app to a first-light state. Practice history, working-on items, competency, saved phrases, custom patterns, and settings will be cleared. Built-in material stays available.',
           ),
           actions: <Widget>[
             TextButton(

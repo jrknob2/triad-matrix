@@ -98,6 +98,19 @@ class _RetentionView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (controller.isFirstLight) {
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        children: const <Widget>[
+          _FirstLightCard(
+            title: 'Retention',
+            detail:
+                'Progress starts once there is work to retain. Log a few sessions and this view will begin surfacing what is cold, what needs review, and what is holding.',
+          ),
+        ],
+      );
+    }
+
     final List<PracticeItemV1> neglected = controller.neglectedTrackedItems
         .take(4)
         .toList(growable: false);
@@ -163,6 +176,19 @@ class _BalanceView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (controller.isFirstLight) {
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        children: const <Widget>[
+          _FirstLightCard(
+            title: 'Balance',
+            detail:
+                'Lead-side balance appears after the first sessions are logged. Start with both leads early so this view has something meaningful to compare.',
+          ),
+        ],
+      );
+    }
+
     final Duration rightLeadTime = controller.leadTime(HandednessV1.right);
     final Duration leftLeadTime = controller.leadTime(HandednessV1.left);
     final HandednessV1 weakLead =
@@ -224,6 +250,39 @@ class _CoverageView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (controller.isFirstLight) {
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        children: <Widget>[
+          _MetricStrip(
+            metrics: <_MetricData>[
+              _MetricData(
+                title: 'Triads Ready',
+                value: '${controller.triadMatrixItems.length}',
+                note: 'Built-in matrix cells',
+              ),
+              _MetricData(
+                title: 'Hands Only',
+                value: '${controller.totalHandsOnlyTriadCount}',
+                note: 'Surface-first material',
+              ),
+              _MetricData(
+                title: 'Has Kick',
+                value: '${controller.totalKickTriadCount}',
+                note: 'Integration material',
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const _FirstLightCard(
+            title: 'Coverage',
+            detail:
+                'Coverage becomes meaningful after practice begins. At first light, the goal is not to touch everything. The goal is to start with a few clear cells and revisit them enough for them to settle in.',
+          ),
+        ],
+      );
+    }
+
     final List<PracticeItemV1> triads = controller
         .itemsNeedingPractice(MaterialFamilyV1.triad)
         .take(3)
@@ -290,6 +349,19 @@ class _ToolboxView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (controller.isFirstLight) {
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        children: const <Widget>[
+          _FirstLightCard(
+            title: 'Toolbox',
+            detail:
+                'Toolbox-ready material is earned. Once a phrase has enough time, reliability, and revisits behind it, it begins to appear here.',
+          ),
+        ],
+      );
+    }
+
     final List<PracticeItemV1> toolboxReady = controller.toolboxReadyItems
         .take(8)
         .toList(growable: false);
@@ -487,6 +559,30 @@ class _ProgressItemTile extends StatelessWidget {
               ),
             ),
             const Icon(Icons.chevron_right),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FirstLightCard extends StatelessWidget {
+  final String title;
+  final String detail;
+
+  const _FirstLightCard({required this.title, required this.detail});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(title, style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 8),
+            Text(detail, style: Theme.of(context).textTheme.bodyLarge),
           ],
         ),
       ),

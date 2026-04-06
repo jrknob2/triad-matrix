@@ -6,7 +6,7 @@ import '../features/app/app_formatters.dart';
 
 class AppController extends ChangeNotifier {
   AppController() {
-    _seed();
+    _initializeFirstLightState();
   }
 
   late UserProfileV1 _profile;
@@ -25,6 +25,17 @@ class AppController extends ChangeNotifier {
   PracticeRoutineV1 get routine => _routine;
   bool get onboardingComplete => _onboardingComplete;
   int get resetVersion => _resetVersion;
+  bool get hasLoggedPractice => _sessions.isNotEmpty;
+  bool get hasSavedPhraseWork => _combinations.isNotEmpty;
+  bool get hasCustomPatterns =>
+      _items.any((PracticeItemV1 item) => item.isCustom);
+  bool get hasActiveWork => _routine.entries.isNotEmpty;
+  bool get isFirstLight =>
+      !hasLoggedPractice &&
+      !hasSavedPhraseWork &&
+      !hasCustomPatterns &&
+      !hasActiveWork &&
+      _competencyByItemId.isEmpty;
 
   String get weakHandLabel =>
       _profile.handedness == HandednessV1.right ? 'Left' : 'Right';
@@ -89,6 +100,101 @@ class AppController extends ChangeNotifier {
   }
 
   TodayBriefingV1 buildTodayBriefing() {
+    if (!hasLoggedPractice) {
+      return TodayBriefingV1(
+        primaryLane: LearningLaneV1.control,
+        headline: 'Start with control.',
+        summary:
+            'Use one clear cell on one surface first. Build even sound and relaxed motion before you widen the phrase.',
+        laneRecommendations: <TodayLaneRecommendationV1>[
+          TodayLaneRecommendationV1(
+            lane: LearningLaneV1.control,
+            title: 'Control',
+            reason:
+                'Hands-only triads are the cleanest place to establish pulse, rebound, and sound.',
+            actionLabel: 'Practice',
+            itemIds: <String>[triadMatrixItems.first.id],
+            evidence: 'No practice logged yet',
+          ),
+          TodayLaneRecommendationV1(
+            lane: LearningLaneV1.balance,
+            title: 'Balance',
+            reason:
+                'Very early on, learn the phrase on both leads so the vocabulary does not become one-sided.',
+            actionLabel: 'Open Matrix',
+            itemIds: const <String>[],
+            evidence: '$weakHandLabel lead has not been worked yet',
+          ),
+          TodayLaneRecommendationV1(
+            lane: LearningLaneV1.dynamics,
+            title: 'Dynamics',
+            reason:
+                'Add accents and ghosts after the base sticking feels steady. Do not force dynamic shape too early.',
+            actionLabel: 'Open Matrix',
+            itemIds: const <String>[],
+            evidence: 'Start with plain strokes first',
+          ),
+          TodayLaneRecommendationV1(
+            lane: LearningLaneV1.integration,
+            title: 'Integration',
+            reason:
+                'Kick material comes after the hands are clear. Keep it in view, but do not start there.',
+            actionLabel: 'Open Matrix',
+            itemIds: const <String>[],
+            evidence: '$totalKickTriadCount kick-based triads available later',
+          ),
+          TodayLaneRecommendationV1(
+            lane: LearningLaneV1.phrasing,
+            title: 'Phrasing',
+            reason:
+                'Phrase work matters, but it should rest on a few stable cells first.',
+            actionLabel: 'Open Matrix',
+            itemIds: const <String>[],
+            evidence: 'Build phrases after core cells settle in',
+          ),
+          TodayLaneRecommendationV1(
+            lane: LearningLaneV1.flow,
+            title: 'Flow',
+            reason:
+                'Flow is where phrases move across voices on the kit. It comes after the phrase feels stable on one surface.',
+            actionLabel: 'Open Matrix',
+            itemIds: const <String>[],
+            evidence: 'Voice work starts once the phrase is under your hands',
+          ),
+        ],
+        momentumRecommendations: <TodayLaneRecommendationV1>[
+          TodayLaneRecommendationV1(
+            lane: LearningLaneV1.control,
+            title: 'First Step',
+            reason:
+                'Pick one hands-only triad, stay with it for a few minutes, then match it on the opposite lead.',
+            actionLabel: 'Practice',
+            itemIds: <String>[triadMatrixItems.first.id],
+            evidence: 'Built-in vocabulary is ready to use',
+          ),
+          TodayLaneRecommendationV1(
+            lane: LearningLaneV1.phrasing,
+            title: 'What Stays Built In',
+            reason:
+                'The app always keeps the core vocabulary. Resetting clears your work, not the built-in material.',
+            actionLabel: 'Open Matrix',
+            itemIds: const <String>[],
+            evidence:
+                '${triadMatrixItems.length} triads available from first light',
+          ),
+          TodayLaneRecommendationV1(
+            lane: LearningLaneV1.flow,
+            title: 'What Comes Later',
+            reason:
+                'Once a phrase is stable, take it into Flow and assign voices deliberately.',
+            actionLabel: 'Open Matrix',
+            itemIds: const <String>[],
+            evidence: 'Single-surface first, flow second',
+          ),
+        ],
+      );
+    }
+
     final List<TodayLaneRecommendationV1> lanes = <TodayLaneRecommendationV1>[
       _buildControlLane(),
       _buildBalanceLane(),
@@ -849,16 +955,7 @@ class AppController extends ChangeNotifier {
   }
 
   void clearAppData() {
-    _profile = UserProfileV1.initial;
-    _items = _basePracticeItems();
-    _combinations = const <PracticeCombinationV1>[];
-    _routine = const PracticeRoutineV1(
-      id: 'main_routine',
-      name: 'Working On',
-      entries: <RoutineEntryV1>[],
-    );
-    _sessions = const <PracticeSessionLogV1>[];
-    _competencyByItemId = <String, CompetencyRecordV1>{};
+    _initializeFirstLightState();
     _onboardingComplete = false;
     _resetVersion += 1;
     notifyListeners();
@@ -1286,7 +1383,7 @@ class AppController extends ChangeNotifier {
     return _defaultAccentIndicesForSticking(cell.id);
   }
 
-  void _seed() {
+  void _initializeFirstLightState() {
     _profile = UserProfileV1.initial;
     _items = _basePracticeItems();
     _combinations = const <PracticeCombinationV1>[];

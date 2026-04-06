@@ -162,7 +162,9 @@ class _FocusSummary extends StatelessWidget {
             const SizedBox(height: 14),
             if (toolboxReady.isEmpty)
               Text(
-                'Nothing is close to toolbox-ready yet. Stay with consistency and revisit the same few phrases.',
+                controller.isFirstLight
+                    ? 'You are at first light. Start with a few stable cells, then let the toolbox grow from repeated use.'
+                    : 'Nothing is close to toolbox-ready yet. Stay with consistency and revisit the same few phrases.',
                 style: Theme.of(context).textTheme.bodyMedium,
               )
             else ...<Widget>[
@@ -298,11 +300,13 @@ class _FocusList extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         if (items.isEmpty)
-          const Card(
+          Card(
             child: Padding(
-              padding: EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
               child: Text(
-                'Nothing here yet. Add material from the matrix or save a custom phrase for later.',
+                controller.isFirstLight
+                    ? 'Nothing is in this section yet. Build a phrase from the matrix or start practicing and let this area fill in from real work.'
+                    : 'Nothing here yet. Add material from the matrix or save a custom phrase for later.',
               ),
             ),
           )
