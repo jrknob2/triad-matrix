@@ -4,12 +4,7 @@ import '../../core/practice/practice_domain_v1.dart';
 import '../../features/app/app_formatters.dart';
 import '../../state/app_controller.dart';
 
-enum _ProgressSection {
-  competency,
-  time,
-  coverage,
-  contexts,
-}
+enum _ProgressSection { competency, time, coverage }
 
 class ProgressScreen extends StatefulWidget {
   final AppController controller;
@@ -51,10 +46,6 @@ class _ProgressScreenState extends State<ProgressScreen> {
                     value: _ProgressSection.coverage,
                     label: Text('Coverage'),
                   ),
-                  ButtonSegment(
-                    value: _ProgressSection.contexts,
-                    label: Text('Contexts'),
-                  ),
                 ],
                 selected: <_ProgressSection>{_section},
                 onSelectionChanged: (Set<_ProgressSection> next) {
@@ -72,15 +63,14 @@ class _ProgressScreenState extends State<ProgressScreen> {
   Widget _buildSection(BuildContext context) {
     return switch (_section) {
       _ProgressSection.competency => _CompetencyView(
-          controller: widget.controller,
-          onOpenItem: widget.onOpenItem,
-        ),
+        controller: widget.controller,
+        onOpenItem: widget.onOpenItem,
+      ),
       _ProgressSection.time => _TimeView(controller: widget.controller),
       _ProgressSection.coverage => _CoverageView(
-          controller: widget.controller,
-          onOpenItem: widget.onOpenItem,
-        ),
-      _ProgressSection.contexts => _ContextsView(controller: widget.controller),
+        controller: widget.controller,
+        onOpenItem: widget.onOpenItem,
+      ),
     };
   }
 }
@@ -89,34 +79,23 @@ class _CompetencyView extends StatelessWidget {
   final AppController controller;
   final ValueChanged<String> onOpenItem;
 
-  const _CompetencyView({
-    required this.controller,
-    required this.onOpenItem,
-  });
+  const _CompetencyView({required this.controller, required this.onOpenItem});
 
   @override
   Widget build(BuildContext context) {
     final items = controller.items.toList()
-      ..sort((a, b) => controller
-          .competencyFor(a.id)
-          .index
-          .compareTo(controller.competencyFor(b.id).index));
+      ..sort(
+        (a, b) => controller
+            .competencyFor(a.id)
+            .index
+            .compareTo(controller.competencyFor(b.id).index),
+      );
 
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-      itemCount: items.length + 1,
+      itemCount: items.length,
       itemBuilder: (BuildContext context, int index) {
-        if (index == 0) {
-          return Card(
-            margin: const EdgeInsets.only(bottom: 12),
-            child: ListTile(
-              title: const Text('Overall Player Level'),
-              subtitle: Text(controller.profile.selfRank.label),
-            ),
-          );
-        }
-
-        final item = items[index - 1];
+        final item = items[index];
         return Card(
           margin: const EdgeInsets.only(bottom: 10),
           child: ListTile(
@@ -149,19 +128,27 @@ class _TimeView extends StatelessWidget {
         ),
         _TimeCard(
           title: 'Triads',
-          value: formatDuration(controller.totalTime(family: MaterialFamilyV1.triad)),
+          value: formatDuration(
+            controller.totalTime(family: MaterialFamilyV1.triad),
+          ),
         ),
         _TimeCard(
           title: '5-Note Groupings',
-          value: formatDuration(controller.totalTime(family: MaterialFamilyV1.fiveNote)),
+          value: formatDuration(
+            controller.totalTime(family: MaterialFamilyV1.fiveNote),
+          ),
         ),
         _TimeCard(
           title: 'Custom',
-          value: formatDuration(controller.totalTime(family: MaterialFamilyV1.custom)),
+          value: formatDuration(
+            controller.totalTime(family: MaterialFamilyV1.custom),
+          ),
         ),
         _TimeCard(
           title: 'Combos',
-          value: formatDuration(controller.totalTime(family: MaterialFamilyV1.combo)),
+          value: formatDuration(
+            controller.totalTime(family: MaterialFamilyV1.combo),
+          ),
         ),
       ],
     );
@@ -172,16 +159,18 @@ class _CoverageView extends StatelessWidget {
   final AppController controller;
   final ValueChanged<String> onOpenItem;
 
-  const _CoverageView({
-    required this.controller,
-    required this.onOpenItem,
-  });
+  const _CoverageView({required this.controller, required this.onOpenItem});
 
   @override
   Widget build(BuildContext context) {
-    final triads = controller.itemsNeedingPractice(MaterialFamilyV1.triad).take(3).toList();
-    final fives =
-        controller.itemsNeedingPractice(MaterialFamilyV1.fiveNote).take(3).toList();
+    final triads = controller
+        .itemsNeedingPractice(MaterialFamilyV1.triad)
+        .take(3)
+        .toList();
+    final fives = controller
+        .itemsNeedingPractice(MaterialFamilyV1.fiveNote)
+        .take(3)
+        .toList();
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
@@ -204,62 +193,17 @@ class _CoverageView extends StatelessWidget {
   }
 }
 
-class _ContextsView extends StatelessWidget {
-  final AppController controller;
-
-  const _ContextsView({required this.controller});
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-      children: <Widget>[
-        _TimeCard(
-          title: 'Single Surface',
-          value: formatDuration(
-            controller.totalTime(context: PracticeContextV1.singleSurface),
-          ),
-        ),
-        _TimeCard(
-          title: 'Kit',
-          value: formatDuration(
-            controller.totalTime(context: PracticeContextV1.kit),
-          ),
-        ),
-        _TimeCard(
-          title: 'Core Skills',
-          value: formatDuration(
-            controller.totalTime(intent: PracticeIntentV1.coreSkills),
-          ),
-        ),
-        _TimeCard(
-          title: 'Flow',
-          value: formatDuration(
-            controller.totalTime(intent: PracticeIntentV1.flow),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _TimeCard extends StatelessWidget {
   final String title;
   final String value;
 
-  const _TimeCard({
-    required this.title,
-    required this.value,
-  });
+  const _TimeCard({required this.title, required this.value});
 
   @override
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
-      child: ListTile(
-        title: Text(title),
-        trailing: Text(value),
-      ),
+      child: ListTile(title: Text(title), trailing: Text(value)),
     );
   }
 }

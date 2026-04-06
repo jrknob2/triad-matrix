@@ -174,20 +174,25 @@ class AppController extends ChangeNotifier {
     return null;
   }
 
-  Duration totalTime({
-    String? itemId,
-    MaterialFamilyV1? family,
-    PracticeContextV1? context,
-    PracticeIntentV1? intent,
-  }) {
+  Duration totalTime({String? itemId, MaterialFamilyV1? family}) {
     Duration total = Duration.zero;
 
     for (final PracticeSessionLogV1 session in _sessions) {
       if (itemId != null && !_sessionContainsItem(session, itemId)) continue;
       if (family != null && session.family != family) continue;
-      if (context != null && session.context != context) continue;
-      if (intent != null && session.intent != intent) continue;
       total += session.duration;
+    }
+
+    return total;
+  }
+
+  int sessionCount({String? itemId, MaterialFamilyV1? family}) {
+    int total = 0;
+
+    for (final PracticeSessionLogV1 session in _sessions) {
+      if (itemId != null && !_sessionContainsItem(session, itemId)) continue;
+      if (family != null && session.family != family) continue;
+      total += 1;
     }
 
     return total;
@@ -557,39 +562,18 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
-  PracticeSessionSetupV1 buildGeneratedSetup({
-    required MaterialFamilyV1 family,
-    required PracticeIntentV1 intent,
-    required PracticeContextV1 context,
-    required int bpm,
-    required TimerPresetV1 timerPreset,
-    required bool clickEnabled,
-    GeneratorOptionsV1? generatorOptions,
+  PracticeSessionSetupV1 buildSessionForItem(
+    String itemId, {
+    String? routineId,
   }) {
-    final GeneratorOptionsV1 options =
-        generatorOptions ?? GeneratorOptionsV1.defaults;
-
-    final List<PracticeItemV1> candidates = _generatedCandidates(
-      family: family,
-      options: options,
-    );
-
-    final List<String> itemIds = candidates
-        .take(options.itemCount.clamp(1, candidates.length))
-        .map((item) => item.id)
-        .toList(growable: false);
-
+    final PracticeItemV1 item = itemById(itemId);
     return PracticeSessionSetupV1(
-      practiceItemIds: itemIds,
-      family: family,
-      intent: intent,
-      context: context,
-      bpm: bpm,
-      timerPreset: timerPreset,
-      clickEnabled: clickEnabled,
-      generated: true,
-      generatorOptions: options,
-      routineId: null,
+      practiceItemIds: <String>[itemId],
+      family: item.family,
+      bpm: _profile.defaultBpm,
+      timerPreset: _profile.defaultTimerPreset,
+      clickEnabled: _profile.clickEnabledByDefault,
+      routineId: routineId,
     );
   }
 
@@ -606,8 +590,6 @@ class AppController extends ChangeNotifier {
       duration: duration,
       practiceItemIds: setup.practiceItemIds,
       family: setup.family,
-      intent: setup.intent,
-      context: setup.context,
       bpm: setup.bpm,
       clickEnabled: setup.clickEnabled,
       routineId: setup.routineId,
@@ -636,46 +618,6 @@ class AppController extends ChangeNotifier {
     final PracticeSessionLogV1? session = lastSessionForItem(itemId);
     if (session == null) return 'No sessions yet';
     return '${formatShortDate(session.endedAt)} · ${formatDuration(session.duration)}';
-  }
-
-  List<PracticeItemV1> _generatedCandidates({
-    required MaterialFamilyV1 family,
-    required GeneratorOptionsV1 options,
-  }) {
-    List<PracticeItemV1> base = itemsByFamily(family);
-
-    if (options.preferRoutineItems) {
-      final List<PracticeItemV1> routineFiltered = routineItems
-          .where((item) => item.family == family)
-          .toList(growable: false);
-      if (routineFiltered.isNotEmpty) base = routineFiltered;
-    }
-
-    if (base.isEmpty) return items.take(1).toList(growable: false);
-
-    base.sort((a, b) {
-      if (options.focusWeakItems) {
-        final bool aWeak = _isWeakHandLead(a);
-        final bool bWeak = _isWeakHandLead(b);
-        if (aWeak != bWeak) return aWeak ? -1 : 1;
-      }
-
-      if (options.focusUnderPracticedItems || !options.focusWeakItems) {
-        final int timeCompare = totalTime(
-          itemId: a.id,
-        ).compareTo(totalTime(itemId: b.id));
-        if (timeCompare != 0) return timeCompare;
-      }
-
-      final int competencyCompare = _competencyScore(
-        competencyFor(a.id),
-      ).compareTo(_competencyScore(competencyFor(b.id)));
-      if (competencyCompare != 0) return competencyCompare;
-
-      return a.name.compareTo(b.name);
-    });
-
-    return base;
   }
 
   int _compareByNeed(PracticeItemV1 a, PracticeItemV1 b) {
@@ -896,8 +838,6 @@ class AppController extends ChangeNotifier {
         duration: const Duration(minutes: 18),
         practiceItemIds: const <String>['triad_rll'],
         family: MaterialFamilyV1.triad,
-        intent: PracticeIntentV1.coreSkills,
-        context: PracticeContextV1.singleSurface,
         bpm: 84,
         clickEnabled: true,
         routineId: 'main_routine',
@@ -912,8 +852,6 @@ class AppController extends ChangeNotifier {
         duration: const Duration(minutes: 16),
         practiceItemIds: const <String>['triad_llr'],
         family: MaterialFamilyV1.triad,
-        intent: PracticeIntentV1.coreSkills,
-        context: PracticeContextV1.singleSurface,
         bpm: 78,
         clickEnabled: true,
         routineId: 'main_routine',
@@ -928,8 +866,6 @@ class AppController extends ChangeNotifier {
         duration: const Duration(minutes: 12),
         practiceItemIds: const <String>['combo_double_builder'],
         family: MaterialFamilyV1.combo,
-        intent: PracticeIntentV1.coreSkills,
-        context: PracticeContextV1.singleSurface,
         bpm: 92,
         clickEnabled: true,
         routineId: 'main_routine',
@@ -944,8 +880,6 @@ class AppController extends ChangeNotifier {
         duration: const Duration(minutes: 10),
         practiceItemIds: const <String>['combo_mirror_builder'],
         family: MaterialFamilyV1.combo,
-        intent: PracticeIntentV1.coreSkills,
-        context: PracticeContextV1.singleSurface,
         bpm: 88,
         clickEnabled: true,
         routineId: 'main_routine',
@@ -958,8 +892,6 @@ class AppController extends ChangeNotifier {
         duration: const Duration(minutes: 9),
         practiceItemIds: const <String>['five_rlrlk'],
         family: MaterialFamilyV1.fiveNote,
-        intent: PracticeIntentV1.flow,
-        context: PracticeContextV1.kit,
         bpm: 100,
         clickEnabled: true,
         routineId: 'main_routine',
@@ -974,8 +906,6 @@ class AppController extends ChangeNotifier {
         duration: const Duration(minutes: 11),
         practiceItemIds: const <String>['triad_rlr'],
         family: MaterialFamilyV1.triad,
-        intent: PracticeIntentV1.flow,
-        context: PracticeContextV1.kit,
         bpm: 96,
         clickEnabled: true,
         routineId: null,
@@ -990,8 +920,6 @@ class AppController extends ChangeNotifier {
         duration: const Duration(minutes: 13),
         practiceItemIds: const <String>['combo_split_flow'],
         family: MaterialFamilyV1.combo,
-        intent: PracticeIntentV1.flow,
-        context: PracticeContextV1.kit,
         bpm: 98,
         clickEnabled: true,
         routineId: null,
@@ -1006,8 +934,6 @@ class AppController extends ChangeNotifier {
         duration: const Duration(minutes: 14),
         practiceItemIds: const <String>['custom_linear_break'],
         family: MaterialFamilyV1.custom,
-        intent: PracticeIntentV1.flow,
-        context: PracticeContextV1.kit,
         bpm: 88,
         clickEnabled: false,
         routineId: null,

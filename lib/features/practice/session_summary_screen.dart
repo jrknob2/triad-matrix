@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/practice/practice_domain_v1.dart';
 import '../../features/app/app_formatters.dart';
 import '../../state/app_controller.dart';
-import 'practice_setup_screen.dart';
+import 'practice_session_screen.dart';
 
 class SessionSummaryScreen extends StatefulWidget {
   final AppController controller;
@@ -26,11 +26,12 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
   Widget build(BuildContext context) {
     final session = widget.controller.sessionById(widget.sessionId);
     if (session == null) {
-      return const Scaffold(
-        body: Center(child: Text('Session not found.')),
-      );
+      return const Scaffold(body: Center(child: Text('Session not found.')));
     }
 
+    final String sessionTitle = session.practiceItemIds.length == 1
+        ? widget.controller.itemById(session.practiceItemIds.first).name
+        : widget.controller.comboDisplayName(session.practiceItemIds);
     final firstItem = widget.controller.itemById(session.practiceItemIds.first);
 
     return Scaffold(
@@ -44,11 +45,12 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Text(firstItem.name, style: Theme.of(context).textTheme.titleLarge),
-                  const SizedBox(height: 8),
                   Text(
-                    '${session.family.label} · ${session.intent.label} · ${session.context.label}',
+                    sessionTitle,
+                    style: Theme.of(context).textTheme.titleLarge,
                   ),
+                  const SizedBox(height: 8),
+                  Text(session.family.label),
                   const SizedBox(height: 12),
                   Text('Duration: ${formatDuration(session.duration)}'),
                   Text('BPM: ${session.bpm}'),
@@ -64,7 +66,10 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Text('Reflection', style: Theme.of(context).textTheme.titleMedium),
+                  Text(
+                    'Reflection',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
@@ -75,7 +80,10 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                             selected: _reflection == rating,
                             onSelected: (_) {
                               setState(() => _reflection = rating);
-                              widget.controller.updateSessionReflection(session.id, rating);
+                              widget.controller.updateSessionReflection(
+                                session.id,
+                                rating,
+                              );
                             },
                           ),
                         )
@@ -103,9 +111,9 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
             onPressed: () {
               Navigator.of(context).pushReplacement(
                 MaterialPageRoute<void>(
-                  builder: (_) => PracticeSetupScreen(
+                  builder: (_) => PracticeSessionScreen(
                     controller: widget.controller,
-                    initialItemId: firstItem.id,
+                    setup: widget.controller.buildSessionForItem(firstItem.id),
                   ),
                 ),
               );

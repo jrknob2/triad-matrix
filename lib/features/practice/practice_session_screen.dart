@@ -74,10 +74,6 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                     currentItem.name,
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '${widget.setup.intent.label} · ${widget.setup.context.label}',
-                  ),
                   const SizedBox(height: 12),
                   Text(
                     widget.controller.markedPatternTextFor(currentItemId),

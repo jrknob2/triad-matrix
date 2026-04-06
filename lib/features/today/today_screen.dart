@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../core/practice/practice_domain_v1.dart';
 import '../../features/app/app_formatters.dart';
 import '../../state/app_controller.dart';
 
@@ -57,26 +56,25 @@ class TodayScreen extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               _TodaySection(
-                title: 'Context Split',
+                title: 'At a Glance',
                 child: Wrap(
                   spacing: 12,
                   runSpacing: 12,
                   children: <Widget>[
                     _ContextTile(
-                      title: 'Single Surface',
-                      value: formatDuration(
-                        controller.totalTime(
-                          context: PracticeContextV1.singleSurface,
-                        ),
-                      ),
-                      note: 'Control, accents, weak-hand work',
+                      title: 'Total Time',
+                      value: formatDuration(controller.totalTime()),
+                      note: 'All logged practice in the app',
                     ),
                     _ContextTile(
-                      title: 'Kit Flow',
-                      value: formatDuration(
-                        controller.totalTime(context: PracticeContextV1.kit),
-                      ),
-                      note: 'Movement, landing, phrasing',
+                      title: 'Routine',
+                      value: '${controller.routine.entries.length}',
+                      note: 'Items in current focus',
+                    ),
+                    _ContextTile(
+                      title: 'Sessions',
+                      value: '${controller.recentSessions.length}',
+                      note: 'Logged sessions so far',
                     ),
                   ],
                 ),

@@ -5,7 +5,7 @@ import '../matrix/matrix_screen.dart';
 import '../library/combination_builder_screen.dart';
 import '../library/custom_pattern_editor_screen.dart';
 import '../library/item_detail_screen.dart';
-import '../practice/practice_setup_screen.dart';
+import '../practice/practice_session_screen.dart';
 import '../progress/progress_screen.dart';
 import '../settings/app_settings_screen.dart';
 import '../today/today_screen.dart';
@@ -30,18 +30,18 @@ class _AppShellState extends State<AppShell> {
         controller: widget.controller,
         onOpenMatrix: () => setState(() => _currentIndex = 1),
         onOpenItem: _openItemDetail,
-        onPracticeItem: _openSetupForItem,
+        onPracticeItem: _openPracticeItem,
       ),
       MatrixScreen(
         controller: widget.controller,
         onOpenItem: _openItemDetail,
-        onPracticeItem: _openSetupForItem,
+        onPracticeItem: _openPracticeItem,
         onBuildComboFromItem: _openCombinationBuilderFromItem,
       ),
       ToolkitScreen(
         controller: widget.controller,
         onOpenItem: _openItemDetail,
-        onPracticeItem: _openSetupForItem,
+        onPracticeItem: _openPracticeItem,
         onBuildCombo: _openCombinationBuilder,
         onCreateCustomPattern: _openCustomPatternEditor,
       ),
@@ -101,12 +101,12 @@ class _AppShellState extends State<AppShell> {
     );
   }
 
-  void _openSetupForItem(String itemId) {
+  void _openPracticeItem(String itemId) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => PracticeSetupScreen(
+        builder: (_) => PracticeSessionScreen(
           controller: widget.controller,
-          initialItemId: itemId,
+          setup: widget.controller.buildSessionForItem(itemId),
         ),
       ),
     );
@@ -118,7 +118,7 @@ class _AppShellState extends State<AppShell> {
         builder: (_) => ItemDetailScreen(
           controller: widget.controller,
           itemId: itemId,
-          onPracticeItem: _openSetupForItem,
+          onPracticeItem: _openPracticeItem,
           onBuildComboFromItem: _openCombinationBuilderFromItem,
         ),
       ),

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/practice/practice_domain_v1.dart';
 import '../../state/app_controller.dart';
 import '../matrix/widgets/triad_matrix_grid.dart';
-import '../practice/practice_setup_screen.dart';
+import '../practice/practice_session_screen.dart';
 
 class CombinationBuilderScreen extends StatefulWidget {
   final AppController controller;
@@ -193,9 +193,9 @@ class _CombinationBuilderScreenState extends State<CombinationBuilderScreen> {
 
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => PracticeSetupScreen(
+        builder: (_) => PracticeSessionScreen(
           controller: widget.controller,
-          initialItemId: itemId,
+          setup: widget.controller.buildSessionForItem(itemId),
         ),
       ),
     );

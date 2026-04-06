@@ -27,14 +27,7 @@ class ItemDetailScreen extends StatelessWidget {
         final item = controller.itemById(itemId);
         final competency = controller.competencyFor(item.id);
         final totalTime = controller.totalTime(itemId: item.id);
-        final singleSurfaceTime = controller.totalTime(
-          itemId: item.id,
-          context: PracticeContextV1.singleSurface,
-        );
-        final kitTime = controller.totalTime(
-          itemId: item.id,
-          context: PracticeContextV1.kit,
-        );
+        final sessionCount = controller.sessionCount(itemId: item.id);
 
         return Scaffold(
           appBar: AppBar(title: Text(item.name)),
@@ -111,12 +104,8 @@ class ItemDetailScreen extends StatelessWidget {
                       trailing: Text(formatDuration(totalTime)),
                     ),
                     ListTile(
-                      title: const Text('Single Surface'),
-                      trailing: Text(formatDuration(singleSurfaceTime)),
-                    ),
-                    ListTile(
-                      title: const Text('Kit'),
-                      trailing: Text(formatDuration(kitTime)),
+                      title: const Text('Sessions'),
+                      trailing: Text('$sessionCount'),
                     ),
                     ListTile(
                       title: const Text('Last Session'),

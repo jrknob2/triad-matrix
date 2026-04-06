@@ -49,26 +49,6 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
             },
           ),
           const SizedBox(height: 12),
-          DropdownButtonFormField<PlayerSelfRankV1>(
-            initialValue: _draft.selfRank,
-            decoration: const InputDecoration(
-              labelText: 'Overall Level',
-              border: OutlineInputBorder(),
-            ),
-            items: PlayerSelfRankV1.values
-                .map(
-                  (rank) => DropdownMenuItem<PlayerSelfRankV1>(
-                    value: rank,
-                    child: Text(rank.label),
-                  ),
-                )
-                .toList(growable: false),
-            onChanged: (PlayerSelfRankV1? value) {
-              if (value == null) return;
-              setState(() => _draft = _draft.copyWith(selfRank: value));
-            },
-          ),
-          const SizedBox(height: 12),
           Row(
             children: <Widget>[
               Expanded(

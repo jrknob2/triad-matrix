@@ -12,13 +12,7 @@ import 'package:flutter/foundation.dart';
 
 enum HandednessV1 { right, left }
 
-enum PlayerSelfRankV1 { beginner, developing, intermediate, advanced }
-
 enum MaterialFamilyV1 { triad, fiveNote, custom, combo }
-
-enum PracticeIntentV1 { coreSkills, flow }
-
-enum PracticeContextV1 { singleSurface, kit }
 
 enum PracticeItemSourceV1 { builtIn, userDefined, generated }
 
@@ -60,14 +54,12 @@ enum PatternNoteMarkingV1 { normal, accent, ghost }
 @immutable
 class UserProfileV1 {
   final HandednessV1 handedness;
-  final PlayerSelfRankV1 selfRank;
   final int defaultBpm;
   final TimerPresetV1 defaultTimerPreset;
   final bool clickEnabledByDefault;
 
   const UserProfileV1({
     required this.handedness,
-    required this.selfRank,
     required this.defaultBpm,
     required this.defaultTimerPreset,
     required this.clickEnabledByDefault,
@@ -75,14 +67,12 @@ class UserProfileV1 {
 
   UserProfileV1 copyWith({
     HandednessV1? handedness,
-    PlayerSelfRankV1? selfRank,
     int? defaultBpm,
     TimerPresetV1? defaultTimerPreset,
     bool? clickEnabledByDefault,
   }) {
     return UserProfileV1(
       handedness: handedness ?? this.handedness,
-      selfRank: selfRank ?? this.selfRank,
       defaultBpm: defaultBpm ?? this.defaultBpm,
       defaultTimerPreset: defaultTimerPreset ?? this.defaultTimerPreset,
       clickEnabledByDefault:
@@ -92,7 +82,6 @@ class UserProfileV1 {
 
   static const UserProfileV1 initial = UserProfileV1(
     handedness: HandednessV1.right,
-    selfRank: PlayerSelfRankV1.beginner,
     defaultBpm: 92,
     defaultTimerPreset: TimerPresetV1.minutes10,
     clickEnabledByDefault: true,
@@ -264,96 +253,38 @@ class PracticeRoutineV1 {
 }
 
 @immutable
-class GeneratorOptionsV1 {
-  final bool focusWeakItems;
-  final bool focusUnderPracticedItems;
-  final bool preferRoutineItems;
-  final int itemCount;
-
-  const GeneratorOptionsV1({
-    required this.focusWeakItems,
-    required this.focusUnderPracticedItems,
-    required this.preferRoutineItems,
-    required this.itemCount,
-  });
-
-  GeneratorOptionsV1 copyWith({
-    bool? focusWeakItems,
-    bool? focusUnderPracticedItems,
-    bool? preferRoutineItems,
-    int? itemCount,
-  }) {
-    return GeneratorOptionsV1(
-      focusWeakItems: focusWeakItems ?? this.focusWeakItems,
-      focusUnderPracticedItems:
-          focusUnderPracticedItems ?? this.focusUnderPracticedItems,
-      preferRoutineItems: preferRoutineItems ?? this.preferRoutineItems,
-      itemCount: itemCount ?? this.itemCount,
-    );
-  }
-
-  static const GeneratorOptionsV1 defaults = GeneratorOptionsV1(
-    focusWeakItems: false,
-    focusUnderPracticedItems: false,
-    preferRoutineItems: false,
-    itemCount: 1,
-  );
-}
-
-@immutable
 class PracticeSessionSetupV1 {
   final List<String> practiceItemIds;
   final MaterialFamilyV1 family;
-  final PracticeIntentV1 intent;
-  final PracticeContextV1 context;
   final int bpm;
   final TimerPresetV1 timerPreset;
   final bool clickEnabled;
-  final bool generated;
-  final GeneratorOptionsV1? generatorOptions;
   final String? routineId;
 
   const PracticeSessionSetupV1({
     required this.practiceItemIds,
     required this.family,
-    required this.intent,
-    required this.context,
     required this.bpm,
     required this.timerPreset,
     required this.clickEnabled,
-    required this.generated,
-    required this.generatorOptions,
     required this.routineId,
   });
-
-  bool get isFlow => intent == PracticeIntentV1.flow;
 
   PracticeSessionSetupV1 copyWith({
     List<String>? practiceItemIds,
     MaterialFamilyV1? family,
-    PracticeIntentV1? intent,
-    PracticeContextV1? context,
     int? bpm,
     TimerPresetV1? timerPreset,
     bool? clickEnabled,
-    bool? generated,
-    GeneratorOptionsV1? generatorOptions,
-    bool clearGeneratorOptions = false,
     String? routineId,
     bool clearRoutineId = false,
   }) {
     return PracticeSessionSetupV1(
       practiceItemIds: practiceItemIds ?? this.practiceItemIds,
       family: family ?? this.family,
-      intent: intent ?? this.intent,
-      context: context ?? this.context,
       bpm: bpm ?? this.bpm,
       timerPreset: timerPreset ?? this.timerPreset,
       clickEnabled: clickEnabled ?? this.clickEnabled,
-      generated: generated ?? this.generated,
-      generatorOptions: clearGeneratorOptions
-          ? null
-          : (generatorOptions ?? this.generatorOptions),
       routineId: clearRoutineId ? null : (routineId ?? this.routineId),
     );
   }
@@ -367,8 +298,6 @@ class PracticeSessionLogV1 {
   final Duration duration;
   final List<String> practiceItemIds;
   final MaterialFamilyV1 family;
-  final PracticeIntentV1 intent;
-  final PracticeContextV1 context;
   final int bpm;
   final bool clickEnabled;
   final String? routineId;
@@ -381,8 +310,6 @@ class PracticeSessionLogV1 {
     required this.duration,
     required this.practiceItemIds,
     required this.family,
-    required this.intent,
-    required this.context,
     required this.bpm,
     required this.clickEnabled,
     required this.routineId,
@@ -396,8 +323,6 @@ class PracticeSessionLogV1 {
     Duration? duration,
     List<String>? practiceItemIds,
     MaterialFamilyV1? family,
-    PracticeIntentV1? intent,
-    PracticeContextV1? context,
     int? bpm,
     bool? clickEnabled,
     String? routineId,
@@ -412,8 +337,6 @@ class PracticeSessionLogV1 {
       duration: duration ?? this.duration,
       practiceItemIds: practiceItemIds ?? this.practiceItemIds,
       family: family ?? this.family,
-      intent: intent ?? this.intent,
-      context: context ?? this.context,
       bpm: bpm ?? this.bpm,
       clickEnabled: clickEnabled ?? this.clickEnabled,
       routineId: clearRoutineId ? null : (routineId ?? this.routineId),
@@ -451,25 +374,19 @@ class CompetencyRecordV1 {
 class PracticeTimeAggregateKeyV1 {
   final String? practiceItemId;
   final MaterialFamilyV1? family;
-  final PracticeIntentV1? intent;
-  final PracticeContextV1? context;
 
   const PracticeTimeAggregateKeyV1({
     required this.practiceItemId,
     required this.family,
-    required this.intent,
-    required this.context,
   });
 
   @override
   bool operator ==(Object other) {
     return other is PracticeTimeAggregateKeyV1 &&
         other.practiceItemId == practiceItemId &&
-        other.family == family &&
-        other.intent == intent &&
-        other.context == context;
+        other.family == family;
   }
 
   @override
-  int get hashCode => Object.hash(practiceItemId, family, intent, context);
+  int get hashCode => Object.hash(practiceItemId, family);
 }

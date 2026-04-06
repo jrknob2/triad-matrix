@@ -41,20 +41,6 @@ extension MaterialFamilyLabel on MaterialFamilyV1 {
   };
 }
 
-extension PracticeIntentLabel on PracticeIntentV1 {
-  String get label => switch (this) {
-    PracticeIntentV1.coreSkills => 'Core Skills',
-    PracticeIntentV1.flow => 'Flow',
-  };
-}
-
-extension PracticeContextLabel on PracticeContextV1 {
-  String get label => switch (this) {
-    PracticeContextV1.singleSurface => 'Single Surface',
-    PracticeContextV1.kit => 'Kit',
-  };
-}
-
 extension CompetencyLabel on CompetencyLevelV1 {
   String get label => switch (this) {
     CompetencyLevelV1.notStarted => 'Not Started',
@@ -62,15 +48,6 @@ extension CompetencyLabel on CompetencyLevelV1 {
     CompetencyLevelV1.comfortable => 'Comfortable',
     CompetencyLevelV1.reliable => 'Reliable',
     CompetencyLevelV1.musical => 'Musical',
-  };
-}
-
-extension SelfRankLabel on PlayerSelfRankV1 {
-  String get label => switch (this) {
-    PlayerSelfRankV1.beginner => 'Beginner',
-    PlayerSelfRankV1.developing => 'Developing',
-    PlayerSelfRankV1.intermediate => 'Intermediate',
-    PlayerSelfRankV1.advanced => 'Advanced',
   };
 }
 
