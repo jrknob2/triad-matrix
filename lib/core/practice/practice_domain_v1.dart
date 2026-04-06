@@ -16,7 +16,9 @@ enum MaterialFamilyV1 { triad, fiveNote, custom, combo }
 
 enum PracticeItemSourceV1 { builtIn, userDefined, generated }
 
-enum ComboIntentTagV1 { coreSkills, flow, both }
+enum PracticeModeV1 { singleSurface, flow }
+
+enum DrumVoiceV1 { snare, rackTom, floorTom, hihat, kick }
 
 enum CompetencyLevelV1 { notStarted, learning, comfortable, reliable, musical }
 
@@ -106,6 +108,9 @@ class PracticeItemV1 {
   /// Zero-based note indices that should be ghosted in the guided view.
   final List<int> ghostNoteIndices;
 
+  /// Default voice assignment used when the phrase is practiced in flow mode.
+  final List<DrumVoiceV1> voiceAssignments;
+
   final PracticeItemSourceV1 source;
   final List<String> tags;
   final bool saved;
@@ -118,6 +123,7 @@ class PracticeItemV1 {
     required this.noteCount,
     required this.accentedNoteIndices,
     required this.ghostNoteIndices,
+    required this.voiceAssignments,
     required this.source,
     required this.tags,
     required this.saved,
@@ -138,6 +144,7 @@ class PracticeItemV1 {
     int? noteCount,
     List<int>? accentedNoteIndices,
     List<int>? ghostNoteIndices,
+    List<DrumVoiceV1>? voiceAssignments,
     PracticeItemSourceV1? source,
     List<String>? tags,
     bool? saved,
@@ -150,6 +157,7 @@ class PracticeItemV1 {
       noteCount: noteCount ?? this.noteCount,
       accentedNoteIndices: accentedNoteIndices ?? this.accentedNoteIndices,
       ghostNoteIndices: ghostNoteIndices ?? this.ghostNoteIndices,
+      voiceAssignments: voiceAssignments ?? this.voiceAssignments,
       source: source ?? this.source,
       tags: tags ?? this.tags,
       saved: saved ?? this.saved,
@@ -188,26 +196,22 @@ class PracticeCombinationV1 {
   final String id;
   final String name;
   final List<String> itemIds;
-  final ComboIntentTagV1 intentTag;
 
   const PracticeCombinationV1({
     required this.id,
     required this.name,
     required this.itemIds,
-    required this.intentTag,
   });
 
   PracticeCombinationV1 copyWith({
     String? id,
     String? name,
     List<String>? itemIds,
-    ComboIntentTagV1? intentTag,
   }) {
     return PracticeCombinationV1(
       id: id ?? this.id,
       name: name ?? this.name,
       itemIds: itemIds ?? this.itemIds,
-      intentTag: intentTag ?? this.intentTag,
     );
   }
 }
@@ -256,6 +260,7 @@ class PracticeRoutineV1 {
 class PracticeSessionSetupV1 {
   final List<String> practiceItemIds;
   final MaterialFamilyV1 family;
+  final PracticeModeV1 practiceMode;
   final int bpm;
   final TimerPresetV1 timerPreset;
   final bool clickEnabled;
@@ -264,6 +269,7 @@ class PracticeSessionSetupV1 {
   const PracticeSessionSetupV1({
     required this.practiceItemIds,
     required this.family,
+    required this.practiceMode,
     required this.bpm,
     required this.timerPreset,
     required this.clickEnabled,
@@ -273,6 +279,7 @@ class PracticeSessionSetupV1 {
   PracticeSessionSetupV1 copyWith({
     List<String>? practiceItemIds,
     MaterialFamilyV1? family,
+    PracticeModeV1? practiceMode,
     int? bpm,
     TimerPresetV1? timerPreset,
     bool? clickEnabled,
@@ -282,6 +289,7 @@ class PracticeSessionSetupV1 {
     return PracticeSessionSetupV1(
       practiceItemIds: practiceItemIds ?? this.practiceItemIds,
       family: family ?? this.family,
+      practiceMode: practiceMode ?? this.practiceMode,
       bpm: bpm ?? this.bpm,
       timerPreset: timerPreset ?? this.timerPreset,
       clickEnabled: clickEnabled ?? this.clickEnabled,
@@ -298,6 +306,7 @@ class PracticeSessionLogV1 {
   final Duration duration;
   final List<String> practiceItemIds;
   final MaterialFamilyV1 family;
+  final PracticeModeV1 practiceMode;
   final int bpm;
   final bool clickEnabled;
   final String? routineId;
@@ -310,6 +319,7 @@ class PracticeSessionLogV1 {
     required this.duration,
     required this.practiceItemIds,
     required this.family,
+    required this.practiceMode,
     required this.bpm,
     required this.clickEnabled,
     required this.routineId,
@@ -323,6 +333,7 @@ class PracticeSessionLogV1 {
     Duration? duration,
     List<String>? practiceItemIds,
     MaterialFamilyV1? family,
+    PracticeModeV1? practiceMode,
     int? bpm,
     bool? clickEnabled,
     String? routineId,
@@ -337,6 +348,7 @@ class PracticeSessionLogV1 {
       duration: duration ?? this.duration,
       practiceItemIds: practiceItemIds ?? this.practiceItemIds,
       family: family ?? this.family,
+      practiceMode: practiceMode ?? this.practiceMode,
       bpm: bpm ?? this.bpm,
       clickEnabled: clickEnabled ?? this.clickEnabled,
       routineId: clearRoutineId ? null : (routineId ?? this.routineId),

@@ -351,11 +351,6 @@ class _MatrixScreenState extends State<MatrixScreen> {
         .combinationForItemIdsOrNull(_selectedItemIds);
     if (existing != null) return existing.id;
     if (!createIfMissing) return null;
-    return widget.controller
-        .createCombination(
-          itemIds: _selectedItemIds,
-          intentTag: ComboIntentTagV1.both,
-        )
-        .id;
+    return widget.controller.createCombination(itemIds: _selectedItemIds).id;
   }
 }

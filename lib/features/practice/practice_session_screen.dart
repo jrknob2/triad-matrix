@@ -9,6 +9,7 @@ import '../../state/app_controller.dart';
 import '../../core/practice/practice_domain_v1.dart';
 import 'widgets/pattern_display_text.dart';
 import 'widgets/pattern_marking_editor.dart';
+import 'widgets/voice_assignment_editor.dart';
 import 'session_summary_screen.dart';
 
 class PracticeSessionScreen extends StatefulWidget {
@@ -30,9 +31,12 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   final AudioPlayer _clickPlayer = AudioPlayer();
   final Map<String, List<PatternNoteMarkingV1>> _sessionMarkingsByItemId =
       <String, List<PatternNoteMarkingV1>>{};
+  final Map<String, List<DrumVoiceV1>> _sessionVoicesByItemId =
+      <String, List<DrumVoiceV1>>{};
   Timer? _elapsedTicker;
   Timer? _beatTicker;
   bool _running = false;
+  late PracticeModeV1 _practiceMode;
   late int _bpm;
   late bool _clickEnabled;
   int _currentItemIndex = 0;
@@ -40,11 +44,15 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   @override
   void initState() {
     super.initState();
+    _practiceMode = widget.setup.practiceMode;
     _bpm = widget.setup.bpm;
     _clickEnabled = widget.setup.clickEnabled;
     for (final String itemId in widget.setup.practiceItemIds) {
       _sessionMarkingsByItemId[itemId] = List<PatternNoteMarkingV1>.from(
         widget.controller.noteMarkingsFor(itemId),
+      );
+      _sessionVoicesByItemId[itemId] = List<DrumVoiceV1>.from(
+        widget.controller.noteVoicesFor(itemId),
       );
     }
     _configureAudio();
@@ -65,6 +73,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     final List<String> tokens = widget.controller.noteTokensFor(currentItemId);
     final List<PatternNoteMarkingV1> markings =
         _sessionMarkingsByItemId[currentItemId]!;
+    final List<DrumVoiceV1> voices = _sessionVoicesByItemId[currentItemId]!;
     final Duration? target = timerPresetToDuration(widget.setup.timerPreset);
     final String timerText = target == null
         ? formatDuration(_stopwatch.elapsed)
@@ -105,6 +114,40 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                       );
                     },
                   ),
+                  const SizedBox(height: 16),
+                  SegmentedButton<PracticeModeV1>(
+                    segments: PracticeModeV1.values
+                        .map(
+                          (PracticeModeV1 mode) =>
+                              ButtonSegment<PracticeModeV1>(
+                                value: mode,
+                                label: Text(mode.label),
+                              ),
+                        )
+                        .toList(growable: false),
+                    selected: <PracticeModeV1>{_practiceMode},
+                    onSelectionChanged: (Set<PracticeModeV1> selection) {
+                      setState(() => _practiceMode = selection.first);
+                    },
+                  ),
+                  if (_practiceMode == PracticeModeV1.flow) ...<Widget>[
+                    const SizedBox(height: 16),
+                    Text(
+                      'Voice Assignment',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 8),
+                    VoiceAssignmentEditor(
+                      tokens: tokens,
+                      voices: voices,
+                      onTapNote: (int noteIndex) {
+                        _toggleSessionVoice(
+                          itemId: currentItemId,
+                          noteIndex: noteIndex,
+                        );
+                      },
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -261,7 +304,11 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     }
 
     final PracticeSessionLogV1 session = widget.controller.completeSession(
-      widget.setup.copyWith(bpm: _bpm, clickEnabled: _clickEnabled),
+      widget.setup.copyWith(
+        practiceMode: _practiceMode,
+        bpm: _bpm,
+        clickEnabled: _clickEnabled,
+      ),
       _stopwatch.elapsed,
     );
 
@@ -291,6 +338,31 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
           List<PatternNoteMarkingV1>.from(current);
       updated[noteIndex] = next;
       _sessionMarkingsByItemId[itemId] = updated;
+    });
+  }
+
+  void _toggleSessionVoice({required String itemId, required int noteIndex}) {
+    final List<DrumVoiceV1> current = _sessionVoicesByItemId[itemId]!;
+    final String token = widget.controller.noteTokensFor(itemId)[noteIndex];
+
+    final DrumVoiceV1 next;
+    if (token == 'K') {
+      next = DrumVoiceV1.kick;
+    } else {
+      const List<DrumVoiceV1> cycle = <DrumVoiceV1>[
+        DrumVoiceV1.snare,
+        DrumVoiceV1.rackTom,
+        DrumVoiceV1.floorTom,
+        DrumVoiceV1.hihat,
+      ];
+      final int currentIndex = cycle.indexOf(current[noteIndex]);
+      next = cycle[(currentIndex + 1) % cycle.length];
+    }
+
+    setState(() {
+      final List<DrumVoiceV1> updated = List<DrumVoiceV1>.from(current);
+      updated[noteIndex] = next;
+      _sessionVoicesByItemId[itemId] = updated;
     });
   }
 

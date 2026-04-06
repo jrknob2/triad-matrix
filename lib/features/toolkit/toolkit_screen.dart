@@ -5,14 +5,14 @@ import '../../features/app/app_formatters.dart';
 import '../../state/app_controller.dart';
 import '../practice/widgets/pattern_display_text.dart';
 
-enum _ToolkitSection { routine, combos, custom }
+enum _FocusSection { workingOn, combos, custom }
 
-class ToolkitScreen extends StatefulWidget {
+class FocusScreen extends StatefulWidget {
   final AppController controller;
   final ValueChanged<String> onOpenItem;
   final ValueChanged<String> onPracticeItem;
 
-  const ToolkitScreen({
+  const FocusScreen({
     super.key,
     required this.controller,
     required this.onOpenItem,
@@ -20,11 +20,11 @@ class ToolkitScreen extends StatefulWidget {
   });
 
   @override
-  State<ToolkitScreen> createState() => _ToolkitScreenState();
+  State<FocusScreen> createState() => _FocusScreenState();
 }
 
-class _ToolkitScreenState extends State<ToolkitScreen> {
-  _ToolkitSection _section = _ToolkitSection.routine;
+class _FocusScreenState extends State<FocusScreen> {
+  _FocusSection _section = _FocusSection.workingOn;
 
   @override
   Widget build(BuildContext context) {
@@ -41,9 +41,9 @@ class _ToolkitScreenState extends State<ToolkitScreen> {
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
-                      children: _ToolkitSection.values
+                      children: _FocusSection.values
                           .map(
-                            (_ToolkitSection section) => Padding(
+                            (_FocusSection section) => Padding(
                               padding: const EdgeInsets.only(right: 8),
                               child: ChoiceChip(
                                 label: Text(_labelForSection(section)),
@@ -69,7 +69,7 @@ class _ToolkitScreenState extends State<ToolkitScreen> {
 
   Widget _buildBody() {
     return switch (_section) {
-      _ToolkitSection.routine => _ToolkitList(
+      _FocusSection.workingOn => _FocusList(
         title: widget.controller.routine.name,
         items: widget.controller.routineItems,
         controller: widget.controller,
@@ -80,15 +80,15 @@ class _ToolkitScreenState extends State<ToolkitScreen> {
           onPressed: () => widget.controller.toggleRoutineItem(item.id),
         ),
       ),
-      _ToolkitSection.combos => _ToolkitList(
+      _FocusSection.combos => _FocusList(
         title: 'Saved Combos',
         items: widget.controller.itemsByFamily(MaterialFamilyV1.combo),
         controller: widget.controller,
         onOpenItem: widget.onOpenItem,
         onPracticeItem: widget.onPracticeItem,
       ),
-      _ToolkitSection.custom => _ToolkitList(
-        title: 'Custom Patterns',
+      _FocusSection.custom => _FocusList(
+        title: 'Custom Bucket',
         items: widget.controller.itemsByFamily(MaterialFamilyV1.custom),
         controller: widget.controller,
         onOpenItem: widget.onOpenItem,
@@ -97,16 +97,16 @@ class _ToolkitScreenState extends State<ToolkitScreen> {
     };
   }
 
-  String _labelForSection(_ToolkitSection section) {
+  String _labelForSection(_FocusSection section) {
     return switch (section) {
-      _ToolkitSection.routine => 'Routine',
-      _ToolkitSection.combos => 'Combos',
-      _ToolkitSection.custom => 'Custom',
+      _FocusSection.workingOn => 'Working On',
+      _FocusSection.combos => 'Combos',
+      _FocusSection.custom => 'Custom',
     };
   }
 }
 
-class _ToolkitList extends StatelessWidget {
+class _FocusList extends StatelessWidget {
   final String title;
   final List<PracticeItemV1> items;
   final AppController controller;
@@ -114,7 +114,7 @@ class _ToolkitList extends StatelessWidget {
   final ValueChanged<String> onPracticeItem;
   final Widget Function(PracticeItemV1 item)? trailingFor;
 
-  const _ToolkitList({
+  const _FocusList({
     required this.title,
     required this.items,
     required this.controller,
@@ -148,7 +148,7 @@ class _ToolkitList extends StatelessWidget {
             child: Padding(
               padding: EdgeInsets.all(16),
               child: Text(
-                'Nothing here yet. Add material from the matrix or custom editor.',
+                'Nothing here yet. Add material from the matrix or save a custom phrase for later.',
               ),
             ),
           )

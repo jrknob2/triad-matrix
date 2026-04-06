@@ -145,7 +145,7 @@ class _HowItWorksStep extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         Text(
-          'Tap triads in the matrix to build a pattern. Use filters when you want to inspect the matrix. Practice items directly from the matrix, Today, or Toolkit.',
+          'Tap triads in the matrix to build a pattern. Use filters to inspect the matrix. Practice items directly from the matrix, Today, or Focus.',
           style: textTheme.bodyLarge?.copyWith(height: 1.4),
         ),
         const SizedBox(height: 16),

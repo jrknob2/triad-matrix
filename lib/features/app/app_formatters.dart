@@ -76,6 +76,31 @@ extension HandednessLabel on HandednessV1 {
   };
 }
 
+extension PracticeModeLabel on PracticeModeV1 {
+  String get label => switch (this) {
+    PracticeModeV1.singleSurface => 'Single Surface',
+    PracticeModeV1.flow => 'Flow',
+  };
+}
+
+extension DrumVoiceLabel on DrumVoiceV1 {
+  String get shortLabel => switch (this) {
+    DrumVoiceV1.snare => 'S',
+    DrumVoiceV1.rackTom => 'T',
+    DrumVoiceV1.floorTom => 'F',
+    DrumVoiceV1.hihat => 'H',
+    DrumVoiceV1.kick => 'K',
+  };
+
+  String get label => switch (this) {
+    DrumVoiceV1.snare => 'Snare',
+    DrumVoiceV1.rackTom => 'Rack Tom',
+    DrumVoiceV1.floorTom => 'Floor Tom',
+    DrumVoiceV1.hihat => 'Hi-Hat',
+    DrumVoiceV1.kick => 'Kick',
+  };
+}
+
 extension TriadMatrixViewModeLabel on TriadMatrixViewModeV1 {
   String get label => switch (this) {
     TriadMatrixViewModeV1.competency => 'Competency',
@@ -99,7 +124,7 @@ extension TriadMatrixFilterLabel on TriadMatrixFilterV1 {
     TriadMatrixFilterV1.inRoutine => 'In Routine',
     TriadMatrixFilterV1.needsAttention => 'Needs Attention',
     TriadMatrixFilterV1.underPracticed => 'Under-Practiced',
-    TriadMatrixFilterV1.closeToToolkit => 'Close To Toolkit',
+    TriadMatrixFilterV1.closeToToolkit => 'Close To Toolbox',
     TriadMatrixFilterV1.recent => 'Recent',
     TriadMatrixFilterV1.unseen => 'Unseen',
     TriadMatrixFilterV1.rightLead => 'Right Lead',

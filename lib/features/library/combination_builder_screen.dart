@@ -190,10 +190,7 @@ class _CombinationBuilderScreenState extends State<CombinationBuilderScreen> {
 
   void _saveCombo() {
     if (_selectedItemIds.length < 2) return;
-    widget.controller.createCombination(
-      itemIds: _selectedItemIds,
-      intentTag: ComboIntentTagV1.both,
-    );
+    widget.controller.createCombination(itemIds: _selectedItemIds);
     Navigator.of(context).pop();
   }
 
@@ -221,12 +218,7 @@ class _CombinationBuilderScreenState extends State<CombinationBuilderScreen> {
   String? _selectionActionItemId() {
     if (_selectedItemIds.isEmpty) return null;
     if (_selectedItemIds.length == 1) return _selectedItemIds.first;
-    return widget.controller
-        .createCombination(
-          itemIds: _selectedItemIds,
-          intentTag: ComboIntentTagV1.both,
-        )
-        .id;
+    return widget.controller.createCombination(itemIds: _selectedItemIds).id;
   }
 
   String? _routineActionItemId() => _selectionActionItemId();

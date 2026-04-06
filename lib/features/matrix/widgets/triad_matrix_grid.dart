@@ -259,7 +259,7 @@ class _TriadCellButton extends StatelessWidget {
     final bool inRoutine = controller.isInRoutine(itemId);
     final bool needsAttention = controller.needsAttention(itemId);
     final bool underPracticed = controller.isUnderPracticed(itemId);
-    final bool closeToToolkit = controller.isCloseToToolkit(itemId);
+    final bool closeToToolkit = controller.isCloseToToolbox(itemId);
     final bool recent = controller.isRecent(itemId);
     final bool unseen = controller.isUnseen(itemId);
     final bool selected = selectedCount > 0;

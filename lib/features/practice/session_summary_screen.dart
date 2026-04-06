@@ -51,6 +51,8 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(session.family.label),
+                  const SizedBox(height: 4),
+                  Text(session.practiceMode.label),
                   const SizedBox(height: 12),
                   Text('Duration: ${formatDuration(session.duration)}'),
                   Text('BPM: ${session.bpm}'),

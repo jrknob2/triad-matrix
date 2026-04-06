@@ -76,7 +76,7 @@ class AppController extends ChangeNotifier {
     return TodayBriefingV1(
       headline: 'Today leans toward control, touch, and flow.',
       summary:
-          '$weakHandLabel-hand lead needs attention, a few triads are close to toolkit status, and there is room for fresh material.',
+          '$weakHandLabel-hand lead needs attention, a few triads are close to toolbox status, and there is room for fresh material.',
       cues: <CoachCueV1>[
         CoachCueV1(
           title: 'Weak Hand',
@@ -97,9 +97,9 @@ class AppController extends ChangeNotifier {
               .toList(),
         ),
         CoachCueV1(
-          title: 'Close To Toolkit',
+          title: 'Close To Toolbox',
           detail:
-              'These are nearly reliable. Tighten them up and they can move into your toolkit.',
+              'These are nearly reliable. Tighten them up and they can move into your toolbox.',
           suggestedItemIds: almostReady.take(2).map((item) => item.id).toList(),
         ),
         CoachCueV1(
@@ -210,7 +210,7 @@ class AppController extends ChangeNotifier {
   }
 
   List<PatternNoteMarkingV1> noteMarkingsFor(String itemId) {
-    final PracticeItemV1 item = _sanitizedItemMarkings(itemById(itemId));
+    final PracticeItemV1 item = _sanitizedItem(itemById(itemId));
     final Set<int> accents = item.accentedNoteIndices.toSet();
     final Set<int> ghosts = item.ghostNoteIndices.toSet();
 
@@ -232,6 +232,11 @@ class AppController extends ChangeNotifier {
         PatternNoteMarkingV1.ghost => '($token)',
       };
     }).join(' ');
+  }
+
+  List<DrumVoiceV1> noteVoicesFor(String itemId) {
+    final PracticeItemV1 item = _sanitizedItem(itemById(itemId));
+    return List<DrumVoiceV1>.unmodifiable(item.voiceAssignments);
   }
 
   bool hasKick(String itemId) => usesKick(itemId);
@@ -288,7 +293,7 @@ class AppController extends ChangeNotifier {
     return totalTime(itemId: itemId) < const Duration(minutes: 12);
   }
 
-  bool isCloseToToolkit(String itemId) {
+  bool isCloseToToolbox(String itemId) {
     final CompetencyLevelV1 level = competencyFor(itemId);
     final bool strongCompetency =
         level == CompetencyLevelV1.comfortable ||
@@ -421,7 +426,7 @@ class AppController extends ChangeNotifier {
     _combinations = const <PracticeCombinationV1>[];
     _routine = const PracticeRoutineV1(
       id: 'main_routine',
-      name: 'Current Focus',
+      name: 'Working On',
       entries: <RoutineEntryV1>[],
     );
     _sessions = const <PracticeSessionLogV1>[];
@@ -470,12 +475,38 @@ class AppController extends ChangeNotifier {
     _items = _items
         .map((entry) {
           if (entry.id != itemId) return entry;
-          return _sanitizedItemMarkings(
+          return _sanitizedItem(
             entry.copyWith(
               accentedNoteIndices: accents.toList()..sort(),
               ghostNoteIndices: ghosts.toList()..sort(),
             ),
           );
+        })
+        .toList(growable: false);
+    notifyListeners();
+  }
+
+  void setNoteVoice({
+    required String itemId,
+    required int noteIndex,
+    required DrumVoiceV1 voice,
+  }) {
+    final PracticeItemV1 item = itemById(itemId);
+    if (noteIndex < 0 || noteIndex >= item.noteCount) return;
+
+    final List<DrumVoiceV1> voices = List<DrumVoiceV1>.from(
+      _sanitizedItem(item).voiceAssignments,
+    );
+    if (_tokenAt(item, noteIndex) == 'K') {
+      voices[noteIndex] = DrumVoiceV1.kick;
+    } else {
+      voices[noteIndex] = voice == DrumVoiceV1.kick ? DrumVoiceV1.snare : voice;
+    }
+
+    _items = _items
+        .map((entry) {
+          if (entry.id != itemId) return entry;
+          return _sanitizedItem(entry.copyWith(voiceAssignments: voices));
         })
         .toList(growable: false);
     notifyListeners();
@@ -503,20 +534,18 @@ class AppController extends ChangeNotifier {
       noteCount: _estimateNoteCount(trimmedSticking),
       accentedNoteIndices: _defaultAccentIndicesForSticking(trimmedSticking),
       ghostNoteIndices: const <int>[],
+      voiceAssignments: _defaultVoiceAssignmentsForSticking(trimmedSticking),
       source: PracticeItemSourceV1.userDefined,
       tags: tags.where((tag) => tag.trim().isNotEmpty).toList(growable: false),
       saved: true,
     );
 
-    _items = <PracticeItemV1>[..._items, _sanitizedItemMarkings(item)];
+    _items = <PracticeItemV1>[..._items, _sanitizedItem(item)];
     notifyListeners();
     return item;
   }
 
-  PracticeCombinationV1 createCombination({
-    required List<String> itemIds,
-    required ComboIntentTagV1 intentTag,
-  }) {
+  PracticeCombinationV1 createCombination({required List<String> itemIds}) {
     final String id = 'combo_${itemIds.join('_')}';
     final String comboName = comboDisplayName(itemIds);
 
@@ -529,7 +558,6 @@ class AppController extends ChangeNotifier {
       id: id,
       name: comboName,
       itemIds: List<String>.from(itemIds),
-      intentTag: intentTag,
     );
 
     final int noteCount = itemIds.fold<int>(
@@ -539,15 +567,17 @@ class AppController extends ChangeNotifier {
 
     final List<int> accented = <int>[];
     final List<int> ghosted = <int>[];
+    final List<DrumVoiceV1> voices = <DrumVoiceV1>[];
     int offset = 0;
     for (final String itemId in itemIds) {
       final PracticeItemV1 item = itemById(itemId);
       accented.addAll(item.accentedNoteIndices.map((index) => index + offset));
       ghosted.addAll(item.ghostNoteIndices.map((index) => index + offset));
+      voices.addAll(_sanitizedItem(item).voiceAssignments);
       offset += item.noteCount;
     }
 
-    final PracticeItemV1 comboItem = _sanitizedItemMarkings(
+    final PracticeItemV1 comboItem = _sanitizedItem(
       PracticeItemV1(
         id: id,
         family: MaterialFamilyV1.combo,
@@ -556,8 +586,9 @@ class AppController extends ChangeNotifier {
         noteCount: noteCount,
         accentedNoteIndices: accented,
         ghostNoteIndices: ghosted,
+        voiceAssignments: voices,
         source: PracticeItemSourceV1.userDefined,
-        tags: <String>['combo', intentTag.name],
+        tags: <String>['combo'],
         saved: true,
       ),
     );
@@ -595,6 +626,7 @@ class AppController extends ChangeNotifier {
     return PracticeSessionSetupV1(
       practiceItemIds: <String>[itemId],
       family: item.family,
+      practiceMode: PracticeModeV1.singleSurface,
       bpm: _profile.defaultBpm,
       timerPreset: _profile.defaultTimerPreset,
       clickEnabled: _profile.clickEnabledByDefault,
@@ -615,6 +647,7 @@ class AppController extends ChangeNotifier {
       duration: duration,
       practiceItemIds: setup.practiceItemIds,
       family: setup.family,
+      practiceMode: setup.practiceMode,
       bpm: setup.bpm,
       clickEnabled: setup.clickEnabled,
       routineId: setup.routineId,
@@ -720,7 +753,7 @@ class AppController extends ChangeNotifier {
     return tokens[index];
   }
 
-  PracticeItemV1 _sanitizedItemMarkings(PracticeItemV1 item) {
+  PracticeItemV1 _sanitizedItem(PracticeItemV1 item) {
     final List<String> tokens = _normalizedTokensForItem(item);
     final List<int> accented =
         item.accentedNoteIndices
@@ -737,15 +770,26 @@ class AppController extends ChangeNotifier {
             .toSet()
             .toList()
           ..sort();
+    final List<DrumVoiceV1> voices = List<DrumVoiceV1>.generate(tokens.length, (
+      index,
+    ) {
+      final DrumVoiceV1 fallback = _defaultVoiceForToken(tokens[index]);
+      if (index >= item.voiceAssignments.length) return fallback;
+      final DrumVoiceV1 voice = item.voiceAssignments[index];
+      if (tokens[index] == 'K') return DrumVoiceV1.kick;
+      return voice == DrumVoiceV1.kick ? fallback : voice;
+    });
 
     if (listEquals(accented, item.accentedNoteIndices) &&
-        listEquals(ghosted, item.ghostNoteIndices)) {
+        listEquals(ghosted, item.ghostNoteIndices) &&
+        listEquals(voices, item.voiceAssignments)) {
       return item;
     }
 
     return item.copyWith(
       accentedNoteIndices: accented,
       ghostNoteIndices: ghosted,
+      voiceAssignments: voices,
     );
   }
 
@@ -782,6 +826,16 @@ class AppController extends ChangeNotifier {
     return <int>[handIndices.first];
   }
 
+  List<DrumVoiceV1> _defaultVoiceAssignmentsForSticking(String sticking) {
+    return _normalizedTokensFromSticking(
+      sticking,
+    ).map(_defaultVoiceForToken).toList(growable: false);
+  }
+
+  DrumVoiceV1 _defaultVoiceForToken(String token) {
+    return token == 'K' ? DrumVoiceV1.kick : DrumVoiceV1.snare;
+  }
+
   String _triadItemId(String cellId) => 'triad_${cellId.toLowerCase()}';
 
   List<String> _tagsForTriadCell(TriadMatrixCell cell) {
@@ -809,7 +863,7 @@ class AppController extends ChangeNotifier {
     _combinations = const <PracticeCombinationV1>[];
     _routine = const PracticeRoutineV1(
       id: 'main_routine',
-      name: 'Current Focus',
+      name: 'Working On',
       entries: <RoutineEntryV1>[],
     );
     _sessions = const <PracticeSessionLogV1>[];
@@ -827,6 +881,7 @@ class AppController extends ChangeNotifier {
             noteCount: 3,
             accentedNoteIndices: _accentIndicesForTriadCell(cell),
             ghostNoteIndices: const <int>[],
+            voiceAssignments: _defaultVoiceAssignmentsForSticking(cell.id),
             source: PracticeItemSourceV1.builtIn,
             tags: _tagsForTriadCell(cell),
             saved: true,
@@ -844,8 +899,15 @@ class AppController extends ChangeNotifier {
         noteCount: 5,
         accentedNoteIndices: <int>[0],
         ghostNoteIndices: <int>[],
+        voiceAssignments: <DrumVoiceV1>[
+          DrumVoiceV1.snare,
+          DrumVoiceV1.snare,
+          DrumVoiceV1.snare,
+          DrumVoiceV1.snare,
+          DrumVoiceV1.kick,
+        ],
         source: PracticeItemSourceV1.builtIn,
-        tags: <String>['5s', 'flow'],
+        tags: <String>['5s'],
         saved: true,
       ),
       const PracticeItemV1(
@@ -856,8 +918,15 @@ class AppController extends ChangeNotifier {
         noteCount: 5,
         accentedNoteIndices: <int>[0, 3],
         ghostNoteIndices: <int>[1],
+        voiceAssignments: <DrumVoiceV1>[
+          DrumVoiceV1.snare,
+          DrumVoiceV1.snare,
+          DrumVoiceV1.snare,
+          DrumVoiceV1.snare,
+          DrumVoiceV1.snare,
+        ],
         source: PracticeItemSourceV1.builtIn,
-        tags: <String>['5s', 'core'],
+        tags: <String>['5s'],
         saved: true,
       ),
     ];

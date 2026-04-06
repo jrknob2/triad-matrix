@@ -42,8 +42,8 @@ class _AppShellState extends State<AppShell> {
             onPracticeItem: _openPracticeItem,
             onBuildComboFromItems: _openCombinationBuilderFromItems,
           ),
-          ToolkitScreen(
-            key: ValueKey<String>('toolkit_${widget.controller.resetVersion}'),
+          FocusScreen(
+            key: ValueKey<String>('focus_${widget.controller.resetVersion}'),
             controller: widget.controller,
             onOpenItem: _openItemDetail,
             onPracticeItem: _openPracticeItem,
@@ -58,7 +58,7 @@ class _AppShellState extends State<AppShell> {
         final List<String> titles = <String>[
           'Today',
           'Matrix',
-          'Toolkit',
+          'Working On',
           'Progress',
         ];
 
@@ -93,7 +93,7 @@ class _AppShellState extends State<AppShell> {
               NavigationDestination(
                 icon: Icon(Icons.backpack_outlined),
                 selectedIcon: Icon(Icons.backpack),
-                label: 'Toolkit',
+                label: 'Focus',
               ),
               NavigationDestination(
                 icon: Icon(Icons.bar_chart_outlined),
