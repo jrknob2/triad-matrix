@@ -206,7 +206,7 @@ class AppController extends ChangeNotifier {
   }
 
   List<PatternNoteMarkingV1> noteMarkingsFor(String itemId) {
-    final PracticeItemV1 item = itemById(itemId);
+    final PracticeItemV1 item = _sanitizedItemMarkings(itemById(itemId));
     final Set<int> accents = item.accentedNoteIndices.toSet();
     final Set<int> ghosts = item.ghostNoteIndices.toSet();
 
@@ -246,6 +246,9 @@ class AppController extends ChangeNotifier {
 
   bool hasDoubles(String itemId) {
     final String normalized = _normalizedSticking(itemById(itemId));
+    if (normalized.length >= 3 && normalized.split('').toSet().length == 1) {
+      return false;
+    }
     for (int index = 0; index < normalized.length - 1; index++) {
       if (normalized[index] == normalized[index + 1]) return true;
     }
@@ -379,8 +382,12 @@ class AppController extends ChangeNotifier {
   }
 
   String accentPatternLabelFor(String itemId) {
+    final List<PatternNoteMarkingV1> markings = noteMarkingsFor(itemId);
+    final Set<int> accented = <int>{
+      for (int index = 0; index < markings.length; index++)
+        if (markings[index] == PatternNoteMarkingV1.accent) index,
+    };
     final PracticeItemV1 item = itemById(itemId);
-    final Set<int> accented = item.accentedNoteIndices.toSet();
     return List<String>.generate(
       item.noteCount,
       (index) => accented.contains(index) ? '^' : '·',
@@ -439,7 +446,9 @@ class AppController extends ChangeNotifier {
       case PatternNoteMarkingV1.normal:
         break;
       case PatternNoteMarkingV1.accent:
-        accents.add(noteIndex);
+        if (_tokenAt(item, noteIndex) != 'K') {
+          accents.add(noteIndex);
+        }
         break;
       case PatternNoteMarkingV1.ghost:
         ghosts.add(noteIndex);
@@ -449,9 +458,11 @@ class AppController extends ChangeNotifier {
     _items = _items
         .map((entry) {
           if (entry.id != itemId) return entry;
-          return entry.copyWith(
-            accentedNoteIndices: accents.toList()..sort(),
-            ghostNoteIndices: ghosts.toList()..sort(),
+          return _sanitizedItemMarkings(
+            entry.copyWith(
+              accentedNoteIndices: accents.toList()..sort(),
+              ghostNoteIndices: ghosts.toList()..sort(),
+            ),
           );
         })
         .toList(growable: false);
@@ -485,7 +496,7 @@ class AppController extends ChangeNotifier {
       saved: true,
     );
 
-    _items = <PracticeItemV1>[..._items, item];
+    _items = <PracticeItemV1>[..._items, _sanitizedItemMarkings(item)];
     notifyListeners();
     return item;
   }
@@ -524,17 +535,19 @@ class AppController extends ChangeNotifier {
       offset += item.noteCount;
     }
 
-    final PracticeItemV1 comboItem = PracticeItemV1(
-      id: id,
-      family: MaterialFamilyV1.combo,
-      name: comboName,
-      sticking: comboName,
-      noteCount: noteCount,
-      accentedNoteIndices: accented,
-      ghostNoteIndices: ghosted,
-      source: PracticeItemSourceV1.userDefined,
-      tags: <String>['combo', intentTag.name],
-      saved: true,
+    final PracticeItemV1 comboItem = _sanitizedItemMarkings(
+      PracticeItemV1(
+        id: id,
+        family: MaterialFamilyV1.combo,
+        name: comboName,
+        sticking: comboName,
+        noteCount: noteCount,
+        accentedNoteIndices: accented,
+        ghostNoteIndices: ghosted,
+        source: PracticeItemSourceV1.userDefined,
+        tags: <String>['combo', intentTag.name],
+        saved: true,
+      ),
     );
 
     _combinations = <PracticeCombinationV1>[combo, ..._combinations];
@@ -677,6 +690,53 @@ class AppController extends ChangeNotifier {
     return item.sticking.replaceAll(RegExp(r'[^RLK]'), '');
   }
 
+  List<String> _normalizedTokensForItem(PracticeItemV1 item) {
+    return _normalizedSticking(item).split('');
+  }
+
+  List<String> _normalizedTokensFromSticking(String sticking) {
+    final String normalized = sticking.toUpperCase().replaceAll(
+      RegExp(r'[^RLK]'),
+      '',
+    );
+    return normalized.split('');
+  }
+
+  String? _tokenAt(PracticeItemV1 item, int index) {
+    final List<String> tokens = _normalizedTokensForItem(item);
+    if (index < 0 || index >= tokens.length) return null;
+    return tokens[index];
+  }
+
+  PracticeItemV1 _sanitizedItemMarkings(PracticeItemV1 item) {
+    final List<String> tokens = _normalizedTokensForItem(item);
+    final List<int> accented =
+        item.accentedNoteIndices
+            .where(
+              (index) =>
+                  index >= 0 && index < tokens.length && tokens[index] != 'K',
+            )
+            .toSet()
+            .toList()
+          ..sort();
+    final List<int> ghosted =
+        item.ghostNoteIndices
+            .where((index) => index >= 0 && index < tokens.length)
+            .toSet()
+            .toList()
+          ..sort();
+
+    if (listEquals(accented, item.accentedNoteIndices) &&
+        listEquals(ghosted, item.ghostNoteIndices)) {
+      return item;
+    }
+
+    return item.copyWith(
+      accentedNoteIndices: accented,
+      ghostNoteIndices: ghosted,
+    );
+  }
+
   String _patternSignature(String sticking) {
     return sticking.toUpperCase().replaceAll(RegExp(r'[^RLK]'), '');
   }
@@ -696,9 +756,18 @@ class AppController extends ChangeNotifier {
   }
 
   List<int> _defaultAccentIndicesForSticking(String sticking) {
-    final int notes = _estimateNoteCount(sticking);
-    if (notes <= 0) return const <int>[];
-    return notes >= 3 ? const <int>[0, 2] : const <int>[0];
+    final List<String> tokens = _normalizedTokensFromSticking(sticking);
+    if (tokens.isEmpty) return const <int>[];
+
+    final List<int> handIndices = <int>[
+      for (int index = 0; index < tokens.length; index++)
+        if (tokens[index] != 'K') index,
+    ];
+    if (handIndices.isEmpty) return const <int>[];
+    if (handIndices.length >= 3) {
+      return <int>[handIndices.first, handIndices[2]];
+    }
+    return <int>[handIndices.first];
   }
 
   String _triadItemId(String cellId) => 'triad_${cellId.toLowerCase()}';
@@ -719,10 +788,7 @@ class AppController extends ChangeNotifier {
   }
 
   List<int> _accentIndicesForTriadCell(TriadMatrixCell cell) {
-    if (cell.handsOnly && !cell.hasHandDouble) return const <int>[1];
-    if (cell.hasKickDouble || cell.hasHandDouble) return const <int>[0];
-    if (cell.usesKick) return const <int>[0, 2];
-    return const <int>[0];
+    return _defaultAccentIndicesForSticking(cell.id);
   }
 
   void _seed() {
@@ -778,7 +844,7 @@ class AppController extends ChangeNotifier {
         tags: <String>['combo', 'flow'],
         saved: true,
       ),
-    ];
+    ].map(_sanitizedItemMarkings).toList(growable: false);
 
     _combinations = const <PracticeCombinationV1>[
       PracticeCombinationV1(

@@ -7,6 +7,7 @@ import 'package:just_audio/just_audio.dart';
 import '../../features/app/app_formatters.dart';
 import '../../state/app_controller.dart';
 import '../../core/practice/practice_domain_v1.dart';
+import 'widgets/pattern_display_text.dart';
 import 'widgets/pattern_marking_editor.dart';
 import 'session_summary_screen.dart';
 
@@ -85,8 +86,9 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const SizedBox(height: 12),
-                  Text(
-                    _markedPatternText(tokens, markings),
+                  PatternDisplayText(
+                    tokens: tokens,
+                    markings: markings,
                     style: Theme.of(context).textTheme.displaySmall?.copyWith(
                       fontWeight: FontWeight.w900,
                       letterSpacing: -1.0,
@@ -276,8 +278,10 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   void _toggleSessionMarking({required String itemId, required int noteIndex}) {
     final List<PatternNoteMarkingV1> current =
         _sessionMarkingsByItemId[itemId]!;
+    final String token = widget.controller.noteTokensFor(itemId)[noteIndex];
     final PatternNoteMarkingV1 next = switch (current[noteIndex]) {
-      PatternNoteMarkingV1.normal => PatternNoteMarkingV1.accent,
+      PatternNoteMarkingV1.normal =>
+        token == 'K' ? PatternNoteMarkingV1.ghost : PatternNoteMarkingV1.accent,
       PatternNoteMarkingV1.accent => PatternNoteMarkingV1.ghost,
       PatternNoteMarkingV1.ghost => PatternNoteMarkingV1.normal,
     };
@@ -288,20 +292,6 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
       updated[noteIndex] = next;
       _sessionMarkingsByItemId[itemId] = updated;
     });
-  }
-
-  String _markedPatternText(
-    List<String> tokens,
-    List<PatternNoteMarkingV1> markings,
-  ) {
-    return List<String>.generate(tokens.length, (int index) {
-      final String token = tokens[index];
-      return switch (markings[index]) {
-        PatternNoteMarkingV1.normal => token,
-        PatternNoteMarkingV1.accent => '^$token',
-        PatternNoteMarkingV1.ghost => '($token)',
-      };
-    }).join(' ');
   }
 
   void _startElapsedTicker() {

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/practice/practice_domain_v1.dart';
 import '../../features/app/app_formatters.dart';
 import '../../state/app_controller.dart';
+import '../practice/widgets/pattern_display_text.dart';
 import 'widgets/triad_matrix_grid.dart';
 
 class MatrixScreen extends StatefulWidget {
@@ -114,13 +115,27 @@ class _MatrixScreenState extends State<MatrixScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: <Widget>[
-                        Text(
-                          _selectedLabel,
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -0.6,
+                        if (_selectedItemIds.length == 1)
+                          PatternDisplayText(
+                            tokens: widget.controller.noteTokensFor(
+                              _selectedItemIds.first,
+                            ),
+                            markings: widget.controller.noteMarkingsFor(
+                              _selectedItemIds.first,
+                            ),
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -0.6,
+                            ),
+                          )
+                        else
+                          Text(
+                            _selectedLabel,
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -0.6,
+                            ),
                           ),
-                        ),
                         const SizedBox(height: 12),
                         FilledButton(
                           onPressed: _practiceSelection,

@@ -37,13 +37,14 @@ class PatternMarkingEditor extends StatelessWidget {
           spacing: 8,
           runSpacing: 8,
           children: List<Widget>.generate(resolvedTokens.length, (index) {
+            final String token = resolvedTokens[index];
             final PatternNoteMarkingV1 marking = resolvedMarkings[index];
             return ActionChip(
-              label: Text(_labelFor(resolvedTokens[index], marking)),
+              label: Text(_labelFor(token, marking)),
               avatar: Text('${index + 1}'),
               onPressed: editable
                   ? () {
-                      _handleTap(index, marking);
+                      _handleTap(index, token, marking);
                     }
                   : null,
               backgroundColor: _backgroundFor(marking),
@@ -57,7 +58,7 @@ class PatternMarkingEditor extends StatelessWidget {
         const SizedBox(height: 10),
         Text(
           editable
-              ? 'Tap notes to cycle Normal -> Accent (^) -> Ghost (( )).'
+              ? 'Tap notes to cycle. Kicks skip accents.'
               : "Accent notes use a tick mark. Ghost notes use parentheses.",
           style: Theme.of(context).textTheme.bodySmall,
         ),
@@ -75,8 +76,8 @@ class PatternMarkingEditor extends StatelessWidget {
     return controller!.noteMarkingsFor(itemId!);
   }
 
-  void _handleTap(int index, PatternNoteMarkingV1 current) {
-    final PatternNoteMarkingV1 next = _nextMarking(current);
+  void _handleTap(int index, String token, PatternNoteMarkingV1 current) {
+    final PatternNoteMarkingV1 next = _nextMarking(token, current);
     if (onTapNote != null) {
       onTapNote!(index);
       return;
@@ -97,7 +98,18 @@ class PatternMarkingEditor extends StatelessWidget {
     };
   }
 
-  PatternNoteMarkingV1 _nextMarking(PatternNoteMarkingV1 current) {
+  PatternNoteMarkingV1 _nextMarking(
+    String token,
+    PatternNoteMarkingV1 current,
+  ) {
+    if (token == 'K') {
+      return switch (current) {
+        PatternNoteMarkingV1.normal => PatternNoteMarkingV1.ghost,
+        PatternNoteMarkingV1.accent => PatternNoteMarkingV1.ghost,
+        PatternNoteMarkingV1.ghost => PatternNoteMarkingV1.normal,
+      };
+    }
+
     return switch (current) {
       PatternNoteMarkingV1.normal => PatternNoteMarkingV1.accent,
       PatternNoteMarkingV1.accent => PatternNoteMarkingV1.ghost,

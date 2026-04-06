@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/practice/practice_domain_v1.dart';
 import '../../features/app/app_formatters.dart';
 import '../../state/app_controller.dart';
+import '../practice/widgets/pattern_display_text.dart';
 
 enum _ToolkitSection { routine, combos, custom }
 
@@ -176,8 +177,9 @@ class _ToolkitList extends StatelessWidget {
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text(
-                      controller.markedPatternTextFor(item.id),
+                    PatternDisplayText(
+                      tokens: controller.noteTokensFor(item.id),
+                      markings: controller.noteMarkingsFor(item.id),
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w900,
                         letterSpacing: -0.5,

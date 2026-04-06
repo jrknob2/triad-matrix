@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../features/app/app_formatters.dart';
 import '../../state/app_controller.dart';
+import '../practice/widgets/pattern_display_text.dart';
 
 class TodayScreen extends StatelessWidget {
   final AppController controller;
@@ -183,6 +184,8 @@ class _CoachCueCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final List<Widget> items = itemIds
         .map((itemId) {
+          final List<String> tokens = controller.noteTokensFor(itemId);
+          final markings = controller.noteMarkingsFor(itemId);
           return InkWell(
             borderRadius: BorderRadius.circular(16),
             onTap: () => onPracticeItem(itemId),
@@ -196,8 +199,9 @@ class _CoachCueCard extends StatelessWidget {
               child: Row(
                 children: <Widget>[
                   Expanded(
-                    child: Text(
-                      controller.markedPatternTextFor(itemId),
+                    child: PatternDisplayText(
+                      tokens: tokens,
+                      markings: markings,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w900,
                         letterSpacing: -0.5,

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/practice/practice_domain_v1.dart';
 import '../../features/app/app_formatters.dart';
 import '../../state/app_controller.dart';
+import '../practice/widgets/pattern_display_text.dart';
 import '../practice/widgets/pattern_marking_editor.dart';
 
 class ItemDetailScreen extends StatelessWidget {
@@ -28,6 +29,10 @@ class ItemDetailScreen extends StatelessWidget {
         final competency = controller.competencyFor(item.id);
         final totalTime = controller.totalTime(itemId: item.id);
         final sessionCount = controller.sessionCount(itemId: item.id);
+        final List<String> tokens = controller.noteTokensFor(item.id);
+        final List<PatternNoteMarkingV1> markings = controller.noteMarkingsFor(
+          item.id,
+        );
 
         return Scaffold(
           appBar: AppBar(title: const Text('Practice Items')),
@@ -45,8 +50,9 @@ class ItemDetailScreen extends StatelessWidget {
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       const SizedBox(height: 12),
-                      Text(
-                        controller.markedPatternTextFor(item.id),
+                      PatternDisplayText(
+                        tokens: tokens,
+                        markings: markings,
                         style: Theme.of(context).textTheme.headlineMedium
                             ?.copyWith(
                               fontWeight: FontWeight.w900,
