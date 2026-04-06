@@ -30,7 +30,7 @@ class ItemDetailScreen extends StatelessWidget {
         final sessionCount = controller.sessionCount(itemId: item.id);
 
         return Scaffold(
-          appBar: AppBar(title: Text(item.name)),
+          appBar: AppBar(title: const Text('Practice Items')),
           body: ListView(
             padding: const EdgeInsets.all(16),
             children: <Widget>[
@@ -40,6 +40,11 @@ class ItemDetailScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
+                      Text(
+                        item.name,
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: 12),
                       Text(
                         controller.markedPatternTextFor(item.id),
                         style: Theme.of(context).textTheme.headlineMedium

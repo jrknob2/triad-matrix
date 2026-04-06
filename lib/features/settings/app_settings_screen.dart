@@ -49,36 +49,69 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
             },
           ),
           const SizedBox(height: 12),
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: Text(
-                  'Default BPM',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-              ),
-              IconButton(
-                onPressed: _draft.defaultBpm <= 30
-                    ? null
-                    : () => setState(
-                        () => _draft = _draft.copyWith(
-                          defaultBpm: _draft.defaultBpm - 1,
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: <Widget>[
+                  Row(
+                    children: <Widget>[
+                      Text(
+                        'Default BPM',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const Spacer(),
+                      Text(
+                        '${_draft.defaultBpm}',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
-                icon: const Icon(Icons.remove),
-              ),
-              Text('${_draft.defaultBpm}'),
-              IconButton(
-                onPressed: _draft.defaultBpm >= 260
-                    ? null
-                    : () => setState(
-                        () => _draft = _draft.copyWith(
-                          defaultBpm: _draft.defaultBpm + 1,
+                    ],
+                  ),
+                  Row(
+                    children: <Widget>[
+                      IconButton(
+                        onPressed: _draft.defaultBpm <= 30
+                            ? null
+                            : () => setState(
+                                () => _draft = _draft.copyWith(
+                                  defaultBpm: _draft.defaultBpm - 1,
+                                ),
+                              ),
+                        icon: const Icon(Icons.remove_circle_outline),
+                      ),
+                      Expanded(
+                        child: Slider(
+                          value: _draft.defaultBpm.toDouble(),
+                          min: 30,
+                          max: 260,
+                          divisions: 230,
+                          label: '${_draft.defaultBpm} BPM',
+                          onChanged: (double value) {
+                            setState(
+                              () => _draft = _draft.copyWith(
+                                defaultBpm: value.round(),
+                              ),
+                            );
+                          },
                         ),
                       ),
-                icon: const Icon(Icons.add),
+                      IconButton(
+                        onPressed: _draft.defaultBpm >= 260
+                            ? null
+                            : () => setState(
+                                () => _draft = _draft.copyWith(
+                                  defaultBpm: _draft.defaultBpm + 1,
+                                ),
+                              ),
+                        icon: const Icon(Icons.add_circle_outline),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<TimerPresetV1>(

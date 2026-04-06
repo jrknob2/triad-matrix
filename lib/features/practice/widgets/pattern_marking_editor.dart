@@ -4,23 +4,31 @@ import '../../../core/practice/practice_domain_v1.dart';
 import '../../../state/app_controller.dart';
 
 class PatternMarkingEditor extends StatelessWidget {
-  final AppController controller;
-  final String itemId;
+  final AppController? controller;
+  final String? itemId;
+  final List<String>? tokens;
+  final List<PatternNoteMarkingV1>? markings;
+  final ValueChanged<int>? onTapNote;
   final bool editable;
 
   const PatternMarkingEditor({
     super.key,
-    required this.controller,
-    required this.itemId,
+    this.controller,
+    this.itemId,
+    this.tokens,
+    this.markings,
+    this.onTapNote,
     this.editable = true,
-  });
+  }) : assert(
+         (controller != null && itemId != null) ||
+             (tokens != null && markings != null),
+         'Provide either controller+itemId or tokens+markings.',
+       );
 
   @override
   Widget build(BuildContext context) {
-    final List<String> tokens = controller.noteTokensFor(itemId);
-    final List<PatternNoteMarkingV1> markings = controller.noteMarkingsFor(
-      itemId,
-    );
+    final List<String> resolvedTokens = _resolvedTokens;
+    final List<PatternNoteMarkingV1> resolvedMarkings = _resolvedMarkings;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -28,18 +36,14 @@ class PatternMarkingEditor extends StatelessWidget {
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: List<Widget>.generate(tokens.length, (index) {
-            final PatternNoteMarkingV1 marking = markings[index];
+          children: List<Widget>.generate(resolvedTokens.length, (index) {
+            final PatternNoteMarkingV1 marking = resolvedMarkings[index];
             return ActionChip(
-              label: Text(_labelFor(tokens[index], marking)),
+              label: Text(_labelFor(resolvedTokens[index], marking)),
               avatar: Text('${index + 1}'),
               onPressed: editable
                   ? () {
-                      controller.setNoteMarking(
-                        itemId: itemId,
-                        noteIndex: index,
-                        marking: _nextMarking(marking),
-                      );
+                      _handleTap(index, marking);
                     }
                   : null,
               backgroundColor: _backgroundFor(marking),
@@ -58,6 +62,30 @@ class PatternMarkingEditor extends StatelessWidget {
           style: Theme.of(context).textTheme.bodySmall,
         ),
       ],
+    );
+  }
+
+  List<String> get _resolvedTokens {
+    if (tokens != null) return tokens!;
+    return controller!.noteTokensFor(itemId!);
+  }
+
+  List<PatternNoteMarkingV1> get _resolvedMarkings {
+    if (markings != null) return markings!;
+    return controller!.noteMarkingsFor(itemId!);
+  }
+
+  void _handleTap(int index, PatternNoteMarkingV1 current) {
+    final PatternNoteMarkingV1 next = _nextMarking(current);
+    if (onTapNote != null) {
+      onTapNote!(index);
+      return;
+    }
+
+    controller!.setNoteMarking(
+      itemId: itemId!,
+      noteIndex: index,
+      marking: next,
     );
   }
 

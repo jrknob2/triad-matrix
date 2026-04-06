@@ -237,12 +237,11 @@ class _TriadCellButton extends StatelessWidget {
     Color textColor = Colors.black;
 
     final bool handsOnly = controller.handsOnly(itemId);
-    final bool weakHandLead = controller.leadsWithWeakHand(itemId);
+    final bool rightLead = controller.startsWithRight(itemId);
+    final bool leftLead = controller.startsWithLeft(itemId);
     final bool hasKick = controller.hasKick(itemId);
     final bool startsWithKick = controller.startsWithKick(itemId);
     final bool endsWithKick = controller.endsWithKick(itemId);
-    final bool handLead =
-        controller.leadsWithRight(itemId) || controller.leadsWithLeft(itemId);
     final bool hasDoubles = controller.hasDoubles(itemId);
     final bool inRoutine = controller.isInRoutine(itemId);
     final bool needsAttention = controller.needsAttention(itemId);
@@ -261,16 +260,19 @@ class _TriadCellButton extends StatelessWidget {
 
     final bool filteredOutByHandsOnly =
         filters.contains(TriadMatrixFilterV1.handsOnly) && !handsOnly;
-    final bool filteredOutByLead =
-        filters.contains(TriadMatrixFilterV1.lead) && !handLead;
+    final bool leadSideFilterActive =
+        filters.contains(TriadMatrixFilterV1.rightLead) ||
+        filters.contains(TriadMatrixFilterV1.leftLead);
+    final bool matchesLeadSide =
+        (filters.contains(TriadMatrixFilterV1.rightLead) && rightLead) ||
+        (filters.contains(TriadMatrixFilterV1.leftLead) && leftLead);
+    final bool filteredOutByLead = leadSideFilterActive && !matchesLeadSide;
     final bool filteredOutByHasKick =
         filters.contains(TriadMatrixFilterV1.hasKick) && !hasKick;
     final bool filteredOutByStartsWithKick =
         filters.contains(TriadMatrixFilterV1.startsWithKick) && !startsWithKick;
     final bool filteredOutByEndsWithKick =
         filters.contains(TriadMatrixFilterV1.endsWithKick) && !endsWithKick;
-    final bool filteredOutByWeakHand =
-        filters.contains(TriadMatrixFilterV1.weakHand) && !weakHandLead;
     final bool filteredOutByInRoutine =
         filters.contains(TriadMatrixFilterV1.inRoutine) && !inRoutine;
     final bool filteredOutByNeedsAttention =
@@ -294,7 +296,6 @@ class _TriadCellButton extends StatelessWidget {
         filteredOutByHasKick ||
         filteredOutByStartsWithKick ||
         filteredOutByEndsWithKick ||
-        filteredOutByWeakHand ||
         filteredOutByInRoutine ||
         filteredOutByNeedsAttention ||
         filteredOutByUnderPracticed ||
@@ -323,12 +324,13 @@ class _TriadCellButton extends StatelessWidget {
       };
     }
 
-    if (filters.contains(TriadMatrixFilterV1.lead)) {
-      borderColor = controller.leadsWithRight(itemId)
-          ? const Color(0xFF2F6EC8)
-          : controller.leadsWithLeft(itemId)
-          ? const Color(0xFFC94949)
-          : borderColor;
+    if (rightLead && filters.contains(TriadMatrixFilterV1.rightLead)) {
+      borderColor = const Color(0xFF2F6EC8);
+      borderWidth = borderWidth < 2 ? 2 : borderWidth;
+    }
+
+    if (leftLead && filters.contains(TriadMatrixFilterV1.leftLead)) {
+      borderColor = const Color(0xFFC94949);
       borderWidth = borderWidth < 2 ? 2 : borderWidth;
     }
 
@@ -350,11 +352,6 @@ class _TriadCellButton extends StatelessWidget {
 
     if (filters.contains(TriadMatrixFilterV1.endsWithKick) && endsWithKick) {
       borderColor = const Color(0xFF916F2F);
-      borderWidth = borderWidth < 3 ? 3 : borderWidth;
-    }
-
-    if (filters.contains(TriadMatrixFilterV1.weakHand) && weakHandLead) {
-      borderColor = const Color(0xFF9A4A33);
       borderWidth = borderWidth < 3 ? 3 : borderWidth;
     }
 

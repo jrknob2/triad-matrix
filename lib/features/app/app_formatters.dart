@@ -79,9 +79,9 @@ extension HandednessLabel on HandednessV1 {
 extension TriadMatrixViewModeLabel on TriadMatrixViewModeV1 {
   String get label => switch (this) {
     TriadMatrixViewModeV1.competency => 'Competency',
-    TriadMatrixViewModeV1.lead => 'Lead Hand',
+    TriadMatrixViewModeV1.rightLead => 'Right Lead',
+    TriadMatrixViewModeV1.leftLead => 'Left Lead',
     TriadMatrixViewModeV1.handsOnly => 'Hands Only',
-    TriadMatrixViewModeV1.weakHand => 'Weak Hand',
   };
 }
 
@@ -102,8 +102,8 @@ extension TriadMatrixFilterLabel on TriadMatrixFilterV1 {
     TriadMatrixFilterV1.closeToToolkit => 'Close To Toolkit',
     TriadMatrixFilterV1.recent => 'Recent',
     TriadMatrixFilterV1.unseen => 'Unseen',
-    TriadMatrixFilterV1.lead => 'Lead Hand',
-    TriadMatrixFilterV1.weakHand => 'Weak Hand',
+    TriadMatrixFilterV1.rightLead => 'Right Lead',
+    TriadMatrixFilterV1.leftLead => 'Left Lead',
     TriadMatrixFilterV1.handsOnly => 'Hands Only',
     TriadMatrixFilterV1.hasKick => 'Has Kick',
     TriadMatrixFilterV1.startsWithKick => 'Starts w/ Kick',

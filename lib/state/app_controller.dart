@@ -234,9 +234,9 @@ class AppController extends ChangeNotifier {
 
   bool handsOnly(String itemId) => !usesKick(itemId);
 
-  bool leadsWithRight(String itemId) => _firstHandChar(itemId) == 'R';
+  bool startsWithRight(String itemId) => _firstNormalizedChar(itemId) == 'R';
 
-  bool leadsWithLeft(String itemId) => _firstHandChar(itemId) == 'L';
+  bool startsWithLeft(String itemId) => _firstNormalizedChar(itemId) == 'L';
 
   bool startsWithKick(String itemId) => _firstNormalizedChar(itemId) == 'K';
 

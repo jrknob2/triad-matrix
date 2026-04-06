@@ -36,7 +36,7 @@ class _AppShellState extends State<AppShell> {
         controller: widget.controller,
         onOpenItem: _openItemDetail,
         onPracticeItem: _openPracticeItem,
-        onBuildComboFromItem: _openCombinationBuilderFromItem,
+        onBuildComboFromItems: _openCombinationBuilderFromItems,
       ),
       ToolkitScreen(
         controller: widget.controller,
@@ -134,11 +134,15 @@ class _AppShellState extends State<AppShell> {
   }
 
   void _openCombinationBuilderFromItem(String itemId) {
+    _openCombinationBuilderFromItems(<String>[itemId]);
+  }
+
+  void _openCombinationBuilderFromItems(List<String> itemIds) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => CombinationBuilderScreen(
           controller: widget.controller,
-          initialItemIds: <String>[itemId],
+          initialItemIds: itemIds,
         ),
       ),
     );

@@ -24,7 +24,7 @@ enum ReflectionRatingV1 { easy, okay, hard }
 
 enum TimerPresetV1 { none, minutes5, minutes10, minutes20, minutes30 }
 
-enum TriadMatrixViewModeV1 { competency, lead, handsOnly, weakHand }
+enum TriadMatrixViewModeV1 { competency, rightLead, leftLead, handsOnly }
 
 enum TriadMatrixFilterPaletteV1 { coaching, technique, combos }
 
@@ -36,8 +36,8 @@ enum TriadMatrixFilterV1 {
   closeToToolkit,
   recent,
   unseen,
-  lead,
-  weakHand,
+  rightLead,
+  leftLead,
   handsOnly,
   hasKick,
   startsWithKick,

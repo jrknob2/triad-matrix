@@ -9,14 +9,14 @@ class MatrixScreen extends StatefulWidget {
   final AppController controller;
   final ValueChanged<String> onOpenItem;
   final ValueChanged<String> onPracticeItem;
-  final ValueChanged<String> onBuildComboFromItem;
+  final ValueChanged<List<String>> onBuildComboFromItems;
 
   const MatrixScreen({
     super.key,
     required this.controller,
     required this.onOpenItem,
     required this.onPracticeItem,
-    required this.onBuildComboFromItem,
+    required this.onBuildComboFromItems,
   });
 
   @override
@@ -29,6 +29,7 @@ class _MatrixScreenState extends State<MatrixScreen> {
   final Set<String> _selectedComboIds = <String>{};
   final Set<String> _selectedRows = <String>{};
   final Set<String> _selectedColumns = <String>{};
+  final List<String> _selectedItemIds = <String>[];
 
   @override
   Widget build(BuildContext context) {
@@ -91,16 +92,75 @@ class _MatrixScreenState extends State<MatrixScreen> {
                   controller: widget.controller,
                   filters: _filters,
                   selectedComboIds: _selectedComboIds,
-                  selectedItemIds: const <String>[],
+                  selectedItemIds: _selectedItemIds,
                   selectedRows: _selectedRows,
                   selectedColumns: _selectedColumns,
                   onToggleRow: _toggleRow,
                   onToggleColumn: _toggleColumn,
-                  onTapItem: _showItemActions,
+                  onTapItem: _toggleItemSelection,
                 ),
               ),
             ),
           ),
+          if (_selectedItemIds.isNotEmpty)
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Text(
+                          _selectedLabel,
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.6,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        FilledButton(
+                          onPressed: _practiceSelection,
+                          child: const Text('Practice Now'),
+                        ),
+                        const SizedBox(height: 8),
+                        OutlinedButton(
+                          onPressed: _buildComboFromSelection,
+                          child: const Text('Build Combo'),
+                        ),
+                        const SizedBox(height: 8),
+                        OutlinedButton(
+                          onPressed: _toggleRoutineSelection,
+                          child: Text(
+                            _selectionIsInRoutine
+                                ? 'Remove from Routine'
+                                : 'Add to Routine',
+                          ),
+                        ),
+                        if (_selectedItemIds.length == 1) ...<Widget>[
+                          const SizedBox(height: 8),
+                          OutlinedButton(
+                            onPressed: () =>
+                                widget.onOpenItem(_selectedItemIds.first),
+                            child: const Text('View Details'),
+                          ),
+                        ],
+                        const SizedBox(height: 8),
+                        TextButton(
+                          onPressed: () {
+                            setState(() => _selectedItemIds.clear());
+                          },
+                          child: const Text('Clear Selection'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -191,8 +251,8 @@ class _MatrixScreenState extends State<MatrixScreen> {
         TriadMatrixFilterV1.unseen,
       ],
       TriadMatrixFilterPaletteV1.technique => const <TriadMatrixFilterV1>[
-        TriadMatrixFilterV1.lead,
-        TriadMatrixFilterV1.weakHand,
+        TriadMatrixFilterV1.rightLead,
+        TriadMatrixFilterV1.leftLead,
         TriadMatrixFilterV1.handsOnly,
         TriadMatrixFilterV1.hasKick,
         TriadMatrixFilterV1.startsWithKick,
@@ -211,62 +271,64 @@ class _MatrixScreenState extends State<MatrixScreen> {
     });
   }
 
-  Future<void> _showItemActions(String itemId) async {
-    final PracticeItemV1 item = widget.controller.itemById(itemId);
-    final bool inRoutine = widget.controller.isDirectRoutineEntry(itemId);
-    await showModalBottomSheet<void>(
-      context: context,
-      builder: (BuildContext context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              ListTile(
-                title: Text(item.name),
-                subtitle: const Text('Choose an action'),
-              ),
-              ListTile(
-                leading: const Icon(Icons.play_arrow),
-                title: const Text('Practice Now'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  widget.onPracticeItem(itemId);
-                },
-              ),
-              ListTile(
-                leading: Icon(
-                  inRoutine
-                      ? Icons.remove_circle_outline
-                      : Icons.add_circle_outline,
-                ),
-                title: Text(
-                  inRoutine ? 'Remove From Routine' : 'Add To Routine',
-                ),
-                onTap: () {
-                  widget.controller.toggleRoutineItem(itemId);
-                  Navigator.of(context).pop();
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.linear_scale),
-                title: const Text('Build Combo From This'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  widget.onBuildComboFromItem(itemId);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.open_in_new),
-                title: const Text('View Details'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  widget.onOpenItem(itemId);
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
+  String get _selectedLabel {
+    if (_selectedItemIds.length == 1) {
+      return widget.controller.markedPatternTextFor(_selectedItemIds.first);
+    }
+    return widget.controller.comboDisplayName(_selectedItemIds);
+  }
+
+  bool get _selectionIsInRoutine {
+    final String? itemId = _selectionRoutineItemId;
+    return itemId != null && widget.controller.isDirectRoutineEntry(itemId);
+  }
+
+  String? get _selectionRoutineItemId {
+    if (_selectedItemIds.isEmpty) return null;
+    if (_selectedItemIds.length == 1) return _selectedItemIds.first;
+    return widget.controller.combinationForItemIdsOrNull(_selectedItemIds)?.id;
+  }
+
+  void _toggleItemSelection(String itemId) {
+    setState(() {
+      if (_selectedItemIds.contains(itemId)) {
+        _selectedItemIds.remove(itemId);
+      } else {
+        _selectedItemIds.add(itemId);
+      }
+    });
+  }
+
+  void _practiceSelection() {
+    final String? itemId = _selectionActionItemId();
+    if (itemId == null) return;
+    widget.onPracticeItem(itemId);
+  }
+
+  void _buildComboFromSelection() {
+    if (_selectedItemIds.isEmpty) return;
+    widget.onBuildComboFromItems(List<String>.from(_selectedItemIds));
+  }
+
+  void _toggleRoutineSelection() {
+    final String? itemId = _selectionActionItemId(createIfMissing: true);
+    if (itemId == null) return;
+    widget.controller.toggleRoutineItem(itemId);
+    setState(() {});
+  }
+
+  String? _selectionActionItemId({bool createIfMissing = false}) {
+    if (_selectedItemIds.isEmpty) return null;
+    if (_selectedItemIds.length == 1) return _selectedItemIds.first;
+    final PracticeCombinationV1? existing = widget.controller
+        .combinationForItemIdsOrNull(_selectedItemIds);
+    if (existing != null) return existing.id;
+    if (!createIfMissing) return null;
+    return widget.controller
+        .createCombination(
+          itemIds: _selectedItemIds,
+          intentTag: ComboIntentTagV1.both,
+        )
+        .id;
   }
 }

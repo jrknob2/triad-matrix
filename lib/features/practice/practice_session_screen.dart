@@ -27,6 +27,8 @@ class PracticeSessionScreen extends StatefulWidget {
 class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   final Stopwatch _stopwatch = Stopwatch();
   final AudioPlayer _clickPlayer = AudioPlayer();
+  final Map<String, List<PatternNoteMarkingV1>> _sessionMarkingsByItemId =
+      <String, List<PatternNoteMarkingV1>>{};
   Timer? _elapsedTicker;
   Timer? _beatTicker;
   bool _running = false;
@@ -39,6 +41,11 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     super.initState();
     _bpm = widget.setup.bpm;
     _clickEnabled = widget.setup.clickEnabled;
+    for (final String itemId in widget.setup.practiceItemIds) {
+      _sessionMarkingsByItemId[itemId] = List<PatternNoteMarkingV1>.from(
+        widget.controller.noteMarkingsFor(itemId),
+      );
+    }
     _configureAudio();
   }
 
@@ -54,6 +61,9 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   Widget build(BuildContext context) {
     final currentItemId = widget.setup.practiceItemIds[_currentItemIndex];
     final currentItem = widget.controller.itemById(currentItemId);
+    final List<String> tokens = widget.controller.noteTokensFor(currentItemId);
+    final List<PatternNoteMarkingV1> markings =
+        _sessionMarkingsByItemId[currentItemId]!;
     final Duration? target = timerPresetToDuration(widget.setup.timerPreset);
     final String timerText = target == null
         ? formatDuration(_stopwatch.elapsed)
@@ -76,7 +86,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    widget.controller.markedPatternTextFor(currentItemId),
+                    _markedPatternText(tokens, markings),
                     style: Theme.of(context).textTheme.displaySmall?.copyWith(
                       fontWeight: FontWeight.w900,
                       letterSpacing: -1.0,
@@ -84,9 +94,14 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                   ),
                   const SizedBox(height: 12),
                   PatternMarkingEditor(
-                    controller: widget.controller,
-                    itemId: currentItemId,
-                    editable: false,
+                    tokens: tokens,
+                    markings: markings,
+                    onTapNote: (int noteIndex) {
+                      _toggleSessionMarking(
+                        itemId: currentItemId,
+                        noteIndex: noteIndex,
+                      );
+                    },
                   ),
                 ],
               ),
@@ -256,6 +271,37 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
         ),
       ),
     );
+  }
+
+  void _toggleSessionMarking({required String itemId, required int noteIndex}) {
+    final List<PatternNoteMarkingV1> current =
+        _sessionMarkingsByItemId[itemId]!;
+    final PatternNoteMarkingV1 next = switch (current[noteIndex]) {
+      PatternNoteMarkingV1.normal => PatternNoteMarkingV1.accent,
+      PatternNoteMarkingV1.accent => PatternNoteMarkingV1.ghost,
+      PatternNoteMarkingV1.ghost => PatternNoteMarkingV1.normal,
+    };
+
+    setState(() {
+      final List<PatternNoteMarkingV1> updated =
+          List<PatternNoteMarkingV1>.from(current);
+      updated[noteIndex] = next;
+      _sessionMarkingsByItemId[itemId] = updated;
+    });
+  }
+
+  String _markedPatternText(
+    List<String> tokens,
+    List<PatternNoteMarkingV1> markings,
+  ) {
+    return List<String>.generate(tokens.length, (int index) {
+      final String token = tokens[index];
+      return switch (markings[index]) {
+        PatternNoteMarkingV1.normal => token,
+        PatternNoteMarkingV1.accent => '^$token',
+        PatternNoteMarkingV1.ghost => '($token)',
+      };
+    }).join(' ');
   }
 
   void _startElapsedTicker() {
