@@ -5,7 +5,7 @@ import '../../features/app/app_formatters.dart';
 import '../../state/app_controller.dart';
 import '../practice/widgets/pattern_display_text.dart';
 
-enum _FocusSection { workingOn, combos, custom }
+enum _FocusSection { workingOn, phraseWork, customBucket }
 
 class FocusScreen extends StatefulWidget {
   final AppController controller;
@@ -38,6 +38,12 @@ class _FocusScreenState extends State<FocusScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
+                  _FocusSummary(
+                    controller: widget.controller,
+                    onOpenItem: widget.onOpenItem,
+                    onPracticeItem: widget.onPracticeItem,
+                  ),
+                  const SizedBox(height: 14),
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
@@ -70,8 +76,10 @@ class _FocusScreenState extends State<FocusScreen> {
   Widget _buildBody() {
     return switch (_section) {
       _FocusSection.workingOn => _FocusList(
-        title: widget.controller.routine.name,
-        items: widget.controller.routineItems,
+        title: 'Working On',
+        summary:
+            'These are the assignments that should get repeated attention. This is coached work, not storage.',
+        items: widget.controller.activeWorkItems,
         controller: widget.controller,
         onOpenItem: widget.onOpenItem,
         onPracticeItem: widget.onPracticeItem,
@@ -80,16 +88,20 @@ class _FocusScreenState extends State<FocusScreen> {
           onPressed: () => widget.controller.toggleRoutineItem(item.id),
         ),
       ),
-      _FocusSection.combos => _FocusList(
-        title: 'Saved Combos',
-        items: widget.controller.itemsByFamily(MaterialFamilyV1.combo),
+      _FocusSection.phraseWork => _FocusList(
+        title: 'Phrase Work',
+        summary:
+            'Saved multi-triad phrases live here. Use them to build transitions, phrase length, and later flow on the kit.',
+        items: widget.controller.phraseWorkItems,
         controller: widget.controller,
         onOpenItem: widget.onOpenItem,
         onPracticeItem: widget.onPracticeItem,
       ),
-      _FocusSection.custom => _FocusList(
+      _FocusSection.customBucket => _FocusList(
         title: 'Custom Bucket',
-        items: widget.controller.itemsByFamily(MaterialFamilyV1.custom),
+        summary:
+            'Custom phrases are available on demand, but they do not affect coaching, coverage, or toolbox readiness.',
+        items: widget.controller.customBucketItems,
         controller: widget.controller,
         onOpenItem: widget.onOpenItem,
         onPracticeItem: widget.onPracticeItem,
@@ -100,14 +112,148 @@ class _FocusScreenState extends State<FocusScreen> {
   String _labelForSection(_FocusSection section) {
     return switch (section) {
       _FocusSection.workingOn => 'Working On',
-      _FocusSection.combos => 'Combos',
-      _FocusSection.custom => 'Custom',
+      _FocusSection.phraseWork => 'Phrase Work',
+      _FocusSection.customBucket => 'Custom Bucket',
     };
+  }
+}
+
+class _FocusSummary extends StatelessWidget {
+  final AppController controller;
+  final ValueChanged<String> onOpenItem;
+  final ValueChanged<String> onPracticeItem;
+
+  const _FocusSummary({
+    required this.controller,
+    required this.onOpenItem,
+    required this.onPracticeItem,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final List<PracticeItemV1> toolboxReady = controller.toolboxReadyItems
+        .take(3)
+        .toList();
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F0E6),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0x22000000)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              'Working On',
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '${controller.activeWorkItems.length} active items • ${controller.phraseWorkItems.length} saved phrases • ${controller.customBucketItems.length} customs',
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: const Color(0xFF5B5345)),
+            ),
+            const SizedBox(height: 14),
+            if (toolboxReady.isEmpty)
+              Text(
+                'Nothing is close to toolbox-ready yet. Stay with consistency and revisit the same few phrases.',
+                style: Theme.of(context).textTheme.bodyMedium,
+              )
+            else ...<Widget>[
+              Text(
+                'Close To Toolbox',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 8),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: toolboxReady
+                      .map(
+                        (item) => Padding(
+                          padding: const EdgeInsets.only(right: 10),
+                          child: _ToolboxReadyChip(
+                            item: item,
+                            controller: controller,
+                            onOpenItem: onOpenItem,
+                            onPracticeItem: onPracticeItem,
+                          ),
+                        ),
+                      )
+                      .toList(growable: false),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ToolboxReadyChip extends StatelessWidget {
+  final PracticeItemV1 item;
+  final AppController controller;
+  final ValueChanged<String> onOpenItem;
+  final ValueChanged<String> onPracticeItem;
+
+  const _ToolboxReadyChip({
+    required this.item,
+    required this.controller,
+    required this.onOpenItem,
+    required this.onPracticeItem,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(18),
+      onTap: () => onOpenItem(item.id),
+      onLongPress: () => onPracticeItem(item.id),
+      child: Ink(
+        width: 170,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF9F5EC),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0xFFB5882D), width: 1.6),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            PatternDisplayText(
+              tokens: controller.noteTokensFor(item.id),
+              markings: controller.noteMarkingsFor(item.id),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.5,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '${controller.competencyFor(item.id).label} • ${formatDuration(controller.totalTime(itemId: item.id))}',
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: const Color(0xFF5B5345)),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
 class _FocusList extends StatelessWidget {
   final String title;
+  final String summary;
   final List<PracticeItemV1> items;
   final AppController controller;
   final ValueChanged<String> onOpenItem;
@@ -116,6 +262,7 @@ class _FocusList extends StatelessWidget {
 
   const _FocusList({
     required this.title,
+    required this.summary,
     required this.items,
     required this.controller,
     required this.onOpenItem,
@@ -134,15 +281,22 @@ class _FocusList extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       children: <Widget>[
-        Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: Text(
-            '$title · ${items.length == 1 ? '1 item' : '${items.length} items'} · ${formatDuration(totalLoggedTime)} logged',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyLarge?.copyWith(color: const Color(0xFF5B5345)),
-          ),
+        Text(
+          title,
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
         ),
+        const SizedBox(height: 6),
+        Text(summary, style: Theme.of(context).textTheme.bodyMedium),
+        const SizedBox(height: 10),
+        Text(
+          '${items.length == 1 ? '1 item' : '${items.length} items'} • ${formatDuration(totalLoggedTime)} logged',
+          style: Theme.of(
+            context,
+          ).textTheme.bodyLarge?.copyWith(color: const Color(0xFF5B5345)),
+        ),
+        const SizedBox(height: 12),
         if (items.isEmpty)
           const Card(
             child: Padding(
@@ -171,8 +325,7 @@ class _FocusList extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${controller.competencyFor(item.id).label} · '
-                      '${formatDuration(controller.totalTime(itemId: item.id))}',
+                      '${controller.competencyFor(item.id).label} • ${formatDuration(controller.totalTime(itemId: item.id))}',
                     ),
                   ],
                 ),

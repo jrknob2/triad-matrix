@@ -135,6 +135,36 @@ class AppController extends ChangeNotifier {
         .toList(growable: false);
   }
 
+  List<PracticeItemV1> get activeWorkItems {
+    final List<PracticeItemV1> items = routineItems
+        .where((item) => !item.isCustom)
+        .toList(growable: false);
+    items.sort((a, b) => _compareByNeed(a, b));
+    return items;
+  }
+
+  List<PracticeItemV1> get phraseWorkItems {
+    final List<PracticeItemV1> items = itemsByFamily(MaterialFamilyV1.combo);
+    items.sort(_compareByNeed);
+    return items;
+  }
+
+  List<PracticeItemV1> get customBucketItems {
+    final List<PracticeItemV1> items = itemsByFamily(MaterialFamilyV1.custom);
+    items.sort((a, b) => a.name.compareTo(b.name));
+    return items;
+  }
+
+  List<PracticeItemV1> get toolboxReadyItems {
+    final List<PracticeItemV1> items = _items
+        .where((item) => !item.isCustom && isCloseToToolbox(item.id))
+        .toList(growable: false);
+    items.sort(
+      (a, b) => totalTime(itemId: b.id).compareTo(totalTime(itemId: a.id)),
+    );
+    return items;
+  }
+
   PracticeSessionLogV1? lastSessionForItem(String itemId) {
     for (final PracticeSessionLogV1 session in recentSessions) {
       if (_sessionContainsItem(session, itemId)) return session;
