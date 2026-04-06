@@ -89,6 +89,7 @@ class _MatrixScreenState extends State<MatrixScreen> {
             onToggleRow: _toggleRow,
             onToggleColumn: _toggleColumn,
             onTapItem: _toggleItemSelection,
+            onRemoveItem: _removeSelectedItem,
           ),
           if (_selectedItemIds.isNotEmpty) ...<Widget>[
             const SizedBox(height: 16),
@@ -297,6 +298,12 @@ class _MatrixScreenState extends State<MatrixScreen> {
       } else {
         _selectedItemIds.add(itemId);
       }
+    });
+  }
+
+  void _removeSelectedItem(String itemId) {
+    setState(() {
+      _selectedItemIds.remove(itemId);
     });
   }
 

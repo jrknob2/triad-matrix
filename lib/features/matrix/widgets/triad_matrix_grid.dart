@@ -14,6 +14,7 @@ class TriadMatrixGrid extends StatelessWidget {
   final ValueChanged<String> onToggleRow;
   final ValueChanged<String> onToggleColumn;
   final ValueChanged<String> onTapItem;
+  final ValueChanged<String>? onRemoveItem;
 
   const TriadMatrixGrid({
     super.key,
@@ -26,6 +27,7 @@ class TriadMatrixGrid extends StatelessWidget {
     required this.onToggleRow,
     required this.onToggleColumn,
     required this.onTapItem,
+    this.onRemoveItem,
   });
 
   @override
@@ -91,10 +93,15 @@ class TriadMatrixGrid extends StatelessWidget {
                         ),
                         rowFilterActive: selectedRows.isNotEmpty,
                         columnFilterActive: selectedColumns.isNotEmpty,
-                        selectionIndex: selectedItemIds.indexOf(
-                          controller.triadItemForCell(cell.id)!.id,
-                        ),
+                        selectedCount: selectedItemIds
+                            .where(
+                              (String selectedId) =>
+                                  selectedId ==
+                                  controller.triadItemForCell(cell.id)!.id,
+                            )
+                            .length,
                         onTapItem: onTapItem,
+                        onRemoveItem: onRemoveItem,
                       ),
                     ),
                 ],
@@ -154,8 +161,9 @@ class _TriadCellButton extends StatelessWidget {
   final bool columnSelected;
   final bool rowFilterActive;
   final bool columnFilterActive;
-  final int selectionIndex;
+  final int selectedCount;
   final ValueChanged<String> onTapItem;
+  final ValueChanged<String>? onRemoveItem;
 
   const _TriadCellButton({
     required this.controller,
@@ -166,8 +174,9 @@ class _TriadCellButton extends StatelessWidget {
     required this.columnSelected,
     required this.rowFilterActive,
     required this.columnFilterActive,
-    required this.selectionIndex,
+    required this.selectedCount,
     required this.onTapItem,
+    required this.onRemoveItem,
   });
 
   @override
@@ -202,23 +211,27 @@ class _TriadCellButton extends StatelessWidget {
                   ),
                 ),
               ),
-              if (selectionIndex >= 0)
+              if (selectedCount > 0 && onRemoveItem != null)
                 Positioned(
                   top: 6,
                   right: 6,
-                  child: Container(
-                    width: 18,
-                    height: 18,
-                    alignment: Alignment.center,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF101010),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text(
-                      '${selectionIndex + 1}',
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(999),
+                    onTap: () => onRemoveItem!(itemId),
+                    child: Container(
+                      width: 18,
+                      height: 18,
+                      alignment: Alignment.center,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF101010),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        'x',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
                     ),
                   ),
@@ -249,6 +262,7 @@ class _TriadCellButton extends StatelessWidget {
     final bool closeToToolkit = controller.isCloseToToolkit(itemId);
     final bool recent = controller.isRecent(itemId);
     final bool unseen = controller.isUnseen(itemId);
+    final bool selected = selectedCount > 0;
     final bool comboMatch =
         selectedComboIds.isEmpty ||
         selectedComboIds.any(
@@ -401,6 +415,11 @@ class _TriadCellButton extends StatelessWidget {
         ),
       );
       borderColor = _comboColor(comboId);
+      borderWidth = borderWidth < 3 ? 3 : borderWidth;
+    }
+
+    if (selected) {
+      borderColor = const Color(0xFF101010);
       borderWidth = borderWidth < 3 ? 3 : borderWidth;
     }
 

@@ -114,12 +114,13 @@ class _CombinationBuilderScreenState extends State<CombinationBuilderScreen> {
             controller: widget.controller,
             filters: const <TriadMatrixFilterV1>{},
             selectedComboIds: const <String>{},
-            selectedItemIds: const <String>[],
+            selectedItemIds: _selectedItemIds,
             selectedRows: const <String>{},
             selectedColumns: const <String>{},
             onToggleRow: _appendRow,
             onToggleColumn: _appendColumn,
             onTapItem: _toggleItemSelection,
+            onRemoveItem: _removeLastOccurrence,
           ),
           const SizedBox(height: 16),
           Row(
@@ -154,6 +155,14 @@ class _CombinationBuilderScreenState extends State<CombinationBuilderScreen> {
   void _toggleItemSelection(String itemId) {
     setState(() {
       _selectedItemIds.add(itemId);
+    });
+  }
+
+  void _removeLastOccurrence(String itemId) {
+    final int index = _selectedItemIds.lastIndexOf(itemId);
+    if (index < 0) return;
+    setState(() {
+      _selectedItemIds.removeAt(index);
     });
   }
 
