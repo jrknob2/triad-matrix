@@ -129,7 +129,8 @@ extension TriadMatrixFilterLabel on TriadMatrixFilterV1 {
     TriadMatrixFilterV1.weakHand => 'Weak Hand',
     TriadMatrixFilterV1.handsOnly => 'Hands Only',
     TriadMatrixFilterV1.hasKick => 'Has Kick',
-    TriadMatrixFilterV1.mirror => 'Mirror',
+    TriadMatrixFilterV1.startsWithKick => 'Starts w/ Kick',
+    TriadMatrixFilterV1.endsWithKick => 'Ends w/ Kick',
     TriadMatrixFilterV1.doubles => 'Doubles',
   };
 }

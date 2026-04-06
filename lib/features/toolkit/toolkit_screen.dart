@@ -173,11 +173,9 @@ class _ToolkitList extends StatelessWidget {
               margin: const EdgeInsets.only(bottom: 10),
               child: ListTile(
                 contentPadding: const EdgeInsets.all(16),
-                title: Text(item.name),
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    const SizedBox(height: 4),
                     Text(
                       controller.markedPatternTextFor(item.id),
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(

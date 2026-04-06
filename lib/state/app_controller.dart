@@ -233,6 +233,10 @@ class AppController extends ChangeNotifier {
 
   bool leadsWithLeft(String itemId) => _firstHandChar(itemId) == 'L';
 
+  bool startsWithKick(String itemId) => _firstNormalizedChar(itemId) == 'K';
+
+  bool endsWithKick(String itemId) => _lastNormalizedChar(itemId) == 'K';
+
   bool leadsWithWeakHand(String itemId) => _isWeakHandLead(itemById(itemId));
 
   bool hasDoubles(String itemId) {
@@ -715,6 +719,16 @@ class AppController extends ChangeNotifier {
       if (ch == 'R' || ch == 'L') return ch;
     }
     return null;
+  }
+
+  String? _firstNormalizedChar(String itemId) {
+    final String normalized = _normalizedSticking(itemById(itemId));
+    return normalized.isEmpty ? null : normalized[0];
+  }
+
+  String? _lastNormalizedChar(String itemId) {
+    final String normalized = _normalizedSticking(itemById(itemId));
+    return normalized.isEmpty ? null : normalized[normalized.length - 1];
   }
 
   String _normalizedSticking(PracticeItemV1 item) {

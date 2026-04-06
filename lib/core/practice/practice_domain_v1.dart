@@ -46,7 +46,8 @@ enum TriadMatrixFilterV1 {
   weakHand,
   handsOnly,
   hasKick,
-  mirror,
+  startsWithKick,
+  endsWithKick,
   doubles,
 }
 

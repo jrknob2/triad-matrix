@@ -30,10 +30,7 @@ class TodayScreen extends StatelessWidget {
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: <Color>[
-                Color(0xFFF7E8C7),
-                Color(0xFFF3F1EA),
-              ],
+              colors: <Color>[Color(0xFFF7E8C7), Color(0xFFF3F1EA)],
             ),
           ),
           child: ListView(
@@ -77,9 +74,7 @@ class TodayScreen extends StatelessWidget {
                     _ContextTile(
                       title: 'Kit Flow',
                       value: formatDuration(
-                        controller.totalTime(
-                          context: PracticeContextV1.kit,
-                        ),
+                        controller.totalTime(context: PracticeContextV1.kit),
                       ),
                       note: 'Movement, landing, phrasing',
                     ),
@@ -111,10 +106,7 @@ class _TodayHero extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(28),
         gradient: const LinearGradient(
-          colors: <Color>[
-            Color(0xFF133E62),
-            Color(0xFF2C6A6A),
-          ],
+          colors: <Color>[Color(0xFF133E62), Color(0xFF2C6A6A)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -134,26 +126,26 @@ class _TodayHero extends StatelessWidget {
             Text(
               'Today',
               style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: const Color(0xFFD8E8E4),
-                    letterSpacing: 1.2,
-                  ),
+                color: const Color(0xFFD8E8E4),
+                letterSpacing: 1.2,
+              ),
             ),
             const SizedBox(height: 10),
             Text(
               headline,
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                    height: 1.05,
-                  ),
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+                height: 1.05,
+              ),
             ),
             const SizedBox(height: 12),
             Text(
               summary,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: const Color(0xFFE8F2EF),
-                    height: 1.35,
-                  ),
+                color: const Color(0xFFE8F2EF),
+                height: 1.35,
+              ),
             ),
             const SizedBox(height: 16),
             FilledButton.tonalIcon(
@@ -191,13 +183,34 @@ class _CoachCueCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List<Widget> chips = itemIds
+    final List<Widget> items = itemIds
         .map((itemId) {
-          final item = controller.itemById(itemId);
-          return ActionChip(
-            label: Text(item.name),
-            avatar: Text(controller.accentPatternLabelFor(itemId)),
-            onPressed: () => onPracticeItem(itemId),
+          return InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: () => onPracticeItem(itemId),
+            child: Ink(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF5F0E6),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0x22000000)),
+              ),
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Text(
+                      controller.markedPatternTextFor(itemId),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Icon(Icons.play_arrow_rounded),
+                ],
+              ),
+            ),
           );
         })
         .toList(growable: false);
@@ -214,10 +227,13 @@ class _CoachCueCard extends StatelessWidget {
             const SizedBox(height: 6),
             Text(detail, style: Theme.of(context).textTheme.bodyMedium),
             const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: chips,
+            Column(
+              children: [
+                for (int index = 0; index < items.length; index++) ...<Widget>[
+                  items[index],
+                  if (index != items.length - 1) const SizedBox(height: 8),
+                ],
+              ],
             ),
             if (itemIds.isNotEmpty) ...<Widget>[
               const SizedBox(height: 8),
@@ -237,10 +253,7 @@ class _TodaySection extends StatelessWidget {
   final String title;
   final Widget child;
 
-  const _TodaySection({
-    required this.title,
-    required this.child,
-  });
+  const _TodaySection({required this.title, required this.child});
 
   @override
   Widget build(BuildContext context) {

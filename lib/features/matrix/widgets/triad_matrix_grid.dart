@@ -239,6 +239,10 @@ class _TriadCellButton extends StatelessWidget {
     final bool handsOnly = controller.handsOnly(itemId);
     final bool weakHandLead = controller.leadsWithWeakHand(itemId);
     final bool hasKick = controller.hasKick(itemId);
+    final bool startsWithKick = controller.startsWithKick(itemId);
+    final bool endsWithKick = controller.endsWithKick(itemId);
+    final bool handLead =
+        controller.leadsWithRight(itemId) || controller.leadsWithLeft(itemId);
     final bool hasDoubles = controller.hasDoubles(itemId);
     final bool inRoutine = controller.isInRoutine(itemId);
     final bool needsAttention = controller.needsAttention(itemId);
@@ -257,8 +261,14 @@ class _TriadCellButton extends StatelessWidget {
 
     final bool filteredOutByHandsOnly =
         filters.contains(TriadMatrixFilterV1.handsOnly) && !handsOnly;
+    final bool filteredOutByLead =
+        filters.contains(TriadMatrixFilterV1.lead) && !handLead;
     final bool filteredOutByHasKick =
         filters.contains(TriadMatrixFilterV1.hasKick) && !hasKick;
+    final bool filteredOutByStartsWithKick =
+        filters.contains(TriadMatrixFilterV1.startsWithKick) && !startsWithKick;
+    final bool filteredOutByEndsWithKick =
+        filters.contains(TriadMatrixFilterV1.endsWithKick) && !endsWithKick;
     final bool filteredOutByWeakHand =
         filters.contains(TriadMatrixFilterV1.weakHand) && !weakHandLead;
     final bool filteredOutByInRoutine =
@@ -280,7 +290,10 @@ class _TriadCellButton extends StatelessWidget {
     final bool filteredOutByColumn = columnFilterActive && !columnSelected;
 
     if (filteredOutByHandsOnly ||
+        filteredOutByLead ||
         filteredOutByHasKick ||
+        filteredOutByStartsWithKick ||
+        filteredOutByEndsWithKick ||
         filteredOutByWeakHand ||
         filteredOutByInRoutine ||
         filteredOutByNeedsAttention ||
@@ -312,10 +325,10 @@ class _TriadCellButton extends StatelessWidget {
 
     if (filters.contains(TriadMatrixFilterV1.lead)) {
       borderColor = controller.leadsWithRight(itemId)
-          ? const Color(0xFF4F86C6)
+          ? const Color(0xFF2F6EC8)
           : controller.leadsWithLeft(itemId)
-          ? const Color(0xFFC76D5A)
-          : const Color(0xFFD2A93A);
+          ? const Color(0xFFC94949)
+          : borderColor;
       borderWidth = borderWidth < 2 ? 2 : borderWidth;
     }
 
@@ -326,6 +339,17 @@ class _TriadCellButton extends StatelessWidget {
 
     if (filters.contains(TriadMatrixFilterV1.hasKick) && hasKick) {
       borderColor = const Color(0xFF8B6A1C);
+      borderWidth = borderWidth < 3 ? 3 : borderWidth;
+    }
+
+    if (filters.contains(TriadMatrixFilterV1.startsWithKick) &&
+        startsWithKick) {
+      borderColor = const Color(0xFF7E6222);
+      borderWidth = borderWidth < 3 ? 3 : borderWidth;
+    }
+
+    if (filters.contains(TriadMatrixFilterV1.endsWithKick) && endsWithKick) {
+      borderColor = const Color(0xFF916F2F);
       borderWidth = borderWidth < 3 ? 3 : borderWidth;
     }
 
@@ -383,39 +407,12 @@ class _TriadCellButton extends StatelessWidget {
       borderWidth = borderWidth < 3 ? 3 : borderWidth;
     }
 
-    if (filters.contains(TriadMatrixFilterV1.mirror)) {
-      final String pairKey = _mirrorPairKey(itemId);
-      final Color mirrorColor = _mirrorColor(pairKey);
-      backgroundColor = mirrorColor;
-      borderColor = mirrorColor;
-      borderWidth = borderWidth < 3 ? 3 : borderWidth;
-    }
-
     return _CellDecorationStyle(
       backgroundColor: backgroundColor,
       borderColor: borderColor,
       borderWidth: borderWidth,
       textColor: textColor,
     );
-  }
-
-  String _mirrorPairKey(String itemId) {
-    final String mirrorId = controller.mirrorItemId(itemId) ?? itemId;
-    final List<String> pair = <String>[itemId, mirrorId]..sort();
-    return pair.join('|');
-  }
-
-  Color _mirrorColor(String pairKey) {
-    const List<Color> colors = <Color>[
-      Color(0xFFB8D4E8),
-      Color(0xFFD8BBB3),
-      Color(0xFFD0DDB1),
-      Color(0xFFD4C7EA),
-      Color(0xFFE7D3A7),
-      Color(0xFFBFE0D2),
-      Color(0xFFE5B9AA),
-    ];
-    return colors[pairKey.hashCode.abs() % colors.length];
   }
 
   Color _comboColor(String comboId) {
