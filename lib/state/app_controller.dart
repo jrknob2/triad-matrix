@@ -230,7 +230,7 @@ class AppController extends ChangeNotifier {
             actionLabel: 'Open Matrix',
             itemIds: const <String>[],
             evidence:
-                '${triadMatrixItems.length} triads available from first light',
+                '${triadMatrixItems.length} built-in triads are ready whenever you are',
           ),
           TodayLaneRecommendationV1(
             lane: LearningLaneV1.flow,

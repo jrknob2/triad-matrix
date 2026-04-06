@@ -50,7 +50,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'First Light',
+                  'Get Started',
                   style: theme.textTheme.titleMedium?.copyWith(
                     color: const Color(0xFF6B5D42),
                   ),
@@ -85,7 +85,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     const Spacer(),
                     FilledButton(
                       onPressed: _step == 2 ? _finish : _next,
-                      child: Text(_step == 2 ? 'Begin First Session' : 'Next'),
+                      child: Text(_step == 2 ? 'Start Playing' : 'Next'),
                     ),
                   ],
                 ),
@@ -115,14 +115,14 @@ class _IntroStep extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Text(
-          'Short patterns become usable vocabulary when they are practiced with control, balance, touch, and repetition.',
+          'Sharpen your hands, open up your phrasing, and bring better ideas to the kit.',
           style: Theme.of(
             context,
           ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 16),
         Text(
-          'This app is built to take triads and short linear phrases from recognition to dependable use. The goal is not to collect patterns. The goal is to make them available when you play.',
+          'Triads and short linear phrases can build speed, control, touch, coordination, and fresher fill language. The point is not to memorize shapes. It is to turn them into something you can actually hear and use when you play.',
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.4),
         ),
       ],
@@ -145,12 +145,12 @@ class _HowItWorksStep extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         Text(
-          'Work begins with clean control on one surface. Then it expands into opposite-hand lead, dynamic shape, longer phrases, and flow on the kit.',
+          'Start with a small phrase and make it smooth. Then flip the lead, shape the dynamics, build longer phrases, and move them around the kit until they feel like music instead of exercises.',
           style: textTheme.bodyLarge?.copyWith(height: 1.4),
         ),
         const SizedBox(height: 16),
         Text(
-          'Today will point you toward the lanes that need attention. The matrix shows the vocabulary. Focus holds what you are actively developing.',
+          'Today gives you a clear place to start. The matrix shows the vocabulary. Working On keeps the phrases you want in rotation.',
           style: textTheme.bodyLarge?.copyWith(height: 1.4),
         ),
       ],
@@ -178,6 +178,13 @@ class _SetupStep extends StatelessWidget {
         Text(
           'Set a lead side and a starting tempo so practice can begin quickly.',
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.4),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          'Keep it simple. You can change any of this later.',
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: const Color(0xFF6B5D42)),
         ),
         const SizedBox(height: 16),
         DropdownButtonFormField<HandednessV1>(

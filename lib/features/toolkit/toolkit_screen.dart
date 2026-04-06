@@ -5,7 +5,7 @@ import '../../features/app/app_formatters.dart';
 import '../../state/app_controller.dart';
 import '../practice/widgets/pattern_display_text.dart';
 
-enum _FocusSection { workingOn, phraseWork, customBucket }
+enum _FocusSection { workingOn, phraseWork, myPatterns }
 
 class FocusScreen extends StatefulWidget {
   final AppController controller;
@@ -97,10 +97,10 @@ class _FocusScreenState extends State<FocusScreen> {
         onOpenItem: widget.onOpenItem,
         onPracticeItem: widget.onPracticeItem,
       ),
-      _FocusSection.customBucket => _FocusList(
-        title: 'Custom Bucket',
+      _FocusSection.myPatterns => _FocusList(
+        title: 'My Patterns',
         summary:
-            'Custom phrases are available on demand, but they do not affect coaching, coverage, or toolbox readiness.',
+            'Your own phrases live here. They are easy to revisit whenever you want, but they do not affect coaching, coverage, or toolbox readiness.',
         items: widget.controller.customBucketItems,
         controller: widget.controller,
         onOpenItem: widget.onOpenItem,
@@ -113,7 +113,7 @@ class _FocusScreenState extends State<FocusScreen> {
     return switch (section) {
       _FocusSection.workingOn => 'Working On',
       _FocusSection.phraseWork => 'Phrase Work',
-      _FocusSection.customBucket => 'Custom Bucket',
+      _FocusSection.myPatterns => 'My Patterns',
     };
   }
 }
@@ -163,8 +163,8 @@ class _FocusSummary extends StatelessWidget {
             if (toolboxReady.isEmpty)
               Text(
                 controller.isFirstLight
-                    ? 'You are at first light. Start with a few stable cells, then let the toolbox grow from repeated use.'
-                    : 'Nothing is close to toolbox-ready yet. Stay with consistency and revisit the same few phrases.',
+                    ? 'You are starting fresh. Pick a few solid cells, stay with them, and let the toolbox grow from real repetition.'
+                    : 'Nothing is close to your toolbox yet. Stay with consistency and revisit the same few phrases.',
                 style: Theme.of(context).textTheme.bodyMedium,
               )
             else ...<Widget>[

@@ -277,7 +277,7 @@ class _CoverageView extends StatelessWidget {
           const _FirstLightCard(
             title: 'Coverage',
             detail:
-                'Coverage becomes meaningful after practice begins. At first light, the goal is not to touch everything. The goal is to start with a few clear cells and revisit them enough for them to settle in.',
+                'Coverage becomes meaningful after practice begins. At the start, do not try to touch everything. Pick a few clear cells and revisit them enough for them to settle in.',
           ),
         ],
       );
@@ -398,7 +398,7 @@ class _ToolboxView extends StatelessWidget {
           items: toolboxReady,
           controller: controller,
           onOpenItem: onOpenItem,
-          emptyText: 'Nothing is close to toolbox-ready yet.',
+          emptyText: 'Nothing is close to your toolbox yet.',
         ),
       ],
     );
