@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'features/app/app_shell.dart';
+import 'features/onboarding/onboarding_screen.dart';
 import 'state/app_controller.dart';
 
 void main() {
@@ -25,13 +26,22 @@ class _TriadTrainerAppState extends State<TriadTrainerApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Triad Trainer',
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF194B7A)),
-      ),
-      home: AppShell(controller: _controller),
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (BuildContext context, _) {
+        return MaterialApp(
+          title: 'Triad Trainer',
+          theme: ThemeData(
+            useMaterial3: true,
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: const Color(0xFF194B7A),
+            ),
+          ),
+          home: _controller.onboardingComplete
+              ? AppShell(controller: _controller)
+              : OnboardingScreen(controller: _controller),
+        );
+      },
     );
   }
 }

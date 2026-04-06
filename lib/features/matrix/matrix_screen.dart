@@ -219,13 +219,6 @@ class _MatrixScreenState extends State<MatrixScreen> {
       Padding(
         padding: const EdgeInsets.only(right: 8),
         child: ActionChip(
-          label: const Text('Build Combo'),
-          onPressed: _buildComboFromSelection,
-        ),
-      ),
-      Padding(
-        padding: const EdgeInsets.only(right: 8),
-        child: ActionChip(
           label: Text(
             _selectionIsInRoutine ? 'Remove from Routine' : 'Add to Routine',
           ),
@@ -339,14 +332,9 @@ class _MatrixScreenState extends State<MatrixScreen> {
   }
 
   void _practiceSelection() {
-    final String? itemId = _selectionActionItemId();
+    final String? itemId = _selectionActionItemId(createIfMissing: true);
     if (itemId == null) return;
     widget.onPracticeItem(itemId);
-  }
-
-  void _buildComboFromSelection() {
-    if (_selectedItemIds.isEmpty) return;
-    widget.onBuildComboFromItems(List<String>.from(_selectedItemIds));
   }
 
   void _toggleRoutineSelection() {

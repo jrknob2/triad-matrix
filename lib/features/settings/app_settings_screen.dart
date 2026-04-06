@@ -188,6 +188,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
 
     if (confirmed != true || !context.mounted) return;
     widget.controller.clearAppData();
-    Navigator.of(context).pop();
+    setState(() => _draft = widget.controller.profile);
+    Navigator.of(context).popUntil((Route<dynamic> route) => route.isFirst);
   }
 }

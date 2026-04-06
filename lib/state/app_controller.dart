@@ -15,12 +15,16 @@ class AppController extends ChangeNotifier {
   late PracticeRoutineV1 _routine;
   late List<PracticeSessionLogV1> _sessions;
   late Map<String, CompetencyRecordV1> _competencyByItemId;
+  bool _onboardingComplete = false;
+  int _resetVersion = 0;
 
   UserProfileV1 get profile => _profile;
   List<PracticeItemV1> get items => List<PracticeItemV1>.unmodifiable(_items);
   List<PracticeCombinationV1> get combinations =>
       List<PracticeCombinationV1>.unmodifiable(_combinations);
   PracticeRoutineV1 get routine => _routine;
+  bool get onboardingComplete => _onboardingComplete;
+  int get resetVersion => _resetVersion;
 
   String get weakHandLabel =>
       _profile.handedness == HandednessV1.right ? 'Left' : 'Right';
@@ -405,6 +409,12 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void completeOnboarding(UserProfileV1 profile) {
+    _profile = profile;
+    _onboardingComplete = true;
+    notifyListeners();
+  }
+
   void clearAppData() {
     _profile = UserProfileV1.initial;
     _items = _basePracticeItems();
@@ -416,6 +426,8 @@ class AppController extends ChangeNotifier {
     );
     _sessions = const <PracticeSessionLogV1>[];
     _competencyByItemId = <String, CompetencyRecordV1>{};
+    _onboardingComplete = false;
+    _resetVersion += 1;
     notifyListeners();
   }
 
@@ -793,257 +805,15 @@ class AppController extends ChangeNotifier {
 
   void _seed() {
     _profile = UserProfileV1.initial;
-
-    _items = <PracticeItemV1>[
-      ..._basePracticeItems(),
-      const PracticeItemV1(
-        id: 'custom_linear_break',
-        family: MaterialFamilyV1.custom,
-        name: 'R K L R L',
-        sticking: 'R K L R L',
-        noteCount: 5,
-        accentedNoteIndices: <int>[0, 3],
-        ghostNoteIndices: <int>[2],
-        source: PracticeItemSourceV1.userDefined,
-        tags: <String>['custom', 'linear'],
-        saved: true,
-      ),
-      const PracticeItemV1(
-        id: 'combo_double_builder',
-        family: MaterialFamilyV1.combo,
-        name: 'RLL-RRL',
-        sticking: 'RLL-RRL',
-        noteCount: 6,
-        accentedNoteIndices: <int>[0, 3],
-        ghostNoteIndices: <int>[],
-        source: PracticeItemSourceV1.userDefined,
-        tags: <String>['combo', 'core'],
-        saved: true,
-      ),
-      const PracticeItemV1(
-        id: 'combo_mirror_builder',
-        family: MaterialFamilyV1.combo,
-        name: 'LRR-LLR',
-        sticking: 'LRR-LLR',
-        noteCount: 6,
-        accentedNoteIndices: <int>[0, 3],
-        ghostNoteIndices: <int>[],
-        source: PracticeItemSourceV1.userDefined,
-        tags: <String>['combo', 'core'],
-        saved: true,
-      ),
-      const PracticeItemV1(
-        id: 'combo_split_flow',
-        family: MaterialFamilyV1.combo,
-        name: 'RLR-KRL',
-        sticking: 'RLR-KRL',
-        noteCount: 6,
-        accentedNoteIndices: <int>[0, 3],
-        ghostNoteIndices: <int>[2, 5],
-        source: PracticeItemSourceV1.userDefined,
-        tags: <String>['combo', 'flow'],
-        saved: true,
-      ),
-    ].map(_sanitizedItemMarkings).toList(growable: false);
-
-    _combinations = const <PracticeCombinationV1>[
-      PracticeCombinationV1(
-        id: 'combo_double_builder',
-        name: 'RLL-RRL',
-        itemIds: <String>['triad_rll', 'triad_rrl'],
-        intentTag: ComboIntentTagV1.coreSkills,
-      ),
-      PracticeCombinationV1(
-        id: 'combo_mirror_builder',
-        name: 'LRR-LLR',
-        itemIds: <String>['triad_lrr', 'triad_llr'],
-        intentTag: ComboIntentTagV1.coreSkills,
-      ),
-      PracticeCombinationV1(
-        id: 'combo_split_flow',
-        name: 'RLR-KRL',
-        itemIds: <String>['triad_rlr', 'triad_krl'],
-        intentTag: ComboIntentTagV1.flow,
-      ),
-    ];
-
-    _routine = PracticeRoutineV1(
+    _items = _basePracticeItems();
+    _combinations = const <PracticeCombinationV1>[];
+    _routine = const PracticeRoutineV1(
       id: 'main_routine',
       name: 'Current Focus',
-      entries: <RoutineEntryV1>[
-        RoutineEntryV1(
-          practiceItemId: 'triad_rll',
-          addedAt: DateTime.now().subtract(const Duration(days: 10)),
-        ),
-        RoutineEntryV1(
-          practiceItemId: 'triad_llr',
-          addedAt: DateTime.now().subtract(const Duration(days: 8)),
-        ),
-        RoutineEntryV1(
-          practiceItemId: 'combo_double_builder',
-          addedAt: DateTime.now().subtract(const Duration(days: 7)),
-        ),
-        RoutineEntryV1(
-          practiceItemId: 'combo_mirror_builder',
-          addedAt: DateTime.now().subtract(const Duration(days: 6)),
-        ),
-        RoutineEntryV1(
-          practiceItemId: 'five_rlrlk',
-          addedAt: DateTime.now().subtract(const Duration(days: 4)),
-        ),
-      ],
+      entries: <RoutineEntryV1>[],
     );
-
-    _sessions = <PracticeSessionLogV1>[
-      PracticeSessionLogV1(
-        id: 'session_seed_1',
-        startedAt: DateTime.now().subtract(
-          const Duration(days: 1, minutes: 18),
-        ),
-        endedAt: DateTime.now().subtract(const Duration(days: 1)),
-        duration: const Duration(minutes: 18),
-        practiceItemIds: const <String>['triad_rll'],
-        family: MaterialFamilyV1.triad,
-        bpm: 84,
-        clickEnabled: true,
-        routineId: 'main_routine',
-        reflection: ReflectionRatingV1.okay,
-      ),
-      PracticeSessionLogV1(
-        id: 'session_seed_2',
-        startedAt: DateTime.now().subtract(
-          const Duration(days: 2, minutes: 16),
-        ),
-        endedAt: DateTime.now().subtract(const Duration(days: 2)),
-        duration: const Duration(minutes: 16),
-        practiceItemIds: const <String>['triad_llr'],
-        family: MaterialFamilyV1.triad,
-        bpm: 78,
-        clickEnabled: true,
-        routineId: 'main_routine',
-        reflection: ReflectionRatingV1.hard,
-      ),
-      PracticeSessionLogV1(
-        id: 'session_seed_3',
-        startedAt: DateTime.now().subtract(
-          const Duration(days: 3, minutes: 12),
-        ),
-        endedAt: DateTime.now().subtract(const Duration(days: 3)),
-        duration: const Duration(minutes: 12),
-        practiceItemIds: const <String>['combo_double_builder'],
-        family: MaterialFamilyV1.combo,
-        bpm: 92,
-        clickEnabled: true,
-        routineId: 'main_routine',
-        reflection: ReflectionRatingV1.okay,
-      ),
-      PracticeSessionLogV1(
-        id: 'session_seed_3b',
-        startedAt: DateTime.now().subtract(
-          const Duration(days: 4, minutes: 10),
-        ),
-        endedAt: DateTime.now().subtract(const Duration(days: 4)),
-        duration: const Duration(minutes: 10),
-        practiceItemIds: const <String>['combo_mirror_builder'],
-        family: MaterialFamilyV1.combo,
-        bpm: 88,
-        clickEnabled: true,
-        routineId: 'main_routine',
-        reflection: ReflectionRatingV1.okay,
-      ),
-      PracticeSessionLogV1(
-        id: 'session_seed_4',
-        startedAt: DateTime.now().subtract(const Duration(days: 5, minutes: 9)),
-        endedAt: DateTime.now().subtract(const Duration(days: 5)),
-        duration: const Duration(minutes: 9),
-        practiceItemIds: const <String>['five_rlrlk'],
-        family: MaterialFamilyV1.fiveNote,
-        bpm: 100,
-        clickEnabled: true,
-        routineId: 'main_routine',
-        reflection: ReflectionRatingV1.hard,
-      ),
-      PracticeSessionLogV1(
-        id: 'session_seed_5',
-        startedAt: DateTime.now().subtract(
-          const Duration(days: 6, minutes: 11),
-        ),
-        endedAt: DateTime.now().subtract(const Duration(days: 6)),
-        duration: const Duration(minutes: 11),
-        practiceItemIds: const <String>['triad_rlr'],
-        family: MaterialFamilyV1.triad,
-        bpm: 96,
-        clickEnabled: true,
-        routineId: null,
-        reflection: ReflectionRatingV1.okay,
-      ),
-      PracticeSessionLogV1(
-        id: 'session_seed_5b',
-        startedAt: DateTime.now().subtract(
-          const Duration(days: 9, minutes: 13),
-        ),
-        endedAt: DateTime.now().subtract(const Duration(days: 9)),
-        duration: const Duration(minutes: 13),
-        practiceItemIds: const <String>['combo_split_flow'],
-        family: MaterialFamilyV1.combo,
-        bpm: 98,
-        clickEnabled: true,
-        routineId: null,
-        reflection: ReflectionRatingV1.hard,
-      ),
-      PracticeSessionLogV1(
-        id: 'session_seed_6',
-        startedAt: DateTime.now().subtract(
-          const Duration(days: 8, minutes: 14),
-        ),
-        endedAt: DateTime.now().subtract(const Duration(days: 8)),
-        duration: const Duration(minutes: 14),
-        practiceItemIds: const <String>['custom_linear_break'],
-        family: MaterialFamilyV1.custom,
-        bpm: 88,
-        clickEnabled: false,
-        routineId: null,
-        reflection: ReflectionRatingV1.okay,
-      ),
-    ];
-
-    _competencyByItemId = <String, CompetencyRecordV1>{
-      'triad_rll': CompetencyRecordV1(
-        practiceItemId: 'triad_rll',
-        level: CompetencyLevelV1.comfortable,
-        updatedAt: DateTime.now().subtract(const Duration(days: 2)),
-      ),
-      'triad_rrl': CompetencyRecordV1(
-        practiceItemId: 'triad_rrl',
-        level: CompetencyLevelV1.learning,
-        updatedAt: DateTime.now().subtract(const Duration(days: 6)),
-      ),
-      'triad_llr': CompetencyRecordV1(
-        practiceItemId: 'triad_llr',
-        level: CompetencyLevelV1.learning,
-        updatedAt: DateTime.now().subtract(const Duration(days: 4)),
-      ),
-      'triad_rlr': CompetencyRecordV1(
-        practiceItemId: 'triad_rlr',
-        level: CompetencyLevelV1.reliable,
-        updatedAt: DateTime.now().subtract(const Duration(days: 5)),
-      ),
-      'triad_lrr': CompetencyRecordV1(
-        practiceItemId: 'triad_lrr',
-        level: CompetencyLevelV1.comfortable,
-        updatedAt: DateTime.now().subtract(const Duration(days: 7)),
-      ),
-      'five_rlrlk': CompetencyRecordV1(
-        practiceItemId: 'five_rlrlk',
-        level: CompetencyLevelV1.learning,
-        updatedAt: DateTime.now().subtract(const Duration(days: 4)),
-      ),
-      'combo_double_builder': CompetencyRecordV1(
-        practiceItemId: 'combo_double_builder',
-        level: CompetencyLevelV1.learning,
-        updatedAt: DateTime.now().subtract(const Duration(days: 3)),
-      ),
-    };
+    _sessions = const <PracticeSessionLogV1>[];
+    _competencyByItemId = <String, CompetencyRecordV1>{};
   }
 
   List<PracticeItemV1> _basePracticeItems() {

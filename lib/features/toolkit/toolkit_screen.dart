@@ -11,16 +11,12 @@ class ToolkitScreen extends StatefulWidget {
   final AppController controller;
   final ValueChanged<String> onOpenItem;
   final ValueChanged<String> onPracticeItem;
-  final VoidCallback onBuildCombo;
-  final VoidCallback onCreateCustomPattern;
 
   const ToolkitScreen({
     super.key,
     required this.controller,
     required this.onOpenItem,
     required this.onPracticeItem,
-    required this.onBuildCombo,
-    required this.onCreateCustomPattern,
   });
 
   @override
@@ -40,44 +36,26 @@ class _ToolkitScreenState extends State<ToolkitScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  SegmentedButton<_ToolkitSection>(
-                    segments: const <ButtonSegment<_ToolkitSection>>[
-                      ButtonSegment(
-                        value: _ToolkitSection.routine,
-                        label: Text('Routine'),
-                      ),
-                      ButtonSegment(
-                        value: _ToolkitSection.combos,
-                        label: Text('Combos'),
-                      ),
-                      ButtonSegment(
-                        value: _ToolkitSection.custom,
-                        label: Text('Custom'),
-                      ),
-                    ],
-                    selected: <_ToolkitSection>{_section},
-                    onSelectionChanged: (Set<_ToolkitSection> selection) {
-                      setState(() => _section = selection.first);
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: <Widget>[
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: widget.onBuildCombo,
-                          child: const Text('Build Combo'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: FilledButton.tonal(
-                          onPressed: widget.onCreateCustomPattern,
-                          child: const Text('New Custom'),
-                        ),
-                      ),
-                    ],
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: _ToolkitSection.values
+                          .map(
+                            (_ToolkitSection section) => Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: ChoiceChip(
+                                label: Text(_labelForSection(section)),
+                                selected: _section == section,
+                                onSelected: (_) {
+                                  setState(() => _section = section);
+                                },
+                              ),
+                            ),
+                          )
+                          .toList(growable: false),
+                    ),
                   ),
                 ],
               ),
@@ -118,6 +96,14 @@ class _ToolkitScreenState extends State<ToolkitScreen> {
       ),
     };
   }
+
+  String _labelForSection(_ToolkitSection section) {
+    return switch (section) {
+      _ToolkitSection.routine => 'Routine',
+      _ToolkitSection.combos => 'Combos',
+      _ToolkitSection.custom => 'Custom',
+    };
+  }
 }
 
 class _ToolkitList extends StatelessWidget {
@@ -148,35 +134,15 @@ class _ToolkitList extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       children: <Widget>[
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(title, style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: <Widget>[
-                    _ToolkitStatChip(
-                      label: items.length == 1
-                          ? '1 item'
-                          : '${items.length} items',
-                    ),
-                    _ToolkitStatChip(
-                      label: '${formatDuration(totalLoggedTime)} logged',
-                    ),
-                    const _ToolkitStatChip(label: 'Tap to open'),
-                    const _ToolkitStatChip(label: 'Hold to practice'),
-                  ],
-                ),
-              ],
-            ),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Text(
+            '$title · ${items.length == 1 ? '1 item' : '${items.length} items'} · ${formatDuration(totalLoggedTime)} logged',
+            style: Theme.of(
+              context,
+            ).textTheme.bodyLarge?.copyWith(color: const Color(0xFF5B5345)),
           ),
         ),
-        const SizedBox(height: 12),
         if (items.isEmpty)
           const Card(
             child: Padding(
@@ -217,32 +183,6 @@ class _ToolkitList extends StatelessWidget {
             ),
           ),
       ],
-    );
-  }
-}
-
-class _ToolkitStatChip extends StatelessWidget {
-  final String label;
-
-  const _ToolkitStatChip({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: const Color(0xFFF3EBDD),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0x22000000)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Text(
-          label,
-          style: Theme.of(
-            context,
-          ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
-        ),
-      ),
     );
   }
 }
