@@ -45,11 +45,6 @@ class ItemDetailScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Text(
-                        item.name,
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 12),
                       PatternDisplayText(
                         tokens: tokens,
                         markings: markings,
