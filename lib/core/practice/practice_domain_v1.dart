@@ -30,12 +30,6 @@ enum ReflectionRatingV1 { easy, okay, hard }
 
 enum TimerPresetV1 { none, minutes5, minutes10, minutes20, minutes30 }
 
-enum FlowFillLengthV1 { oneBeat, twoBeats, oneBar, twoBars }
-
-enum FlowLandingRuleV1 { beat1 }
-
-enum GrooveFrameV1 { fourFourSixteenthGrid }
-
 enum TriadMatrixViewModeV1 { competency, lead, handsOnly, weakHand }
 
 enum TriadMatrixFilterPaletteV1 { coaching, technique, combos }
@@ -69,7 +63,6 @@ class UserProfileV1 {
   final int defaultBpm;
   final TimerPresetV1 defaultTimerPreset;
   final bool clickEnabledByDefault;
-  final FlowFillLengthV1 defaultFlowFillLength;
 
   const UserProfileV1({
     required this.handedness,
@@ -77,7 +70,6 @@ class UserProfileV1 {
     required this.defaultBpm,
     required this.defaultTimerPreset,
     required this.clickEnabledByDefault,
-    required this.defaultFlowFillLength,
   });
 
   UserProfileV1 copyWith({
@@ -86,7 +78,6 @@ class UserProfileV1 {
     int? defaultBpm,
     TimerPresetV1? defaultTimerPreset,
     bool? clickEnabledByDefault,
-    FlowFillLengthV1? defaultFlowFillLength,
   }) {
     return UserProfileV1(
       handedness: handedness ?? this.handedness,
@@ -95,8 +86,6 @@ class UserProfileV1 {
       defaultTimerPreset: defaultTimerPreset ?? this.defaultTimerPreset,
       clickEnabledByDefault:
           clickEnabledByDefault ?? this.clickEnabledByDefault,
-      defaultFlowFillLength:
-          defaultFlowFillLength ?? this.defaultFlowFillLength,
     );
   }
 
@@ -106,7 +95,6 @@ class UserProfileV1 {
     defaultBpm: 92,
     defaultTimerPreset: TimerPresetV1.minutes10,
     clickEnabledByDefault: true,
-    defaultFlowFillLength: FlowFillLengthV1.oneBar,
   );
 }
 
@@ -275,37 +263,6 @@ class PracticeRoutineV1 {
 }
 
 @immutable
-class FlowSpecV1 {
-  final FlowFillLengthV1 fillLength;
-  final FlowLandingRuleV1 landingRule;
-  final GrooveFrameV1 grooveFrame;
-
-  const FlowSpecV1({
-    required this.fillLength,
-    required this.landingRule,
-    required this.grooveFrame,
-  });
-
-  FlowSpecV1 copyWith({
-    FlowFillLengthV1? fillLength,
-    FlowLandingRuleV1? landingRule,
-    GrooveFrameV1? grooveFrame,
-  }) {
-    return FlowSpecV1(
-      fillLength: fillLength ?? this.fillLength,
-      landingRule: landingRule ?? this.landingRule,
-      grooveFrame: grooveFrame ?? this.grooveFrame,
-    );
-  }
-
-  static const FlowSpecV1 v1Default = FlowSpecV1(
-    fillLength: FlowFillLengthV1.oneBar,
-    landingRule: FlowLandingRuleV1.beat1,
-    grooveFrame: GrooveFrameV1.fourFourSixteenthGrid,
-  );
-}
-
-@immutable
 class GeneratorOptionsV1 {
   final bool focusWeakItems;
   final bool focusUnderPracticedItems;
@@ -352,7 +309,6 @@ class PracticeSessionSetupV1 {
   final TimerPresetV1 timerPreset;
   final bool clickEnabled;
   final bool generated;
-  final FlowSpecV1? flowSpec;
   final GeneratorOptionsV1? generatorOptions;
   final String? routineId;
 
@@ -365,7 +321,6 @@ class PracticeSessionSetupV1 {
     required this.timerPreset,
     required this.clickEnabled,
     required this.generated,
-    required this.flowSpec,
     required this.generatorOptions,
     required this.routineId,
   });
@@ -381,8 +336,6 @@ class PracticeSessionSetupV1 {
     TimerPresetV1? timerPreset,
     bool? clickEnabled,
     bool? generated,
-    FlowSpecV1? flowSpec,
-    bool clearFlowSpec = false,
     GeneratorOptionsV1? generatorOptions,
     bool clearGeneratorOptions = false,
     String? routineId,
@@ -397,7 +350,6 @@ class PracticeSessionSetupV1 {
       timerPreset: timerPreset ?? this.timerPreset,
       clickEnabled: clickEnabled ?? this.clickEnabled,
       generated: generated ?? this.generated,
-      flowSpec: clearFlowSpec ? null : (flowSpec ?? this.flowSpec),
       generatorOptions: clearGeneratorOptions
           ? null
           : (generatorOptions ?? this.generatorOptions),

@@ -389,6 +389,20 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void clearAppData() {
+    _profile = UserProfileV1.initial;
+    _items = _basePracticeItems();
+    _combinations = const <PracticeCombinationV1>[];
+    _routine = const PracticeRoutineV1(
+      id: 'main_routine',
+      name: 'Current Focus',
+      entries: <RoutineEntryV1>[],
+    );
+    _sessions = const <PracticeSessionLogV1>[];
+    _competencyByItemId = <String, CompetencyRecordV1>{};
+    notifyListeners();
+  }
+
   void updateCompetency(String itemId, CompetencyLevelV1 level) {
     _competencyByItemId[itemId] = CompetencyRecordV1(
       practiceItemId: itemId,
@@ -546,7 +560,6 @@ class AppController extends ChangeNotifier {
     required int bpm,
     required TimerPresetV1 timerPreset,
     required bool clickEnabled,
-    FlowSpecV1? flowSpec,
     GeneratorOptionsV1? generatorOptions,
   }) {
     final GeneratorOptionsV1 options =
@@ -571,9 +584,6 @@ class AppController extends ChangeNotifier {
       timerPreset: timerPreset,
       clickEnabled: clickEnabled,
       generated: true,
-      flowSpec: intent == PracticeIntentV1.flow
-          ? (flowSpec ?? FlowSpecV1.v1Default)
-          : null,
       generatorOptions: options,
       routineId: null,
     );
@@ -762,49 +772,8 @@ class AppController extends ChangeNotifier {
   void _seed() {
     _profile = UserProfileV1.initial;
 
-    final List<PracticeItemV1> triadItems = triadMatrixAll()
-        .map(
-          (cell) => PracticeItemV1(
-            id: _triadItemId(cell.id),
-            family: MaterialFamilyV1.triad,
-            name: cell.id,
-            sticking: cell.id,
-            noteCount: 3,
-            accentedNoteIndices: _accentIndicesForTriadCell(cell),
-            ghostNoteIndices: const <int>[],
-            source: PracticeItemSourceV1.builtIn,
-            tags: _tagsForTriadCell(cell),
-            saved: true,
-          ),
-        )
-        .toList(growable: false);
-
     _items = <PracticeItemV1>[
-      ...triadItems,
-      const PracticeItemV1(
-        id: 'five_rlrlk',
-        family: MaterialFamilyV1.fiveNote,
-        name: 'RLRLK',
-        sticking: 'RLRLK',
-        noteCount: 5,
-        accentedNoteIndices: <int>[0],
-        ghostNoteIndices: <int>[],
-        source: PracticeItemSourceV1.builtIn,
-        tags: <String>['5s', 'flow'],
-        saved: true,
-      ),
-      const PracticeItemV1(
-        id: 'five_rllrl',
-        family: MaterialFamilyV1.fiveNote,
-        name: 'RLLRL',
-        sticking: 'RLLRL',
-        noteCount: 5,
-        accentedNoteIndices: <int>[0, 3],
-        ghostNoteIndices: <int>[1],
-        source: PracticeItemSourceV1.builtIn,
-        tags: <String>['5s', 'core'],
-        saved: true,
-      ),
+      ..._basePracticeItems(),
       const PracticeItemV1(
         id: 'custom_linear_break',
         family: MaterialFamilyV1.custom,
@@ -1069,5 +1038,52 @@ class AppController extends ChangeNotifier {
         updatedAt: DateTime.now().subtract(const Duration(days: 3)),
       ),
     };
+  }
+
+  List<PracticeItemV1> _basePracticeItems() {
+    final List<PracticeItemV1> triadItems = triadMatrixAll()
+        .map(
+          (cell) => PracticeItemV1(
+            id: _triadItemId(cell.id),
+            family: MaterialFamilyV1.triad,
+            name: cell.id,
+            sticking: cell.id,
+            noteCount: 3,
+            accentedNoteIndices: _accentIndicesForTriadCell(cell),
+            ghostNoteIndices: const <int>[],
+            source: PracticeItemSourceV1.builtIn,
+            tags: _tagsForTriadCell(cell),
+            saved: true,
+          ),
+        )
+        .toList(growable: false);
+
+    return <PracticeItemV1>[
+      ...triadItems,
+      const PracticeItemV1(
+        id: 'five_rlrlk',
+        family: MaterialFamilyV1.fiveNote,
+        name: 'RLRLK',
+        sticking: 'RLRLK',
+        noteCount: 5,
+        accentedNoteIndices: <int>[0],
+        ghostNoteIndices: <int>[],
+        source: PracticeItemSourceV1.builtIn,
+        tags: <String>['5s', 'flow'],
+        saved: true,
+      ),
+      const PracticeItemV1(
+        id: 'five_rllrl',
+        family: MaterialFamilyV1.fiveNote,
+        name: 'RLLRL',
+        sticking: 'RLLRL',
+        noteCount: 5,
+        accentedNoteIndices: <int>[0, 3],
+        ghostNoteIndices: <int>[1],
+        source: PracticeItemSourceV1.builtIn,
+        tags: <String>['5s', 'core'],
+        saved: true,
+      ),
+    ];
   }
 }

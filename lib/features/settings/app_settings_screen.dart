@@ -7,10 +7,7 @@ import '../../state/app_controller.dart';
 class AppSettingsScreen extends StatefulWidget {
   final AppController controller;
 
-  const AppSettingsScreen({
-    super.key,
-    required this.controller,
-  });
+  const AppSettingsScreen({super.key, required this.controller});
 
   @override
   State<AppSettingsScreen> createState() => _AppSettingsScreenState();
@@ -42,7 +39,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                 .map(
                   (handedness) => DropdownMenuItem<HandednessV1>(
                     value: handedness,
-                    child: Text(handedness.name),
+                    child: Text(handedness.label),
                   ),
                 )
                 .toList(growable: false),
@@ -84,10 +81,10 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                 onPressed: _draft.defaultBpm <= 30
                     ? null
                     : () => setState(
-                          () => _draft = _draft.copyWith(
-                            defaultBpm: _draft.defaultBpm - 1,
-                          ),
+                        () => _draft = _draft.copyWith(
+                          defaultBpm: _draft.defaultBpm - 1,
                         ),
+                      ),
                 icon: const Icon(Icons.remove),
               ),
               Text('${_draft.defaultBpm}'),
@@ -95,10 +92,10 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                 onPressed: _draft.defaultBpm >= 260
                     ? null
                     : () => setState(
-                          () => _draft = _draft.copyWith(
-                            defaultBpm: _draft.defaultBpm + 1,
-                          ),
+                        () => _draft = _draft.copyWith(
+                          defaultBpm: _draft.defaultBpm + 1,
                         ),
+                      ),
                 icon: const Icon(Icons.add),
               ),
             ],
@@ -120,32 +117,11 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                 .toList(growable: false),
             onChanged: (TimerPresetV1? value) {
               if (value == null) return;
-              setState(() => _draft = _draft.copyWith(defaultTimerPreset: value));
-            },
-          ),
-          const SizedBox(height: 12),
-          DropdownButtonFormField<FlowFillLengthV1>(
-            initialValue: _draft.defaultFlowFillLength,
-            decoration: const InputDecoration(
-              labelText: 'Default Flow Fill Length',
-              border: OutlineInputBorder(),
-            ),
-            items: FlowFillLengthV1.values
-                .map(
-                  (length) => DropdownMenuItem<FlowFillLengthV1>(
-                    value: length,
-                    child: Text(length.label),
-                  ),
-                )
-                .toList(growable: false),
-            onChanged: (FlowFillLengthV1? value) {
-              if (value == null) return;
               setState(
-                () => _draft = _draft.copyWith(defaultFlowFillLength: value),
+                () => _draft = _draft.copyWith(defaultTimerPreset: value),
               );
             },
           ),
-          const SizedBox(height: 12),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             title: const Text('Click Enabled by Default'),
@@ -164,8 +140,41 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
             },
             child: const Text('Save Settings'),
           ),
+          const SizedBox(height: 12),
+          OutlinedButton(
+            onPressed: () => _confirmClearAppData(context),
+            child: const Text('Clear App Data'),
+          ),
         ],
       ),
     );
+  }
+
+  Future<void> _confirmClearAppData(BuildContext context) async {
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Clear App Data'),
+          content: const Text(
+            'This resets the app to a first-light state. Practice history, routine, competency, combos, custom patterns, and settings will be cleared.',
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Clear'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true || !context.mounted) return;
+    widget.controller.clearAppData();
+    Navigator.of(context).pop();
   }
 }

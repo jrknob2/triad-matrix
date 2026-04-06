@@ -84,20 +84,18 @@ extension TimerPresetLabel on TimerPresetV1 {
   };
 }
 
-extension FlowFillLengthLabel on FlowFillLengthV1 {
-  String get label => switch (this) {
-    FlowFillLengthV1.oneBeat => '1 Beat',
-    FlowFillLengthV1.twoBeats => '2 Beats',
-    FlowFillLengthV1.oneBar => '1 Bar',
-    FlowFillLengthV1.twoBars => '2 Bars',
-  };
-}
-
 extension ReflectionLabel on ReflectionRatingV1 {
   String get label => switch (this) {
     ReflectionRatingV1.easy => 'Easy',
     ReflectionRatingV1.okay => 'Okay',
     ReflectionRatingV1.hard => 'Hard',
+  };
+}
+
+extension HandednessLabel on HandednessV1 {
+  String get label => switch (this) {
+    HandednessV1.right => 'Right Handed',
+    HandednessV1.left => 'Left Handed',
   };
 }
 

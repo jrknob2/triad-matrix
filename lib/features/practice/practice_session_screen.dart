@@ -89,13 +89,6 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                     itemId: currentItemId,
                     editable: false,
                   ),
-                  if (widget.setup.intent == PracticeIntentV1.flow) ...<Widget>[
-                    const SizedBox(height: 12),
-                    Text(
-                      'Landing: resolve to beat 1 in 4/4',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ],
                 ],
               ),
             ),
@@ -138,24 +131,44 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                 children: <Widget>[
                   Row(
                     children: <Widget>[
-                      Expanded(
-                        child: Text(
-                          'BPM',
-                          style: Theme.of(context).textTheme.titleMedium,
+                      Text(
+                        'BPM',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const Spacer(),
+                      Text(
+                        '$_bpm',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
+                    ],
+                  ),
+                  Row(
+                    children: <Widget>[
                       IconButton(
                         onPressed: _bpm <= 30
                             ? null
                             : () => _updateBpm(_bpm - 1),
-                        icon: const Icon(Icons.remove),
+                        icon: const Icon(Icons.remove_circle_outline),
                       ),
-                      Text('$_bpm'),
+                      Expanded(
+                        child: Slider(
+                          value: _bpm.toDouble(),
+                          min: 30,
+                          max: 260,
+                          divisions: 230,
+                          label: '$_bpm BPM',
+                          onChanged: (double value) {
+                            _updateBpm(value.round());
+                          },
+                        ),
+                      ),
                       IconButton(
                         onPressed: _bpm >= 260
                             ? null
                             : () => _updateBpm(_bpm + 1),
-                        icon: const Icon(Icons.add),
+                        icon: const Icon(Icons.add_circle_outline),
                       ),
                     ],
                   ),

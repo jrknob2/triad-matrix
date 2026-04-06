@@ -29,7 +29,6 @@ class _PracticeSetupScreenState extends State<PracticeSetupScreen> {
   late TimerPresetV1 _timerPreset;
   late bool _clickEnabled;
   late bool _generated;
-  late FlowFillLengthV1 _flowFillLength;
   late String _selectedItemId;
 
   @override
@@ -51,7 +50,6 @@ class _PracticeSetupScreenState extends State<PracticeSetupScreen> {
     _timerPreset = profile.defaultTimerPreset;
     _clickEnabled = profile.clickEnabledByDefault;
     _generated = widget.generated;
-    _flowFillLength = profile.defaultFlowFillLength;
 
     final items = widget.controller.itemsByFamily(_family);
     _selectedItemId = initialItem?.id ?? items.first.id;
@@ -97,7 +95,10 @@ class _PracticeSetupScreenState extends State<PracticeSetupScreen> {
               if (value == null) return;
               setState(() {
                 _family = value;
-                _selectedItemId = widget.controller.itemsByFamily(value).first.id;
+                _selectedItemId = widget.controller
+                    .itemsByFamily(value)
+                    .first
+                    .id;
               });
             },
           ),
@@ -169,21 +170,57 @@ class _PracticeSetupScreenState extends State<PracticeSetupScreen> {
             },
           ),
           const SizedBox(height: 12),
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: Text('BPM', style: Theme.of(context).textTheme.titleMedium),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: <Widget>[
+                  Row(
+                    children: <Widget>[
+                      Text(
+                        'BPM',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const Spacer(),
+                      Text(
+                        '$_bpm',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    children: <Widget>[
+                      IconButton(
+                        onPressed: _bpm <= 30
+                            ? null
+                            : () => setState(() => _bpm -= 1),
+                        icon: const Icon(Icons.remove_circle_outline),
+                      ),
+                      Expanded(
+                        child: Slider(
+                          value: _bpm.toDouble(),
+                          min: 30,
+                          max: 260,
+                          divisions: 230,
+                          label: '$_bpm BPM',
+                          onChanged: (double value) {
+                            setState(() => _bpm = value.round());
+                          },
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: _bpm >= 260
+                            ? null
+                            : () => setState(() => _bpm += 1),
+                        icon: const Icon(Icons.add_circle_outline),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-              IconButton(
-                onPressed: _bpm <= 30 ? null : () => setState(() => _bpm -= 1),
-                icon: const Icon(Icons.remove),
-              ),
-              Text('$_bpm'),
-              IconButton(
-                onPressed: _bpm >= 260 ? null : () => setState(() => _bpm += 1),
-                icon: const Icon(Icons.add),
-              ),
-            ],
+            ),
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<TimerPresetV1>(
@@ -213,37 +250,6 @@ class _PracticeSetupScreenState extends State<PracticeSetupScreen> {
             value: _clickEnabled,
             onChanged: (bool value) => setState(() => _clickEnabled = value),
           ),
-          if (_intent == PracticeIntentV1.flow) ...<Widget>[
-            const SizedBox(height: 12),
-            DropdownButtonFormField<FlowFillLengthV1>(
-              initialValue: _flowFillLength,
-              decoration: const InputDecoration(
-                labelText: 'Flow Fill Length',
-                border: OutlineInputBorder(),
-              ),
-              items: FlowFillLengthV1.values
-                  .map(
-                    (fillLength) => DropdownMenuItem<FlowFillLengthV1>(
-                      value: fillLength,
-                      child: Text(fillLength.label),
-                    ),
-                  )
-                  .toList(growable: false),
-              onChanged: (FlowFillLengthV1? value) {
-                if (value == null) return;
-                setState(() => _flowFillLength = value);
-              },
-            ),
-            const SizedBox(height: 8),
-            Card(
-              child: ListTile(
-                title: const Text('Flow Rule'),
-                subtitle: const Text(
-                  'Resolve phrases to land on beat 1 in 4/4 over a 16th-note grid.',
-                ),
-              ),
-            ),
-          ],
           const SizedBox(height: 20),
           FilledButton(
             onPressed: () => _startSession(context),
@@ -265,9 +271,6 @@ class _PracticeSetupScreenState extends State<PracticeSetupScreen> {
         bpm: _bpm,
         timerPreset: _timerPreset,
         clickEnabled: _clickEnabled,
-        flowSpec: _intent == PracticeIntentV1.flow
-            ? FlowSpecV1.v1Default.copyWith(fillLength: _flowFillLength)
-            : null,
       );
     } else {
       setup = PracticeSessionSetupV1(
@@ -279,9 +282,6 @@ class _PracticeSetupScreenState extends State<PracticeSetupScreen> {
         timerPreset: _timerPreset,
         clickEnabled: _clickEnabled,
         generated: false,
-        flowSpec: _intent == PracticeIntentV1.flow
-            ? FlowSpecV1.v1Default.copyWith(fillLength: _flowFillLength)
-            : null,
         generatorOptions: null,
         routineId: null,
       );
@@ -289,10 +289,8 @@ class _PracticeSetupScreenState extends State<PracticeSetupScreen> {
 
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => PracticeSessionScreen(
-          controller: widget.controller,
-          setup: setup,
-        ),
+        builder: (_) =>
+            PracticeSessionScreen(controller: widget.controller, setup: setup),
       ),
     );
   }
