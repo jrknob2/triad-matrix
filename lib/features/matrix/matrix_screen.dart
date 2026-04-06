@@ -293,17 +293,15 @@ class _MatrixScreenState extends State<MatrixScreen> {
 
   void _toggleItemSelection(String itemId) {
     setState(() {
-      if (_selectedItemIds.contains(itemId)) {
-        _selectedItemIds.remove(itemId);
-      } else {
-        _selectedItemIds.add(itemId);
-      }
+      _selectedItemIds.add(itemId);
     });
   }
 
   void _removeSelectedItem(String itemId) {
+    final int index = _selectedItemIds.lastIndexOf(itemId);
+    if (index < 0) return;
     setState(() {
-      _selectedItemIds.remove(itemId);
+      _selectedItemIds.removeAt(index);
     });
   }
 
