@@ -1,6 +1,6 @@
 // lib/core/pattern/triad_matrix.dart
 //
-// Triad Trainer — Triad Matrix (v1)
+// Drumcabulary — Triad Matrix (v1)
 //
 // Purpose:
 // - Canonical, baked-in triad matrix data (R/L/K).

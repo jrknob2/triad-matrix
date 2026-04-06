@@ -1,6 +1,6 @@
 // lib/core/pattern_analysis.dart
 //
-// Triad Trainer — Pattern Analysis (v1)
+// Drumcabulary — Pattern Analysis (v1)
 //
 // Pure analysis utilities for generated patterns.
 // No UI, no state, no side effects.

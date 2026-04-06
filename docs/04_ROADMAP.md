@@ -1,6 +1,6 @@
 # 04 — Modes & Defaults (V1)
 
-This document defines **practice modes** in Triad Trainer.
+This document defines **practice modes** in Drumcabulary.
 
 Modes are not labels.
 Modes are **contracts**.

@@ -1,6 +1,6 @@
 // lib/core/pattern_formatter.dart
 //
-// Triad Trainer — Pattern Formatting (v1)
+// Drumcabulary — Pattern Formatting (v1)
 //
 // Converts a Pattern into fixed-width mono “rows” suitable for rendering.
 // This is UI-agnostic: it outputs strings/char arrays, not widgets.

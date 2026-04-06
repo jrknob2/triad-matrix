@@ -7,13 +7,13 @@ import 'state/app_controller.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final AppController controller = await AppController.create();
-  runApp(TriadTrainerApp(controller: controller));
+  runApp(DrumcabularyApp(controller: controller));
 }
 
-class TriadTrainerApp extends StatelessWidget {
+class DrumcabularyApp extends StatelessWidget {
   final AppController controller;
 
-  const TriadTrainerApp({super.key, required this.controller});
+  const DrumcabularyApp({super.key, required this.controller});
 
   @override
   Widget build(BuildContext context) {
@@ -21,7 +21,7 @@ class TriadTrainerApp extends StatelessWidget {
       animation: controller,
       builder: (BuildContext context, _) {
         return MaterialApp(
-          title: 'Triad Trainer',
+          title: 'Drumcabulary',
           theme: ThemeData(
             useMaterial3: true,
             colorScheme: ColorScheme.fromSeed(

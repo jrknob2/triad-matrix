@@ -1,6 +1,6 @@
 # 03 — UI Model (V1)
 
-This document defines how Triad Trainer’s UI behaves in v1.
+This document defines how Drumcabulary’s UI behaves in v1.
 
 The goal is to create a practice experience that feels:
 - calm

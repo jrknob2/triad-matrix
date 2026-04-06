@@ -1,6 +1,6 @@
 # 02 — Generation Rules (V1)
 
-This document defines **what makes a generated pattern valid** in Triad Trainer v1.
+This document defines **what makes a generated pattern valid** in Drumcabulary v1.
 
 If a pattern violates any rule in this document, it is **invalid**, even if it is mathematically correct.
 

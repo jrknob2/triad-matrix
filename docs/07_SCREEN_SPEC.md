@@ -84,7 +84,7 @@ Purpose:
 Top-to-bottom wire:
 
 1. App bar
-   - title: `Triad Trainer`
+   - title: `Drumcabulary`
    - settings icon
 
 2. Quick start section

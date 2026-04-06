@@ -1,6 +1,6 @@
 # 05 — Pattern Focus (V1)
 
-This document defines how Triad Trainer explains **why a pattern is valuable**.
+This document defines how Drumcabulary explains **why a pattern is valuable**.
 
 The goal of Pattern Focus is **orientation, not instruction**.
 

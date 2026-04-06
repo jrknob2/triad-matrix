@@ -2,7 +2,7 @@
 
 ## Product Definition
 
-Triad Trainer is a drummer-first practice app for building, organizing, and tracking grouping-based sticking vocabulary.
+Drumcabulary is a drummer-first practice app for building, organizing, and tracking grouping-based sticking vocabulary.
 
 V1 starts with **triads (3-note groupings)** as the primary material, adds support for **5-note groupings**, and distinguishes between:
 

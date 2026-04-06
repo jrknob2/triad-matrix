@@ -1,6 +1,6 @@
 // lib/core/pattern/pattern_engine.dart
 //
-// Triad Trainer — Pattern Engine (v1)
+// Drumcabulary — Pattern Engine (v1)
 //
 // Purpose:
 // - Single source of truth for pattern generation primitives + request contract.

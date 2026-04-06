@@ -1,6 +1,6 @@
-# Triad Trainer
+# Drumcabulary
 
-Triad Trainer helps drummers internalize triad stickings by practicing **physically realistic**, **musically intentional** patterns — not random permutations.
+Drumcabulary helps drummers internalize triad stickings by practicing **physically realistic**, **musically intentional** patterns — not random permutations.
 
 The goal is to build **usable drumming vocabulary** through focused repetition and flow, using:
 - clear visual cues
@@ -8,7 +8,7 @@ The goal is to build **usable drumming vocabulary** through focused repetition a
 - a timer
 - minimal, intent-driven controls
 
-Triad Trainer is a **practice tool**, not a composition tool.
+Drumcabulary is a **practice tool**, not a composition tool.
 
 ---
 
@@ -50,7 +50,7 @@ Randomness is only useful when anchored to musical language.
 
 ## Surface vs Intent (key concept)
 
-Triad Trainer separates two ideas that are often conflated:
+Drumcabulary separates two ideas that are often conflated:
 
 - **Surface** → *What am I physically practicing on?*
 - **Intent** → *What am I trying to develop?*
@@ -161,14 +161,14 @@ If something looks confusing, it’s a bug.
 
 ---
 
-## What Triad Trainer v1 is
+## What Drumcabulary v1 is
 
 - A lightweight daily practice tool
 - Focused on triads only
 - Fast to start, easy to repeat
 - Designed for pads *and* kits
 
-## What Triad Trainer v1 is NOT
+## What Drumcabulary v1 is NOT
 
 - A DAW
 - A groove library

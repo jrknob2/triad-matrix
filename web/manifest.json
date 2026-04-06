@@ -1,11 +1,11 @@
 {
-    "name": "traid_trainer",
-    "short_name": "traid_trainer",
+    "name": "Drumcabulary",
+    "short_name": "Drumcabulary",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "A drummer-first practice app for turning patterns into musical vocabulary.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

@@ -1,6 +1,6 @@
 // lib/core/pattern_benefits.dart
 //
-// Triad Trainer — Pattern Benefits (v1)
+// Drumcabulary — Pattern Benefits (v1)
 //
 // Purpose:
 // - Produce a short, drummer-first “why this is valuable” line for a given pattern.

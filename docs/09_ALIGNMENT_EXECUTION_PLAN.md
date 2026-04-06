@@ -104,7 +104,7 @@ This does not need to be fully realized in MVP, but the design must make room fo
 
 ### Recommended product sentence
 
-Triad Trainer helps drummers turn triads and related linear phrases into usable musical vocabulary through guided work in control, balance, dynamics, phrasing, and kit application.
+Drumcabulary helps drummers turn triads and related linear phrases into usable musical vocabulary through guided work in control, balance, dynamics, phrasing, and kit application.
 
 ### What the app teaches
 

@@ -1,15 +1,15 @@
 # 00 — Overview
 
-## What Triad Trainer Is
+## What Drumcabulary Is
 
-Triad Trainer is a **drummer-first practice tool** focused on one thing:
+Drumcabulary is a **drummer-first practice tool** focused on one thing:
 
 > Helping drummers internalize triad stickings so they become usable musical vocabulary.
 
 It is not about theory, genres, or collecting patterns.
 It is about **repetition, feel, and physical reality**.
 
-Triad Trainer exists to answer the question:
+Drumcabulary exists to answer the question:
 > “What should I play *right now* to get better at triads?”
 
 ---
@@ -31,13 +31,13 @@ Most tools either:
 - Generate *random* permutations with no musical grounding, or
 - Present *static exercises* with no variation or adaptability
 
-Triad Trainer sits between those extremes.
+Drumcabulary sits between those extremes.
 
 ---
 
 ## Who This Is For
 
-Triad Trainer is designed for drummers who:
+Drumcabulary is designed for drummers who:
 
 - Practice regularly (pad, kick pad, or full kit)
 - Want structured material without rigid lesson plans
@@ -73,7 +73,7 @@ The goal is fluency, not coverage.
 
 ## What This App Is Not
 
-Triad Trainer is **not**:
+Drumcabulary is **not**:
 
 - A DAW
 - A groove player
