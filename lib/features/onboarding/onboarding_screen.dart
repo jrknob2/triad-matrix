@@ -115,14 +115,14 @@ class _IntroStep extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Text(
-          'Sharpen your hands, open up your phrasing, and bring better ideas to the kit.',
+          'Train short patterns until they come out as phrases, not individual hits.',
           style: Theme.of(
             context,
           ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 16),
         Text(
-          'Triads and short linear phrases can build speed, control, touch, coordination, and fresher fill language. The point is not to memorize shapes. It is to turn them into something you can actually hear and use when you play.',
+          'This kind of work builds timing, control, touch, speed, coordination, and stronger ideas around the kit. Instead of thinking one note at a time, you start hearing and feeling complete shapes that are ready when you need them.',
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.4),
         ),
       ],
@@ -145,12 +145,12 @@ class _HowItWorksStep extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         Text(
-          'Start with a small phrase and make it smooth. Then flip the lead, shape the dynamics, build longer phrases, and move them around the kit until they feel like music instead of exercises.',
+          'Take a phrase slowly, make it smooth, and repeat it until it feels easy. Then bring up the speed, shape the dynamics, switch the lead, and move it around the kit. That is how control turns into speed, touch, flow, and relaxed playing.',
           style: textTheme.bodyLarge?.copyWith(height: 1.4),
         ),
         const SizedBox(height: 16),
         Text(
-          'Today gives you a clear place to start. The matrix shows the vocabulary. Working On keeps the phrases you want in rotation.',
+          'The app is built to guide that process: what to start with, what to revisit, what needs balance, and what is ready to move closer to real musical use.',
           style: textTheme.bodyLarge?.copyWith(height: 1.4),
         ),
       ],
