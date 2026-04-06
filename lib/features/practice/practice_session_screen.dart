@@ -70,6 +70,10 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   Widget build(BuildContext context) {
     final currentItemId = widget.setup.practiceItemIds[_currentItemIndex];
     final currentItem = widget.controller.itemById(currentItemId);
+    final LearningLaneV1 lane = widget.controller.laneForPracticeItem(
+      currentItemId,
+      practiceMode: _practiceMode,
+    );
     final List<String> tokens = widget.controller.noteTokensFor(currentItemId);
     final List<PatternNoteMarkingV1> markings =
         _sessionMarkingsByItemId[currentItemId]!;
@@ -90,9 +94,23 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Text(
-                    currentItem.name,
-                    style: Theme.of(context).textTheme.titleLarge,
+                  Wrap(
+                    spacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: <Widget>[
+                      Text(
+                        currentItem.name,
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      Chip(
+                        label: Text(lane.label),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      Chip(
+                        label: Text(_practiceMode.label),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 12),
                   PatternDisplayText(
@@ -104,6 +122,17 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
+                  Text(
+                    widget.controller.practiceGuidanceFor(
+                      currentItemId,
+                      practiceMode: _practiceMode,
+                    ),
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: const Color(0xFF5B5345),
+                      height: 1.35,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   PatternMarkingEditor(
                     tokens: tokens,
                     markings: markings,
@@ -114,7 +143,15 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                       );
                     },
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 18),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Practice Mode',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   SegmentedButton<PracticeModeV1>(
                     segments: PracticeModeV1.values
                         .map(
@@ -146,6 +183,11 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                           noteIndex: noteIndex,
                         );
                       },
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Keep the route intentional. The phrase should read clearly from surface to surface.',
+                      style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
                 ],

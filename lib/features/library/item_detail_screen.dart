@@ -10,6 +10,7 @@ class ItemDetailScreen extends StatelessWidget {
   final AppController controller;
   final String itemId;
   final ValueChanged<String> onPracticeItem;
+  final void Function(String, PracticeModeV1) onPracticeItemInMode;
   final ValueChanged<String> onBuildComboFromItem;
 
   const ItemDetailScreen({
@@ -17,6 +18,7 @@ class ItemDetailScreen extends StatelessWidget {
     required this.controller,
     required this.itemId,
     required this.onPracticeItem,
+    required this.onPracticeItemInMode,
     required this.onBuildComboFromItem,
   });
 
@@ -33,6 +35,7 @@ class ItemDetailScreen extends StatelessWidget {
         final List<PatternNoteMarkingV1> markings = controller.noteMarkingsFor(
           item.id,
         );
+        final LearningLaneV1 lane = controller.laneForPracticeItem(item.id);
 
         return Scaffold(
           appBar: AppBar(title: const Text('Practice Items')),
@@ -53,6 +56,28 @@ class ItemDetailScreen extends StatelessWidget {
                               fontWeight: FontWeight.w900,
                               letterSpacing: -0.8,
                             ),
+                      ),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        children: <Widget>[
+                          Chip(
+                            label: Text(lane.label),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                          Chip(
+                            label: Text(item.family.label),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        controller.practiceGuidanceFor(item.id),
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: const Color(0xFF5B5345),
+                          height: 1.35,
+                        ),
                       ),
                     ],
                   ),
@@ -121,22 +146,36 @@ class ItemDetailScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              FilledButton(
-                onPressed: () => onPracticeItem(item.id),
-                child: const Text('Practice Now'),
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: () => onPracticeItem(item.id),
+                      child: const Text('Single Surface'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: FilledButton.tonal(
+                      onPressed: () =>
+                          onPracticeItemInMode(item.id, PracticeModeV1.flow),
+                      child: const Text('Flow'),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 8),
               OutlinedButton(
                 onPressed: () => onBuildComboFromItem(item.id),
-                child: const Text('Build Combo From This'),
+                child: const Text('Build Phrase From This'),
               ),
               const SizedBox(height: 8),
               OutlinedButton(
                 onPressed: () => controller.toggleRoutineItem(item.id),
                 child: Text(
                   controller.isDirectRoutineEntry(item.id)
-                      ? 'Remove from Routine'
-                      : 'Add to Routine',
+                      ? 'Remove from Working On'
+                      : 'Add to Working On',
                 ),
               ),
             ],

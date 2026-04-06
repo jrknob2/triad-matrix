@@ -42,6 +42,7 @@ class _AppShellState extends State<AppShell> {
             controller: widget.controller,
             onOpenItem: _openItemDetail,
             onPracticeItem: _openPracticeItem,
+            onPracticeItemInMode: _openPracticeItemInMode,
             onBuildComboFromItems: _openCombinationBuilderFromItems,
           ),
           FocusScreen(
@@ -134,6 +135,7 @@ class _AppShellState extends State<AppShell> {
           controller: widget.controller,
           itemId: itemId,
           onPracticeItem: _openPracticeItem,
+          onPracticeItemInMode: _openPracticeItemInMode,
           onBuildComboFromItem: _openCombinationBuilderFromItem,
         ),
       ),

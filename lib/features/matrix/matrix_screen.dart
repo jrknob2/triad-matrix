@@ -10,6 +10,7 @@ class MatrixScreen extends StatefulWidget {
   final AppController controller;
   final ValueChanged<String> onOpenItem;
   final ValueChanged<String> onPracticeItem;
+  final void Function(String, PracticeModeV1) onPracticeItemInMode;
   final ValueChanged<List<String>> onBuildComboFromItems;
 
   const MatrixScreen({
@@ -17,6 +18,7 @@ class MatrixScreen extends StatefulWidget {
     required this.controller,
     required this.onOpenItem,
     required this.onPracticeItem,
+    required this.onPracticeItemInMode,
     required this.onBuildComboFromItems,
   });
 
@@ -212,19 +214,36 @@ class _MatrixScreenState extends State<MatrixScreen> {
       Padding(
         padding: const EdgeInsets.only(right: 8),
         child: ActionChip(
-          label: const Text('Practice Now'),
+          label: const Text('Single Surface'),
           onPressed: _practiceSelection,
         ),
       ),
       Padding(
         padding: const EdgeInsets.only(right: 8),
         child: ActionChip(
+          label: const Text('Flow'),
+          onPressed: _practiceSelectionInFlow,
+        ),
+      ),
+      Padding(
+        padding: const EdgeInsets.only(right: 8),
+        child: ActionChip(
           label: Text(
-            _selectionIsInRoutine ? 'Remove from Routine' : 'Add to Routine',
+            _selectionIsInRoutine
+                ? 'Remove from Working On'
+                : 'Add to Working On',
           ),
           onPressed: _toggleRoutineSelection,
         ),
       ),
+      if (_selectedItemIds.length > 1)
+        Padding(
+          padding: const EdgeInsets.only(right: 8),
+          child: ActionChip(
+            label: const Text('Save Phrase'),
+            onPressed: _saveSelection,
+          ),
+        ),
     ];
 
     if (_selectedItemIds.length == 1) {
@@ -337,10 +356,22 @@ class _MatrixScreenState extends State<MatrixScreen> {
     widget.onPracticeItem(itemId);
   }
 
+  void _practiceSelectionInFlow() {
+    final String? itemId = _selectionActionItemId(createIfMissing: true);
+    if (itemId == null) return;
+    widget.onPracticeItemInMode(itemId, PracticeModeV1.flow);
+  }
+
   void _toggleRoutineSelection() {
     final String? itemId = _selectionActionItemId(createIfMissing: true);
     if (itemId == null) return;
     widget.controller.toggleRoutineItem(itemId);
+    setState(() {});
+  }
+
+  void _saveSelection() {
+    if (_selectedItemIds.length < 2) return;
+    widget.controller.createCombination(itemIds: _selectedItemIds);
     setState(() {});
   }
 

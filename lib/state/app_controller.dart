@@ -50,6 +50,44 @@ class AppController extends ChangeNotifier {
     return _items.where((item) => !item.isCustom).toList(growable: false);
   }
 
+  LearningLaneV1 laneForPracticeItem(
+    String itemId, {
+    PracticeModeV1 practiceMode = PracticeModeV1.singleSurface,
+  }) {
+    final PracticeItemV1 item = itemById(itemId);
+    if (practiceMode == PracticeModeV1.flow) return LearningLaneV1.flow;
+    if (item.isCombo) return LearningLaneV1.phrasing;
+    if (hasKick(itemId)) return LearningLaneV1.integration;
+    if (item.hasAccents || item.hasGhostNotes) return LearningLaneV1.dynamics;
+    if (_isWeakHandLead(item)) return LearningLaneV1.balance;
+    return LearningLaneV1.control;
+  }
+
+  String practiceGuidanceFor(
+    String itemId, {
+    PracticeModeV1 practiceMode = PracticeModeV1.singleSurface,
+  }) {
+    final LearningLaneV1 lane = laneForPracticeItem(
+      itemId,
+      practiceMode: practiceMode,
+    );
+
+    return switch (lane) {
+      LearningLaneV1.control =>
+        'Keep the sound even and the motion relaxed before you add anything else.',
+      LearningLaneV1.balance =>
+        '$weakHandLabel-hand lead is the point of this phrase. Match it to the strong side without forcing it.',
+      LearningLaneV1.dynamics =>
+        'Hold the sticking steady and shape the touch. Let the accents and ghosts do the work.',
+      LearningLaneV1.integration =>
+        'Add the kick without letting the hands smear. Keep the phrase clean first.',
+      LearningLaneV1.phrasing =>
+        'Listen to the transition points. The phrase should feel connected, not stitched together.',
+      LearningLaneV1.flow =>
+        'Assign voices deliberately and make the phrase read clearly around the kit.',
+    };
+  }
+
   TodayBriefingV1 buildTodayBriefing() {
     final List<TodayLaneRecommendationV1> lanes = <TodayLaneRecommendationV1>[
       _buildControlLane(),
