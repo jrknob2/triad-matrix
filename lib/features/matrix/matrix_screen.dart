@@ -44,138 +44,124 @@ class _MatrixScreenState extends State<MatrixScreen> {
           colors: <Color>[Color(0xFFF5EEE1), Color(0xFFF8F6F1)],
         ),
       ),
-      child: Column(
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
         children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  'Triad Matrix',
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: TriadMatrixFilterPaletteV1.values
-                        .map(
-                          (palette) => Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: ChoiceChip(
-                              label: Text(palette.label),
-                              selected: _palette == palette,
-                              onSelected: (_) => _togglePalette(palette),
-                            ),
-                          ),
-                        )
-                        .toList(growable: false),
-                  ),
-                ),
-                if (_palette != null) ...<Widget>[
-                  const SizedBox(height: 10),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(children: _buildPaletteFilters()),
-                  ),
-                ],
-              ],
+          Text(
+            'Triad Matrix',
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w800,
             ),
           ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 6, 16, 16),
-              child: SingleChildScrollView(
-                child: TriadMatrixGrid(
-                  controller: widget.controller,
-                  filters: _filters,
-                  selectedComboIds: _selectedComboIds,
-                  selectedItemIds: _selectedItemIds,
-                  selectedRows: _selectedRows,
-                  selectedColumns: _selectedColumns,
-                  onToggleRow: _toggleRow,
-                  onToggleColumn: _toggleColumn,
-                  onTapItem: _toggleItemSelection,
-                ),
-              ),
+          const SizedBox(height: 10),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: TriadMatrixFilterPaletteV1.values
+                  .map(
+                    (palette) => Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text(palette.label),
+                        selected: _palette == palette,
+                        onSelected: (_) => _togglePalette(palette),
+                      ),
+                    ),
+                  )
+                  .toList(growable: false),
             ),
           ),
-          if (_selectedItemIds.isNotEmpty)
+          if (_palette != null) ...<Widget>[
+            const SizedBox(height: 10),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(children: _buildPaletteFilters()),
+            ),
+          ],
+          const SizedBox(height: 12),
+          TriadMatrixGrid(
+            controller: widget.controller,
+            filters: _filters,
+            selectedComboIds: _selectedComboIds,
+            selectedItemIds: _selectedItemIds,
+            selectedRows: _selectedRows,
+            selectedColumns: _selectedColumns,
+            onToggleRow: _toggleRow,
+            onToggleColumn: _toggleColumn,
+            onTapItem: _toggleItemSelection,
+          ),
+          if (_selectedItemIds.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 16),
             SafeArea(
               top: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                child: Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        if (_selectedItemIds.length == 1)
-                          PatternDisplayText(
-                            tokens: widget.controller.noteTokensFor(
-                              _selectedItemIds.first,
-                            ),
-                            markings: widget.controller.noteMarkingsFor(
-                              _selectedItemIds.first,
-                            ),
-                            style: theme.textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: -0.6,
-                            ),
-                          )
-                        else
-                          Text(
-                            _selectedLabel,
-                            style: theme.textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: -0.6,
-                            ),
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      if (_selectedItemIds.length == 1)
+                        PatternDisplayText(
+                          tokens: widget.controller.noteTokensFor(
+                            _selectedItemIds.first,
                           ),
-                        const SizedBox(height: 12),
-                        FilledButton(
-                          onPressed: _practiceSelection,
-                          child: const Text('Practice Now'),
+                          markings: widget.controller.noteMarkingsFor(
+                            _selectedItemIds.first,
+                          ),
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.6,
+                          ),
+                        )
+                      else
+                        Text(
+                          _selectedLabel,
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.6,
+                          ),
                         ),
+                      const SizedBox(height: 12),
+                      FilledButton(
+                        onPressed: _practiceSelection,
+                        child: const Text('Practice Now'),
+                      ),
+                      const SizedBox(height: 8),
+                      OutlinedButton(
+                        onPressed: _buildComboFromSelection,
+                        child: const Text('Build Combo'),
+                      ),
+                      const SizedBox(height: 8),
+                      OutlinedButton(
+                        onPressed: _toggleRoutineSelection,
+                        child: Text(
+                          _selectionIsInRoutine
+                              ? 'Remove from Routine'
+                              : 'Add to Routine',
+                        ),
+                      ),
+                      if (_selectedItemIds.length == 1) ...<Widget>[
                         const SizedBox(height: 8),
                         OutlinedButton(
-                          onPressed: _buildComboFromSelection,
-                          child: const Text('Build Combo'),
-                        ),
-                        const SizedBox(height: 8),
-                        OutlinedButton(
-                          onPressed: _toggleRoutineSelection,
-                          child: Text(
-                            _selectionIsInRoutine
-                                ? 'Remove from Routine'
-                                : 'Add to Routine',
-                          ),
-                        ),
-                        if (_selectedItemIds.length == 1) ...<Widget>[
-                          const SizedBox(height: 8),
-                          OutlinedButton(
-                            onPressed: () =>
-                                widget.onOpenItem(_selectedItemIds.first),
-                            child: const Text('View Details'),
-                          ),
-                        ],
-                        const SizedBox(height: 8),
-                        TextButton(
-                          onPressed: () {
-                            setState(() => _selectedItemIds.clear());
-                          },
-                          child: const Text('Clear Selection'),
+                          onPressed: () =>
+                              widget.onOpenItem(_selectedItemIds.first),
+                          child: const Text('View Details'),
                         ),
                       ],
-                    ),
+                      const SizedBox(height: 8),
+                      TextButton(
+                        onPressed: () {
+                          setState(() => _selectedItemIds.clear());
+                        },
+                        child: const Text('Clear Selection'),
+                      ),
+                    ],
                   ),
                 ),
               ),
             ),
+          ],
         ],
       ),
     );

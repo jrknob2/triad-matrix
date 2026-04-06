@@ -139,6 +139,12 @@ class _ToolkitList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final Duration totalLoggedTime = items.fold<Duration>(
+      Duration.zero,
+      (Duration sum, PracticeItemV1 item) =>
+          sum + controller.totalTime(itemId: item.id),
+    );
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       children: <Widget>[
@@ -149,10 +155,22 @@ class _ToolkitList extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(title, style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 6),
-                Text(
-                  'These are the items you are shaping into usable vocabulary.',
-                  style: Theme.of(context).textTheme.bodyMedium,
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: <Widget>[
+                    _ToolkitStatChip(
+                      label: items.length == 1
+                          ? '1 item'
+                          : '${items.length} items',
+                    ),
+                    _ToolkitStatChip(
+                      label: '${formatDuration(totalLoggedTime)} logged',
+                    ),
+                    const _ToolkitStatChip(label: 'Tap to open'),
+                    const _ToolkitStatChip(label: 'Hold to practice'),
+                  ],
                 ),
               ],
             ),
@@ -199,6 +217,32 @@ class _ToolkitList extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+class _ToolkitStatChip extends StatelessWidget {
+  final String label;
+
+  const _ToolkitStatChip({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3EBDD),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0x22000000)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Text(
+          label,
+          style: Theme.of(
+            context,
+          ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+        ),
+      ),
     );
   }
 }

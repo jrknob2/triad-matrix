@@ -325,12 +325,12 @@ class _TriadCellButton extends StatelessWidget {
     }
 
     if (rightLead && filters.contains(TriadMatrixFilterV1.rightLead)) {
-      borderColor = const Color(0xFF2F6EC8);
+      borderColor = const Color(0xFFC94949);
       borderWidth = borderWidth < 2 ? 2 : borderWidth;
     }
 
     if (leftLead && filters.contains(TriadMatrixFilterV1.leftLead)) {
-      borderColor = const Color(0xFFC94949);
+      borderColor = const Color(0xFF2F6EC8);
       borderWidth = borderWidth < 2 ? 2 : borderWidth;
     }
 

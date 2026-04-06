@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/pattern/triad_matrix.dart';
 import '../../core/practice/practice_domain_v1.dart';
 import '../../state/app_controller.dart';
 import '../matrix/widgets/triad_matrix_grid.dart';
@@ -22,8 +23,6 @@ class CombinationBuilderScreen extends StatefulWidget {
 
 class _CombinationBuilderScreenState extends State<CombinationBuilderScreen> {
   final List<String> _selectedItemIds = <String>[];
-  final Set<String> _selectedRows = <String>{};
-  final Set<String> _selectedColumns = <String>{};
 
   @override
   void initState() {
@@ -60,7 +59,7 @@ class _CombinationBuilderScreenState extends State<CombinationBuilderScreen> {
                   Text(
                     hasSelection
                         ? widget.controller.comboDisplayName(_selectedItemIds)
-                        : 'Tap triads on the matrix to build a combo.',
+                        : 'Tap triads, rows, or columns on the matrix to build a combo.',
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   if (hasSelection) ...<Widget>[
@@ -116,10 +115,10 @@ class _CombinationBuilderScreenState extends State<CombinationBuilderScreen> {
             filters: const <TriadMatrixFilterV1>{},
             selectedComboIds: const <String>{},
             selectedItemIds: const <String>[],
-            selectedRows: _selectedRows,
-            selectedColumns: _selectedColumns,
-            onToggleRow: _toggleRow,
-            onToggleColumn: _toggleColumn,
+            selectedRows: const <String>{},
+            selectedColumns: const <String>{},
+            onToggleRow: _appendRow,
+            onToggleColumn: _appendColumn,
             onTapItem: _toggleItemSelection,
           ),
           const SizedBox(height: 16),
@@ -158,24 +157,26 @@ class _CombinationBuilderScreenState extends State<CombinationBuilderScreen> {
     });
   }
 
-  void _toggleRow(String rowLabel) {
-    setState(() {
-      if (_selectedRows.contains(rowLabel)) {
-        _selectedRows.remove(rowLabel);
-      } else {
-        _selectedRows.add(rowLabel);
-      }
-    });
+  void _appendRow(String rowLabel) {
+    final List<String> itemIds = triadMatrixAll()
+        .where((TriadMatrixCell cell) => cell.id.substring(1) == rowLabel)
+        .map(
+          (TriadMatrixCell cell) =>
+              widget.controller.triadItemForCell(cell.id)!.id,
+        )
+        .toList(growable: false);
+    setState(() => _selectedItemIds.addAll(itemIds));
   }
 
-  void _toggleColumn(String columnLabel) {
-    setState(() {
-      if (_selectedColumns.contains(columnLabel)) {
-        _selectedColumns.remove(columnLabel);
-      } else {
-        _selectedColumns.add(columnLabel);
-      }
-    });
+  void _appendColumn(String columnLabel) {
+    final List<String> itemIds = triadMatrixAll()
+        .where((TriadMatrixCell cell) => cell.id.startsWith(columnLabel))
+        .map(
+          (TriadMatrixCell cell) =>
+              widget.controller.triadItemForCell(cell.id)!.id,
+        )
+        .toList(growable: false);
+    setState(() => _selectedItemIds.addAll(itemIds));
   }
 
   void _saveCombo() {

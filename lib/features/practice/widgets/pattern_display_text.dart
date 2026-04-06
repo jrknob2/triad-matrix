@@ -8,6 +8,7 @@ class PatternDisplayText extends StatelessWidget {
   final TextStyle? style;
   final TextAlign textAlign;
   final double ghostScale;
+  final double ghostOpacity;
 
   const PatternDisplayText({
     super.key,
@@ -16,6 +17,7 @@ class PatternDisplayText extends StatelessWidget {
     this.style,
     this.textAlign = TextAlign.start,
     this.ghostScale = 0.84,
+    this.ghostOpacity = 0.72,
   }) : assert(tokens.length == markings.length);
 
   @override
@@ -59,10 +61,24 @@ class PatternDisplayText extends StatelessWidget {
   }
 
   TextStyle _ghostStyleForToken(String token, TextStyle baseStyle) {
-    if (token != 'R' && token != 'L') return baseStyle;
+    final Color baseColor = baseStyle.color ?? const Color(0xFF101010);
+    final FontWeight? ghostWeight =
+        (baseStyle.fontWeight == null ||
+            baseStyle.fontWeight!.index < FontWeight.w700.index)
+        ? baseStyle.fontWeight
+        : FontWeight.w700;
+
+    if (token != 'R' && token != 'L') {
+      return baseStyle.copyWith(
+        color: baseColor.withValues(alpha: ghostOpacity),
+        fontWeight: ghostWeight,
+      );
+    }
     final double? fontSize = baseStyle.fontSize;
     return baseStyle.copyWith(
       fontSize: fontSize == null ? null : fontSize * ghostScale,
+      color: baseColor.withValues(alpha: ghostOpacity),
+      fontWeight: ghostWeight,
     );
   }
 }
