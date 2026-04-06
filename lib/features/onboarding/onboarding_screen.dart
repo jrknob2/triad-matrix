@@ -115,14 +115,14 @@ class _IntroStep extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Text(
-          'This app helps you build triad vocabulary into your hands.',
+          'Short patterns become usable vocabulary when they are practiced with control, balance, touch, and repetition.',
           style: Theme.of(
             context,
           ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 16),
         Text(
-          'You will use the matrix to explore patterns, build combinations, and track what is actually making it into your toolkit.',
+          'This app is built to take triads and short linear phrases from recognition to dependable use. The goal is not to collect patterns. The goal is to make them available when you play.',
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.4),
         ),
       ],
@@ -140,17 +140,17 @@ class _HowItWorksStep extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Text(
-          'How It Works',
+          'Method',
           style: textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 16),
         Text(
-          'Tap triads in the matrix to build a pattern. Use filters to inspect the matrix. Practice items directly from the matrix, Today, or Focus.',
+          'Work begins with clean control on one surface. Then it expands into opposite-hand lead, dynamic shape, longer phrases, and flow on the kit.',
           style: textTheme.bodyLarge?.copyWith(height: 1.4),
         ),
         const SizedBox(height: 16),
         Text(
-          'Accents and ghost notes are part of the material, and you can change them for a session without overwriting the saved item.',
+          'Today will point you toward the lanes that need attention. The matrix shows the vocabulary. Focus holds what you are actively developing.',
           style: textTheme.bodyLarge?.copyWith(height: 1.4),
         ),
       ],
@@ -173,6 +173,11 @@ class _SetupStep extends StatelessWidget {
           style: Theme.of(
             context,
           ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          'Set a lead side and a starting tempo so practice can begin quickly.',
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.4),
         ),
         const SizedBox(height: 16),
         DropdownButtonFormField<HandednessV1>(

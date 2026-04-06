@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/practice/practice_domain_v1.dart';
 import '../../features/app/app_formatters.dart';
 import '../../state/app_controller.dart';
 import '../practice/widgets/pattern_display_text.dart';
@@ -9,6 +10,7 @@ class TodayScreen extends StatelessWidget {
   final VoidCallback onOpenMatrix;
   final ValueChanged<String> onOpenItem;
   final ValueChanged<String> onPracticeItem;
+  final void Function(String, PracticeModeV1) onPracticeItemInMode;
 
   const TodayScreen({
     super.key,
@@ -16,6 +18,7 @@ class TodayScreen extends StatelessWidget {
     required this.onOpenMatrix,
     required this.onOpenItem,
     required this.onPracticeItem,
+    required this.onPracticeItemInMode,
   });
 
   @override
@@ -23,7 +26,7 @@ class TodayScreen extends StatelessWidget {
     return AnimatedBuilder(
       animation: controller,
       builder: (BuildContext context, _) {
-        final briefing = controller.buildTodayBriefing();
+        final TodayBriefingV1 briefing = controller.buildTodayBriefing();
 
         return DecoratedBox(
           decoration: const BoxDecoration(
@@ -37,22 +40,50 @@ class TodayScreen extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
             children: <Widget>[
               _TodayHero(
+                lane: briefing.primaryLane,
                 headline: briefing.headline,
                 summary: briefing.summary,
                 onOpenMatrix: onOpenMatrix,
               ),
               const SizedBox(height: 16),
-              ...briefing.cues.map(
-                (cue) => Padding(
-                  padding: const EdgeInsets.only(bottom: 14),
-                  child: _CoachCueCard(
-                    title: cue.title,
-                    detail: cue.detail,
-                    itemIds: cue.suggestedItemIds,
-                    controller: controller,
-                    onOpenItem: onOpenItem,
-                    onPracticeItem: onPracticeItem,
-                  ),
+              _TodaySection(
+                title: 'Teaching Lanes',
+                child: Column(
+                  children: briefing.laneRecommendations
+                      .map(
+                        (recommendation) => Padding(
+                          padding: const EdgeInsets.only(bottom: 14),
+                          child: _LaneCard(
+                            recommendation: recommendation,
+                            controller: controller,
+                            onOpenItem: onOpenItem,
+                            onPracticeItem: onPracticeItem,
+                            onPracticeItemInMode: onPracticeItemInMode,
+                            onOpenMatrix: onOpenMatrix,
+                          ),
+                        ),
+                      )
+                      .toList(growable: false),
+                ),
+              ),
+              const SizedBox(height: 4),
+              _TodaySection(
+                title: 'Momentum',
+                child: Column(
+                  children: briefing.momentumRecommendations
+                      .map(
+                        (recommendation) => Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _MomentumCard(
+                            recommendation: recommendation,
+                            controller: controller,
+                            onOpenItem: onOpenItem,
+                            onPracticeItem: onPracticeItem,
+                            onOpenMatrix: onOpenMatrix,
+                          ),
+                        ),
+                      )
+                      .toList(growable: false),
                 ),
               ),
               const SizedBox(height: 4),
@@ -68,9 +99,9 @@ class TodayScreen extends StatelessWidget {
                       note: 'All logged practice in the app',
                     ),
                     _ContextTile(
-                      title: 'Routine',
+                      title: 'Working On',
                       value: '${controller.routine.entries.length}',
-                      note: 'Items in current focus',
+                      note: 'Items in active focus',
                     ),
                     _ContextTile(
                       title: 'Sessions',
@@ -89,11 +120,13 @@ class TodayScreen extends StatelessWidget {
 }
 
 class _TodayHero extends StatelessWidget {
+  final LearningLaneV1 lane;
   final String headline;
   final String summary;
   final VoidCallback onOpenMatrix;
 
   const _TodayHero({
+    required this.lane,
     required this.headline,
     required this.summary,
     required this.onOpenMatrix,
@@ -130,13 +163,28 @@ class _TodayHero extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 10),
-            Text(
-              headline,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w800,
-                height: 1.05,
-              ),
+            Wrap(
+              spacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: <Widget>[
+                Text(
+                  headline,
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    height: 1.05,
+                  ),
+                ),
+                Chip(
+                  label: Text(lane.label),
+                  backgroundColor: const Color(0xFFF4C95D),
+                  labelStyle: const TextStyle(
+                    color: Color(0xFF24323A),
+                    fontWeight: FontWeight.w700,
+                  ),
+                  visualDensity: VisualDensity.compact,
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             Text(
@@ -163,59 +211,28 @@ class _TodayHero extends StatelessWidget {
   }
 }
 
-class _CoachCueCard extends StatelessWidget {
-  final String title;
-  final String detail;
-  final List<String> itemIds;
+class _LaneCard extends StatelessWidget {
+  final TodayLaneRecommendationV1 recommendation;
   final AppController controller;
   final ValueChanged<String> onOpenItem;
   final ValueChanged<String> onPracticeItem;
+  final void Function(String, PracticeModeV1) onPracticeItemInMode;
+  final VoidCallback onOpenMatrix;
 
-  const _CoachCueCard({
-    required this.title,
-    required this.detail,
-    required this.itemIds,
+  const _LaneCard({
+    required this.recommendation,
     required this.controller,
     required this.onOpenItem,
     required this.onPracticeItem,
+    required this.onPracticeItemInMode,
+    required this.onOpenMatrix,
   });
 
   @override
   Widget build(BuildContext context) {
-    final List<Widget> items = itemIds
-        .map((itemId) {
-          final List<String> tokens = controller.noteTokensFor(itemId);
-          final markings = controller.noteMarkingsFor(itemId);
-          return InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: () => onPracticeItem(itemId),
-            child: Ink(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF5F0E6),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0x22000000)),
-              ),
-              child: Row(
-                children: <Widget>[
-                  Expanded(
-                    child: PatternDisplayText(
-                      tokens: tokens,
-                      markings: markings,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  const Icon(Icons.play_arrow_rounded),
-                ],
-              ),
-            ),
-          );
-        })
-        .toList(growable: false);
+    final String? featuredItemId = recommendation.itemIds.isNotEmpty
+        ? recommendation.itemIds.first
+        : null;
 
     return Card(
       elevation: 1,
@@ -225,25 +242,195 @@ class _CoachCueCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text(title, style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 6),
-            Text(detail, style: Theme.of(context).textTheme.bodyMedium),
-            const SizedBox(height: 12),
-            Column(
-              children: [
-                for (int index = 0; index < items.length; index++) ...<Widget>[
-                  items[index],
-                  if (index != items.length - 1) const SizedBox(height: 8),
-                ],
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: Text(
+                    recommendation.title,
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                ),
+                Chip(
+                  label: Text(recommendation.lane.label),
+                  visualDensity: VisualDensity.compact,
+                ),
               ],
             ),
-            if (itemIds.isNotEmpty) ...<Widget>[
-              const SizedBox(height: 8),
+            const SizedBox(height: 6),
+            Text(
+              recommendation.reason,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              recommendation.evidence,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: const Color(0xFF6B5D42)),
+            ),
+            if (featuredItemId != null) ...<Widget>[
+              const SizedBox(height: 12),
+              _PatternActionTile(
+                itemId: featuredItemId,
+                controller: controller,
+                onTap: () => _handlePrimaryAction(featuredItemId),
+              ),
+              const SizedBox(height: 12),
+            ] else ...<Widget>[const SizedBox(height: 12)],
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: <Widget>[
+                  ActionChip(
+                    label: Text(recommendation.actionLabel),
+                    onPressed: featuredItemId == null
+                        ? onOpenMatrix
+                        : () => _handlePrimaryAction(featuredItemId),
+                  ),
+                  if (featuredItemId != null) ...<Widget>[
+                    const SizedBox(width: 8),
+                    ActionChip(
+                      label: const Text('Open Item'),
+                      onPressed: () => onOpenItem(featuredItemId),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _handlePrimaryAction(String itemId) {
+    if (recommendation.lane == LearningLaneV1.flow) {
+      onPracticeItemInMode(itemId, PracticeModeV1.flow);
+      return;
+    }
+    if (recommendation.actionLabel == 'Open in Matrix') {
+      onOpenMatrix();
+      return;
+    }
+    onPracticeItem(itemId);
+  }
+}
+
+class _MomentumCard extends StatelessWidget {
+  final TodayLaneRecommendationV1 recommendation;
+  final AppController controller;
+  final ValueChanged<String> onOpenItem;
+  final ValueChanged<String> onPracticeItem;
+  final VoidCallback onOpenMatrix;
+
+  const _MomentumCard({
+    required this.recommendation,
+    required this.controller,
+    required this.onOpenItem,
+    required this.onPracticeItem,
+    required this.onOpenMatrix,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final String? featuredItemId = recommendation.itemIds.isNotEmpty
+        ? recommendation.itemIds.first
+        : null;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F0E6),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0x22000000)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              recommendation.title,
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 4),
+            Text(recommendation.reason),
+            const SizedBox(height: 4),
+            Text(
+              recommendation.evidence,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: const Color(0xFF6B5D42)),
+            ),
+            if (featuredItemId != null) ...<Widget>[
+              const SizedBox(height: 10),
+              _PatternActionTile(
+                itemId: featuredItemId,
+                controller: controller,
+                onTap: () => onPracticeItem(featuredItemId),
+              ),
+              const SizedBox(height: 10),
               TextButton(
-                onPressed: () => onOpenItem(itemIds.first),
-                child: const Text('Open First Recommendation'),
+                onPressed: () => onOpenItem(featuredItemId),
+                child: const Text('Open Item'),
+              ),
+            ] else ...<Widget>[
+              const SizedBox(height: 10),
+              TextButton(
+                onPressed: onOpenMatrix,
+                child: const Text('Open Matrix'),
               ),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PatternActionTile extends StatelessWidget {
+  final String itemId;
+  final AppController controller;
+  final VoidCallback onTap;
+
+  const _PatternActionTile({
+    required this.itemId,
+    required this.controller,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final List<String> tokens = controller.noteTokensFor(itemId);
+    final List<PatternNoteMarkingV1> markings = controller.noteMarkingsFor(
+      itemId,
+    );
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: onTap,
+      child: Ink(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF5F0E6),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0x22000000)),
+        ),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: PatternDisplayText(
+                tokens: tokens,
+                markings: markings,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.5,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Icon(Icons.play_arrow_rounded),
           ],
         ),
       ),
@@ -259,17 +446,20 @@ class _TodaySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(title, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 10),
-            child,
-          ],
-        ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            title,
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 12),
+          child,
+        ],
       ),
     );
   }
@@ -289,20 +479,26 @@ class _ContextTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 170,
+      width: 150,
       child: DecoratedBox(
         decoration: BoxDecoration(
+          color: const Color(0xFFF5F0E6),
           borderRadius: BorderRadius.circular(20),
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          border: Border.all(color: const Color(0x22000000)),
         ),
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Text(title, style: Theme.of(context).textTheme.labelLarge),
-              const SizedBox(height: 6),
-              Text(value, style: Theme.of(context).textTheme.titleLarge),
+              Text(title, style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              Text(
+                value,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
               const SizedBox(height: 6),
               Text(note, style: Theme.of(context).textTheme.bodySmall),
             ],

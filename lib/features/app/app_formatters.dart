@@ -83,6 +83,17 @@ extension PracticeModeLabel on PracticeModeV1 {
   };
 }
 
+extension LearningLaneLabel on LearningLaneV1 {
+  String get label => switch (this) {
+    LearningLaneV1.control => 'Control',
+    LearningLaneV1.balance => 'Balance',
+    LearningLaneV1.dynamics => 'Dynamics',
+    LearningLaneV1.integration => 'Integration',
+    LearningLaneV1.phrasing => 'Phrasing',
+    LearningLaneV1.flow => 'Flow',
+  };
+}
+
 extension DrumVoiceLabel on DrumVoiceV1 {
   String get shortLabel => switch (this) {
     DrumVoiceV1.snare => 'S',

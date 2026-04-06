@@ -47,67 +47,31 @@ class AppController extends ChangeNotifier {
   }
 
   TodayBriefingV1 buildTodayBriefing() {
-    final List<PracticeItemV1> weakHandItems =
-        triadMatrixItems.where(_isWeakHandLead).toList(growable: false)
-          ..sort(_compareByNeed);
+    final List<TodayLaneRecommendationV1> lanes = <TodayLaneRecommendationV1>[
+      _buildControlLane(),
+      _buildBalanceLane(),
+      _buildDynamicsLane(),
+      _buildIntegrationLane(),
+      _buildPhrasingLane(),
+      _buildFlowLane(),
+    ];
 
-    final List<PracticeItemV1> neglectedTriads = triadMatrixItems.toList()
-      ..sort(_compareByNeed);
-
-    final List<PracticeItemV1> almostReady =
-        triadMatrixItems
-            .where((item) {
-              final CompetencyLevelV1 competency = competencyFor(item.id);
-              return competency == CompetencyLevelV1.comfortable ||
-                  competency == CompetencyLevelV1.reliable;
-            })
-            .toList(growable: false)
-          ..sort(
-            (a, b) =>
-                totalTime(itemId: b.id).compareTo(totalTime(itemId: a.id)),
-          );
-
-    final List<PracticeItemV1> accentItems =
-        triadMatrixItems
-            .where((item) => item.hasAccents && !usesKick(item.id))
-            .toList(growable: false)
-          ..sort(_compareByNeed);
+    final LearningLaneV1 primaryLane = lanes.map((lane) => lane.lane).reduce((
+      best,
+      next,
+    ) {
+      return _lanePriority(best) >= _lanePriority(next) ? best : next;
+    });
 
     return TodayBriefingV1(
-      headline: 'Today leans toward control, touch, and flow.',
-      summary:
-          '$weakHandLabel-hand lead needs attention, a few triads are close to toolbox status, and there is room for fresh material.',
-      cues: <CoachCueV1>[
-        CoachCueV1(
-          title: 'Weak Hand',
-          detail:
-              '$weakHandLabel-hand lead is under-practiced. Start there while your hands are fresh.',
-          suggestedItemIds: weakHandItems
-              .take(2)
-              .map((item) => item.id)
-              .toList(),
-        ),
-        CoachCueV1(
-          title: 'New Ground',
-          detail:
-              'A few triads have barely been touched lately. Add one new cell to the routine.',
-          suggestedItemIds: neglectedTriads
-              .take(2)
-              .map((item) => item.id)
-              .toList(),
-        ),
-        CoachCueV1(
-          title: 'Close To Toolbox',
-          detail:
-              'These are nearly reliable. Tighten them up and they can move into your toolbox.',
-          suggestedItemIds: almostReady.take(2).map((item) => item.id).toList(),
-        ),
-        CoachCueV1(
-          title: 'Accent Focus',
-          detail:
-              'Accent placement matters. These cells are good candidates for deliberate accent work.',
-          suggestedItemIds: accentItems.take(2).map((item) => item.id).toList(),
-        ),
+      primaryLane: primaryLane,
+      headline: 'Today centers on ${primaryLane.label.toLowerCase()}.',
+      summary: _summaryForPrimaryLane(primaryLane),
+      laneRecommendations: lanes,
+      momentumRecommendations: <TodayLaneRecommendationV1>[
+        _buildToolboxMomentum(),
+        _buildNeglectedMomentum(),
+        _buildReviewMomentum(),
       ],
     );
   }
@@ -409,6 +373,343 @@ class AppController extends ChangeNotifier {
     return candidates;
   }
 
+  TodayLaneRecommendationV1 _buildControlLane() {
+    final List<PracticeItemV1> candidates =
+        triadMatrixItems
+            .where((item) => handsOnly(item.id))
+            .toList(growable: false)
+          ..sort(_compareByNeed);
+    final PracticeItemV1 target = candidates.first;
+
+    return TodayLaneRecommendationV1(
+      lane: LearningLaneV1.control,
+      title: 'Control',
+      reason:
+          'Start on one surface and clean up the pulse before adding more variables.',
+      actionLabel: 'Practice',
+      itemIds: <String>[target.id],
+      evidence:
+          '${formatDuration(totalTime(itemId: target.id))} logged • ${competencyFor(target.id).label}',
+    );
+  }
+
+  TodayLaneRecommendationV1 _buildBalanceLane() {
+    final List<PracticeItemV1> candidates =
+        triadMatrixItems.where(_isWeakHandLead).toList(growable: false)
+          ..sort(_compareByNeed);
+    final PracticeItemV1 target = candidates.isNotEmpty
+        ? candidates.first
+        : triadMatrixItems.first;
+    final Duration weakLeadTime = _timeForLead(weakHandLabel[0]);
+    final Duration strongLeadTime = _timeForLead(strongHandLabel[0]);
+
+    return TodayLaneRecommendationV1(
+      lane: LearningLaneV1.balance,
+      title: 'Balance',
+      reason:
+          '$weakHandLabel-hand lead is lagging. Put it first while your hands are fresh.',
+      actionLabel: 'Practice',
+      itemIds: <String>[target.id],
+      evidence:
+          '$weakHandLabel lead ${formatDuration(weakLeadTime)} vs ${strongHandLabel.toLowerCase()} lead ${formatDuration(strongLeadTime)}',
+    );
+  }
+
+  TodayLaneRecommendationV1 _buildDynamicsLane() {
+    final List<PracticeItemV1> candidates =
+        triadMatrixItems
+            .where((item) => handsOnly(item.id))
+            .toList(growable: false)
+          ..sort((a, b) {
+            final int dynamicGap = _dynamicGapScore(
+              b.id,
+            ).compareTo(_dynamicGapScore(a.id));
+            if (dynamicGap != 0) return dynamicGap;
+            return _compareByNeed(a, b);
+          });
+    final PracticeItemV1 target = candidates.first;
+
+    return TodayLaneRecommendationV1(
+      lane: LearningLaneV1.dynamics,
+      title: 'Dynamics',
+      reason:
+          'Use one stable cell to work accent height and ghost-note touch without changing the sticking.',
+      actionLabel: 'Practice',
+      itemIds: <String>[target.id],
+      evidence: _dynamicEvidenceFor(target.id),
+    );
+  }
+
+  TodayLaneRecommendationV1 _buildIntegrationLane() {
+    final List<PracticeItemV1> candidates =
+        triadMatrixItems
+            .where((item) => hasKick(item.id))
+            .toList(growable: false)
+          ..sort(_compareByNeed);
+    final PracticeItemV1 target = candidates.first;
+
+    return TodayLaneRecommendationV1(
+      lane: LearningLaneV1.integration,
+      title: 'Integration',
+      reason:
+          'Bring the kick in only after the phrase is clear. This keeps coordination honest.',
+      actionLabel: 'Practice',
+      itemIds: <String>[target.id],
+      evidence:
+          '${formatDuration(totalTime(itemId: target.id))} logged on kick-based material',
+    );
+  }
+
+  TodayLaneRecommendationV1 _buildPhrasingLane() {
+    final List<PracticeItemV1> comboItems = itemsByFamily(
+      MaterialFamilyV1.combo,
+    );
+    final PracticeItemV1 target;
+    final String evidence;
+    if (comboItems.isNotEmpty) {
+      comboItems.sort(_compareByNeed);
+      target = comboItems.first;
+      evidence =
+          '${formatDuration(totalTime(itemId: target.id))} logged • ${sessionCount(itemId: target.id)} sessions';
+    } else {
+      final List<PracticeItemV1> source = triadMatrixItems.toList()
+        ..sort(_compareByNeed);
+      target = source.first;
+      evidence = 'No saved phrase work yet. Start by chaining stable cells.';
+    }
+
+    return TodayLaneRecommendationV1(
+      lane: LearningLaneV1.phrasing,
+      title: 'Phrasing',
+      reason:
+          'Move beyond single cells. Phrase length and transitions are where the vocabulary starts to sound musical.',
+      actionLabel: comboItems.isNotEmpty ? 'Practice' : 'Open in Matrix',
+      itemIds: <String>[target.id],
+      evidence: evidence,
+    );
+  }
+
+  TodayLaneRecommendationV1 _buildFlowLane() {
+    final List<PracticeItemV1> candidates = _flowReadyItems();
+    final PracticeItemV1 target = candidates.isNotEmpty
+        ? candidates.first
+        : triadMatrixItems.first;
+
+    return TodayLaneRecommendationV1(
+      lane: LearningLaneV1.flow,
+      title: 'Flow',
+      reason:
+          'Take a phrase that already feels stable and assign voices so it starts behaving like kit vocabulary.',
+      actionLabel: 'Practice in Flow',
+      itemIds: <String>[target.id],
+      evidence: _flowEvidenceFor(target.id),
+    );
+  }
+
+  TodayLaneRecommendationV1 _buildToolboxMomentum() {
+    final List<PracticeItemV1> items =
+        triadMatrixItems
+            .where((item) => isCloseToToolbox(item.id))
+            .toList(growable: false)
+          ..sort(
+            (a, b) =>
+                totalTime(itemId: b.id).compareTo(totalTime(itemId: a.id)),
+          );
+    final PracticeItemV1? target = items.isNotEmpty ? items.first : null;
+
+    return TodayLaneRecommendationV1(
+      lane: LearningLaneV1.control,
+      title: 'Close To Toolbox',
+      reason: target == null
+          ? 'Nothing is near-ready yet. Stay with consistency and revisit the same few cells.'
+          : 'This phrase is close to reliable. One focused pass could move it into your toolbox.',
+      actionLabel: target == null ? 'Open Matrix' : 'Practice',
+      itemIds: target == null ? const <String>[] : <String>[target.id],
+      evidence: target == null
+          ? '${recentSessions.length} total sessions logged'
+          : '${competencyFor(target.id).label} • ${formatDuration(totalTime(itemId: target.id))}',
+    );
+  }
+
+  TodayLaneRecommendationV1 _buildNeglectedMomentum() {
+    final List<PracticeItemV1> items = triadMatrixItems.toList(
+      growable: false,
+    )..sort((a, b) => _lastPracticedAt(a.id).compareTo(_lastPracticedAt(b.id)));
+    final PracticeItemV1 target = items.first;
+
+    return TodayLaneRecommendationV1(
+      lane: LearningLaneV1.balance,
+      title: 'Neglected',
+      reason:
+          'Bring back material that has drifted out of rotation before it disappears.',
+      actionLabel: 'Practice',
+      itemIds: <String>[target.id],
+      evidence: lastSessionForItem(target.id) == null
+          ? 'No sessions yet'
+          : 'Last touched ${formatShortDate(lastSessionForItem(target.id)!.endedAt)}',
+    );
+  }
+
+  TodayLaneRecommendationV1 _buildReviewMomentum() {
+    final List<PracticeItemV1> items =
+        triadMatrixItems
+            .where(
+              (item) => competencyFor(item.id) == CompetencyLevelV1.reliable,
+            )
+            .toList(growable: false)
+          ..sort(
+            (a, b) => _lastPracticedAt(a.id).compareTo(_lastPracticedAt(b.id)),
+          );
+    final PracticeItemV1? target = items.isNotEmpty ? items.first : null;
+
+    return TodayLaneRecommendationV1(
+      lane: LearningLaneV1.phrasing,
+      title: 'Needs Review',
+      reason: target == null
+          ? 'Nothing is established enough for review yet.'
+          : 'Reliable material still needs revisits so it stays available on demand.',
+      actionLabel: target == null ? 'Open Matrix' : 'Practice',
+      itemIds: target == null ? const <String>[] : <String>[target.id],
+      evidence: target == null
+          ? '${triadMatrixItems.length} triads available'
+          : '${formatDuration(totalTime(itemId: target.id))} total • ${competencyFor(target.id).label}',
+    );
+  }
+
+  int _lanePriority(LearningLaneV1 lane) {
+    return switch (lane) {
+      LearningLaneV1.control => _controlPriority(),
+      LearningLaneV1.balance => _balancePriority(),
+      LearningLaneV1.dynamics => _dynamicsPriority(),
+      LearningLaneV1.integration => _integrationPriority(),
+      LearningLaneV1.phrasing => _phrasingPriority(),
+      LearningLaneV1.flow => _flowPriority(),
+    };
+  }
+
+  int _controlPriority() =>
+      _notStartedCount(triadMatrixItems.where((item) => handsOnly(item.id)));
+
+  int _balancePriority() {
+    final Duration weakLeadTime = _timeForLead(weakHandLabel[0]);
+    final Duration strongLeadTime = _timeForLead(strongHandLabel[0]);
+    return (strongLeadTime - weakLeadTime).inMinutes.abs() +
+        _notStartedCount(triadMatrixItems.where(_isWeakHandLead));
+  }
+
+  int _dynamicsPriority() => triadMatrixItems.fold<int>(
+    0,
+    (sum, item) => sum + _dynamicGapScore(item.id),
+  );
+
+  int _integrationPriority() =>
+      _notStartedCount(triadMatrixItems.where((item) => hasKick(item.id)));
+
+  int _phrasingPriority() {
+    final int comboSessions = sessionCount(family: MaterialFamilyV1.combo);
+    return comboSessions == 0 ? 10 : (4 - comboSessions).clamp(0, 4);
+  }
+
+  int _flowPriority() => _flowReadyItems().length;
+
+  int _notStartedCount(Iterable<PracticeItemV1> items) {
+    return items
+        .where((item) => competencyFor(item.id) == CompetencyLevelV1.notStarted)
+        .length;
+  }
+
+  Duration _timeForLead(String leadChar) {
+    Duration total = Duration.zero;
+    for (final PracticeItemV1 item in triadMatrixItems) {
+      if (_firstNormalizedChar(item.id) == leadChar) {
+        total += totalTime(itemId: item.id);
+      }
+    }
+    return total;
+  }
+
+  int _dynamicGapScore(String itemId) {
+    final PracticeItemV1 item = itemById(itemId);
+    int score = 0;
+    if (!item.hasAccents) score += 2;
+    if (!item.hasGhostNotes) score += 2;
+    if (totalTime(itemId: itemId) >= const Duration(minutes: 6)) score += 2;
+    return score;
+  }
+
+  String _dynamicEvidenceFor(String itemId) {
+    final PracticeItemV1 item = itemById(itemId);
+    final List<String> parts = <String>[];
+    parts.add(item.hasAccents ? 'accent-ready' : 'plain only');
+    parts.add(item.hasGhostNotes ? 'ghosts present' : 'no ghost work');
+    parts.add(formatDuration(totalTime(itemId: itemId)));
+    return parts.join(' • ');
+  }
+
+  List<PracticeItemV1> _flowReadyItems() {
+    final List<PracticeItemV1> items = <PracticeItemV1>[
+      ...itemsByFamily(MaterialFamilyV1.combo),
+      ...triadMatrixItems.where(
+        (item) =>
+            competencyFor(item.id).index >= CompetencyLevelV1.comfortable.index,
+      ),
+    ];
+    final Map<String, PracticeItemV1> unique = <String, PracticeItemV1>{};
+    for (final PracticeItemV1 item in items) {
+      unique[item.id] = item;
+    }
+    final List<PracticeItemV1> deduped = unique.values.toList(growable: false)
+      ..sort((a, b) {
+        final int flowCompare = _flowSessionCount(
+          a.id,
+        ).compareTo(_flowSessionCount(b.id));
+        if (flowCompare != 0) return flowCompare;
+        return _compareByNeed(a, b);
+      });
+    return deduped;
+  }
+
+  int _flowSessionCount(String itemId) {
+    int total = 0;
+    for (final PracticeSessionLogV1 session in _sessions) {
+      if (session.practiceMode == PracticeModeV1.flow &&
+          _sessionContainsItem(session, itemId)) {
+        total += 1;
+      }
+    }
+    return total;
+  }
+
+  String _flowEvidenceFor(String itemId) {
+    final int flowSessions = _flowSessionCount(itemId);
+    if (flowSessions == 0) {
+      return 'Stable on the surface, not yet applied in flow';
+    }
+    return '$flowSessions flow session${flowSessions == 1 ? '' : 's'} logged';
+  }
+
+  DateTime _lastPracticedAt(String itemId) {
+    return lastSessionForItem(itemId)?.endedAt ??
+        DateTime.fromMillisecondsSinceEpoch(0);
+  }
+
+  String _summaryForPrimaryLane(LearningLaneV1 lane) {
+    return switch (lane) {
+      LearningLaneV1.control =>
+        'Keep the surface simple and tighten the pulse before adding more variables.',
+      LearningLaneV1.balance =>
+        '$weakHandLabel-hand lead is lagging. Today should rebalance the phrase work.',
+      LearningLaneV1.dynamics =>
+        'The next gain is in touch. Use stable material and shape it deliberately.',
+      LearningLaneV1.integration =>
+        'Kick-based material needs attention. Add it without letting the hands smear.',
+      LearningLaneV1.phrasing =>
+        'Single cells are not enough today. Extend them into phrases that have shape.',
+      LearningLaneV1.flow =>
+        'Some material is ready to leave the pad and behave like kit vocabulary.',
+    };
+  }
+
   void updateProfile(UserProfileV1 next) {
     _profile = next;
     notifyListeners();
@@ -620,13 +921,14 @@ class AppController extends ChangeNotifier {
 
   PracticeSessionSetupV1 buildSessionForItem(
     String itemId, {
+    PracticeModeV1 practiceMode = PracticeModeV1.singleSurface,
     String? routineId,
   }) {
     final PracticeItemV1 item = itemById(itemId);
     return PracticeSessionSetupV1(
       practiceItemIds: <String>[itemId],
       family: item.family,
-      practiceMode: PracticeModeV1.singleSurface,
+      practiceMode: practiceMode,
       bpm: _profile.defaultBpm,
       timerPreset: _profile.defaultTimerPreset,
       clickEnabled: _profile.clickEnabledByDefault,

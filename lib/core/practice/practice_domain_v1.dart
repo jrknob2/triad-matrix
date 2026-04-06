@@ -20,6 +20,8 @@ enum PracticeModeV1 { singleSurface, flow }
 
 enum DrumVoiceV1 { snare, rackTom, floorTom, hihat, kick }
 
+enum LearningLaneV1 { control, balance, dynamics, integration, phrasing, flow }
+
 enum CompetencyLevelV1 { notStarted, learning, comfortable, reliable, musical }
 
 enum ReflectionRatingV1 { easy, okay, hard }
@@ -166,28 +168,38 @@ class PracticeItemV1 {
 }
 
 @immutable
-class CoachCueV1 {
+class TodayLaneRecommendationV1 {
+  final LearningLaneV1 lane;
   final String title;
-  final String detail;
-  final List<String> suggestedItemIds;
+  final String reason;
+  final String actionLabel;
+  final List<String> itemIds;
+  final String evidence;
 
-  const CoachCueV1({
+  const TodayLaneRecommendationV1({
+    required this.lane,
     required this.title,
-    required this.detail,
-    required this.suggestedItemIds,
+    required this.reason,
+    required this.actionLabel,
+    required this.itemIds,
+    required this.evidence,
   });
 }
 
 @immutable
 class TodayBriefingV1 {
+  final LearningLaneV1 primaryLane;
   final String headline;
   final String summary;
-  final List<CoachCueV1> cues;
+  final List<TodayLaneRecommendationV1> laneRecommendations;
+  final List<TodayLaneRecommendationV1> momentumRecommendations;
 
   const TodayBriefingV1({
+    required this.primaryLane,
     required this.headline,
     required this.summary,
-    required this.cues,
+    required this.laneRecommendations,
+    required this.momentumRecommendations,
   });
 }
 

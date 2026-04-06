@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/practice/practice_domain_v1.dart';
 import '../../state/app_controller.dart';
 import '../matrix/matrix_screen.dart';
 import '../library/combination_builder_screen.dart';
@@ -34,6 +35,7 @@ class _AppShellState extends State<AppShell> {
             onOpenMatrix: () => setState(() => _currentIndex = 1),
             onOpenItem: _openItemDetail,
             onPracticeItem: _openPracticeItem,
+            onPracticeItemInMode: _openPracticeItemInMode,
           ),
           MatrixScreen(
             key: ValueKey<String>('matrix_${widget.controller.resetVersion}'),
@@ -108,11 +110,18 @@ class _AppShellState extends State<AppShell> {
   }
 
   void _openPracticeItem(String itemId) {
+    _openPracticeItemInMode(itemId, PracticeModeV1.singleSurface);
+  }
+
+  void _openPracticeItemInMode(String itemId, PracticeModeV1 mode) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => PracticeSessionScreen(
           controller: widget.controller,
-          setup: widget.controller.buildSessionForItem(itemId),
+          setup: widget.controller.buildSessionForItem(
+            itemId,
+            practiceMode: mode,
+          ),
         ),
       ),
     );
