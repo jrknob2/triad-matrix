@@ -46,6 +46,10 @@ class AppController extends ChangeNotifier {
         .toList(growable: false);
   }
 
+  List<PracticeItemV1> get trackedItems {
+    return _items.where((item) => !item.isCustom).toList(growable: false);
+  }
+
   TodayBriefingV1 buildTodayBriefing() {
     final List<TodayLaneRecommendationV1> lanes = <TodayLaneRecommendationV1>[
       _buildControlLane(),
@@ -163,6 +167,57 @@ class AppController extends ChangeNotifier {
       (a, b) => totalTime(itemId: b.id).compareTo(totalTime(itemId: a.id)),
     );
     return items;
+  }
+
+  List<PracticeItemV1> get neglectedTrackedItems {
+    final List<PracticeItemV1> items = trackedItems.toList(
+      growable: false,
+    )..sort((a, b) => _lastPracticedAt(a.id).compareTo(_lastPracticedAt(b.id)));
+    return items;
+  }
+
+  List<PracticeItemV1> get reliableItemsNeedingReview {
+    final List<PracticeItemV1> items =
+        trackedItems
+            .where(
+              (item) =>
+                  competencyFor(item.id).index >=
+                      CompetencyLevelV1.reliable.index &&
+                  !isRecent(item.id),
+            )
+            .toList(growable: false)
+          ..sort(
+            (a, b) => _lastPracticedAt(a.id).compareTo(_lastPracticedAt(b.id)),
+          );
+    return items;
+  }
+
+  Duration leadTime(HandednessV1 handedness) {
+    return _timeForLead(handedness == HandednessV1.right ? 'R' : 'L');
+  }
+
+  int get practicedTriadCount {
+    return triadMatrixItems.where((item) => !isUnseen(item.id)).length;
+  }
+
+  int get practicedHandsOnlyTriadCount {
+    return triadMatrixItems
+        .where((item) => handsOnly(item.id) && !isUnseen(item.id))
+        .length;
+  }
+
+  int get practicedKickTriadCount {
+    return triadMatrixItems
+        .where((item) => hasKick(item.id) && !isUnseen(item.id))
+        .length;
+  }
+
+  int get totalHandsOnlyTriadCount {
+    return triadMatrixItems.where((item) => handsOnly(item.id)).length;
+  }
+
+  int get totalKickTriadCount {
+    return triadMatrixItems.where((item) => hasKick(item.id)).length;
   }
 
   PracticeSessionLogV1? lastSessionForItem(String itemId) {
@@ -401,6 +456,10 @@ class AppController extends ChangeNotifier {
     final List<PracticeItemV1> candidates = itemsByFamily(family);
     candidates.sort(_compareByNeed);
     return candidates;
+  }
+
+  int compareItemsByNeed(PracticeItemV1 a, PracticeItemV1 b) {
+    return _compareByNeed(a, b);
   }
 
   TodayLaneRecommendationV1 _buildControlLane() {
