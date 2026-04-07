@@ -64,7 +64,7 @@ class PatternDisplayText extends StatelessWidget {
     final Color baseColor = baseStyle.color ?? const Color(0xFF101010);
     final FontWeight? ghostWeight =
         (baseStyle.fontWeight == null ||
-            baseStyle.fontWeight!.index < FontWeight.w700.index)
+            baseStyle.fontWeight!.value < FontWeight.w700.value)
         ? baseStyle.fontWeight
         : FontWeight.w700;
 
