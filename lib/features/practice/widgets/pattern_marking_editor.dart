@@ -10,6 +10,7 @@ class PatternMarkingEditor extends StatelessWidget {
   final List<PatternNoteMarkingV1>? markings;
   final ValueChanged<int>? onTapNote;
   final bool editable;
+  final bool showHelpText;
 
   const PatternMarkingEditor({
     super.key,
@@ -19,6 +20,7 @@ class PatternMarkingEditor extends StatelessWidget {
     this.markings,
     this.onTapNote,
     this.editable = true,
+    this.showHelpText = true,
   }) : assert(
          (controller != null && itemId != null) ||
              (tokens != null && markings != null),
@@ -55,13 +57,15 @@ class PatternMarkingEditor extends StatelessWidget {
             );
           }),
         ),
-        const SizedBox(height: 10),
-        Text(
-          editable
-              ? 'Tap notes to cycle. Kicks skip accents.'
-              : "Accent notes use a tick mark. Ghost notes use parentheses.",
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
+        if (showHelpText) ...<Widget>[
+          const SizedBox(height: 10),
+          Text(
+            editable
+                ? 'Tap notes to cycle. Kicks skip accents.'
+                : "Accent notes use a tick mark. Ghost notes use parentheses.",
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
       ],
     );
   }

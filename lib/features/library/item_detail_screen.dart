@@ -57,9 +57,15 @@ class ItemDetailScreen extends StatelessWidget {
                             ),
                       ),
                       const SizedBox(height: 12),
+                      Text(
+                        'Accents & Ghosts',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 8),
                       PatternMarkingEditor(
                         controller: controller,
                         itemId: item.id,
+                        showHelpText: false,
                       ),
                     ],
                   ),

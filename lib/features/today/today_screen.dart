@@ -188,7 +188,7 @@ class _GettingStartedCoachCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'Your Triad Matrix journey is just starting. We recommend that you start working on the triads listed below. Click the button below to add these triads to your Working On practice items. You can also open the Matrix and choose your own to get started.',
+              'Your Triad Matrix journey is just starting. We recommend that you start working on these triads. Click the button below to add these triads to your Working On practice items. You can also open the Matrix and choose your own to get started.',
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 color: const Color(0xFFE8F2EF),
                 height: 1.35,
@@ -212,13 +212,11 @@ class _GettingStartedCoachCard extends StatelessWidget {
               spacing: 10,
               runSpacing: 10,
               children: <Widget>[
-                FilledButton(
+                OutlinedButton(
                   onPressed: allAdded ? null : onAddToWorkingOn,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFFF4C95D),
-                    foregroundColor: const Color(0xFF24323A),
-                    disabledBackgroundColor: const Color(0x88F4C95D),
-                    disabledForegroundColor: const Color(0xAA24323A),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side: const BorderSide(color: Color(0xFFE8F2EF)),
                   ),
                   child: Text(
                     allAdded ? 'Added to Working On' : 'Add to Working On',

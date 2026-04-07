@@ -53,6 +53,11 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
 
+dependency_overrides:
+  # path_provider_foundation 2.6.x uses package:objective_c native assets,
+  # which currently fail to resolve on the iOS simulator in this project.
+  path_provider_foundation: 2.4.2
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
