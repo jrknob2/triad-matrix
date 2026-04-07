@@ -33,6 +33,7 @@ class _AppShellState extends State<AppShell> {
             key: ValueKey<String>('today_${widget.controller.resetVersion}'),
             controller: widget.controller,
             onOpenMatrix: () => setState(() => _currentIndex = 1),
+            onOpenFocus: () => setState(() => _currentIndex = 2),
             onOpenItem: _openItemDetail,
             onPracticeItem: _openPracticeItem,
             onPracticeItemInMode: _openPracticeItemInMode,

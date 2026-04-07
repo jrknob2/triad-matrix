@@ -8,6 +8,7 @@ import '../practice/widgets/pattern_display_text.dart';
 class TodayScreen extends StatelessWidget {
   final AppController controller;
   final VoidCallback onOpenMatrix;
+  final VoidCallback onOpenFocus;
   final ValueChanged<String> onOpenItem;
   final ValueChanged<String> onPracticeItem;
   final void Function(String, PracticeModeV1) onPracticeItemInMode;
@@ -16,6 +17,7 @@ class TodayScreen extends StatelessWidget {
     super.key,
     required this.controller,
     required this.onOpenMatrix,
+    required this.onOpenFocus,
     required this.onOpenItem,
     required this.onPracticeItem,
     required this.onPracticeItemInMode,
@@ -121,6 +123,7 @@ class TodayScreen extends StatelessWidget {
                         controller.addRoutineItems(
                           controller.recommendedStartingTriadItemIds,
                         );
+                        onOpenFocus();
                       },
                       onOpenMatrix: onOpenMatrix,
                     ),
@@ -187,7 +190,7 @@ class _GettingStartedCoachCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'Your triad work is just starting. A good first set is RRR, LLL, RLL, and LRR: two simple reference points, then a right-lead and left-lead shape that start building phrase balance.',
+              'Your Triad Matrix journey is just starting. We recommend that you start working on the triads listed below. Click the button below to add these triads to your Working On practice items. You can also open the Matrix and choose your own to get started.',
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 color: const Color(0xFFE8F2EF),
                 height: 1.35,
@@ -256,9 +259,8 @@ class _StartingTriadChip extends StatelessWidget {
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: PatternDisplayText(
-          tokens: controller.noteTokensFor(itemId),
-          markings: controller.noteMarkingsFor(itemId),
+        child: Text(
+          controller.itemById(itemId).name,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
             color: const Color(0xFF1F2528),
             fontWeight: FontWeight.w900,
