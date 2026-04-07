@@ -4,6 +4,7 @@ import '../../core/practice/practice_domain_v1.dart';
 import '../../features/app/app_formatters.dart';
 import '../../state/app_controller.dart';
 import '../practice/widgets/pattern_display_text.dart';
+import '../practice/widgets/pattern_voice_display.dart';
 
 enum _FocusSection { workingOn, phraseWork, myPatterns }
 
@@ -11,12 +12,14 @@ class FocusScreen extends StatefulWidget {
   final AppController controller;
   final ValueChanged<String> onOpenItem;
   final ValueChanged<String> onPracticeItem;
+  final void Function(String, PracticeModeV1) onPracticeItemInMode;
 
   const FocusScreen({
     super.key,
     required this.controller,
     required this.onOpenItem,
     required this.onPracticeItem,
+    required this.onPracticeItemInMode,
   });
 
   @override
@@ -25,6 +28,7 @@ class FocusScreen extends StatefulWidget {
 
 class _FocusScreenState extends State<FocusScreen> {
   _FocusSection _section = _FocusSection.workingOn;
+  PracticeModeV1 _viewMode = PracticeModeV1.singleSurface;
 
   @override
   Widget build(BuildContext context) {
@@ -64,6 +68,28 @@ class _FocusScreenState extends State<FocusScreen> {
                           .toList(growable: false),
                     ),
                   ),
+                  if (_section == _FocusSection.workingOn) ...<Widget>[
+                    const SizedBox(height: 10),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: PracticeModeV1.values
+                            .map(
+                              (PracticeModeV1 mode) => Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: ChoiceChip(
+                                  label: Text(mode.label),
+                                  selected: _viewMode == mode,
+                                  onSelected: (_) {
+                                    setState(() => _viewMode = mode);
+                                  },
+                                ),
+                              ),
+                            )
+                            .toList(growable: false),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -84,6 +110,8 @@ class _FocusScreenState extends State<FocusScreen> {
         controller: widget.controller,
         onOpenItem: widget.onOpenItem,
         onPracticeItem: widget.onPracticeItem,
+        onPracticeItemInMode: widget.onPracticeItemInMode,
+        practiceMode: _viewMode,
         trailingFor: (item) => IconButton(
           icon: const Icon(Icons.remove_circle_outline),
           onPressed: () => widget.controller.toggleRoutineItem(item.id),
@@ -97,6 +125,8 @@ class _FocusScreenState extends State<FocusScreen> {
         controller: widget.controller,
         onOpenItem: widget.onOpenItem,
         onPracticeItem: widget.onPracticeItem,
+        onPracticeItemInMode: widget.onPracticeItemInMode,
+        practiceMode: PracticeModeV1.singleSurface,
       ),
       _FocusSection.myPatterns => _FocusList(
         title: 'My Patterns',
@@ -106,6 +136,8 @@ class _FocusScreenState extends State<FocusScreen> {
         controller: widget.controller,
         onOpenItem: widget.onOpenItem,
         onPracticeItem: widget.onPracticeItem,
+        onPracticeItemInMode: widget.onPracticeItemInMode,
+        practiceMode: PracticeModeV1.singleSurface,
       ),
     };
   }
@@ -261,6 +293,8 @@ class _FocusList extends StatelessWidget {
   final AppController controller;
   final ValueChanged<String> onOpenItem;
   final ValueChanged<String> onPracticeItem;
+  final void Function(String, PracticeModeV1) onPracticeItemInMode;
+  final PracticeModeV1 practiceMode;
   final Widget Function(PracticeItemV1 item)? trailingFor;
 
   const _FocusList({
@@ -270,6 +304,8 @@ class _FocusList extends StatelessWidget {
     required this.controller,
     required this.onOpenItem,
     required this.onPracticeItem,
+    required this.onPracticeItemInMode,
+    required this.practiceMode,
     this.trailingFor,
   });
 
@@ -322,15 +358,29 @@ class _FocusList extends StatelessWidget {
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      PatternDisplayText(
-                        tokens: controller.noteTokensFor(item.id),
-                        markings: controller.noteMarkingsFor(item.id),
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: -0.5,
-                            ),
-                      ),
+                      if (practiceMode == PracticeModeV1.flow)
+                        PatternVoiceDisplay(
+                          tokens: controller.noteTokensFor(item.id),
+                          markings: controller.noteMarkingsFor(item.id),
+                          voices: controller.noteVoicesFor(item.id),
+                          patternStyle: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -0.5,
+                              ),
+                          voiceStyle: Theme.of(context).textTheme.labelMedium,
+                          cellWidth: 34,
+                        )
+                      else
+                        PatternDisplayText(
+                          tokens: controller.noteTokensFor(item.id),
+                          markings: controller.noteMarkingsFor(item.id),
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -0.5,
+                              ),
+                        ),
                       const SizedBox(height: 4),
                       Text(
                         '${controller.competencyFor(item.id).label} • ${formatDuration(controller.totalTime(itemId: item.id))}',
@@ -339,7 +389,8 @@ class _FocusList extends StatelessWidget {
                   ),
                   trailing: trailingFor?.call(item),
                   onTap: () => onOpenItem(item.id),
-                  onLongPress: () => onPracticeItem(item.id),
+                  onLongPress: () =>
+                      onPracticeItemInMode(item.id, practiceMode),
                 ),
               ),
             ),

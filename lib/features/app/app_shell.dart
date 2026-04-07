@@ -51,6 +51,7 @@ class _AppShellState extends State<AppShell> {
             controller: widget.controller,
             onOpenItem: _openItemDetail,
             onPracticeItem: _openPracticeItem,
+            onPracticeItemInMode: _openPracticeItemInMode,
           ),
           ProgressScreen(
             key: ValueKey<String>('progress_${widget.controller.resetVersion}'),

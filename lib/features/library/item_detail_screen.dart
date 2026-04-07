@@ -5,9 +5,10 @@ import '../../features/app/app_formatters.dart';
 import '../../state/app_controller.dart';
 import '../practice/widgets/pattern_display_text.dart';
 import '../practice/widgets/pattern_marking_editor.dart';
+import '../practice/widgets/pattern_voice_display.dart';
 import '../practice/widgets/voice_assignment_editor.dart';
 
-class ItemDetailScreen extends StatelessWidget {
+class ItemDetailScreen extends StatefulWidget {
   final AppController controller;
   final String itemId;
   final ValueChanged<String> onPracticeItem;
@@ -24,16 +25,29 @@ class ItemDetailScreen extends StatelessWidget {
   });
 
   @override
+  State<ItemDetailScreen> createState() => _ItemDetailScreenState();
+}
+
+class _ItemDetailScreenState extends State<ItemDetailScreen> {
+  PracticeModeV1 _viewMode = PracticeModeV1.singleSurface;
+
+  @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: controller,
+      animation: widget.controller,
       builder: (BuildContext context, _) {
-        final item = controller.itemById(itemId);
-        final competency = controller.competencyFor(item.id);
-        final totalTime = controller.totalTime(itemId: item.id);
-        final sessionCount = controller.sessionCount(itemId: item.id);
-        final List<String> tokens = controller.noteTokensFor(item.id);
-        final List<PatternNoteMarkingV1> markings = controller.noteMarkingsFor(
+        final PracticeItemV1 item = widget.controller.itemById(widget.itemId);
+        final CompetencyLevelV1 competency = widget.controller.competencyFor(
+          item.id,
+        );
+        final Duration totalTime = widget.controller.totalTime(itemId: item.id);
+        final int sessionCount = widget.controller.sessionCount(
+          itemId: item.id,
+        );
+        final List<String> tokens = widget.controller.noteTokensFor(item.id);
+        final List<PatternNoteMarkingV1> markings = widget.controller
+            .noteMarkingsFor(item.id);
+        final List<DrumVoiceV1> voices = widget.controller.noteVoicesFor(
           item.id,
         );
 
@@ -48,15 +62,46 @@ class ItemDetailScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      PatternDisplayText(
-                        tokens: tokens,
-                        markings: markings,
-                        style: Theme.of(context).textTheme.headlineMedium
-                            ?.copyWith(
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: -0.8,
-                            ),
+                      SegmentedButton<PracticeModeV1>(
+                        segments: PracticeModeV1.values
+                            .map(
+                              (PracticeModeV1 mode) =>
+                                  ButtonSegment<PracticeModeV1>(
+                                    value: mode,
+                                    label: Text(mode.label),
+                                  ),
+                            )
+                            .toList(growable: false),
+                        selected: <PracticeModeV1>{_viewMode},
+                        onSelectionChanged: (Set<PracticeModeV1> selection) {
+                          setState(() => _viewMode = selection.first);
+                        },
                       ),
+                      const SizedBox(height: 16),
+                      if (_viewMode == PracticeModeV1.flow)
+                        PatternVoiceDisplay(
+                          tokens: tokens,
+                          markings: markings,
+                          voices: voices,
+                          patternStyle: Theme.of(context)
+                              .textTheme
+                              .headlineMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -0.8,
+                              ),
+                          voiceStyle: Theme.of(context).textTheme.titleMedium,
+                        )
+                      else
+                        PatternDisplayText(
+                          tokens: tokens,
+                          markings: markings,
+                          style: Theme.of(context).textTheme.headlineMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -0.8,
+                              ),
+                        ),
                       const SizedBox(height: 12),
                       Text(
                         'Accents & Ghosts',
@@ -64,21 +109,23 @@ class ItemDetailScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       PatternMarkingEditor(
-                        controller: controller,
+                        controller: widget.controller,
                         itemId: item.id,
                         showHelpText: false,
                       ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Flow Voices',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 8),
-                      VoiceAssignmentEditor(
-                        controller: controller,
-                        itemId: item.id,
-                        showHelpText: false,
-                      ),
+                      if (_viewMode == PracticeModeV1.flow) ...<Widget>[
+                        const SizedBox(height: 16),
+                        Text(
+                          'Flow Voices',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 8),
+                        VoiceAssignmentEditor(
+                          controller: widget.controller,
+                          itemId: item.id,
+                          showHelpText: false,
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -102,12 +149,15 @@ class ItemDetailScreen extends StatelessWidget {
                             value: competency,
                             onChanged: (CompetencyLevelV1? next) {
                               if (next != null) {
-                                controller.updateCompetency(item.id, next);
+                                widget.controller.updateCompetency(
+                                  item.id,
+                                  next,
+                                );
                               }
                             },
                             items: CompetencyLevelV1.values
                                 .map(
-                                  (level) =>
+                                  (CompetencyLevelV1 level) =>
                                       DropdownMenuItem<CompetencyLevelV1>(
                                         value: level,
                                         child: Text(level.label),
@@ -126,7 +176,10 @@ class ItemDetailScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        controller.competencyGuidanceFor(item.id, competency),
+                        widget.controller.competencyGuidanceFor(
+                          item.id,
+                          competency,
+                        ),
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           color: const Color(0xFF5B5345),
                           height: 1.35,
@@ -150,40 +203,29 @@ class ItemDetailScreen extends StatelessWidget {
                     ),
                     ListTile(
                       title: const Text('Last Session'),
-                      trailing: Text(controller.recentSummaryForItem(item.id)),
+                      trailing: Text(
+                        widget.controller.recentSummaryForItem(item.id),
+                      ),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 16),
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: () => onPracticeItem(item.id),
-                      child: const Text('Single Surface'),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: FilledButton.tonal(
-                      onPressed: () =>
-                          onPracticeItemInMode(item.id, PracticeModeV1.flow),
-                      child: const Text('Flow'),
-                    ),
-                  ),
-                ],
+              FilledButton(
+                onPressed: () =>
+                    widget.onPracticeItemInMode(item.id, _viewMode),
+                child: Text('Practice ${_viewMode.label}'),
               ),
               const SizedBox(height: 8),
               OutlinedButton(
-                onPressed: () => onBuildComboFromItem(item.id),
+                onPressed: () => widget.onBuildComboFromItem(item.id),
                 child: const Text('Build Phrase From This'),
               ),
               const SizedBox(height: 8),
               OutlinedButton(
-                onPressed: () => controller.toggleRoutineItem(item.id),
+                onPressed: () => widget.controller.toggleRoutineItem(item.id),
                 child: Text(
-                  controller.isDirectRoutineEntry(item.id)
+                  widget.controller.isDirectRoutineEntry(item.id)
                       ? 'Remove from Working On'
                       : 'Add to Working On',
                 ),
