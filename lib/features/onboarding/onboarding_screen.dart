@@ -115,14 +115,19 @@ class _IntroStep extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Text(
-          'Train short patterns until they come out as phrases, not individual hits.',
+          'Learn how to tell stories with your drumming',
           style: Theme.of(
             context,
           ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 16),
         Text(
-          'This kind of work builds timing, control, touch, speed, coordination, and stronger ideas around the kit. Instead of thinking one note at a time, you start hearing and feeling complete shapes that are ready when you need them.',
+          'Patterns become ideas. Ideas become phrases. Phrases become the fills, transitions, and longer statements that give your playing shape. The more naturally and automatically you can apply those shapes, the more you can say with your drumming.',
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.4),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          'Drumcabulary starts small: one pattern, steady time, relaxed motion. As it settles in, you add dynamics, connect it to other ideas, and move it around the kit when you’re ready.',
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.4),
         ),
       ],
