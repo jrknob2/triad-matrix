@@ -53,6 +53,7 @@ class AppStateStore {
       <CollectionSchema<dynamic>>[AppStateRecordSchema],
       directory: dir.path,
       name: _dbName,
+      inspector: false,
     );
     return AppStateStore._(isar);
   }
@@ -63,7 +64,8 @@ class AppStateStore {
 
     final Map<String, dynamic> profileMap =
         jsonDecode(record.profileJson) as Map<String, dynamic>;
-    final List<dynamic> itemsList = jsonDecode(record.itemsJson) as List<dynamic>;
+    final List<dynamic> itemsList =
+        jsonDecode(record.itemsJson) as List<dynamic>;
     final List<dynamic> combinationsList =
         jsonDecode(record.combinationsJson) as List<dynamic>;
     final Map<String, dynamic> routineMap =
@@ -77,7 +79,10 @@ class AppStateStore {
       onboardingComplete: record.onboardingComplete,
       profile: _userProfileFromMap(profileMap),
       items: itemsList
-          .map((dynamic item) => _practiceItemFromMap(item as Map<String, dynamic>))
+          .map(
+            (dynamic item) =>
+                _practiceItemFromMap(item as Map<String, dynamic>),
+          )
           .toList(growable: false),
       combinations: combinationsList
           .map(
@@ -173,8 +178,8 @@ class AppStateStore {
       name: map['name'] as String,
       sticking: map['sticking'] as String,
       noteCount: map['noteCount'] as int,
-      accentedNoteIndices:
-          (map['accentedNoteIndices'] as List<dynamic>).cast<int>(),
+      accentedNoteIndices: (map['accentedNoteIndices'] as List<dynamic>)
+          .cast<int>(),
       ghostNoteIndices: (map['ghostNoteIndices'] as List<dynamic>).cast<int>(),
       voiceAssignments: (map['voiceAssignments'] as List<dynamic>)
           .map((dynamic value) => DrumVoiceV1.values.byName(value as String))
@@ -219,7 +224,9 @@ class AppStateStore {
     return <String, dynamic>{
       'id': routine.id,
       'name': routine.name,
-      'entries': routine.entries.map(_routineEntryToMap).toList(growable: false),
+      'entries': routine.entries
+          .map(_routineEntryToMap)
+          .toList(growable: false),
     };
   }
 
@@ -228,7 +235,10 @@ class AppStateStore {
       id: map['id'] as String,
       name: map['name'] as String,
       entries: (map['entries'] as List<dynamic>)
-          .map((dynamic item) => _routineEntryFromMap(item as Map<String, dynamic>))
+          .map(
+            (dynamic item) =>
+                _routineEntryFromMap(item as Map<String, dynamic>),
+          )
           .toList(growable: false),
     );
   }
@@ -257,9 +267,7 @@ class AppStateStore {
       duration: Duration(milliseconds: map['durationMs'] as int),
       practiceItemIds: (map['practiceItemIds'] as List<dynamic>).cast<String>(),
       family: MaterialFamilyV1.values.byName(map['family'] as String),
-      practiceMode: PracticeModeV1.values.byName(
-        map['practiceMode'] as String,
-      ),
+      practiceMode: PracticeModeV1.values.byName(map['practiceMode'] as String),
       bpm: map['bpm'] as int,
       clickEnabled: map['clickEnabled'] as bool,
       routineId: map['routineId'] as String?,
