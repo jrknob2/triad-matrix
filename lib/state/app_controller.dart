@@ -107,6 +107,13 @@ class AppController extends ChangeNotifier {
         .toList(growable: false);
   }
 
+  List<String> get recommendedStartingTriadItemIds => <String>[
+    _triadItemId('RRR'),
+    _triadItemId('LLL'),
+    _triadItemId('RLL'),
+    _triadItemId('LRR'),
+  ];
+
   List<PracticeItemV1> get trackedItems {
     return _items.where((item) => !item.isCustom).toList(growable: false);
   }
@@ -1189,6 +1196,26 @@ class AppController extends ChangeNotifier {
         ],
       );
     }
+    _notifyChanged();
+  }
+
+  void addRoutineItems(Iterable<String> itemIds) {
+    final Set<String> existingIds = _routine.entries
+        .map((entry) => entry.practiceItemId)
+        .toSet();
+    final List<RoutineEntryV1> additions = itemIds
+        .where((itemId) => itemByIdOrNull(itemId) != null)
+        .where((itemId) => !existingIds.contains(itemId))
+        .map(
+          (itemId) =>
+              RoutineEntryV1(practiceItemId: itemId, addedAt: DateTime.now()),
+        )
+        .toList(growable: false);
+    if (additions.isEmpty) return;
+
+    _routine = _routine.copyWith(
+      entries: <RoutineEntryV1>[..._routine.entries, ...additions],
+    );
     _notifyChanged();
   }
 

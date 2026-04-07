@@ -59,7 +59,7 @@ class _AppShellState extends State<AppShell> {
         ];
 
         final List<String> titles = <String>[
-          'Today',
+          'Coach',
           'Matrix',
           'Working On',
           'Progress',
@@ -86,7 +86,7 @@ class _AppShellState extends State<AppShell> {
               NavigationDestination(
                 icon: Icon(Icons.wb_sunny_outlined),
                 selectedIcon: Icon(Icons.wb_sunny),
-                label: 'Today',
+                label: 'Coach',
               ),
               NavigationDestination(
                 icon: Icon(Icons.grid_view_outlined),

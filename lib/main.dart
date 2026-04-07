@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import 'features/app/app_shell.dart';
-import 'features/onboarding/onboarding_screen.dart';
 import 'state/app_controller.dart';
 
 Future<void> main() async {
@@ -28,9 +27,7 @@ class DrumcabularyApp extends StatelessWidget {
               seedColor: const Color(0xFF194B7A),
             ),
           ),
-          home: controller.onboardingComplete
-              ? AppShell(controller: controller)
-              : OnboardingScreen(controller: controller),
+          home: AppShell(controller: controller),
         );
       },
     );

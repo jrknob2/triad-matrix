@@ -27,6 +27,7 @@ class TodayScreen extends StatelessWidget {
       animation: controller,
       builder: (BuildContext context, _) {
         final TodayBriefingV1 briefing = controller.buildTodayBriefing();
+        final bool hasPracticeData = controller.hasLoggedPractice;
 
         return DecoratedBox(
           decoration: const BoxDecoration(
@@ -38,83 +39,233 @@ class TodayScreen extends StatelessWidget {
           ),
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
-            children: <Widget>[
-              _TodayHero(
-                lane: briefing.primaryLane,
-                headline: briefing.headline,
-                summary: briefing.summary,
-                onOpenMatrix: onOpenMatrix,
-              ),
-              const SizedBox(height: 16),
-              _TodaySection(
-                title: 'Teaching Lanes',
-                child: Column(
-                  children: briefing.laneRecommendations
-                      .map(
-                        (recommendation) => Padding(
-                          padding: const EdgeInsets.only(bottom: 14),
-                          child: _LaneCard(
-                            recommendation: recommendation,
-                            controller: controller,
-                            onOpenItem: onOpenItem,
-                            onPracticeItem: onPracticeItem,
-                            onPracticeItemInMode: onPracticeItemInMode,
-                            onOpenMatrix: onOpenMatrix,
-                          ),
-                        ),
-                      )
-                      .toList(growable: false),
-                ),
-              ),
-              const SizedBox(height: 4),
-              _TodaySection(
-                title: 'Momentum',
-                child: Column(
-                  children: briefing.momentumRecommendations
-                      .map(
-                        (recommendation) => Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: _MomentumCard(
-                            recommendation: recommendation,
-                            controller: controller,
-                            onOpenItem: onOpenItem,
-                            onPracticeItem: onPracticeItem,
-                            onOpenMatrix: onOpenMatrix,
-                          ),
-                        ),
-                      )
-                      .toList(growable: false),
-                ),
-              ),
-              const SizedBox(height: 4),
-              _TodaySection(
-                title: 'At a Glance',
-                child: Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: <Widget>[
-                    _ContextTile(
-                      title: 'Total Time',
-                      value: formatDuration(controller.totalTime()),
-                      note: 'All logged practice in the app',
+            children: hasPracticeData
+                ? <Widget>[
+                    _TodayHero(
+                      lane: briefing.primaryLane,
+                      headline: briefing.headline,
+                      summary: briefing.summary,
+                      onOpenMatrix: onOpenMatrix,
                     ),
-                    _ContextTile(
-                      title: 'Working On',
-                      value: '${controller.routine.entries.length}',
-                      note: 'Items in active focus',
+                    const SizedBox(height: 16),
+                    _TodaySection(
+                      title: 'Teaching Lanes',
+                      child: Column(
+                        children: briefing.laneRecommendations
+                            .map(
+                              (recommendation) => Padding(
+                                padding: const EdgeInsets.only(bottom: 14),
+                                child: _LaneCard(
+                                  recommendation: recommendation,
+                                  controller: controller,
+                                  onOpenItem: onOpenItem,
+                                  onPracticeItem: onPracticeItem,
+                                  onPracticeItemInMode: onPracticeItemInMode,
+                                  onOpenMatrix: onOpenMatrix,
+                                ),
+                              ),
+                            )
+                            .toList(growable: false),
+                      ),
                     ),
-                    _ContextTile(
-                      title: 'Sessions',
-                      value: '${controller.recentSessions.length}',
-                      note: 'Logged sessions so far',
+                    const SizedBox(height: 4),
+                    _TodaySection(
+                      title: 'Momentum',
+                      child: Column(
+                        children: briefing.momentumRecommendations
+                            .map(
+                              (recommendation) => Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: _MomentumCard(
+                                  recommendation: recommendation,
+                                  controller: controller,
+                                  onOpenItem: onOpenItem,
+                                  onPracticeItem: onPracticeItem,
+                                  onOpenMatrix: onOpenMatrix,
+                                ),
+                              ),
+                            )
+                            .toList(growable: false),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    _TodaySection(
+                      title: 'At a Glance',
+                      child: Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: <Widget>[
+                          _ContextTile(
+                            title: 'Total Time',
+                            value: formatDuration(controller.totalTime()),
+                            note: 'All logged practice in the app',
+                          ),
+                          _ContextTile(
+                            title: 'Working On',
+                            value: '${controller.routine.entries.length}',
+                            note: 'Items in active focus',
+                          ),
+                          _ContextTile(
+                            title: 'Sessions',
+                            value: '${controller.recentSessions.length}',
+                            note: 'Logged sessions so far',
+                          ),
+                        ],
+                      ),
+                    ),
+                  ]
+                : <Widget>[
+                    _GettingStartedCoachCard(
+                      controller: controller,
+                      onAddToWorkingOn: () {
+                        controller.addRoutineItems(
+                          controller.recommendedStartingTriadItemIds,
+                        );
+                      },
+                      onOpenMatrix: onOpenMatrix,
                     ),
                   ],
-                ),
-              ),
-            ],
           ),
         );
       },
+    );
+  }
+}
+
+class _GettingStartedCoachCard extends StatelessWidget {
+  final AppController controller;
+  final VoidCallback onAddToWorkingOn;
+  final VoidCallback onOpenMatrix;
+
+  const _GettingStartedCoachCard({
+    required this.controller,
+    required this.onAddToWorkingOn,
+    required this.onOpenMatrix,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final List<String> itemIds = controller.recommendedStartingTriadItemIds;
+    final bool allAdded = itemIds.every(controller.isDirectRoutineEntry);
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(28),
+        gradient: const LinearGradient(
+          colors: <Color>[Color(0xFF133E62), Color(0xFF2C6A6A)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: const <BoxShadow>[
+          BoxShadow(
+            color: Color(0x22000000),
+            blurRadius: 18,
+            offset: Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              'Today',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: const Color(0xFFD8E8E4),
+                letterSpacing: 1.2,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Getting Started',
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+                height: 1.05,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Your triad work is just starting. A good first set is RRR, LLL, RLL, and LRR: two simple reference points, then a right-lead and left-lead shape that start building phrase balance.',
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: const Color(0xFFE8F2EF),
+                height: 1.35,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: itemIds
+                  .map(
+                    (itemId) => _StartingTriadChip(
+                      controller: controller,
+                      itemId: itemId,
+                    ),
+                  )
+                  .toList(growable: false),
+            ),
+            const SizedBox(height: 18),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: <Widget>[
+                FilledButton(
+                  onPressed: allAdded ? null : onAddToWorkingOn,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFF4C95D),
+                    foregroundColor: const Color(0xFF24323A),
+                    disabledBackgroundColor: const Color(0x88F4C95D),
+                    disabledForegroundColor: const Color(0xAA24323A),
+                  ),
+                  child: Text(
+                    allAdded ? 'Added to Working On' : 'Add to Working On',
+                  ),
+                ),
+                OutlinedButton.icon(
+                  onPressed: onOpenMatrix,
+                  icon: const Icon(Icons.grid_view_rounded),
+                  label: const Text('Open the Matrix'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side: const BorderSide(color: Color(0xFFE8F2EF)),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StartingTriadChip extends StatelessWidget {
+  final AppController controller;
+  final String itemId;
+
+  const _StartingTriadChip({required this.controller, required this.itemId});
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F0E6),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: PatternDisplayText(
+          tokens: controller.noteTokensFor(itemId),
+          markings: controller.noteMarkingsFor(itemId),
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: const Color(0xFF1F2528),
+            fontWeight: FontWeight.w900,
+            letterSpacing: -0.5,
+          ),
+        ),
+      ),
     );
   }
 }
