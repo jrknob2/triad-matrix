@@ -260,24 +260,75 @@ class AppController extends ChangeNotifier {
       _buildPhrasingLane(),
       _buildFlowLane(),
     ];
+    final List<TodayLaneRecommendationV1> rankedLanes =
+        _rankedLaneRecommendations(lanes);
 
-    final LearningLaneV1 primaryLane = lanes.map((lane) => lane.lane).reduce((
-      best,
-      next,
-    ) {
-      return _lanePriority(best) >= _lanePriority(next) ? best : next;
-    });
+    final LearningLaneV1 primaryLane = rankedLanes.first.lane;
+
+    final List<TodayLaneRecommendationV1> momentum =
+        <TodayLaneRecommendationV1>[
+          _buildWorkingOnMomentum(),
+          _buildToolboxMomentum(),
+          _buildNeglectedMomentum(),
+          _buildReviewMomentum(),
+        ].where(_isActionableRecommendation).take(2).toList(growable: false);
 
     return TodayBriefingV1(
       primaryLane: primaryLane,
       headline: 'Today centers on ${primaryLane.label.toLowerCase()}.',
       summary: _summaryForPrimaryLane(primaryLane),
-      laneRecommendations: lanes,
-      momentumRecommendations: <TodayLaneRecommendationV1>[
-        _buildToolboxMomentum(),
-        _buildNeglectedMomentum(),
-        _buildReviewMomentum(),
-      ],
+      laneRecommendations: rankedLanes.take(3).toList(growable: false),
+      momentumRecommendations: momentum,
+    );
+  }
+
+  List<TodayLaneRecommendationV1> _rankedLaneRecommendations(
+    List<TodayLaneRecommendationV1> lanes,
+  ) {
+    final List<TodayLaneRecommendationV1> ranked = lanes.toList(growable: false)
+      ..sort((a, b) {
+        final int priorityCompare = _lanePriority(
+          b.lane,
+        ).compareTo(_lanePriority(a.lane));
+        if (priorityCompare != 0) return priorityCompare;
+        final bool aInFocus = a.itemIds.any(isInRoutine);
+        final bool bInFocus = b.itemIds.any(isInRoutine);
+        if (aInFocus != bInFocus) return bInFocus ? 1 : -1;
+        return a.title.compareTo(b.title);
+      });
+    return ranked;
+  }
+
+  bool _isActionableRecommendation(TodayLaneRecommendationV1 recommendation) {
+    if (recommendation.itemIds.isEmpty) return true;
+    return recommendation.itemIds.any(
+      (String itemId) => itemByIdOrNull(itemId) != null,
+    );
+  }
+
+  TodayLaneRecommendationV1 _buildWorkingOnMomentum() {
+    if (activeWorkItems.isEmpty) {
+      return TodayLaneRecommendationV1(
+        lane: LearningLaneV1.control,
+        title: 'Working On',
+        reason:
+            'Add a few cells to Working On so practice has a clear center of gravity.',
+        actionLabel: 'Open Matrix',
+        itemIds: const <String>[],
+        evidence: 'No active work selected yet',
+      );
+    }
+
+    final PracticeItemV1 target = activeWorkItems.first;
+    return TodayLaneRecommendationV1(
+      lane: laneForPracticeItem(target.id),
+      title: 'Working On',
+      reason:
+          'Keep your active material moving. Repetition across days is what turns a pattern into vocabulary.',
+      actionLabel: 'Practice',
+      itemIds: <String>[target.id],
+      evidence:
+          '${formatDuration(totalTime(itemId: target.id))} logged • ${competencyFor(target.id).label}',
     );
   }
 

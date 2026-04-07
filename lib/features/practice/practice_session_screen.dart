@@ -36,7 +36,9 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
       <String, List<DrumVoiceV1>>{};
   Timer? _elapsedTicker;
   Timer? _beatTicker;
+  Timer? _beatFlashTimer;
   bool _running = false;
+  bool _beatLit = false;
   late PracticeModeV1 _practiceMode;
   late int _bpm;
   late bool _clickEnabled;
@@ -63,6 +65,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   void dispose() {
     _elapsedTicker?.cancel();
     _beatTicker?.cancel();
+    _beatFlashTimer?.cancel();
     _clickPlayer.dispose();
     super.dispose();
   }
@@ -195,6 +198,35 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                     style: Theme.of(context).textTheme.headlineMedium,
                   ),
                   const SizedBox(height: 12),
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 90),
+                    curve: Curves.easeOut,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _beatLit
+                          ? const Color(0xFFF4C95D)
+                          : const Color(0xFFF4EFE6),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: _beatLit
+                            ? const Color(0xFF8B5E00)
+                            : const Color(0x22000000),
+                        width: _beatLit ? 2 : 1,
+                      ),
+                    ),
+                    child: Text(
+                      'Beat',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: const Color(0xFF24323A),
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.4,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: <Widget>[
@@ -312,19 +344,24 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   }
 
   void _toggleRunning() {
+    final bool shouldStart = !_running;
     setState(() {
-      if (_running) {
+      if (shouldStart) {
+        _running = true;
+        _stopwatch.start();
+        _startElapsedTicker();
+      } else {
         _running = false;
         _stopwatch.stop();
         _elapsedTicker?.cancel();
         _beatTicker?.cancel();
-      } else {
-        _running = true;
-        _stopwatch.start();
-        _startElapsedTicker();
-        _restartBeatTicker();
+        _beatFlashTimer?.cancel();
+        _beatLit = false;
       }
     });
+    if (shouldStart) {
+      _restartBeatTicker();
+    }
   }
 
   void _endSession() {
@@ -332,7 +369,9 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
       _stopwatch.stop();
       _elapsedTicker?.cancel();
       _beatTicker?.cancel();
+      _beatFlashTimer?.cancel();
       _running = false;
+      _beatLit = false;
     }
 
     final PracticeSessionLogV1 session = widget.controller.completeSession(
@@ -408,12 +447,28 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
 
   void _restartBeatTicker() {
     _beatTicker?.cancel();
-    if (!_running || !_clickEnabled) return;
+    if (!_running) return;
 
     final int intervalMs = (60000 / _bpm).round().clamp(120, 2000);
-    _playClick();
+    _handleBeat();
     _beatTicker = Timer.periodic(Duration(milliseconds: intervalMs), (_) {
+      _handleBeat();
+    });
+  }
+
+  void _handleBeat() {
+    _pulseBeat();
+    if (_clickEnabled) {
       _playClick();
+    }
+  }
+
+  void _pulseBeat() {
+    if (!mounted) return;
+    _beatFlashTimer?.cancel();
+    setState(() => _beatLit = true);
+    _beatFlashTimer = Timer(const Duration(milliseconds: 110), () {
+      if (mounted) setState(() => _beatLit = false);
     });
   }
 
@@ -424,15 +479,15 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   void _updateBpm(int bpm) {
     setState(() {
       _bpm = bpm.clamp(30, 260);
-      _restartBeatTicker();
     });
+    _restartBeatTicker();
   }
 
   void _updateClickEnabled(bool value) {
     setState(() {
       _clickEnabled = value;
-      _restartBeatTicker();
     });
+    _restartBeatTicker();
   }
 
   Future<void> _configureAudio() async {

@@ -44,7 +44,6 @@ class TodayScreen extends StatelessWidget {
             children: hasPracticeData
                 ? <Widget>[
                     _TodayHero(
-                      lane: briefing.primaryLane,
                       headline: briefing.headline,
                       summary: briefing.summary,
                       onOpenMatrix: onOpenMatrix,
@@ -278,13 +277,11 @@ class _StartingTriadChip extends StatelessWidget {
 }
 
 class _TodayHero extends StatelessWidget {
-  final LearningLaneV1 lane;
   final String headline;
   final String summary;
   final VoidCallback onOpenMatrix;
 
   const _TodayHero({
-    required this.lane,
     required this.headline,
     required this.summary,
     required this.onOpenMatrix,
@@ -321,28 +318,13 @@ class _TodayHero extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: <Widget>[
-                Text(
-                  headline,
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                    height: 1.05,
-                  ),
-                ),
-                Chip(
-                  label: Text(lane.label),
-                  backgroundColor: const Color(0xFFF4C95D),
-                  labelStyle: const TextStyle(
-                    color: Color(0xFF24323A),
-                    fontWeight: FontWeight.w700,
-                  ),
-                  visualDensity: VisualDensity.compact,
-                ),
-              ],
+            Text(
+              headline,
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+                height: 1.05,
+              ),
             ),
             const SizedBox(height: 12),
             Text(
@@ -407,10 +389,6 @@ class _LaneCard extends StatelessWidget {
                     recommendation.title,
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
-                ),
-                Chip(
-                  label: Text(recommendation.lane.label),
-                  visualDensity: VisualDensity.compact,
                 ),
               ],
             ),
