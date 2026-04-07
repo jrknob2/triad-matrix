@@ -330,7 +330,7 @@ class _TriadCellButton extends StatelessWidget {
 
     if (filters.contains(TriadMatrixFilterV1.competency)) {
       backgroundColor = switch (controller.competencyFor(itemId)) {
-        CompetencyLevelV1.notStarted => const Color(0xFFF1ECE3),
+        CompetencyLevelV1.notStarted => const Color(0xFFF0B2AA),
         CompetencyLevelV1.learning => const Color(0xFFD9E9F7),
         CompetencyLevelV1.comfortable => const Color(0xFFDDEDDD),
         CompetencyLevelV1.reliable => const Color(0xFFF4E4C8),
