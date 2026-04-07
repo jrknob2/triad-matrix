@@ -18,7 +18,7 @@ enum PracticeItemSourceV1 { builtIn, userDefined, generated }
 
 enum PracticeModeV1 { singleSurface, flow }
 
-enum DrumVoiceV1 { snare, rackTom, floorTom, hihat, kick }
+enum DrumVoiceV1 { snare, rackTom, tom2, floorTom, hihat, kick }
 
 enum LearningLaneV1 { control, balance, dynamics, integration, phrasing, flow }
 

@@ -11,6 +11,7 @@ class VoiceAssignmentEditor extends StatelessWidget {
   final List<DrumVoiceV1>? voices;
   final ValueChanged<int>? onTapNote;
   final bool editable;
+  final bool showHelpText;
 
   const VoiceAssignmentEditor({
     super.key,
@@ -20,6 +21,7 @@ class VoiceAssignmentEditor extends StatelessWidget {
     this.voices,
     this.onTapNote,
     this.editable = true,
+    this.showHelpText = true,
   }) : assert(
          (controller != null && itemId != null) ||
              (tokens != null && voices != null),
@@ -56,13 +58,15 @@ class VoiceAssignmentEditor extends StatelessWidget {
             );
           }),
         ),
-        const SizedBox(height: 10),
-        Text(
-          editable
-              ? 'Tap notes to change voices. Kicks stay on kick.'
-              : 'Voice labels show the flow path across the kit.',
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
+        if (showHelpText) ...<Widget>[
+          const SizedBox(height: 10),
+          Text(
+            editable
+                ? 'Tap notes to change voices. Kicks stay on kick.'
+                : 'Voice labels show the flow path across the kit.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
       ],
     );
   }
@@ -93,6 +97,7 @@ class VoiceAssignmentEditor extends StatelessWidget {
     const List<DrumVoiceV1> cycle = <DrumVoiceV1>[
       DrumVoiceV1.snare,
       DrumVoiceV1.rackTom,
+      DrumVoiceV1.tom2,
       DrumVoiceV1.floorTom,
       DrumVoiceV1.hihat,
     ];
@@ -106,6 +111,7 @@ class VoiceAssignmentEditor extends StatelessWidget {
     return switch (voice) {
       DrumVoiceV1.snare => const Color(0xFFF4EFE6),
       DrumVoiceV1.rackTom => const Color(0xFFE8EFE0),
+      DrumVoiceV1.tom2 => const Color(0xFFE3EBDD),
       DrumVoiceV1.floorTom => const Color(0xFFE3E0EF),
       DrumVoiceV1.hihat => const Color(0xFFE1EDF2),
       DrumVoiceV1.kick => const Color(0xFFE9E2D7),
@@ -116,6 +122,7 @@ class VoiceAssignmentEditor extends StatelessWidget {
     return switch (voice) {
       DrumVoiceV1.snare => const Color(0x22000000),
       DrumVoiceV1.rackTom => const Color(0xFF5F7A44),
+      DrumVoiceV1.tom2 => const Color(0xFF6D7F36),
       DrumVoiceV1.floorTom => const Color(0xFF6A5B97),
       DrumVoiceV1.hihat => const Color(0xFF4D7A8B),
       DrumVoiceV1.kick => const Color(0xFF8B6D4D),

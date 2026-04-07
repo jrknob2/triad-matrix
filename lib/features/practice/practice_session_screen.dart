@@ -9,6 +9,7 @@ import '../../state/app_controller.dart';
 import '../../core/practice/practice_domain_v1.dart';
 import 'widgets/pattern_display_text.dart';
 import 'widgets/pattern_marking_editor.dart';
+import 'widgets/pattern_voice_display.dart';
 import 'widgets/voice_assignment_editor.dart';
 import 'session_summary_screen.dart';
 
@@ -89,14 +90,27 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  PatternDisplayText(
-                    tokens: tokens,
-                    markings: markings,
-                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -1.0,
+                  if (_practiceMode == PracticeModeV1.flow)
+                    PatternVoiceDisplay(
+                      tokens: tokens,
+                      markings: markings,
+                      voices: voices,
+                      patternStyle: Theme.of(context).textTheme.displaySmall
+                          ?.copyWith(
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -1.0,
+                          ),
+                      voiceStyle: Theme.of(context).textTheme.titleMedium,
+                    )
+                  else
+                    PatternDisplayText(
+                      tokens: tokens,
+                      markings: markings,
+                      style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -1.0,
+                      ),
                     ),
-                  ),
                   const SizedBox(height: 12),
                   Text(
                     widget.controller.practiceGuidanceFor(
@@ -370,6 +384,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
       const List<DrumVoiceV1> cycle = <DrumVoiceV1>[
         DrumVoiceV1.snare,
         DrumVoiceV1.rackTom,
+        DrumVoiceV1.tom2,
         DrumVoiceV1.floorTom,
         DrumVoiceV1.hihat,
       ];

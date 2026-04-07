@@ -4,6 +4,7 @@ import '../../core/practice/practice_domain_v1.dart';
 import '../../features/app/app_formatters.dart';
 import '../../state/app_controller.dart';
 import '../practice/widgets/pattern_display_text.dart';
+import '../practice/widgets/pattern_voice_display.dart';
 import 'widgets/triad_matrix_grid.dart';
 
 class MatrixScreen extends StatefulWidget {
@@ -200,9 +201,7 @@ class _MatrixScreenState extends State<MatrixScreen> {
             return Padding(
               padding: const EdgeInsets.only(right: 8),
               child: FilterChip(
-                label: Text(
-                  widget.controller.matrixLabelForCombination(comboId),
-                ),
+                label: _comboFilterLabel(comboId),
                 selected: _selectedComboIds.contains(comboId),
                 onSelected: (bool selected) {
                   setState(() {
@@ -315,6 +314,25 @@ class _MatrixScreenState extends State<MatrixScreen> {
     );
 
     return pills;
+  }
+
+  Widget _comboFilterLabel(String comboId) {
+    final bool showVoices = _laneFocus == LearningLaneV1.flow;
+    if (!showVoices) {
+      return Text(widget.controller.matrixLabelForCombination(comboId));
+    }
+
+    return PatternVoiceDisplay(
+      tokens: widget.controller.noteTokensFor(comboId),
+      markings: widget.controller.noteMarkingsFor(comboId),
+      voices: widget.controller.noteVoicesFor(comboId),
+      patternStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+        fontWeight: FontWeight.w900,
+        color: const Color(0xFF101010),
+      ),
+      voiceStyle: Theme.of(context).textTheme.labelSmall,
+      cellWidth: 30,
+    );
   }
 
   List<TriadMatrixFilterV1> _paletteFilters(

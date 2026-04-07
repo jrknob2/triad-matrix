@@ -97,15 +97,17 @@ extension LearningLaneLabel on LearningLaneV1 {
 extension DrumVoiceLabel on DrumVoiceV1 {
   String get shortLabel => switch (this) {
     DrumVoiceV1.snare => 'S',
-    DrumVoiceV1.rackTom => 'T',
-    DrumVoiceV1.floorTom => 'F',
-    DrumVoiceV1.hihat => 'H',
+    DrumVoiceV1.rackTom => 'T1',
+    DrumVoiceV1.tom2 => 'T2',
+    DrumVoiceV1.floorTom => 'FT',
+    DrumVoiceV1.hihat => 'HH',
     DrumVoiceV1.kick => 'K',
   };
 
   String get label => switch (this) {
     DrumVoiceV1.snare => 'Snare',
-    DrumVoiceV1.rackTom => 'Rack Tom',
+    DrumVoiceV1.rackTom => 'Tom 1',
+    DrumVoiceV1.tom2 => 'Tom 2',
     DrumVoiceV1.floorTom => 'Floor Tom',
     DrumVoiceV1.hihat => 'Hi-Hat',
     DrumVoiceV1.kick => 'Kick',

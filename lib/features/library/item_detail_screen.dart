@@ -5,6 +5,7 @@ import '../../features/app/app_formatters.dart';
 import '../../state/app_controller.dart';
 import '../practice/widgets/pattern_display_text.dart';
 import '../practice/widgets/pattern_marking_editor.dart';
+import '../practice/widgets/voice_assignment_editor.dart';
 
 class ItemDetailScreen extends StatelessWidget {
   final AppController controller;
@@ -63,6 +64,17 @@ class ItemDetailScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       PatternMarkingEditor(
+                        controller: controller,
+                        itemId: item.id,
+                        showHelpText: false,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Flow Voices',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      VoiceAssignmentEditor(
                         controller: controller,
                         itemId: item.id,
                         showHelpText: false,
