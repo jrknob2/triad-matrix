@@ -1219,6 +1219,39 @@ class AppController extends ChangeNotifier {
     _notifyChanged();
   }
 
+  void addRecommendedStartingTriadsToRoutine() {
+    final Set<String> starterIds = recommendedStartingTriadItemIds.toSet();
+    _items = _items
+        .map(
+          (PracticeItemV1 item) => starterIds.contains(item.id)
+              ? item.copyWith(
+                  accentedNoteIndices: const <int>[],
+                  ghostNoteIndices: const <int>[],
+                )
+              : item,
+        )
+        .toList(growable: false);
+    addRoutineItems(starterIds);
+  }
+
+  String competencyGuidanceFor(String itemId, CompetencyLevelV1 level) {
+    final PracticeItemV1 item = itemById(itemId);
+    return switch (level) {
+      CompetencyLevelV1.notStarted =>
+        'Start plain and slow. Keep the sound even before adding tempo, accents, or movement.',
+      CompetencyLevelV1.learning =>
+        'Stay with the pattern until the motion stops fighting you. Clean repetition matters more than speed here.',
+      CompetencyLevelV1.comfortable =>
+        'Now test the edges: raise the tempo a little, shape the dynamics, and check whether the phrase still feels relaxed.',
+      CompetencyLevelV1.reliable =>
+        item.isCombo
+            ? 'This phrase is close to usable vocabulary. Review it, then try it in flow so the connections hold together around the kit.'
+            : 'This pattern is close to dependable. Review it, then connect it to another idea so it becomes vocabulary, not just a cell.',
+      CompetencyLevelV1.musical =>
+        'Keep this in rotation. The goal now is musical use: fills, transitions, flow, and decisions made without overthinking.',
+    };
+  }
+
   PracticeSessionSetupV1 buildSessionForItem(
     String itemId, {
     PracticeModeV1 practiceMode = PracticeModeV1.singleSurface,

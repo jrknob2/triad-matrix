@@ -69,11 +69,6 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   @override
   Widget build(BuildContext context) {
     final currentItemId = widget.setup.practiceItemIds[_currentItemIndex];
-    final currentItem = widget.controller.itemById(currentItemId);
-    final LearningLaneV1 lane = widget.controller.laneForPracticeItem(
-      currentItemId,
-      practiceMode: _practiceMode,
-    );
     final List<String> tokens = widget.controller.noteTokensFor(currentItemId);
     final List<PatternNoteMarkingV1> markings =
         _sessionMarkingsByItemId[currentItemId]!;
@@ -94,25 +89,6 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Wrap(
-                    spacing: 8,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: <Widget>[
-                      Text(
-                        currentItem.name,
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      Chip(
-                        label: Text(lane.label),
-                        visualDensity: VisualDensity.compact,
-                      ),
-                      Chip(
-                        label: Text(_practiceMode.label),
-                        visualDensity: VisualDensity.compact,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
                   PatternDisplayText(
                     tokens: tokens,
                     markings: markings,

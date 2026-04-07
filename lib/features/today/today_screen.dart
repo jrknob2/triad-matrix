@@ -120,9 +120,7 @@ class TodayScreen extends StatelessWidget {
                     _GettingStartedCoachCard(
                       controller: controller,
                       onAddToWorkingOn: () {
-                        controller.addRoutineItems(
-                          controller.recommendedStartingTriadItemIds,
-                        );
+                        controller.addRecommendedStartingTriadsToRoutine();
                         onOpenFocus();
                       },
                       onOpenMatrix: onOpenMatrix,

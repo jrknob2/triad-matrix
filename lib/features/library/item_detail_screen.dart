@@ -35,7 +35,6 @@ class ItemDetailScreen extends StatelessWidget {
         final List<PatternNoteMarkingV1> markings = controller.noteMarkingsFor(
           item.id,
         );
-        final LearningLaneV1 lane = controller.laneForPracticeItem(item.id);
 
         return Scaffold(
           appBar: AppBar(title: const Text('Practice Items')),
@@ -58,26 +57,9 @@ class ItemDetailScreen extends StatelessWidget {
                             ),
                       ),
                       const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 8,
-                        children: <Widget>[
-                          Chip(
-                            label: Text(lane.label),
-                            visualDensity: VisualDensity.compact,
-                          ),
-                          Chip(
-                            label: Text(item.family.label),
-                            visualDensity: VisualDensity.compact,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        controller.practiceGuidanceFor(item.id),
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: const Color(0xFF5B5345),
-                          height: 1.35,
-                        ),
+                      PatternMarkingEditor(
+                        controller: controller,
+                        itemId: item.id,
                       ),
                     ],
                   ),
@@ -85,42 +67,52 @@ class ItemDetailScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Card(
-                child: ListTile(
-                  title: const Text('Competency'),
-                  subtitle: Text(competency.label),
-                  trailing: DropdownButton<CompetencyLevelV1>(
-                    value: competency,
-                    onChanged: (CompetencyLevelV1? next) {
-                      if (next != null) {
-                        controller.updateCompetency(item.id, next);
-                      }
-                    },
-                    items: CompetencyLevelV1.values
-                        .map(
-                          (level) => DropdownMenuItem<CompetencyLevelV1>(
-                            value: level,
-                            child: Text(level.label),
-                          ),
-                        )
-                        .toList(growable: false),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
+                      Row(
+                        children: <Widget>[
+                          Expanded(
+                            child: Text(
+                              'Competency',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                          ),
+                          DropdownButton<CompetencyLevelV1>(
+                            value: competency,
+                            onChanged: (CompetencyLevelV1? next) {
+                              if (next != null) {
+                                controller.updateCompetency(item.id, next);
+                              }
+                            },
+                            items: CompetencyLevelV1.values
+                                .map(
+                                  (level) =>
+                                      DropdownMenuItem<CompetencyLevelV1>(
+                                        value: level,
+                                        child: Text(level.label),
+                                      ),
+                                )
+                                .toList(growable: false),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
                       Text(
-                        'Accents & Ghosts',
-                        style: Theme.of(context).textTheme.titleMedium,
+                        competency.label,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: const Color(0xFF6B5D42),
+                        ),
                       ),
                       const SizedBox(height: 10),
-                      PatternMarkingEditor(
-                        controller: controller,
-                        itemId: item.id,
+                      Text(
+                        controller.competencyGuidanceFor(item.id, competency),
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: const Color(0xFF5B5345),
+                          height: 1.35,
+                        ),
                       ),
                     ],
                   ),
