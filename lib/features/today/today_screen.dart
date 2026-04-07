@@ -148,6 +148,22 @@ class _GettingStartedCoachCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final List<String> itemIds = controller.recommendedStartingTriadItemIds;
     final bool allAdded = itemIds.every(controller.isDirectRoutineEntry);
+    final ButtonStyle coachButtonStyle =
+        OutlinedButton.styleFrom(
+          foregroundColor: Colors.white,
+          side: const BorderSide(color: Color(0xFFE8F2EF)),
+        ).copyWith(
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.pressed)) {
+              return const Color(0x33FFFFFF);
+            }
+            if (states.contains(WidgetState.hovered) ||
+                states.contains(WidgetState.focused)) {
+              return const Color(0x22FFFFFF);
+            }
+            return null;
+          }),
+        );
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -213,23 +229,16 @@ class _GettingStartedCoachCard extends StatelessWidget {
               runSpacing: 10,
               children: <Widget>[
                 OutlinedButton(
-                  onPressed: allAdded ? null : onAddToWorkingOn,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    side: const BorderSide(color: Color(0xFFE8F2EF)),
-                  ),
+                  onPressed: onAddToWorkingOn,
+                  style: coachButtonStyle,
                   child: Text(
-                    allAdded ? 'Added to Working On' : 'Add to Working On',
+                    allAdded ? 'View Working On' : 'Add to Working On',
                   ),
                 ),
-                OutlinedButton.icon(
+                OutlinedButton(
                   onPressed: onOpenMatrix,
-                  icon: const Icon(Icons.grid_view_rounded),
-                  label: const Text('Open the Matrix'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    side: const BorderSide(color: Color(0xFFE8F2EF)),
-                  ),
+                  style: coachButtonStyle,
+                  child: const Text('Open the Matrix'),
                 ),
               ],
             ),

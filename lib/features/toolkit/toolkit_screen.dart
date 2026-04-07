@@ -31,7 +31,8 @@ class _FocusScreenState extends State<FocusScreen> {
     return AnimatedBuilder(
       animation: widget.controller,
       builder: (BuildContext context, _) {
-        return Column(
+        return ListView(
+          padding: EdgeInsets.zero,
           children: <Widget>[
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
@@ -66,7 +67,7 @@ class _FocusScreenState extends State<FocusScreen> {
                 ],
               ),
             ),
-            Expanded(child: _buildBody()),
+            _buildBody(),
           ],
         );
       },
@@ -280,66 +281,70 @@ class _FocusList extends StatelessWidget {
           sum + controller.totalTime(itemId: item.id),
     );
 
-    return ListView(
+    return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-      children: <Widget>[
-        Text(
-          title,
-          style: Theme.of(
-            context,
-          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-        ),
-        const SizedBox(height: 6),
-        Text(summary, style: Theme.of(context).textTheme.bodyMedium),
-        const SizedBox(height: 10),
-        Text(
-          '${items.length == 1 ? '1 item' : '${items.length} items'} • ${formatDuration(totalLoggedTime)} logged',
-          style: Theme.of(
-            context,
-          ).textTheme.bodyLarge?.copyWith(color: const Color(0xFF5B5345)),
-        ),
-        const SizedBox(height: 12),
-        if (items.isEmpty)
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                controller.isFirstLight
-                    ? 'Nothing is in this section yet. Build a phrase from the matrix or start practicing and let this area fill in from real work.'
-                    : 'Nothing here yet. Add material from the matrix or save a custom phrase for later.',
-              ),
-            ),
-          )
-        else
-          ...items.map(
-            (item) => Card(
-              margin: const EdgeInsets.only(bottom: 10),
-              child: ListTile(
-                contentPadding: const EdgeInsets.all(16),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    PatternDisplayText(
-                      tokens: controller.noteTokensFor(item.id),
-                      markings: controller.noteMarkingsFor(item.id),
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${controller.competencyFor(item.id).label} • ${formatDuration(controller.totalTime(itemId: item.id))}',
-                    ),
-                  ],
-                ),
-                trailing: trailingFor?.call(item),
-                onTap: () => onOpenItem(item.id),
-                onLongPress: () => onPracticeItem(item.id),
-              ),
-            ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            title,
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
           ),
-      ],
+          const SizedBox(height: 6),
+          Text(summary, style: Theme.of(context).textTheme.bodyMedium),
+          const SizedBox(height: 10),
+          Text(
+            '${items.length == 1 ? '1 item' : '${items.length} items'} • ${formatDuration(totalLoggedTime)} logged',
+            style: Theme.of(
+              context,
+            ).textTheme.bodyLarge?.copyWith(color: const Color(0xFF5B5345)),
+          ),
+          const SizedBox(height: 12),
+          if (items.isEmpty)
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  controller.isFirstLight
+                      ? 'Nothing is in this section yet. Build a phrase from the matrix or start practicing and let this area fill in from real work.'
+                      : 'Nothing here yet. Add material from the matrix or save a custom phrase for later.',
+                ),
+              ),
+            )
+          else
+            ...items.map(
+              (item) => Card(
+                margin: const EdgeInsets.only(bottom: 10),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.all(16),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      PatternDisplayText(
+                        tokens: controller.noteTokensFor(item.id),
+                        markings: controller.noteMarkingsFor(item.id),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -0.5,
+                            ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${controller.competencyFor(item.id).label} • ${formatDuration(controller.totalTime(itemId: item.id))}',
+                      ),
+                    ],
+                  ),
+                  trailing: trailingFor?.call(item),
+                  onTap: () => onOpenItem(item.id),
+                  onLongPress: () => onPracticeItem(item.id),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
