@@ -175,6 +175,212 @@ class AppController extends ChangeNotifier {
     };
   }
 
+  CoachBriefingV1 buildCoachBriefing() {
+    final List<CoachBlockV1> blocks = <CoachBlockV1>[
+      ?selectCoachResume(),
+      ?selectCoachNeedsWork(),
+      ?selectCoachFocus(),
+      ?selectCoachMomentum(),
+      ?selectCoachNextUnlock(),
+    ];
+
+    return CoachBriefingV1(blocks: blocks);
+  }
+
+  CoachBlockV1? selectCoachFocus() {
+    if (!hasLoggedPractice && activeWorkItems.isNotEmpty) {
+      final PracticeItemV1 target = activeWorkItems.first;
+      return CoachBlockV1(
+        id: 'focus_first_session',
+        type: CoachBlockTypeV1.focus,
+        title: 'Start the first rep',
+        subtitle: 'Focus',
+        body:
+            'You picked material for Working On. Start with one clean pass and let the first session create the baseline.',
+        itemIds: <String>[target.id],
+        ctaLabel: 'Start Practice',
+        ctaAction: CoachActionV1.startPractice,
+        matrixPalette: null,
+        matrixFilters: const <TriadMatrixFilterV1>{},
+        practiceMode: PracticeModeV1.singleSurface,
+      );
+    }
+
+    if (activeWorkItems.isNotEmpty) {
+      final PracticeItemV1 target = activeWorkItems.first;
+      return CoachBlockV1(
+        id: 'focus_working_on',
+        type: CoachBlockTypeV1.focus,
+        title: 'Stay with ${target.name}',
+        subtitle: 'Focus',
+        body:
+            'Keep the active material moving. Repetition across days is what turns a pattern into vocabulary.',
+        itemIds: <String>[target.id],
+        ctaLabel: 'Start Practice',
+        ctaAction: CoachActionV1.startPractice,
+        matrixPalette: null,
+        matrixFilters: const <TriadMatrixFilterV1>{},
+        practiceMode: PracticeModeV1.singleSurface,
+      );
+    }
+
+    if (!hasLoggedPractice) return null;
+
+    final PracticeItemV1 target = itemsNeedingPractice(
+      MaterialFamilyV1.triad,
+    ).first;
+    return CoachBlockV1(
+      id: 'focus_balanced_triads',
+      type: CoachBlockTypeV1.focus,
+      title: 'Put ${target.name} in rotation',
+      subtitle: 'Focus',
+      body:
+          'This is the best current triad target based on coverage, time, and confidence.',
+      itemIds: <String>[target.id],
+      ctaLabel: 'Start Practice',
+      ctaAction: CoachActionV1.startPractice,
+      matrixPalette: TriadMatrixFilterPaletteV1.coaching,
+      matrixFilters: const <TriadMatrixFilterV1>{
+        TriadMatrixFilterV1.underPracticed,
+      },
+      practiceMode: PracticeModeV1.singleSurface,
+    );
+  }
+
+  CoachBlockV1? selectCoachNeedsWork() {
+    final List<PracticeItemV1> candidates =
+        trackedItems
+            .where((PracticeItemV1 item) {
+              if (isUnseen(item.id)) return false;
+              final CompetencyLevelV1 level = competencyFor(item.id);
+              return level.index <= CompetencyLevelV1.learning.index ||
+                  needsAttention(item.id);
+            })
+            .toList(growable: false)
+          ..sort(_compareByNeed);
+
+    if (candidates.isEmpty) return null;
+
+    final PracticeItemV1 target = candidates.first;
+    return CoachBlockV1(
+      id: 'needs_work_${target.id}',
+      type: CoachBlockTypeV1.needsWork,
+      title: '${target.name} needs a cleanup pass',
+      subtitle: 'Needs Work',
+      body:
+          'This has practice history, but the signal is not strong yet. Keep the tempo controlled and clean it up before pushing.',
+      itemIds: <String>[target.id],
+      ctaLabel: 'Fix This',
+      ctaAction: CoachActionV1.startPractice,
+      matrixPalette: TriadMatrixFilterPaletteV1.coaching,
+      matrixFilters: const <TriadMatrixFilterV1>{
+        TriadMatrixFilterV1.needsAttention,
+      },
+      practiceMode: PracticeModeV1.singleSurface,
+    );
+  }
+
+  CoachBlockV1? selectCoachMomentum() {
+    final List<PracticeItemV1> candidates =
+        trackedItems
+            .where((PracticeItemV1 item) {
+              if (!isRecent(item.id)) return false;
+              final CompetencyLevelV1 level = competencyFor(item.id);
+              return level.index >= CompetencyLevelV1.comfortable.index ||
+                  totalTime(itemId: item.id) >= const Duration(minutes: 10);
+            })
+            .toList(growable: false)
+          ..sort(
+            (PracticeItemV1 a, PracticeItemV1 b) =>
+                totalTime(itemId: b.id).compareTo(totalTime(itemId: a.id)),
+          );
+
+    if (candidates.isEmpty) return null;
+
+    final PracticeItemV1 target = candidates.first;
+    return CoachBlockV1(
+      id: 'momentum_${target.id}',
+      type: CoachBlockTypeV1.momentum,
+      title: '${target.name} is moving',
+      subtitle: 'Momentum',
+      body:
+          'This is recent and getting stable. Give it a short review or use it as source material for a longer phrase.',
+      itemIds: <String>[target.id],
+      ctaLabel: target.isCombo ? 'Move to Flow' : 'Build Combo',
+      ctaAction: target.isCombo
+          ? CoachActionV1.moveToFlow
+          : CoachActionV1.buildCombo,
+      matrixPalette: TriadMatrixFilterPaletteV1.coaching,
+      matrixFilters: const <TriadMatrixFilterV1>{TriadMatrixFilterV1.recent},
+      practiceMode: target.isCombo
+          ? PracticeModeV1.flow
+          : PracticeModeV1.singleSurface,
+    );
+  }
+
+  CoachBlockV1? selectCoachResume() {
+    // A real Resume block needs persisted active/incomplete sessions. The app
+    // only logs completed sessions right now, so returning null is intentional.
+    return null;
+  }
+
+  CoachBlockV1? selectCoachNextUnlock() {
+    final List<PracticeItemV1> flowCandidates = _flowReadyItems()
+        .where((PracticeItemV1 item) => _flowSessionCount(item.id) == 0)
+        .toList(growable: false);
+    if (flowCandidates.isNotEmpty) {
+      final PracticeItemV1 target = flowCandidates.first;
+      return CoachBlockV1(
+        id: 'unlock_flow_${target.id}',
+        type: CoachBlockTypeV1.nextUnlock,
+        title: 'Move ${target.name} to Flow',
+        subtitle: 'Next Unlock',
+        body:
+            'This is ready to leave one surface. Assign voices and make the phrase read clearly around the kit.',
+        itemIds: <String>[target.id],
+        ctaLabel: 'Move to Flow',
+        ctaAction: CoachActionV1.moveToFlow,
+        matrixPalette: TriadMatrixFilterPaletteV1.combos,
+        matrixFilters: const <TriadMatrixFilterV1>{},
+        practiceMode: PracticeModeV1.flow,
+      );
+    }
+
+    final List<PracticeItemV1> stableTriads = triadMatrixItems
+        .where(
+          (PracticeItemV1 item) =>
+              competencyFor(item.id).index >=
+                  CompetencyLevelV1.comfortable.index &&
+              totalTime(itemId: item.id) >= const Duration(minutes: 8),
+        )
+        .toList(growable: false);
+    if (stableTriads.length < 2) return null;
+
+    stableTriads.sort(
+      (PracticeItemV1 a, PracticeItemV1 b) =>
+          totalTime(itemId: b.id).compareTo(totalTime(itemId: a.id)),
+    );
+    final List<String> itemIds = stableTriads
+        .take(2)
+        .map((PracticeItemV1 item) => item.id)
+        .toList(growable: false);
+
+    return CoachBlockV1(
+      id: 'unlock_combo_${itemIds.join('_')}',
+      type: CoachBlockTypeV1.nextUnlock,
+      title: 'Build a phrase',
+      subtitle: 'Next Unlock',
+      body:
+          'Two stable cells are ready to be connected. Work the transition until it feels like one idea.',
+      itemIds: itemIds,
+      ctaLabel: 'Build Combo',
+      ctaAction: CoachActionV1.buildCombo,
+      matrixPalette: TriadMatrixFilterPaletteV1.combos,
+      matrixFilters: const <TriadMatrixFilterV1>{},
+      practiceMode: PracticeModeV1.singleSurface,
+    );
+  }
+
   TodayBriefingV1 buildTodayBriefing() {
     if (!hasLoggedPractice) {
       return TodayBriefingV1(

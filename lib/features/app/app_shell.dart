@@ -37,6 +37,7 @@ class _AppShellState extends State<AppShell> {
             onOpenItem: _openItemDetail,
             onPracticeItem: _openPracticeItem,
             onPracticeItemInMode: _openPracticeItemInMode,
+            onBuildComboFromItems: _openCombinationBuilderFromItems,
           ),
           MatrixScreen(
             key: ValueKey<String>('matrix_${widget.controller.resetVersion}'),
