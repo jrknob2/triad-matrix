@@ -4,7 +4,8 @@
 
 Warmups and future rudiment-style material should not be forced into triad notation just because triads are the first teaching focus.
 
-The app now supports **display-only grouping** for pattern notation.
+The app now supports **display-only grouping** for pattern notation and a small
+built-in warmup deck.
 
 This means:
 
@@ -51,6 +52,37 @@ Candidate warmup phrases:
 - `RRRR-RRRR-RRRR`
 - `LRLR-RLRL-LRLR-RLRL`
 - `RLLR-RRLL-LRRL-LLRR`
+
+Implemented MVP warmups:
+
+- `warmup_left_isolation`: `LLLL-LLLL-LLLL`
+- `warmup_right_isolation`: `RRRR-RRRR-RRRR`
+- `warmup_alternating_leads`: `LRLR-RLRL-LRLR-RLRL`
+- `warmup_doubles_shapes`: `RLLR-RRLL-LRRL-LLRR`
+
+Warmups use `MaterialFamilyV1.warmup` so they can be practiced and logged
+without becoming coached curriculum. They are excluded from:
+
+- Coach "has logged practice" gating
+- Matrix coverage and progress status
+- Toolbox readiness
+- Working On / tracked-item progress analysis
+
+Warmup time can still appear as logged session time where the app is showing
+all practice activity.
+
+## Practice Source
+
+The practice session can now receive more than one item in its setup. Prev/next
+navigation is driven by the setup's `practiceItemIds`.
+
+Current multi-item sources:
+
+- `Working On`
+- `Warmups`
+
+Single-item practice still uses the same session screen, so the execution view
+does not fork by source.
 
 The exact grouping should reflect the exercise intention:
 

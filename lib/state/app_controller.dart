@@ -41,7 +41,9 @@ class AppController extends ChangeNotifier {
       List<SessionAssessmentResultV1>.unmodifiable(_assessmentResults);
   bool get onboardingComplete => _onboardingComplete;
   int get resetVersion => _resetVersion;
-  bool get hasLoggedPractice => _sessions.isNotEmpty;
+  bool get hasLoggedPractice => _sessions.any(
+    (PracticeSessionLogV1 session) => !_isWarmupSession(session),
+  );
   bool get hasSavedPhraseWork => _combinations.isNotEmpty;
   bool get hasCustomPatterns =>
       _items.any((PracticeItemV1 item) => item.isCustom);
@@ -58,7 +60,7 @@ class AppController extends ChangeNotifier {
     if (snapshot == null) return;
 
     _profile = snapshot.profile;
-    _items = snapshot.items;
+    _items = _itemsWithMissingBuiltIns(snapshot.items);
     _combinations = snapshot.combinations;
     _routine = snapshot.routine;
     _sessions = snapshot.sessions;
@@ -81,6 +83,17 @@ class AppController extends ChangeNotifier {
     }
     unawaited(_persistState());
     notifyListeners();
+  }
+
+  List<PracticeItemV1> _itemsWithMissingBuiltIns(List<PracticeItemV1> items) {
+    final Set<String> existingIds = items
+        .map((PracticeItemV1 item) => item.id)
+        .toSet();
+    final List<PracticeItemV1> missingBuiltIns = _basePracticeItems()
+        .where((PracticeItemV1 item) => !existingIds.contains(item.id))
+        .toList(growable: false);
+    if (missingBuiltIns.isEmpty) return items;
+    return <PracticeItemV1>[...items, ...missingBuiltIns];
   }
 
   Future<void> _persistState() async {
@@ -134,7 +147,9 @@ class AppController extends ChangeNotifier {
   ];
 
   List<PracticeItemV1> get trackedItems {
-    return _items.where((item) => !item.isCustom).toList(growable: false);
+    return _items
+        .where((item) => !item.isCustom && !item.isWarmup)
+        .toList(growable: false);
   }
 
   LearningLaneV1 laneForPracticeItem(
@@ -615,7 +630,11 @@ class AppController extends ChangeNotifier {
 
   List<PracticeItemV1> sourceItemsForBuilder() {
     final List<PracticeItemV1> filtered = _items
-        .where((item) => item.family != MaterialFamilyV1.combo)
+        .where(
+          (item) =>
+              item.family != MaterialFamilyV1.combo &&
+              item.family != MaterialFamilyV1.warmup,
+        )
         .toList(growable: false);
     filtered.sort((a, b) => a.name.compareTo(b.name));
     return filtered;
@@ -666,9 +685,15 @@ class AppController extends ChangeNotifier {
 
   List<PracticeItemV1> get activeWorkItems {
     final List<PracticeItemV1> items = routineItems
-        .where((item) => !item.isCustom)
+        .where((item) => !item.isCustom && !item.isWarmup)
         .toList(growable: false);
     items.sort((a, b) => _compareByNeed(a, b));
+    return items;
+  }
+
+  List<PracticeItemV1> get warmupItems {
+    final List<PracticeItemV1> items = itemsByFamily(MaterialFamilyV1.warmup);
+    items.sort((a, b) => a.name.compareTo(b.name));
     return items;
   }
 
@@ -686,7 +711,10 @@ class AppController extends ChangeNotifier {
 
   List<PracticeItemV1> get toolboxReadyItems {
     final List<PracticeItemV1> items = _items
-        .where((item) => !item.isCustom && isCloseToToolbox(item.id))
+        .where(
+          (item) =>
+              !item.isCustom && !item.isWarmup && isCloseToToolbox(item.id),
+        )
         .toList(growable: false);
     items.sort(
       (a, b) => totalTime(itemId: b.id).compareTo(totalTime(itemId: a.id)),
@@ -793,6 +821,13 @@ class AppController extends ChangeNotifier {
       if (accents.contains(index)) return PatternNoteMarkingV1.accent;
       return PatternNoteMarkingV1.normal;
     });
+  }
+
+  PatternGroupingV1 displayGroupingFor(String itemId) {
+    final PracticeItemV1 item = itemById(itemId);
+    return item.isWarmup
+        ? PatternGroupingV1.fourNote
+        : PatternGroupingV1.spaced;
   }
 
   String markedPatternTextFor(
@@ -1068,6 +1103,13 @@ class AppController extends ChangeNotifier {
       if (_entryContainsItem(sessionItemId, itemId)) return true;
     }
     return false;
+  }
+
+  bool _isWarmupSession(PracticeSessionLogV1 session) {
+    return session.family == MaterialFamilyV1.warmup ||
+        session.practiceItemIds.every(
+          (String itemId) => itemByIdOrNull(itemId)?.isWarmup ?? false,
+        );
   }
 
   bool _entryContainsItem(String entryItemId, String itemId) {
@@ -1727,6 +1769,47 @@ class AppController extends ChangeNotifier {
       timerPreset: _profile.defaultTimerPreset,
       clickEnabled: _profile.clickEnabledByDefault,
       routineId: routineId,
+      sourceName: '',
+    );
+  }
+
+  PracticeSessionSetupV1 buildSessionForWorkingOn({
+    PracticeModeV1 practiceMode = PracticeModeV1.singleSurface,
+  }) {
+    final List<String> itemIds = activeWorkItems
+        .where(
+          (PracticeItemV1 item) =>
+              practiceMode == PracticeModeV1.singleSurface ||
+              hasNonSnareVoice(item.id),
+        )
+        .map((PracticeItemV1 item) => item.id)
+        .toList(growable: false);
+    return PracticeSessionSetupV1(
+      practiceItemIds: itemIds,
+      family: itemIds.length == 1
+          ? itemById(itemIds.first).family
+          : MaterialFamilyV1.combo,
+      practiceMode: practiceMode,
+      bpm: _profile.defaultBpm,
+      timerPreset: _profile.defaultTimerPreset,
+      clickEnabled: _profile.clickEnabledByDefault,
+      routineId: _routine.id,
+      sourceName: 'Working On',
+    );
+  }
+
+  PracticeSessionSetupV1 buildWarmupSession() {
+    return PracticeSessionSetupV1(
+      practiceItemIds: warmupItems
+          .map((PracticeItemV1 item) => item.id)
+          .toList(growable: false),
+      family: MaterialFamilyV1.warmup,
+      practiceMode: PracticeModeV1.singleSurface,
+      bpm: _profile.defaultBpm,
+      timerPreset: _profile.defaultTimerPreset,
+      clickEnabled: _profile.clickEnabledByDefault,
+      routineId: null,
+      sourceName: 'Warmups',
     );
   }
 
@@ -1751,15 +1834,18 @@ class AppController extends ChangeNotifier {
       clickEnabled: setup.clickEnabled,
       routineId: setup.routineId,
       reflection: reflection,
+      sourceName: setup.sourceName,
     );
 
     _sessions = <PracticeSessionLogV1>[session, ..._sessions];
-    _recordManualAssessment(
-      session: session,
-      selfReportControl: selfReportControl,
-      selfReportTension: selfReportTension,
-      selfReportTempoReadiness: selfReportTempoReadiness,
-    );
+    if (!_isWarmupSession(session)) {
+      _recordManualAssessment(
+        session: session,
+        selfReportControl: selfReportControl,
+        selfReportTension: selfReportTension,
+        selfReportTempoReadiness: selfReportTempoReadiness,
+      );
+    }
     _notifyChanged();
     return session;
   }
@@ -1777,6 +1863,10 @@ class AppController extends ChangeNotifier {
           (SessionAssessmentResultV1 result) => result.sessionId != sessionId,
         )
         .toList(growable: false);
+    if (_isWarmupSession(session)) {
+      _notifyChanged();
+      return;
+    }
     _recordManualAssessment(
       session: session,
       selfReportControl: selfReportControl,
@@ -1814,7 +1904,7 @@ class AppController extends ChangeNotifier {
   }) {
     for (final String itemId in _assessmentTargetItemIdsForSession(session)) {
       final PracticeItemV1? item = itemByIdOrNull(itemId);
-      if (item == null || item.isCustom) continue;
+      if (item == null || item.isCustom || item.isWarmup) continue;
       final SessionAssessmentResultV1 result = _manualAssessmentForItem(
         session: session,
         itemId: itemId,
@@ -2336,6 +2426,7 @@ class AppController extends ChangeNotifier {
 
     return <PracticeItemV1>[
       ...triadItems,
+      ..._baseWarmupItems(),
       const PracticeItemV1(
         id: 'five_rlrlk',
         family: MaterialFamilyV1.fiveNote,
@@ -2375,5 +2466,55 @@ class AppController extends ChangeNotifier {
         saved: true,
       ),
     ];
+  }
+
+  List<PracticeItemV1> _baseWarmupItems() {
+    return <PracticeItemV1>[
+      _warmupItem(
+        id: 'warmup_left_isolation',
+        name: 'LLLL-LLLL-LLLL',
+        sticking: 'LLLLLLLLLLLL',
+        tags: const <String>['warmup', 'left-hand'],
+      ),
+      _warmupItem(
+        id: 'warmup_right_isolation',
+        name: 'RRRR-RRRR-RRRR',
+        sticking: 'RRRRRRRRRRRR',
+        tags: const <String>['warmup', 'right-hand'],
+      ),
+      _warmupItem(
+        id: 'warmup_alternating_leads',
+        name: 'LRLR-RLRL-LRLR-RLRL',
+        sticking: 'LRLRRLRLLRLRRLRL',
+        tags: const <String>['warmup', 'singles', 'lead-switching'],
+      ),
+      _warmupItem(
+        id: 'warmup_doubles_shapes',
+        name: 'RLLR-RRLL-LRRL-LLRR',
+        sticking: 'RLLRRRLLLRRLLLRR',
+        tags: const <String>['warmup', 'doubles', 'balance'],
+      ),
+    ];
+  }
+
+  PracticeItemV1 _warmupItem({
+    required String id,
+    required String name,
+    required String sticking,
+    required List<String> tags,
+  }) {
+    return PracticeItemV1(
+      id: id,
+      family: MaterialFamilyV1.warmup,
+      name: name,
+      sticking: sticking,
+      noteCount: _normalizedTokensFromSticking(sticking).length,
+      accentedNoteIndices: const <int>[],
+      ghostNoteIndices: const <int>[],
+      voiceAssignments: _defaultVoiceAssignmentsForSticking(sticking),
+      source: PracticeItemSourceV1.builtIn,
+      tags: tags,
+      saved: true,
+    );
   }
 }

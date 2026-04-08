@@ -38,6 +38,8 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
 
     final firstItem = widget.controller.itemById(session.practiceItemIds.first);
     final String primaryItemId = session.practiceItemIds.first;
+    final bool isWarmup = session.family == MaterialFamilyV1.warmup;
+    final bool isWorkingOnSource = session.sourceName == 'Working On';
     final _SessionRecommendation recommendation = _recommendationFor(session);
 
     return Scaffold(
@@ -58,6 +60,9 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                         primaryItemId,
                       ),
                       voices: widget.controller.noteVoicesFor(primaryItemId),
+                      grouping: widget.controller.displayGroupingFor(
+                        primaryItemId,
+                      ),
                       patternStyle: Theme.of(context).textTheme.headlineMedium
                           ?.copyWith(
                             fontWeight: FontWeight.w900,
@@ -69,6 +74,9 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                     PatternDisplayText(
                       tokens: widget.controller.noteTokensFor(primaryItemId),
                       markings: widget.controller.noteMarkingsFor(
+                        primaryItemId,
+                      ),
+                      grouping: widget.controller.displayGroupingFor(
                         primaryItemId,
                       ),
                       style: Theme.of(context).textTheme.headlineMedium
@@ -96,88 +104,115 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            DrumPanel(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  const DrumSectionTitle(text: 'Session Check'),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Use this to guide the next recommendation. This is not a test.',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                  const SizedBox(height: 16),
-                  _AssessmentChoiceGroup<SelfReportControlV1>(
-                    title: 'Control',
-                    value: _control,
-                    values: SelfReportControlV1.values,
-                    labelFor: (SelfReportControlV1 value) => value.label,
-                    onSelected: (SelfReportControlV1 value) {
-                      setState(() => _control = value);
-                      _saveAssessment(session.id);
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  _AssessmentChoiceGroup<SelfReportTensionV1>(
-                    title: 'Tension',
-                    value: _tension,
-                    values: SelfReportTensionV1.values,
-                    labelFor: (SelfReportTensionV1 value) => value.label,
-                    onSelected: (SelfReportTensionV1 value) {
-                      setState(() => _tension = value);
-                      _saveAssessment(session.id);
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  _AssessmentChoiceGroup<SelfReportTempoReadinessV1>(
-                    title: 'Tempo',
-                    value: _tempoReadiness,
-                    values: SelfReportTempoReadinessV1.values,
-                    labelFor: (SelfReportTempoReadinessV1 value) => value.label,
-                    onSelected: (SelfReportTempoReadinessV1 value) {
-                      setState(() => _tempoReadiness = value);
-                      _saveAssessment(session.id);
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  _RecommendationPanel(recommendation: recommendation),
-                ],
+            if (isWarmup)
+              DrumPanel(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    const DrumSectionTitle(text: 'Warmup Logged'),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Warmup time is saved separately from coached progress. It will not change Matrix coverage, toolbox readiness, or Coach priorities.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
+              )
+            else
+              DrumPanel(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    const DrumSectionTitle(text: 'Session Check'),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Use this to guide the next recommendation. This is not a test.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: 16),
+                    _AssessmentChoiceGroup<SelfReportControlV1>(
+                      title: 'Control',
+                      value: _control,
+                      values: SelfReportControlV1.values,
+                      labelFor: (SelfReportControlV1 value) => value.label,
+                      onSelected: (SelfReportControlV1 value) {
+                        setState(() => _control = value);
+                        _saveAssessment(session.id);
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    _AssessmentChoiceGroup<SelfReportTensionV1>(
+                      title: 'Tension',
+                      value: _tension,
+                      values: SelfReportTensionV1.values,
+                      labelFor: (SelfReportTensionV1 value) => value.label,
+                      onSelected: (SelfReportTensionV1 value) {
+                        setState(() => _tension = value);
+                        _saveAssessment(session.id);
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    _AssessmentChoiceGroup<SelfReportTempoReadinessV1>(
+                      title: 'Tempo',
+                      value: _tempoReadiness,
+                      values: SelfReportTempoReadinessV1.values,
+                      labelFor: (SelfReportTempoReadinessV1 value) =>
+                          value.label,
+                      onSelected: (SelfReportTempoReadinessV1 value) {
+                        setState(() => _tempoReadiness = value);
+                        _saveAssessment(session.id);
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    _RecommendationPanel(recommendation: recommendation),
+                  ],
+                ),
               ),
-            ),
             const SizedBox(height: 16),
             DrumActionRow(
               children: <Widget>[
-                FilledButton(
-                  onPressed: () {
-                    if (!widget.controller.isInRoutine(firstItem.id)) {
-                      widget.controller.toggleRoutineItem(firstItem.id);
-                    }
-                  },
-                  child: Text(
-                    widget.controller.isInRoutine(firstItem.id)
-                        ? 'In Working On'
-                        : 'Add to Working On',
+                if (!isWarmup)
+                  FilledButton(
+                    onPressed: () {
+                      if (!widget.controller.isInRoutine(firstItem.id)) {
+                        widget.controller.toggleRoutineItem(firstItem.id);
+                      }
+                    },
+                    child: Text(
+                      widget.controller.isInRoutine(firstItem.id)
+                          ? 'In Working On'
+                          : 'Add to Working On',
+                    ),
                   ),
-                ),
                 OutlinedButton(
                   onPressed: () {
                     Navigator.of(context).pushReplacement(
                       MaterialPageRoute<void>(
                         builder: (_) => PracticeSessionScreen(
                           controller: widget.controller,
-                          setup: widget.controller
-                              .buildSessionForItem(
-                                firstItem.id,
-                                practiceMode: session.practiceMode,
-                              )
-                              .copyWith(
-                                bpm: recommendation.nextBpm(session.bpm),
-                              ),
+                          setup:
+                              (isWarmup
+                                      ? widget.controller.buildWarmupSession()
+                                      : isWorkingOnSource
+                                      ? widget.controller
+                                            .buildSessionForWorkingOn(
+                                              practiceMode:
+                                                  session.practiceMode,
+                                            )
+                                      : widget.controller.buildSessionForItem(
+                                          firstItem.id,
+                                          practiceMode: session.practiceMode,
+                                        ))
+                                  .copyWith(
+                                    bpm: recommendation.nextBpm(session.bpm),
+                                  ),
                         ),
                       ),
                     );
                   },
-                  child: Text(recommendation.practiceLabel),
+                  child: Text(
+                    isWarmup ? 'Warm Up Again' : recommendation.practiceLabel,
+                  ),
                 ),
                 TextButton(
                   onPressed: () {

@@ -12,7 +12,7 @@ import 'package:flutter/foundation.dart';
 
 enum HandednessV1 { right, left }
 
-enum MaterialFamilyV1 { triad, fiveNote, custom, combo }
+enum MaterialFamilyV1 { triad, fiveNote, custom, combo, warmup }
 
 enum PracticeItemSourceV1 { builtIn, userDefined, generated }
 
@@ -193,6 +193,7 @@ class PracticeItemV1 {
   bool get isFiveNote => family == MaterialFamilyV1.fiveNote;
   bool get isCustom => family == MaterialFamilyV1.custom;
   bool get isCombo => family == MaterialFamilyV1.combo;
+  bool get isWarmup => family == MaterialFamilyV1.warmup;
   bool get hasAccents => accentedNoteIndices.isNotEmpty;
   bool get hasGhostNotes => ghostNoteIndices.isNotEmpty;
 
@@ -429,6 +430,7 @@ class PracticeSessionSetupV1 {
   final TimerPresetV1 timerPreset;
   final bool clickEnabled;
   final String? routineId;
+  final String sourceName;
 
   const PracticeSessionSetupV1({
     required this.practiceItemIds,
@@ -438,6 +440,7 @@ class PracticeSessionSetupV1 {
     required this.timerPreset,
     required this.clickEnabled,
     required this.routineId,
+    this.sourceName = '',
   });
 
   PracticeSessionSetupV1 copyWith({
@@ -448,6 +451,7 @@ class PracticeSessionSetupV1 {
     TimerPresetV1? timerPreset,
     bool? clickEnabled,
     String? routineId,
+    String? sourceName,
     bool clearRoutineId = false,
   }) {
     return PracticeSessionSetupV1(
@@ -458,6 +462,7 @@ class PracticeSessionSetupV1 {
       timerPreset: timerPreset ?? this.timerPreset,
       clickEnabled: clickEnabled ?? this.clickEnabled,
       routineId: clearRoutineId ? null : (routineId ?? this.routineId),
+      sourceName: sourceName ?? this.sourceName,
     );
   }
 }
@@ -475,6 +480,7 @@ class PracticeSessionLogV1 {
   final bool clickEnabled;
   final String? routineId;
   final ReflectionRatingV1? reflection;
+  final String sourceName;
 
   const PracticeSessionLogV1({
     required this.id,
@@ -488,6 +494,7 @@ class PracticeSessionLogV1 {
     required this.clickEnabled,
     required this.routineId,
     required this.reflection,
+    this.sourceName = '',
   });
 
   PracticeSessionLogV1 copyWith({
@@ -504,6 +511,7 @@ class PracticeSessionLogV1 {
     bool clearRoutineId = false,
     ReflectionRatingV1? reflection,
     bool clearReflection = false,
+    String? sourceName,
   }) {
     return PracticeSessionLogV1(
       id: id ?? this.id,
@@ -517,6 +525,7 @@ class PracticeSessionLogV1 {
       clickEnabled: clickEnabled ?? this.clickEnabled,
       routineId: clearRoutineId ? null : (routineId ?? this.routineId),
       reflection: clearReflection ? null : (reflection ?? this.reflection),
+      sourceName: sourceName ?? this.sourceName,
     );
   }
 }

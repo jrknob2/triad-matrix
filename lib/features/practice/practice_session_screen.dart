@@ -58,6 +58,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   @override
   Widget build(BuildContext context) {
     final currentItemId = widget.setup.practiceItemIds[_currentItemIndex];
+    final currentItem = widget.controller.itemById(currentItemId);
     final List<String> tokens = widget.controller.noteTokensFor(currentItemId);
     final List<PatternNoteMarkingV1> markings = widget.controller
         .noteMarkingsFor(currentItemId);
@@ -85,6 +86,9 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                       tokens: tokens,
                       markings: markings,
                       voices: voices,
+                      grouping: widget.controller.displayGroupingFor(
+                        currentItemId,
+                      ),
                       patternStyle: Theme.of(context).textTheme.displaySmall
                           ?.copyWith(
                             fontWeight: FontWeight.w900,
@@ -96,13 +100,24 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                     PatternDisplayText(
                       tokens: tokens,
                       markings: markings,
+                      grouping: widget.controller.displayGroupingFor(
+                        currentItemId,
+                      ),
                       style: Theme.of(context).textTheme.displaySmall?.copyWith(
                         fontWeight: FontWeight.w900,
                         letterSpacing: -1.0,
                       ),
                     ),
                   const SizedBox(height: 12),
-                  Chip(label: Text(widget.setup.practiceMode.label)),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: <Widget>[
+                      Chip(label: Text(widget.setup.practiceMode.label)),
+                      if (widget.setup.sourceName.isNotEmpty)
+                        Chip(label: Text(widget.setup.sourceName)),
+                    ],
+                  ),
                   const SizedBox(height: 12),
                   Text(
                     widget.controller.practiceGuidanceFor(
@@ -146,6 +161,18 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                           label: Text(_running ? 'Pause' : 'Play'),
                         ),
                       ),
+                      if (widget.setup.family != MaterialFamilyV1.warmup)
+                        OutlinedButton.icon(
+                          onPressed: _openWarmup,
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFFFFF4DE),
+                            side: const BorderSide(color: Color(0xFFFFF4DE)),
+                          ),
+                          icon: const Icon(
+                            Icons.local_fire_department_outlined,
+                          ),
+                          label: const Text('Warm Up'),
+                        ),
                       OutlinedButton(
                         onPressed: _endSession,
                         style: OutlinedButton.styleFrom(
@@ -218,28 +245,39 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
             if (widget.setup.practiceItemIds.length > 1) ...<Widget>[
               const SizedBox(height: 16),
               DrumPanel(
-                child: Row(
+                child: Column(
                   children: <Widget>[
-                    IconButton(
-                      onPressed: _currentItemIndex == 0
-                          ? null
-                          : () => setState(() => _currentItemIndex -= 1),
-                      icon: const Icon(Icons.chevron_left),
-                    ),
-                    Expanded(
-                      child: Center(
-                        child: Text(
-                          '${_currentItemIndex + 1} / ${widget.setup.practiceItemIds.length}',
+                    Row(
+                      children: <Widget>[
+                        IconButton(
+                          onPressed: _currentItemIndex == 0
+                              ? null
+                              : () => setState(() => _currentItemIndex -= 1),
+                          icon: const Icon(Icons.chevron_left),
                         ),
-                      ),
+                        Expanded(
+                          child: Center(
+                            child: Text(
+                              '${_currentItemIndex + 1} / ${widget.setup.practiceItemIds.length}',
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.w900),
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed:
+                              _currentItemIndex ==
+                                  widget.setup.practiceItemIds.length - 1
+                              ? null
+                              : () => setState(() => _currentItemIndex += 1),
+                          icon: const Icon(Icons.chevron_right),
+                        ),
+                      ],
                     ),
-                    IconButton(
-                      onPressed:
-                          _currentItemIndex ==
-                              widget.setup.practiceItemIds.length - 1
-                          ? null
-                          : () => setState(() => _currentItemIndex += 1),
-                      icon: const Icon(Icons.chevron_right),
+                    Text(
+                      currentItem.name,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ],
                 ),
@@ -292,6 +330,30 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
         builder: (_) => SessionSummaryScreen(
           controller: widget.controller,
           sessionId: session.id,
+        ),
+      ),
+    );
+  }
+
+  void _openWarmup() {
+    if (_running) {
+      _stopwatch.stop();
+      _elapsedTicker?.cancel();
+      _beatTicker?.cancel();
+      _beatFlashTimer?.cancel();
+      _running = false;
+      _beatLit = false;
+    }
+
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute<void>(
+        builder: (_) => PracticeSessionScreen(
+          controller: widget.controller,
+          setup: widget.controller.buildWarmupSession().copyWith(
+            bpm: _bpm,
+            timerPreset: widget.setup.timerPreset,
+            clickEnabled: _clickEnabled,
+          ),
         ),
       ),
     );

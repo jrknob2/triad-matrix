@@ -130,14 +130,15 @@ class _RetentionView extends StatelessWidget {
               title: 'Tracked Time',
               value: formatDuration(
                 controller.totalTime() -
-                    controller.totalTime(family: MaterialFamilyV1.custom),
+                    controller.totalTime(family: MaterialFamilyV1.custom) -
+                    controller.totalTime(family: MaterialFamilyV1.warmup),
               ),
               note: 'Core material only',
             ),
             _MetricData(
               title: 'Tracked Items',
               value: '${controller.trackedItems.length}',
-              note: 'Excludes My Patterns',
+              note: 'Excludes My Patterns and warmups',
             ),
             _MetricData(
               title: 'Sessions',

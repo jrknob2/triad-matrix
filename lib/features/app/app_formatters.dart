@@ -38,6 +38,7 @@ extension MaterialFamilyLabel on MaterialFamilyV1 {
     MaterialFamilyV1.fiveNote => '5-Note',
     MaterialFamilyV1.custom => 'Custom',
     MaterialFamilyV1.combo => 'Combo',
+    MaterialFamilyV1.warmup => 'Warmup',
   };
 }
 

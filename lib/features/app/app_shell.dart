@@ -56,6 +56,8 @@ class _AppShellState extends State<AppShell> {
             onOpenItem: _openItemDetail,
             onPracticeItem: _openPracticeItem,
             onPracticeItemInMode: _openPracticeItemInMode,
+            onPracticeWorkingOn: _openWorkingOnPractice,
+            onPracticeWarmup: _openWarmupPractice,
           ),
           ProgressScreen(
             key: ValueKey<String>('progress_${widget.controller.resetVersion}'),
@@ -146,6 +148,29 @@ class _AppShellState extends State<AppShell> {
             itemId,
             practiceMode: mode,
           ),
+        ),
+      ),
+    );
+  }
+
+  void _openWorkingOnPractice(PracticeModeV1 mode) {
+    final PracticeSessionSetupV1 setup = widget.controller
+        .buildSessionForWorkingOn(practiceMode: mode);
+    if (setup.practiceItemIds.isEmpty) return;
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            PracticeSessionScreen(controller: widget.controller, setup: setup),
+      ),
+    );
+  }
+
+  void _openWarmupPractice() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => PracticeSessionScreen(
+          controller: widget.controller,
+          setup: widget.controller.buildWarmupSession(),
         ),
       ),
     );

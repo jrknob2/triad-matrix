@@ -316,6 +316,7 @@ class AppStateStore {
       'clickEnabled': session.clickEnabled,
       'routineId': session.routineId,
       'reflection': session.reflection?.name,
+      'sourceName': session.sourceName,
     };
   }
 
@@ -334,6 +335,7 @@ class AppStateStore {
       reflection: map['reflection'] == null
           ? null
           : ReflectionRatingV1.values.byName(map['reflection'] as String),
+      sourceName: map['sourceName'] as String? ?? '',
     );
   }
 

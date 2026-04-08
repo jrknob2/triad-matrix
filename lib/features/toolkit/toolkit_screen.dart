@@ -14,6 +14,8 @@ class FocusScreen extends StatefulWidget {
   final ValueChanged<String> onOpenItem;
   final ValueChanged<String> onPracticeItem;
   final void Function(String, PracticeModeV1) onPracticeItemInMode;
+  final ValueChanged<PracticeModeV1> onPracticeWorkingOn;
+  final VoidCallback onPracticeWarmup;
 
   const FocusScreen({
     super.key,
@@ -21,6 +23,8 @@ class FocusScreen extends StatefulWidget {
     required this.onOpenItem,
     required this.onPracticeItem,
     required this.onPracticeItemInMode,
+    required this.onPracticeWorkingOn,
+    required this.onPracticeWarmup,
   });
 
   @override
@@ -49,6 +53,9 @@ class _FocusScreenState extends State<FocusScreen> {
                       controller: widget.controller,
                       onOpenItem: widget.onOpenItem,
                       onPracticeItem: widget.onPracticeItem,
+                      onPracticeWorkingOn: widget.onPracticeWorkingOn,
+                      onPracticeWarmup: widget.onPracticeWarmup,
+                      practiceMode: _viewMode,
                     ),
                     const SizedBox(height: 14),
                     SingleChildScrollView(
@@ -176,11 +183,17 @@ class _FocusSummary extends StatelessWidget {
   final AppController controller;
   final ValueChanged<String> onOpenItem;
   final ValueChanged<String> onPracticeItem;
+  final ValueChanged<PracticeModeV1> onPracticeWorkingOn;
+  final VoidCallback onPracticeWarmup;
+  final PracticeModeV1 practiceMode;
 
   const _FocusSummary({
     required this.controller,
     required this.onOpenItem,
     required this.onPracticeItem,
+    required this.onPracticeWorkingOn,
+    required this.onPracticeWarmup,
+    required this.practiceMode,
   });
 
   @override
@@ -188,6 +201,11 @@ class _FocusSummary extends StatelessWidget {
     final List<PracticeItemV1> toolboxReady = controller.toolboxReadyItems
         .take(3)
         .toList();
+    final bool canPracticeWorkingOn = controller.activeWorkItems.any(
+      (PracticeItemV1 item) =>
+          practiceMode == PracticeModeV1.singleSurface ||
+          controller.hasNonSnareVoice(item.id),
+    );
 
     return DrumPanel(
       tone: DrumPanelTone.warm,
@@ -203,6 +221,23 @@ class _FocusSummary extends StatelessWidget {
               style: Theme.of(
                 context,
               ).textTheme.bodyMedium?.copyWith(color: const Color(0xFF5B5345)),
+            ),
+            const SizedBox(height: 14),
+            DrumActionRow(
+              children: <Widget>[
+                OutlinedButton.icon(
+                  onPressed: canPracticeWorkingOn
+                      ? () => onPracticeWorkingOn(practiceMode)
+                      : null,
+                  icon: const Icon(Icons.play_arrow_rounded),
+                  label: const Text('Practice Working On'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: onPracticeWarmup,
+                  icon: const Icon(Icons.local_fire_department_outlined),
+                  label: const Text('Warm Up'),
+                ),
+              ],
             ),
             const SizedBox(height: 14),
             if (toolboxReady.isEmpty)
