@@ -692,9 +692,9 @@ class AppController extends ChangeNotifier {
   }
 
   List<PracticeItemV1> get warmupItems {
-    final List<PracticeItemV1> items = itemsByFamily(MaterialFamilyV1.warmup);
-    items.sort((a, b) => a.name.compareTo(b.name));
-    return items;
+    return _items
+        .where((PracticeItemV1 item) => item.family == MaterialFamilyV1.warmup)
+        .toList(growable: false);
   }
 
   List<PracticeItemV1> get phraseWorkItems {
@@ -830,6 +830,24 @@ class AppController extends ChangeNotifier {
       return const PatternGroupingV1(groupSize: 6, separator: '-');
     }
     return PatternGroupingV1.fourNote;
+  }
+
+  String? warmupRudimentLabelFor(String itemId) {
+    final PracticeItemV1 item = itemById(itemId);
+    if (!item.isWarmup) return null;
+    if (item.tags.contains('paradiddle-diddle')) {
+      return 'Paradiddle-Diddle';
+    }
+    if (item.tags.contains('paradiddle')) {
+      return 'Paradiddle';
+    }
+    if (item.tags.contains('doubles')) {
+      return 'Doubles';
+    }
+    if (item.tags.contains('singles')) {
+      return 'Singles';
+    }
+    return 'Rudiment';
   }
 
   String markedPatternTextFor(

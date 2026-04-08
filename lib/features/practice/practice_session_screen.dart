@@ -64,6 +64,8 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     final bool isWarmup = _setup.family == MaterialFamilyV1.warmup;
     final currentItemId = _setup.practiceItemIds[_currentItemIndex];
     final currentItem = widget.controller.itemById(currentItemId);
+    final String? warmupRudimentLabel = widget.controller
+        .warmupRudimentLabelFor(currentItemId);
     final List<String> tokens = widget.controller.noteTokensFor(currentItemId);
     final List<PatternNoteMarkingV1> markings = widget.controller
         .noteMarkingsFor(currentItemId);
@@ -115,7 +117,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                         patternStyle: Theme.of(context).textTheme.displaySmall
                             ?.copyWith(
                               fontWeight: FontWeight.w900,
-                              letterSpacing: -1.0,
+                              letterSpacing: isWarmup ? 0.8 : -1.0,
                             ),
                         voiceStyle: Theme.of(context).textTheme.titleMedium,
                       )
@@ -130,7 +132,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                         style: Theme.of(context).textTheme.displaySmall
                             ?.copyWith(
                               fontWeight: FontWeight.w900,
-                              letterSpacing: -1.0,
+                              letterSpacing: isWarmup ? 0.8 : -1.0,
                             ),
                       ),
                     const SizedBox(height: 12),
@@ -141,7 +143,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                         if (!isWarmup)
                           Chip(label: Text(_setup.practiceMode.label))
                         else
-                          Chip(label: Text(currentItem.name)),
+                          Chip(label: Text(warmupRudimentLabel ?? 'Rudiment')),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -181,7 +183,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                       ),
                       const SizedBox(height: 16),
                     ],
-                    _BeatPulse(beatLit: _beatLit),
+                    _BeatPulse(beatLit: _beatLit, bpm: _bpm),
                     const SizedBox(height: 18),
                     Text(
                       timerText,
@@ -466,8 +468,9 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
 
 class _BeatPulse extends StatelessWidget {
   final bool beatLit;
+  final int bpm;
 
-  const _BeatPulse({required this.beatLit});
+  const _BeatPulse({required this.beatLit, required this.bpm});
 
   @override
   Widget build(BuildContext context) {
@@ -527,13 +530,26 @@ class _BeatPulse extends StatelessWidget {
               ],
             ),
             child: Center(
-              child: Text(
-                'Beat',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: const Color(0xFFFFF4DE),
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0.6,
-                ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  Text(
+                    '$bpm',
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      color: const Color(0xFFFFF4DE),
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.8,
+                    ),
+                  ),
+                  Text(
+                    'BPM',
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: const Color(0xFFFFF4DE),
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
