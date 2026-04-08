@@ -43,7 +43,7 @@ Warmups should:
 
 - use built-in exercise phrases
 - be launched optionally before or during a practice session
-- use a standard 5-minute timer
+- use a standard 1-minute timer per exercise
 - carry the current BPM and click setting when launched from a practice session
 - be excluded from Matrix coverage, Toolbox readiness, and Coach priority scoring unless deliberately changed later
 
@@ -56,10 +56,13 @@ Candidate warmup phrases considered earlier:
 
 Implemented MVP warmups:
 
-- `warmup_singles`: `LRLR-RLRL-LRLR-RLRL`
+- `warmup_right_hand_singles`: `RRRR-RRRR-RRRR-RRRR`
+- `warmup_left_hand_singles`: `LLLL-LLLL-LLLL-LLLL`
+- `warmup_singles`: `RLRL-RLRL-RLRL-RLRL`
 - `warmup_doubles`: `RRLL-RRLL-RRLL-RRLL`
 - `warmup_paradiddles`: `RLRR-LRLL-RLRR-LRLL`
-- `warmup_paradiddle_diddles`: `RLRRLL-LRLLRR`
+- `warmup_paradiddle_diddles`: `RLRRLL-RLRRLL-RLRRLL-RLRRLL`
+- `warmup_left_paradiddle_diddles`: `LRLLRR-LRLLRR-LRLLRR-LRLLRR`
 
 Warmups use `MaterialFamilyV1.warmup` so they can be practiced without becoming
 coached curriculum. They are excluded from:
@@ -84,13 +87,15 @@ Single-item practice still uses the same session screen, so the execution view
 does not fork by source.
 
 Warmup mode switches the current practice surface in place instead of pushing a
-new route. That keeps Back navigation pointed at the previous screen, not a
-stacked warmup session.
+new route. If launched from an active practice session, ending warmup returns to
+that practice session. If launched directly from Focus, ending warmup returns to
+Focus.
 
 The exact grouping should reflect the exercise intention:
 
 - isolation/stamina work can use 4-note grouping
 - triad vocabulary work should use 3-note grouping
+- paradiddle-diddles use 6-note grouping
 - future rudiments can use the grouping that matches the rudiment structure
 
 ## MVP Boundary

@@ -37,6 +37,8 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   late int _bpm;
   late bool _clickEnabled;
   late PracticeSessionSetupV1 _setup;
+  PracticeSessionSetupV1? _returnSetup;
+  int _returnItemIndex = 0;
   int _currentItemIndex = 0;
 
   @override
@@ -68,203 +70,225 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     final List<DrumVoiceV1> voices = widget.controller.noteVoicesFor(
       currentItemId,
     );
-    final Duration? target = timerPresetToDuration(_setup.timerPreset);
+    final Duration? target = isWarmup
+        ? const Duration(minutes: 1)
+        : timerPresetToDuration(_setup.timerPreset);
     final String timerText = target == null
         ? formatDuration(_stopwatch.elapsed)
         : '${formatDuration(_stopwatch.elapsed)} / ${formatDuration(target)}';
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(isWarmup ? 'Warmup Session' : 'Practice Session'),
-      ),
-      body: DrumScreen(
-        warm: false,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: <Widget>[
-            DrumPanel(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  if (_setup.practiceMode == PracticeModeV1.flow)
-                    PatternVoiceDisplay(
-                      tokens: tokens,
-                      markings: markings,
-                      voices: voices,
-                      grouping: widget.controller.displayGroupingFor(
-                        currentItemId,
-                      ),
-                      patternStyle: Theme.of(context).textTheme.displaySmall
-                          ?.copyWith(
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -1.0,
-                          ),
-                      voiceStyle: Theme.of(context).textTheme.titleMedium,
-                    )
-                  else
-                    PatternDisplayText(
-                      tokens: tokens,
-                      markings: markings,
-                      grouping: widget.controller.displayGroupingFor(
-                        currentItemId,
-                      ),
-                      style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -1.0,
-                      ),
-                    ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: <Widget>[
-                      if (!isWarmup)
-                        Chip(label: Text(_setup.practiceMode.label))
-                      else
-                        const Chip(label: Text('Rudiments')),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    widget.controller.practiceGuidanceFor(
-                      currentItemId,
-                      practiceMode: _setup.practiceMode,
-                    ),
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: const Color(0xFF5B5345),
-                      height: 1.35,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            DrumPanel(
-              tone: DrumPanelTone.dark,
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: <Widget>[
-                  if (_setup.practiceItemIds.length > 1) ...<Widget>[
-                    _SessionStepper(
-                      currentIndex: _currentItemIndex,
-                      itemCount: _setup.practiceItemIds.length,
-                      label: currentItem.name,
-                      onPrevious: _currentItemIndex == 0
-                          ? null
-                          : () => setState(() => _currentItemIndex -= 1),
-                      onNext:
-                          _currentItemIndex == _setup.practiceItemIds.length - 1
-                          ? null
-                          : () => setState(() => _currentItemIndex += 1),
-                      dark: true,
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                  _BeatPulse(beatLit: _beatLit),
-                  const SizedBox(height: 18),
-                  Text(
-                    timerText,
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      color: const Color(0xFFFFF4DE),
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  Wrap(
-                    alignment: WrapAlignment.center,
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: <Widget>[
-                      SizedBox(
-                        height: 58,
-                        child: FilledButton.icon(
-                          onPressed: _toggleRunning,
-                          icon: Icon(_running ? Icons.pause : Icons.play_arrow),
-                          label: Text(_running ? 'Pause' : 'Play'),
+    return PopScope(
+      canPop: !isWarmup || _returnSetup == null,
+      onPopInvokedWithResult: (bool didPop, Object? _) {
+        if (!didPop && isWarmup && _returnSetup != null) {
+          _restoreFromWarmup();
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leading: isWarmup && _returnSetup != null
+              ? IconButton(
+                  onPressed: _restoreFromWarmup,
+                  icon: const Icon(Icons.arrow_back),
+                )
+              : null,
+          title: Text(isWarmup ? 'Warmup Session' : 'Practice Session'),
+        ),
+        body: DrumScreen(
+          warm: false,
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: <Widget>[
+              DrumPanel(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    if (_setup.practiceMode == PracticeModeV1.flow)
+                      PatternVoiceDisplay(
+                        tokens: tokens,
+                        markings: markings,
+                        voices: voices,
+                        grouping: widget.controller.displayGroupingFor(
+                          currentItemId,
                         ),
+                        showRepeatIndicator: isWarmup,
+                        patternStyle: Theme.of(context).textTheme.displaySmall
+                            ?.copyWith(
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -1.0,
+                            ),
+                        voiceStyle: Theme.of(context).textTheme.titleMedium,
+                      )
+                    else
+                      PatternDisplayText(
+                        tokens: tokens,
+                        markings: markings,
+                        grouping: widget.controller.displayGroupingFor(
+                          currentItemId,
+                        ),
+                        showRepeatIndicator: isWarmup,
+                        style: Theme.of(context).textTheme.displaySmall
+                            ?.copyWith(
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -1.0,
+                            ),
                       ),
-                      if (!isWarmup)
-                        OutlinedButton.icon(
-                          onPressed: _openWarmup,
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: <Widget>[
+                        if (!isWarmup)
+                          Chip(label: Text(_setup.practiceMode.label))
+                        else
+                          Chip(label: Text(currentItem.name)),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      widget.controller.practiceGuidanceFor(
+                        currentItemId,
+                        practiceMode: _setup.practiceMode,
+                      ),
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: const Color(0xFF5B5345),
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              DrumPanel(
+                tone: DrumPanelTone.dark,
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: <Widget>[
+                    if (_setup.practiceItemIds.length > 1) ...<Widget>[
+                      _SessionStepper(
+                        currentIndex: _currentItemIndex,
+                        itemCount: _setup.practiceItemIds.length,
+                        label: currentItem.name,
+                        onPrevious: _currentItemIndex == 0
+                            ? null
+                            : () => _changeItem(_currentItemIndex - 1),
+                        onNext:
+                            _currentItemIndex ==
+                                _setup.practiceItemIds.length - 1
+                            ? null
+                            : () => _changeItem(_currentItemIndex + 1),
+                        dark: true,
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                    _BeatPulse(beatLit: _beatLit),
+                    const SizedBox(height: 18),
+                    Text(
+                      timerText,
+                      style: Theme.of(context).textTheme.headlineMedium
+                          ?.copyWith(
+                            color: const Color(0xFFFFF4DE),
+                            fontWeight: FontWeight.w900,
+                          ),
+                    ),
+                    const SizedBox(height: 18),
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: <Widget>[
+                        SizedBox(
+                          height: 58,
+                          child: FilledButton.icon(
+                            onPressed: _toggleRunning,
+                            icon: Icon(
+                              _running ? Icons.pause : Icons.play_arrow,
+                            ),
+                            label: Text(_running ? 'Pause' : 'Play'),
+                          ),
+                        ),
+                        if (!isWarmup)
+                          OutlinedButton.icon(
+                            onPressed: _openWarmup,
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFFFFF4DE),
+                              side: const BorderSide(color: Color(0xFFFFF4DE)),
+                            ),
+                            icon: const Icon(
+                              Icons.local_fire_department_outlined,
+                            ),
+                            label: const Text('Warm Up'),
+                          ),
+                        OutlinedButton(
+                          onPressed: _endSession,
                           style: OutlinedButton.styleFrom(
                             foregroundColor: const Color(0xFFFFF4DE),
                             side: const BorderSide(color: Color(0xFFFFF4DE)),
                           ),
-                          icon: const Icon(
-                            Icons.local_fire_department_outlined,
+                          child: Text(isWarmup ? 'End Warmup' : 'End Session'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              DrumPanel(
+                child: Column(
+                  children: <Widget>[
+                    Row(
+                      children: <Widget>[
+                        Text(
+                          'BPM',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const Spacer(),
+                        Text(
+                          '$_bpm',
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(fontWeight: FontWeight.w800),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      children: <Widget>[
+                        IconButton(
+                          onPressed: _bpm <= 30
+                              ? null
+                              : () => _updateBpm(_bpm - 1),
+                          icon: const Icon(Icons.remove_circle_outline),
+                        ),
+                        Expanded(
+                          child: Slider(
+                            value: _bpm.toDouble(),
+                            min: 30,
+                            max: 260,
+                            divisions: 230,
+                            label: '$_bpm BPM',
+                            onChanged: (double value) {
+                              _updateBpm(value.round());
+                            },
                           ),
-                          label: const Text('Warm Up'),
                         ),
-                      OutlinedButton(
-                        onPressed: _endSession,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFFFFF4DE),
-                          side: const BorderSide(color: Color(0xFFFFF4DE)),
+                        IconButton(
+                          onPressed: _bpm >= 260
+                              ? null
+                              : () => _updateBpm(_bpm + 1),
+                          icon: const Icon(Icons.add_circle_outline),
                         ),
-                        child: const Text('End Session'),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Click'),
+                      value: _clickEnabled,
+                      onChanged: _updateClickEnabled,
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            DrumPanel(
-              child: Column(
-                children: <Widget>[
-                  Row(
-                    children: <Widget>[
-                      Text(
-                        'BPM',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const Spacer(),
-                      Text(
-                        '$_bpm',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ],
-                  ),
-                  Row(
-                    children: <Widget>[
-                      IconButton(
-                        onPressed: _bpm <= 30
-                            ? null
-                            : () => _updateBpm(_bpm - 1),
-                        icon: const Icon(Icons.remove_circle_outline),
-                      ),
-                      Expanded(
-                        child: Slider(
-                          value: _bpm.toDouble(),
-                          min: 30,
-                          max: 260,
-                          divisions: 230,
-                          label: '$_bpm BPM',
-                          onChanged: (double value) {
-                            _updateBpm(value.round());
-                          },
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: _bpm >= 260
-                            ? null
-                            : () => _updateBpm(_bpm + 1),
-                        icon: const Icon(Icons.add_circle_outline),
-                      ),
-                    ],
-                  ),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('Click'),
-                    value: _clickEnabled,
-                    onChanged: _updateClickEnabled,
-                  ),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -292,24 +316,17 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   }
 
   void _endSession() {
-    if (_running) {
-      _stopwatch.stop();
-      _elapsedTicker?.cancel();
-      _beatTicker?.cancel();
-      _beatFlashTimer?.cancel();
-      _running = false;
-      _beatLit = false;
+    if (_setup.family == MaterialFamilyV1.warmup) {
+      _restoreFromWarmup();
+      return;
     }
+
+    _resetRunState(clearElapsed: false);
 
     final PracticeSessionLogV1 session = widget.controller.completeSession(
       _setup.copyWith(bpm: _bpm, clickEnabled: _clickEnabled),
       _stopwatch.elapsed,
     );
-
-    if (_setup.family == MaterialFamilyV1.warmup) {
-      Navigator.of(context).pop();
-      return;
-    }
 
     Navigator.of(context).pushReplacement(
       MaterialPageRoute<void>(
@@ -322,14 +339,9 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   }
 
   void _openWarmup() {
-    if (_running) {
-      _stopwatch.stop();
-      _elapsedTicker?.cancel();
-      _beatTicker?.cancel();
-      _beatFlashTimer?.cancel();
-      _running = false;
-      _beatLit = false;
-    }
+    _returnSetup = _setup.copyWith(bpm: _bpm, clickEnabled: _clickEnabled);
+    _returnItemIndex = _currentItemIndex;
+    _resetRunState();
 
     setState(() {
       _setup = widget.controller.buildWarmupSession().copyWith(
@@ -337,9 +349,50 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
         clickEnabled: _clickEnabled,
       );
       _currentItemIndex = 0;
-      _running = false;
-      _beatLit = false;
     });
+  }
+
+  void _restoreFromWarmup() {
+    final PracticeSessionSetupV1? returnSetup = _returnSetup;
+    if (returnSetup == null) {
+      Navigator.of(context).pop();
+      return;
+    }
+    _resetRunState();
+    setState(() {
+      _setup = returnSetup;
+      _bpm = returnSetup.bpm;
+      _clickEnabled = returnSetup.clickEnabled;
+      _currentItemIndex = _returnItemIndex.clamp(
+        0,
+        returnSetup.practiceItemIds.length - 1,
+      );
+      _returnSetup = null;
+      _returnItemIndex = 0;
+    });
+  }
+
+  void _changeItem(int nextIndex) {
+    if (_setup.family == MaterialFamilyV1.warmup) {
+      _resetRunState();
+    }
+    setState(() {
+      _currentItemIndex = nextIndex;
+    });
+  }
+
+  void _resetRunState({bool clearElapsed = true}) {
+    if (_running) {
+      _stopwatch.stop();
+    }
+    if (clearElapsed) {
+      _stopwatch.reset();
+    }
+    _elapsedTicker?.cancel();
+    _beatTicker?.cancel();
+    _beatFlashTimer?.cancel();
+    _running = false;
+    _beatLit = false;
   }
 
   void _startElapsedTicker() {

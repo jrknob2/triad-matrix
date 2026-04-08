@@ -13,6 +13,7 @@ class PatternVoiceDisplay extends StatelessWidget {
   final double ghostScale;
   final double ghostOpacity;
   final PatternGroupingV1 grouping;
+  final bool showRepeatIndicator;
 
   const PatternVoiceDisplay({
     super.key,
@@ -25,6 +26,7 @@ class PatternVoiceDisplay extends StatelessWidget {
     this.ghostScale = 0.84,
     this.ghostOpacity = 0.72,
     this.grouping = PatternGroupingV1.none,
+    this.showRepeatIndicator = false,
   }) : assert(tokens.length == markings.length),
        assert(tokens.length == voices.length);
 
@@ -45,40 +47,54 @@ class PatternVoiceDisplay extends StatelessWidget {
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: <Widget>[
-          Row(
-            children: _rowCells(
-              tokens,
-              separators,
-              separatorWidth,
-              (int index) => _patternText(
-                tokens[index],
-                markings[index],
-                resolvedPatternStyle,
-              ),
-              resolvedPatternStyle,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Row(
-            children: _rowCells(
-              tokens,
-              separators,
-              separatorWidth,
-              (int index) => Text(
-                voices[index].shortLabel,
-                textAlign: TextAlign.center,
-                style: resolvedVoiceStyle.copyWith(
-                  color: const Color(0xFF5B5345),
-                  fontWeight: FontWeight.w800,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Row(
+                children: _rowCells(
+                  tokens,
+                  separators,
+                  separatorWidth,
+                  (int index) => _patternText(
+                    tokens[index],
+                    markings[index],
+                    resolvedPatternStyle,
+                  ),
+                  resolvedPatternStyle,
                 ),
               ),
-              resolvedVoiceStyle,
-              showSeparatorText: false,
-            ),
+              const SizedBox(height: 6),
+              Row(
+                children: _rowCells(
+                  tokens,
+                  separators,
+                  separatorWidth,
+                  (int index) => Text(
+                    voices[index].shortLabel,
+                    textAlign: TextAlign.center,
+                    style: resolvedVoiceStyle.copyWith(
+                      color: const Color(0xFF5B5345),
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  resolvedVoiceStyle,
+                  showSeparatorText: false,
+                ),
+              ),
+            ],
           ),
+          if (showRepeatIndicator)
+            Padding(
+              padding: const EdgeInsets.only(left: 10),
+              child: Icon(
+                Icons.repeat_rounded,
+                size: (resolvedPatternStyle.fontSize ?? 20) * 1.05,
+                color: resolvedPatternStyle.color,
+              ),
+            ),
         ],
       ),
     );

@@ -825,9 +825,11 @@ class AppController extends ChangeNotifier {
 
   PatternGroupingV1 displayGroupingFor(String itemId) {
     final PracticeItemV1 item = itemById(itemId);
-    return item.isWarmup
-        ? PatternGroupingV1.fourNote
-        : PatternGroupingV1.spaced;
+    if (!item.isWarmup) return PatternGroupingV1.spaced;
+    if (item.tags.contains('paradiddle-diddle')) {
+      return const PatternGroupingV1(groupSize: 6, separator: '-');
+    }
+    return PatternGroupingV1.fourNote;
   }
 
   String markedPatternTextFor(
@@ -1806,7 +1808,7 @@ class AppController extends ChangeNotifier {
       family: MaterialFamilyV1.warmup,
       practiceMode: PracticeModeV1.singleSurface,
       bpm: _profile.defaultBpm,
-      timerPreset: TimerPresetV1.minutes5,
+      timerPreset: TimerPresetV1.none,
       clickEnabled: _profile.clickEnabledByDefault,
       routineId: null,
       sourceName: 'Warmup',
@@ -2471,9 +2473,21 @@ class AppController extends ChangeNotifier {
   List<PracticeItemV1> _baseWarmupItems() {
     return <PracticeItemV1>[
       _warmupItem(
+        id: 'warmup_right_hand_singles',
+        name: 'Right-Hand Singles',
+        sticking: 'RRRRRRRRRRRRRRRR',
+        tags: const <String>['warmup', 'rudiment', 'singles', 'right-hand'],
+      ),
+      _warmupItem(
+        id: 'warmup_left_hand_singles',
+        name: 'Left-Hand Singles',
+        sticking: 'LLLLLLLLLLLLLLLL',
+        tags: const <String>['warmup', 'rudiment', 'singles', 'left-hand'],
+      ),
+      _warmupItem(
         id: 'warmup_singles',
         name: 'Singles',
-        sticking: 'LRLRRLRLLRLRRLRL',
+        sticking: 'RLRLRLRLRLRLRLRL',
         tags: const <String>['warmup', 'rudiment', 'singles'],
       ),
       _warmupItem(
@@ -2490,9 +2504,20 @@ class AppController extends ChangeNotifier {
       ),
       _warmupItem(
         id: 'warmup_paradiddle_diddles',
-        name: 'Paradiddle-Diddles',
-        sticking: 'RLRRLLLRLLRR',
-        tags: const <String>['warmup', 'rudiment', 'paradiddle-diddle'],
+        name: 'Right Paradiddle-Diddle',
+        sticking: 'RLRRLLRLRRLLRLRRLLRLRRLL',
+        tags: const <String>[
+          'warmup',
+          'rudiment',
+          'paradiddle-diddle',
+          'right',
+        ],
+      ),
+      _warmupItem(
+        id: 'warmup_left_paradiddle_diddles',
+        name: 'Left Paradiddle-Diddle',
+        sticking: 'LRLLRRLRLLRRLRLLRRLRLLRR',
+        tags: const <String>['warmup', 'rudiment', 'paradiddle-diddle', 'left'],
       ),
     ];
   }

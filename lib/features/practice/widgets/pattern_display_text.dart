@@ -10,6 +10,7 @@ class PatternDisplayText extends StatelessWidget {
   final double ghostScale;
   final double ghostOpacity;
   final PatternGroupingV1 grouping;
+  final bool showRepeatIndicator;
 
   const PatternDisplayText({
     super.key,
@@ -20,6 +21,7 @@ class PatternDisplayText extends StatelessWidget {
     this.ghostScale = 0.84,
     this.ghostOpacity = 0.72,
     this.grouping = PatternGroupingV1.spaced,
+    this.showRepeatIndicator = false,
   }) : assert(tokens.length == markings.length);
 
   @override
@@ -41,6 +43,18 @@ class PatternDisplayText extends StatelessWidget {
             if (separators[index].isNotEmpty)
               TextSpan(text: separators[index], style: baseStyle),
           ],
+          if (showRepeatIndicator)
+            WidgetSpan(
+              alignment: PlaceholderAlignment.middle,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: Icon(
+                  Icons.repeat_rounded,
+                  size: (baseStyle.fontSize ?? 20) * 1.05,
+                  color: baseStyle.color,
+                ),
+              ),
+            ),
         ],
       ),
     );
