@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/practice/practice_domain_v1.dart';
 import '../../state/app_controller.dart';
+import '../app/drumcabulary_ui.dart';
 import '../practice/widgets/pattern_display_text.dart';
 
 typedef OpenMatrixCallback =
@@ -40,14 +41,7 @@ class TodayScreen extends StatelessWidget {
         final bool showGettingStarted =
             !controller.hasLoggedPractice && !controller.hasActiveWork;
 
-        return DecoratedBox(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: <Color>[Color(0xFFF7E8C7), Color(0xFFF3F1EA)],
-            ),
-          ),
+        return DrumScreen(
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
             children: showGettingStarted
@@ -148,18 +142,13 @@ class _EmptyCoachCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return DrumPanel(
       child: Padding(
-        padding: const EdgeInsets.all(18),
+        padding: EdgeInsets.zero,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text(
-              'Coach',
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
-            ),
+            const DrumSectionTitle(text: 'Coach'),
             const SizedBox(height: 8),
             const Text(
               'There is not enough practice signal yet. Choose material from the Matrix and log a short session.',
@@ -195,22 +184,17 @@ class _CoachBlockCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool prominent = block.type == CoachBlockTypeV1.focus;
 
-    return Card(
-      color: prominent ? const Color(0xFF1F1A14) : null,
+    return DrumPanel(
+      tone: prominent ? DrumPanelTone.dark : DrumPanelTone.surface,
+      padding: const EdgeInsets.all(18),
       child: Padding(
-        padding: const EdgeInsets.all(18),
+        padding: EdgeInsets.zero,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text(
-              block.subtitle ?? block.type.name,
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: prominent
-                    ? const Color(0xFFF0C35B)
-                    : const Color(0xFF665C4E),
-                fontWeight: FontWeight.w900,
-                letterSpacing: 1.1,
-              ),
+            DrumEyebrow(
+              text: block.subtitle ?? block.type.name,
+              color: prominent ? const Color(0xFFF0C35B) : null,
             ),
             const SizedBox(height: 10),
             Text(
@@ -241,9 +225,7 @@ class _CoachBlockCard extends StatelessWidget {
               ),
             ],
             const SizedBox(height: 16),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
+            DrumActionRow(
               children: <Widget>[
                 FilledButton(onPressed: onAction, child: Text(block.ctaLabel)),
                 if (onOpenMatrix != null)

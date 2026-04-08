@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/practice/practice_domain_v1.dart';
 import '../../features/app/app_formatters.dart';
+import '../../features/app/drumcabulary_ui.dart';
 import '../../state/app_controller.dart';
 import '../practice/widgets/pattern_display_text.dart';
 
@@ -437,18 +438,13 @@ class _AssessmentStatusCard extends StatelessWidget {
       ),
     ];
 
-    return Card(
+    return DrumPanel(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.zero,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text(
-              'Assessment Status',
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
-            ),
+            const DrumSectionTitle(text: 'Assessment Status'),
             const SizedBox(height: 6),
             Text(
               'This is the same status language used by Coach and Matrix.',
@@ -544,14 +540,11 @@ class _MetricStrip extends StatelessWidget {
                 padding: const EdgeInsets.only(right: 10),
                 child: SizedBox(
                   width: 155,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF5F0E6),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: const Color(0x22000000)),
-                    ),
+                  child: DrumPanel(
+                    tone: DrumPanelTone.warm,
+                    padding: const EdgeInsets.all(14),
                     child: Padding(
-                      padding: const EdgeInsets.all(14),
+                      padding: EdgeInsets.zero,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
@@ -602,13 +595,13 @@ class _ItemListCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return DrumPanel(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.zero,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text(title, style: Theme.of(context).textTheme.titleLarge),
+            DrumSectionTitle(text: title),
             const SizedBox(height: 6),
             Text(description, style: Theme.of(context).textTheme.bodyMedium),
             const SizedBox(height: 12),
@@ -685,13 +678,13 @@ class _FirstLightCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return DrumPanel(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.zero,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text(title, style: Theme.of(context).textTheme.titleLarge),
+            DrumSectionTitle(text: title),
             const SizedBox(height: 8),
             Text(detail, style: Theme.of(context).textTheme.bodyLarge),
           ],

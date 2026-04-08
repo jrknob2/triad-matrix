@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/practice/practice_domain_v1.dart';
 import '../../features/app/app_formatters.dart';
+import '../../features/app/drumcabulary_ui.dart';
 import '../../state/app_controller.dart';
 import 'practice_session_screen.dart';
 
@@ -41,12 +42,12 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Session Summary')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: <Widget>[
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
+      body: DrumScreen(
+        warm: false,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: <Widget>[
+            DrumPanel(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
@@ -65,20 +66,12 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                 ],
               ),
             ),
-          ),
-          const SizedBox(height: 16),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
+            const SizedBox(height: 16),
+            DrumPanel(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Text(
-                    'Session Check',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
+                  const DrumSectionTitle(text: 'Session Check'),
                   const SizedBox(height: 8),
                   Text(
                     'Use this to guide the next recommendation. This is not a test.',
@@ -122,47 +115,51 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                 ],
               ),
             ),
-          ),
-          const SizedBox(height: 16),
-          FilledButton(
-            onPressed: () {
-              if (!widget.controller.isInRoutine(firstItem.id)) {
-                widget.controller.toggleRoutineItem(firstItem.id);
-              }
-            },
-            child: Text(
-              widget.controller.isInRoutine(firstItem.id)
-                  ? 'In Routine'
-                  : 'Add to Routine',
-            ),
-          ),
-          const SizedBox(height: 8),
-          OutlinedButton(
-            onPressed: () {
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute<void>(
-                  builder: (_) => PracticeSessionScreen(
-                    controller: widget.controller,
-                    setup: widget.controller
-                        .buildSessionForItem(
-                          firstItem.id,
-                          practiceMode: session.practiceMode,
-                        )
-                        .copyWith(bpm: recommendation.nextBpm(session.bpm)),
+            const SizedBox(height: 16),
+            DrumActionRow(
+              children: <Widget>[
+                FilledButton(
+                  onPressed: () {
+                    if (!widget.controller.isInRoutine(firstItem.id)) {
+                      widget.controller.toggleRoutineItem(firstItem.id);
+                    }
+                  },
+                  child: Text(
+                    widget.controller.isInRoutine(firstItem.id)
+                        ? 'In Routine'
+                        : 'Add to Routine',
                   ),
                 ),
-              );
-            },
-            child: Text(recommendation.practiceLabel),
-          ),
-          const SizedBox(height: 8),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).popUntil((route) => route.isFirst);
-            },
-            child: const Text('Done'),
-          ),
-        ],
+                OutlinedButton(
+                  onPressed: () {
+                    Navigator.of(context).pushReplacement(
+                      MaterialPageRoute<void>(
+                        builder: (_) => PracticeSessionScreen(
+                          controller: widget.controller,
+                          setup: widget.controller
+                              .buildSessionForItem(
+                                firstItem.id,
+                                practiceMode: session.practiceMode,
+                              )
+                              .copyWith(
+                                bpm: recommendation.nextBpm(session.bpm),
+                              ),
+                        ),
+                      ),
+                    );
+                  },
+                  child: Text(recommendation.practiceLabel),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).popUntil((route) => route.isFirst);
+                  },
+                  child: const Text('Done'),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -260,13 +257,11 @@ class _RecommendationPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      ),
+    return DrumPanel(
+      tone: DrumPanelTone.warm,
+      padding: const EdgeInsets.all(14),
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: EdgeInsets.zero,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[

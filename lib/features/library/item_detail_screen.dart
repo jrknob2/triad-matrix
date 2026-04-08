@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/practice/practice_domain_v1.dart';
 import '../../features/app/app_formatters.dart';
+import '../../features/app/drumcabulary_ui.dart';
 import '../../state/app_controller.dart';
 import '../practice/widgets/pattern_display_text.dart';
 import '../practice/widgets/pattern_marking_editor.dart';
@@ -56,9 +57,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
           body: ListView(
             padding: const EdgeInsets.all(16),
             children: <Widget>[
-              Card(
+              DrumPanel(
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.zero,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
@@ -135,9 +136,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              Card(
+              DrumPanel(
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.zero,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
@@ -194,7 +195,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-              Card(
+              DrumPanel(
                 child: Column(
                   children: <Widget>[
                     ListTile(

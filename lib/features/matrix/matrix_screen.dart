@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/practice/practice_domain_v1.dart';
 import '../../features/app/app_formatters.dart';
+import '../../features/app/drumcabulary_ui.dart';
 import '../../state/app_controller.dart';
 import '../practice/widgets/pattern_display_text.dart';
 import '../practice/widgets/pattern_voice_display.dart';
@@ -78,14 +79,8 @@ class _MatrixScreenState extends State<MatrixScreen> {
       orderedItemIds: _selectedItemIds,
     );
 
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: <Color>[Color(0xFFF5EEE1), Color(0xFFF8F6F1)],
-        ),
-      ),
+    return DrumScreen(
+      warm: false,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
         children: <Widget>[
@@ -615,23 +610,15 @@ class _LaneFocusCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5F0E6),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x22000000)),
-      ),
+    return DrumPanel(
+      tone: DrumPanelTone.warm,
+      padding: const EdgeInsets.all(14),
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: EdgeInsets.zero,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text(
-              lane.label,
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-            ),
+            DrumSectionTitle(text: lane.label),
             const SizedBox(height: 6),
             Text(description, style: Theme.of(context).textTheme.bodyMedium),
           ],
@@ -654,14 +641,11 @@ class _ProgressLegendCard extends StatelessWidget {
           (label: 'Strong', color: Color(0xFFDDEDDD)),
         ];
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5F0E6),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x22000000)),
-      ),
+    return DrumPanel(
+      tone: DrumPanelTone.warm,
+      padding: const EdgeInsets.all(12),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: EdgeInsets.zero,
         child: Wrap(
           spacing: 10,
           runSpacing: 8,

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 
 import '../../features/app/app_formatters.dart';
+import '../../features/app/drumcabulary_ui.dart';
 import '../../state/app_controller.dart';
 import '../../core/practice/practice_domain_v1.dart';
 import 'widgets/pattern_display_text.dart';
@@ -70,12 +71,12 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Practice Session')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: <Widget>[
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
+      body: DrumScreen(
+        warm: false,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: <Widget>[
+            DrumPanel(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
@@ -116,10 +117,9 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                 ],
               ),
             ),
-          ),
-          const SizedBox(height: 16),
-          Card(
-            child: Padding(
+            const SizedBox(height: 16),
+            DrumPanel(
+              tone: DrumPanelTone.dark,
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: <Widget>[
@@ -155,6 +155,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                   Text(
                     timerText,
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      color: const Color(0xFFFFF4DE),
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -180,11 +181,8 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                 ],
               ),
             ),
-          ),
-          const SizedBox(height: 16),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
+            const SizedBox(height: 16),
+            DrumPanel(
               child: Column(
                 children: <Widget>[
                   Row(
@@ -239,12 +237,9 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                 ],
               ),
             ),
-          ),
-          if (widget.setup.practiceItemIds.length > 1) ...<Widget>[
-            const SizedBox(height: 16),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
+            if (widget.setup.practiceItemIds.length > 1) ...<Widget>[
+              const SizedBox(height: 16),
+              DrumPanel(
                 child: Row(
                   children: <Widget>[
                     IconButton(
@@ -271,9 +266,9 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                   ],
                 ),
               ),
-            ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/pattern/triad_matrix.dart';
 import '../../core/practice/practice_domain_v1.dart';
 import '../../state/app_controller.dart';
+import '../app/drumcabulary_ui.dart';
 import '../matrix/widgets/triad_matrix_grid.dart';
 import '../practice/practice_session_screen.dart';
 
@@ -45,16 +46,16 @@ class _CombinationBuilderScreenState extends State<CombinationBuilderScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Build Combo')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: <Widget>[
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
+      body: DrumScreen(
+        warm: false,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: <Widget>[
+            DrumPanel(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Text('Combo', style: Theme.of(context).textTheme.titleMedium),
+                  const DrumEyebrow(text: 'Combo'),
                   const SizedBox(height: 8),
                   Text(
                     hasSelection
@@ -108,50 +109,46 @@ class _CombinationBuilderScreenState extends State<CombinationBuilderScreen> {
                 ],
               ),
             ),
-          ),
-          const SizedBox(height: 16),
-          TriadMatrixGrid(
-            controller: widget.controller,
-            filters: const MatrixFiltersV1(
-              lane: null,
-              palette: null,
-              filters: <TriadMatrixFilterV1>{},
-              selectedComboIds: <String>{},
-              selectedRows: <String>{},
-              selectedColumns: <String>{},
+            const SizedBox(height: 16),
+            TriadMatrixGrid(
+              controller: widget.controller,
+              filters: const MatrixFiltersV1(
+                lane: null,
+                palette: null,
+                filters: <TriadMatrixFilterV1>{},
+                selectedComboIds: <String>{},
+                selectedRows: <String>{},
+                selectedColumns: <String>{},
+              ),
+              selection: MatrixSelectionStateV1(
+                orderedItemIds: _selectedItemIds,
+              ),
+              onToggleRow: _appendRow,
+              onToggleColumn: _appendColumn,
+              onTapItem: _toggleItemSelection,
+              onRemoveItem: _removeLastOccurrence,
             ),
-            selection: MatrixSelectionStateV1(orderedItemIds: _selectedItemIds),
-            onToggleRow: _appendRow,
-            onToggleColumn: _appendColumn,
-            onTapItem: _toggleItemSelection,
-            onRemoveItem: _removeLastOccurrence,
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: OutlinedButton(
+            const SizedBox(height: 16),
+            DrumActionRow(
+              children: <Widget>[
+                OutlinedButton(
                   onPressed: hasSelection ? _practiceNow : null,
                   child: const Text('Practice Now'),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: FilledButton.tonal(
+                FilledButton.tonal(
                   onPressed: hasSelection ? _toggleRoutine : null,
                   child: Text(
                     inRoutine ? 'Remove From Routine' : 'Add To Routine',
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          FilledButton(
-            onPressed: canSaveCombo ? _saveCombo : null,
-            child: const Text('Save Combo'),
-          ),
-        ],
+                FilledButton(
+                  onPressed: canSaveCombo ? _saveCombo : null,
+                  child: const Text('Save Combo'),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
