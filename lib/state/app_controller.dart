@@ -794,6 +794,120 @@ class AppController extends ChangeNotifier {
     return false;
   }
 
+  MatrixCellVisualStateV1 matrixCellVisualStateFor({
+    required String itemId,
+    required MatrixFiltersV1 filters,
+    required MatrixSelectionStateV1 selection,
+  }) {
+    final bool inScope = _matrixCellIsInScope(itemId, filters);
+    final int selectedCount = selection.countOf(itemId);
+    return MatrixCellVisualStateV1(
+      itemId: itemId,
+      inScope: inScope,
+      muted: !inScope,
+      progress: matrixProgressStateFor(itemId),
+      selected: selectedCount > 0,
+      selectedCount: selectedCount,
+    );
+  }
+
+  MatrixProgressStateV1 matrixProgressStateFor(String itemId) {
+    final PracticeAssessmentAggregateV1? aggregate =
+        _assessmentAggregateByItemId[itemId];
+    if (aggregate != null && aggregate.assessmentCount > 0) {
+      return aggregate.status;
+    }
+
+    if (isUnseen(itemId)) return MatrixProgressStateV1.notTrained;
+    if (competencyFor(itemId).index >= CompetencyLevelV1.reliable.index ||
+        isCloseToToolbox(itemId)) {
+      return MatrixProgressStateV1.strong;
+    }
+    if (needsAttention(itemId)) return MatrixProgressStateV1.needsWork;
+    return MatrixProgressStateV1.active;
+  }
+
+  bool _matrixCellIsInScope(String itemId, MatrixFiltersV1 filters) {
+    if (filters.selectedRows.isNotEmpty) {
+      final String rowLabel = itemById(itemId).name.substring(1);
+      if (!filters.selectedRows.contains(rowLabel)) return false;
+    }
+
+    if (filters.selectedColumns.isNotEmpty) {
+      final String columnLabel = itemById(itemId).name.substring(0, 1);
+      if (!filters.selectedColumns.contains(columnLabel)) return false;
+    }
+
+    if (filters.selectedComboIds.isNotEmpty) {
+      final bool comboMatch = filters.selectedComboIds.any(
+        (comboId) => combinationContainsItem(comboId: comboId, itemId: itemId),
+      );
+      if (!comboMatch) return false;
+    }
+
+    final Set<TriadMatrixFilterV1> activeFilters = filters.filters;
+
+    if (activeFilters.contains(TriadMatrixFilterV1.handsOnly) &&
+        !handsOnly(itemId)) {
+      return false;
+    }
+
+    final bool leadSideFilterActive =
+        activeFilters.contains(TriadMatrixFilterV1.rightLead) ||
+        activeFilters.contains(TriadMatrixFilterV1.leftLead);
+    if (leadSideFilterActive) {
+      final bool matchesLeadSide =
+          (activeFilters.contains(TriadMatrixFilterV1.rightLead) &&
+              startsWithRight(itemId)) ||
+          (activeFilters.contains(TriadMatrixFilterV1.leftLead) &&
+              startsWithLeft(itemId));
+      if (!matchesLeadSide) return false;
+    }
+
+    if (activeFilters.contains(TriadMatrixFilterV1.hasKick) &&
+        !hasKick(itemId)) {
+      return false;
+    }
+    if (activeFilters.contains(TriadMatrixFilterV1.startsWithKick) &&
+        !startsWithKick(itemId)) {
+      return false;
+    }
+    if (activeFilters.contains(TriadMatrixFilterV1.endsWithKick) &&
+        !endsWithKick(itemId)) {
+      return false;
+    }
+    if (activeFilters.contains(TriadMatrixFilterV1.inRoutine) &&
+        !isInRoutine(itemId)) {
+      return false;
+    }
+    if (activeFilters.contains(TriadMatrixFilterV1.needsAttention) &&
+        !needsAttention(itemId)) {
+      return false;
+    }
+    if (activeFilters.contains(TriadMatrixFilterV1.underPracticed) &&
+        !isUnderPracticed(itemId)) {
+      return false;
+    }
+    if (activeFilters.contains(TriadMatrixFilterV1.closeToToolkit) &&
+        !isCloseToToolbox(itemId)) {
+      return false;
+    }
+    if (activeFilters.contains(TriadMatrixFilterV1.recent) &&
+        !isRecent(itemId)) {
+      return false;
+    }
+    if (activeFilters.contains(TriadMatrixFilterV1.unseen) &&
+        !isUnseen(itemId)) {
+      return false;
+    }
+    if (activeFilters.contains(TriadMatrixFilterV1.doubles) &&
+        !hasDoubles(itemId)) {
+      return false;
+    }
+
+    return true;
+  }
+
   String? mirrorItemId(String itemId) {
     final PracticeItemV1 item = itemById(itemId);
     if (!item.isTriad) return null;

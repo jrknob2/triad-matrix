@@ -40,6 +40,17 @@ class _MatrixScreenState extends State<MatrixScreen> {
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final bool showBuildHeader = _showBuildHeader;
+    final MatrixFiltersV1 matrixFilters = MatrixFiltersV1(
+      lane: _laneFocus,
+      palette: _palette,
+      filters: _effectiveFilters,
+      selectedComboIds: _selectedComboIds,
+      selectedRows: _selectedRows,
+      selectedColumns: _selectedColumns,
+    );
+    final MatrixSelectionStateV1 matrixSelection = MatrixSelectionStateV1(
+      orderedItemIds: _selectedItemIds,
+    );
 
     return DecoratedBox(
       decoration: const BoxDecoration(
@@ -158,11 +169,8 @@ class _MatrixScreenState extends State<MatrixScreen> {
           const SizedBox(height: 12),
           TriadMatrixGrid(
             controller: widget.controller,
-            filters: _effectiveFilters,
-            selectedComboIds: _selectedComboIds,
-            selectedItemIds: _selectedItemIds,
-            selectedRows: _selectedRows,
-            selectedColumns: _selectedColumns,
+            filters: matrixFilters,
+            selection: matrixSelection,
             onToggleRow: _toggleRow,
             onToggleColumn: _toggleColumn,
             onTapItem: _toggleItemSelection,

@@ -6,11 +6,8 @@ import '../../../state/app_controller.dart';
 
 class TriadMatrixGrid extends StatelessWidget {
   final AppController controller;
-  final Set<TriadMatrixFilterV1> filters;
-  final Set<String> selectedComboIds;
-  final List<String> selectedItemIds;
-  final Set<String> selectedRows;
-  final Set<String> selectedColumns;
+  final MatrixFiltersV1 filters;
+  final MatrixSelectionStateV1 selection;
   final ValueChanged<String> onToggleRow;
   final ValueChanged<String> onToggleColumn;
   final ValueChanged<String> onTapItem;
@@ -20,10 +17,7 @@ class TriadMatrixGrid extends StatelessWidget {
     super.key,
     required this.controller,
     required this.filters,
-    required this.selectedComboIds,
-    this.selectedItemIds = const <String>[],
-    required this.selectedRows,
-    required this.selectedColumns,
+    required this.selection,
     required this.onToggleRow,
     required this.onToggleColumn,
     required this.onTapItem,
@@ -50,17 +44,17 @@ class TriadMatrixGrid extends StatelessWidget {
                 const SizedBox.shrink(),
                 _MatrixAxisLabel(
                   label: 'R',
-                  selected: selectedColumns.contains('R'),
+                  selected: filters.selectedColumns.contains('R'),
                   onTap: () => onToggleColumn('R'),
                 ),
                 _MatrixAxisLabel(
                   label: 'L',
-                  selected: selectedColumns.contains('L'),
+                  selected: filters.selectedColumns.contains('L'),
                   onTap: () => onToggleColumn('L'),
                 ),
                 _MatrixAxisLabel(
                   label: 'K',
-                  selected: selectedColumns.contains('K'),
+                  selected: filters.selectedColumns.contains('K'),
                   onTap: () => onToggleColumn('K'),
                 ),
               ],
@@ -70,7 +64,7 @@ class TriadMatrixGrid extends StatelessWidget {
                 children: <Widget>[
                   _MatrixAxisLabel(
                     label: cells[rowIndex * 3].id.substring(1),
-                    selected: selectedRows.contains(
+                    selected: filters.selectedRows.contains(
                       cells[rowIndex * 3].id.substring(1),
                     ),
                     onTap: () =>
@@ -84,22 +78,7 @@ class TriadMatrixGrid extends StatelessWidget {
                         controller: controller,
                         cell: cell,
                         filters: filters,
-                        selectedComboIds: selectedComboIds,
-                        rowSelected: selectedRows.contains(
-                          cell.id.substring(1),
-                        ),
-                        columnSelected: selectedColumns.contains(
-                          cell.id.substring(0, 1),
-                        ),
-                        rowFilterActive: selectedRows.isNotEmpty,
-                        columnFilterActive: selectedColumns.isNotEmpty,
-                        selectedCount: selectedItemIds
-                            .where(
-                              (String selectedId) =>
-                                  selectedId ==
-                                  controller.triadItemForCell(cell.id)!.id,
-                            )
-                            .length,
+                        selection: selection,
                         onTapItem: onTapItem,
                         onRemoveItem: onRemoveItem,
                       ),
@@ -155,13 +134,8 @@ class _MatrixAxisLabel extends StatelessWidget {
 class _TriadCellButton extends StatelessWidget {
   final AppController controller;
   final TriadMatrixCell cell;
-  final Set<TriadMatrixFilterV1> filters;
-  final Set<String> selectedComboIds;
-  final bool rowSelected;
-  final bool columnSelected;
-  final bool rowFilterActive;
-  final bool columnFilterActive;
-  final int selectedCount;
+  final MatrixFiltersV1 filters;
+  final MatrixSelectionStateV1 selection;
   final ValueChanged<String> onTapItem;
   final ValueChanged<String>? onRemoveItem;
 
@@ -169,12 +143,7 @@ class _TriadCellButton extends StatelessWidget {
     required this.controller,
     required this.cell,
     required this.filters,
-    required this.selectedComboIds,
-    required this.rowSelected,
-    required this.columnSelected,
-    required this.rowFilterActive,
-    required this.columnFilterActive,
-    required this.selectedCount,
+    required this.selection,
     required this.onTapItem,
     required this.onRemoveItem,
   });
@@ -182,7 +151,13 @@ class _TriadCellButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String itemId = controller.triadItemForCell(cell.id)!.id;
-    final _CellDecorationStyle style = _styleFor(itemId);
+    final MatrixCellVisualStateV1 visualState = controller
+        .matrixCellVisualStateFor(
+          itemId: itemId,
+          filters: filters,
+          selection: selection,
+        );
+    final _CellDecorationStyle style = _styleFor(itemId, visualState);
 
     return Material(
       color: Colors.transparent,
@@ -211,7 +186,7 @@ class _TriadCellButton extends StatelessWidget {
                   ),
                 ),
               ),
-              if (selectedCount > 0 && onRemoveItem != null)
+              if (visualState.selected && onRemoveItem != null)
                 Positioned(
                   top: 6,
                   right: 6,
@@ -243,7 +218,10 @@ class _TriadCellButton extends StatelessWidget {
     );
   }
 
-  _CellDecorationStyle _styleFor(String itemId) {
+  _CellDecorationStyle _styleFor(
+    String itemId,
+    MatrixCellVisualStateV1 visualState,
+  ) {
     Color backgroundColor = const Color(0xFFF6F1E7);
     Color borderColor = const Color(0x22000000);
     double borderWidth = 1;
@@ -262,64 +240,16 @@ class _TriadCellButton extends StatelessWidget {
     final bool closeToToolkit = controller.isCloseToToolbox(itemId);
     final bool recent = controller.isRecent(itemId);
     final bool unseen = controller.isUnseen(itemId);
-    final bool selected = selectedCount > 0;
     final bool comboMatch =
-        selectedComboIds.isEmpty ||
-        selectedComboIds.any(
+        filters.selectedComboIds.isEmpty ||
+        filters.selectedComboIds.any(
           (comboId) => controller.combinationContainsItem(
             comboId: comboId,
             itemId: itemId,
           ),
         );
 
-    final bool filteredOutByHandsOnly =
-        filters.contains(TriadMatrixFilterV1.handsOnly) && !handsOnly;
-    final bool leadSideFilterActive =
-        filters.contains(TriadMatrixFilterV1.rightLead) ||
-        filters.contains(TriadMatrixFilterV1.leftLead);
-    final bool matchesLeadSide =
-        (filters.contains(TriadMatrixFilterV1.rightLead) && rightLead) ||
-        (filters.contains(TriadMatrixFilterV1.leftLead) && leftLead);
-    final bool filteredOutByLead = leadSideFilterActive && !matchesLeadSide;
-    final bool filteredOutByHasKick =
-        filters.contains(TriadMatrixFilterV1.hasKick) && !hasKick;
-    final bool filteredOutByStartsWithKick =
-        filters.contains(TriadMatrixFilterV1.startsWithKick) && !startsWithKick;
-    final bool filteredOutByEndsWithKick =
-        filters.contains(TriadMatrixFilterV1.endsWithKick) && !endsWithKick;
-    final bool filteredOutByInRoutine =
-        filters.contains(TriadMatrixFilterV1.inRoutine) && !inRoutine;
-    final bool filteredOutByNeedsAttention =
-        filters.contains(TriadMatrixFilterV1.needsAttention) && !needsAttention;
-    final bool filteredOutByUnderPracticed =
-        filters.contains(TriadMatrixFilterV1.underPracticed) && !underPracticed;
-    final bool filteredOutByCloseToToolkit =
-        filters.contains(TriadMatrixFilterV1.closeToToolkit) && !closeToToolkit;
-    final bool filteredOutByRecent =
-        filters.contains(TriadMatrixFilterV1.recent) && !recent;
-    final bool filteredOutByUnseen =
-        filters.contains(TriadMatrixFilterV1.unseen) && !unseen;
-    final bool filteredOutByDoubles =
-        filters.contains(TriadMatrixFilterV1.doubles) && !hasDoubles;
-    final bool filteredOutByCombos = selectedComboIds.isNotEmpty && !comboMatch;
-    final bool filteredOutByRow = rowFilterActive && !rowSelected;
-    final bool filteredOutByColumn = columnFilterActive && !columnSelected;
-
-    if (filteredOutByHandsOnly ||
-        filteredOutByLead ||
-        filteredOutByHasKick ||
-        filteredOutByStartsWithKick ||
-        filteredOutByEndsWithKick ||
-        filteredOutByInRoutine ||
-        filteredOutByNeedsAttention ||
-        filteredOutByUnderPracticed ||
-        filteredOutByCloseToToolkit ||
-        filteredOutByRecent ||
-        filteredOutByUnseen ||
-        filteredOutByDoubles ||
-        filteredOutByCombos ||
-        filteredOutByRow ||
-        filteredOutByColumn) {
+    if (visualState.muted) {
       return const _CellDecorationStyle(
         backgroundColor: Color(0xFFE0DDD8),
         borderColor: Color(0x22000000),
@@ -328,7 +258,7 @@ class _TriadCellButton extends StatelessWidget {
       );
     }
 
-    if (filters.contains(TriadMatrixFilterV1.competency)) {
+    if (filters.filters.contains(TriadMatrixFilterV1.competency)) {
       backgroundColor = switch (controller.competencyFor(itemId)) {
         CompetencyLevelV1.notStarted => const Color(0xFFF0B2AA),
         CompetencyLevelV1.learning => const Color(0xFFD9E9F7),
@@ -338,77 +268,78 @@ class _TriadCellButton extends StatelessWidget {
       };
     }
 
-    if (rightLead && filters.contains(TriadMatrixFilterV1.rightLead)) {
+    if (rightLead && filters.filters.contains(TriadMatrixFilterV1.rightLead)) {
       borderColor = const Color(0xFFC94949);
       borderWidth = borderWidth < 2 ? 2 : borderWidth;
     }
 
-    if (leftLead && filters.contains(TriadMatrixFilterV1.leftLead)) {
+    if (leftLead && filters.filters.contains(TriadMatrixFilterV1.leftLead)) {
       borderColor = const Color(0xFF2F6EC8);
       borderWidth = borderWidth < 2 ? 2 : borderWidth;
     }
 
-    if (filters.contains(TriadMatrixFilterV1.handsOnly) && handsOnly) {
+    if (filters.filters.contains(TriadMatrixFilterV1.handsOnly) && handsOnly) {
       borderColor = Colors.black;
       borderWidth = borderWidth < 3 ? 3 : borderWidth;
     }
 
-    if (filters.contains(TriadMatrixFilterV1.hasKick) && hasKick) {
+    if (filters.filters.contains(TriadMatrixFilterV1.hasKick) && hasKick) {
       borderColor = const Color(0xFF8B6A1C);
       borderWidth = borderWidth < 3 ? 3 : borderWidth;
     }
 
-    if (filters.contains(TriadMatrixFilterV1.startsWithKick) &&
+    if (filters.filters.contains(TriadMatrixFilterV1.startsWithKick) &&
         startsWithKick) {
       borderColor = const Color(0xFF7E6222);
       borderWidth = borderWidth < 3 ? 3 : borderWidth;
     }
 
-    if (filters.contains(TriadMatrixFilterV1.endsWithKick) && endsWithKick) {
+    if (filters.filters.contains(TriadMatrixFilterV1.endsWithKick) &&
+        endsWithKick) {
       borderColor = const Color(0xFF916F2F);
       borderWidth = borderWidth < 3 ? 3 : borderWidth;
     }
 
-    if (filters.contains(TriadMatrixFilterV1.doubles) && hasDoubles) {
+    if (filters.filters.contains(TriadMatrixFilterV1.doubles) && hasDoubles) {
       borderColor = const Color(0xFF3E4E74);
       borderWidth = borderWidth < 3 ? 3 : borderWidth;
     }
 
-    if (filters.contains(TriadMatrixFilterV1.inRoutine) && inRoutine) {
+    if (filters.filters.contains(TriadMatrixFilterV1.inRoutine) && inRoutine) {
       borderColor = const Color(0xFF41644A);
       borderWidth = borderWidth < 3 ? 3 : borderWidth;
     }
 
-    if (filters.contains(TriadMatrixFilterV1.needsAttention) &&
+    if (filters.filters.contains(TriadMatrixFilterV1.needsAttention) &&
         needsAttention) {
       borderColor = const Color(0xFF9C3D2C);
       borderWidth = borderWidth < 3 ? 3 : borderWidth;
     }
 
-    if (filters.contains(TriadMatrixFilterV1.underPracticed) &&
+    if (filters.filters.contains(TriadMatrixFilterV1.underPracticed) &&
         underPracticed) {
       borderColor = const Color(0xFF5E7A8A);
       borderWidth = borderWidth < 3 ? 3 : borderWidth;
     }
 
-    if (filters.contains(TriadMatrixFilterV1.closeToToolkit) &&
+    if (filters.filters.contains(TriadMatrixFilterV1.closeToToolkit) &&
         closeToToolkit) {
       borderColor = const Color(0xFFB37A22);
       borderWidth = borderWidth < 3 ? 3 : borderWidth;
     }
 
-    if (filters.contains(TriadMatrixFilterV1.recent) && recent) {
+    if (filters.filters.contains(TriadMatrixFilterV1.recent) && recent) {
       borderColor = const Color(0xFF2F7C72);
       borderWidth = borderWidth < 3 ? 3 : borderWidth;
     }
 
-    if (filters.contains(TriadMatrixFilterV1.unseen) && unseen) {
+    if (filters.filters.contains(TriadMatrixFilterV1.unseen) && unseen) {
       borderColor = const Color(0xFF6B6B6B);
       borderWidth = borderWidth < 3 ? 3 : borderWidth;
     }
 
-    if (selectedComboIds.isNotEmpty && comboMatch) {
-      final String comboId = selectedComboIds.firstWhere(
+    if (filters.selectedComboIds.isNotEmpty && comboMatch) {
+      final String comboId = filters.selectedComboIds.firstWhere(
         (candidate) => controller.combinationContainsItem(
           comboId: candidate,
           itemId: itemId,
@@ -418,7 +349,7 @@ class _TriadCellButton extends StatelessWidget {
       borderWidth = borderWidth < 3 ? 3 : borderWidth;
     }
 
-    if (selected) {
+    if (visualState.selected) {
       borderColor = const Color(0xFF101010);
       borderWidth = borderWidth < 3 ? 3 : borderWidth;
     }
