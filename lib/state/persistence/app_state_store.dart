@@ -70,22 +70,30 @@ class AppStateStore {
     final AppStateRecord? record = await _isar.appStateRecords.get(0);
     if (record == null) return null;
 
-    final Map<String, dynamic> profileMap =
-        jsonDecode(record.profileJson) as Map<String, dynamic>;
-    final List<dynamic> itemsList =
-        jsonDecode(record.itemsJson) as List<dynamic>;
-    final List<dynamic> combinationsList =
-        jsonDecode(record.combinationsJson) as List<dynamic>;
-    final Map<String, dynamic> routineMap =
-        jsonDecode(record.routineJson) as Map<String, dynamic>;
-    final List<dynamic> sessionsList =
-        jsonDecode(record.sessionsJson) as List<dynamic>;
-    final List<dynamic> competencyList =
-        jsonDecode(record.competencyJson) as List<dynamic>;
-    final List<dynamic> assessmentResultsList =
-        jsonDecode(record.assessmentResultsJson) as List<dynamic>;
-    final List<dynamic> assessmentAggregatesList =
-        jsonDecode(record.assessmentAggregatesJson) as List<dynamic>;
+    final Map<String, dynamic> profileMap = _decodeMap(
+      record.profileJson,
+      fallback: _userProfileToMap(UserProfileV1.initial),
+    );
+    final List<dynamic> itemsList = _decodeList(record.itemsJson);
+    final List<dynamic> combinationsList = _decodeList(record.combinationsJson);
+    final Map<String, dynamic> routineMap = _decodeMap(
+      record.routineJson,
+      fallback: _practiceRoutineToMap(
+        const PracticeRoutineV1(
+          id: 'main_routine',
+          name: 'Working On',
+          entries: <RoutineEntryV1>[],
+        ),
+      ),
+    );
+    final List<dynamic> sessionsList = _decodeList(record.sessionsJson);
+    final List<dynamic> competencyList = _decodeList(record.competencyJson);
+    final List<dynamic> assessmentResultsList = _decodeList(
+      record.assessmentResultsJson,
+    );
+    final List<dynamic> assessmentAggregatesList = _decodeList(
+      record.assessmentAggregatesJson,
+    );
 
     return AppStateSnapshotData(
       schemaVersion: record.schemaVersion,
@@ -168,6 +176,23 @@ class AppStateStore {
     await _isar.writeTxn(() async {
       await _isar.appStateRecords.put(record);
     });
+  }
+
+  Map<String, dynamic> _decodeMap(
+    String encoded, {
+    required Map<String, dynamic> fallback,
+  }) {
+    if (encoded.trim().isEmpty) return fallback;
+    final Object? decoded = jsonDecode(encoded);
+    if (decoded is Map<String, dynamic>) return decoded;
+    return fallback;
+  }
+
+  List<dynamic> _decodeList(String encoded) {
+    if (encoded.trim().isEmpty) return const <dynamic>[];
+    final Object? decoded = jsonDecode(encoded);
+    if (decoded is List<dynamic>) return decoded;
+    return const <dynamic>[];
   }
 
   Map<String, dynamic> _userProfileToMap(UserProfileV1 profile) {
