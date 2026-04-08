@@ -8,9 +8,7 @@ import '../../features/app/app_formatters.dart';
 import '../../state/app_controller.dart';
 import '../../core/practice/practice_domain_v1.dart';
 import 'widgets/pattern_display_text.dart';
-import 'widgets/pattern_marking_editor.dart';
 import 'widgets/pattern_voice_display.dart';
-import 'widgets/voice_assignment_editor.dart';
 import 'session_summary_screen.dart';
 
 class PracticeSessionScreen extends StatefulWidget {
@@ -30,16 +28,11 @@ class PracticeSessionScreen extends StatefulWidget {
 class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   final Stopwatch _stopwatch = Stopwatch();
   final AudioPlayer _clickPlayer = AudioPlayer();
-  final Map<String, List<PatternNoteMarkingV1>> _sessionMarkingsByItemId =
-      <String, List<PatternNoteMarkingV1>>{};
-  final Map<String, List<DrumVoiceV1>> _sessionVoicesByItemId =
-      <String, List<DrumVoiceV1>>{};
   Timer? _elapsedTicker;
   Timer? _beatTicker;
   Timer? _beatFlashTimer;
   bool _running = false;
   bool _beatLit = false;
-  late PracticeModeV1 _practiceMode;
   late int _bpm;
   late bool _clickEnabled;
   int _currentItemIndex = 0;
@@ -47,17 +40,8 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   @override
   void initState() {
     super.initState();
-    _practiceMode = widget.setup.practiceMode;
     _bpm = widget.setup.bpm;
     _clickEnabled = widget.setup.clickEnabled;
-    for (final String itemId in widget.setup.practiceItemIds) {
-      _sessionMarkingsByItemId[itemId] = List<PatternNoteMarkingV1>.from(
-        widget.controller.noteMarkingsFor(itemId),
-      );
-      _sessionVoicesByItemId[itemId] = List<DrumVoiceV1>.from(
-        widget.controller.noteVoicesFor(itemId),
-      );
-    }
     _configureAudio();
   }
 
@@ -74,9 +58,11 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   Widget build(BuildContext context) {
     final currentItemId = widget.setup.practiceItemIds[_currentItemIndex];
     final List<String> tokens = widget.controller.noteTokensFor(currentItemId);
-    final List<PatternNoteMarkingV1> markings =
-        _sessionMarkingsByItemId[currentItemId]!;
-    final List<DrumVoiceV1> voices = _sessionVoicesByItemId[currentItemId]!;
+    final List<PatternNoteMarkingV1> markings = widget.controller
+        .noteMarkingsFor(currentItemId);
+    final List<DrumVoiceV1> voices = widget.controller.noteVoicesFor(
+      currentItemId,
+    );
     final Duration? target = timerPresetToDuration(widget.setup.timerPreset);
     final String timerText = target == null
         ? formatDuration(_stopwatch.elapsed)
@@ -93,7 +79,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  if (_practiceMode == PracticeModeV1.flow)
+                  if (widget.setup.practiceMode == PracticeModeV1.flow)
                     PatternVoiceDisplay(
                       tokens: tokens,
                       markings: markings,
@@ -115,74 +101,18 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                       ),
                     ),
                   const SizedBox(height: 12),
+                  Chip(label: Text(widget.setup.practiceMode.label)),
+                  const SizedBox(height: 12),
                   Text(
                     widget.controller.practiceGuidanceFor(
                       currentItemId,
-                      practiceMode: _practiceMode,
+                      practiceMode: widget.setup.practiceMode,
                     ),
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: const Color(0xFF5B5345),
                       height: 1.35,
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  PatternMarkingEditor(
-                    tokens: tokens,
-                    markings: markings,
-                    onTapNote: (int noteIndex) {
-                      _toggleSessionMarking(
-                        itemId: currentItemId,
-                        noteIndex: noteIndex,
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 18),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Practice Mode',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  SegmentedButton<PracticeModeV1>(
-                    segments: PracticeModeV1.values
-                        .map(
-                          (PracticeModeV1 mode) =>
-                              ButtonSegment<PracticeModeV1>(
-                                value: mode,
-                                label: Text(mode.label),
-                              ),
-                        )
-                        .toList(growable: false),
-                    selected: <PracticeModeV1>{_practiceMode},
-                    onSelectionChanged: (Set<PracticeModeV1> selection) {
-                      setState(() => _practiceMode = selection.first);
-                    },
-                  ),
-                  if (_practiceMode == PracticeModeV1.flow) ...<Widget>[
-                    const SizedBox(height: 16),
-                    Text(
-                      'Voice Assignment',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    VoiceAssignmentEditor(
-                      tokens: tokens,
-                      voices: voices,
-                      onTapNote: (int noteIndex) {
-                        _toggleSessionVoice(
-                          itemId: currentItemId,
-                          noteIndex: noteIndex,
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Keep the route intentional. The phrase should read clearly from surface to surface.',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
                 ],
               ),
             ),
@@ -190,50 +120,55 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
           const SizedBox(height: 16),
           Card(
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               child: Column(
                 children: <Widget>[
-                  Text(
-                    timerText,
-                    style: Theme.of(context).textTheme.headlineMedium,
-                  ),
-                  const SizedBox(height: 12),
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 90),
                     curve: Curves.easeOut,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 18,
-                      vertical: 10,
-                    ),
+                    width: 150,
+                    height: 150,
                     decoration: BoxDecoration(
                       color: _beatLit
-                          ? const Color(0xFFF4C95D)
-                          : const Color(0xFFF4EFE6),
-                      borderRadius: BorderRadius.circular(999),
+                          ? const Color(0xFFF05A28)
+                          : const Color(0xFF1F1A14),
+                      shape: BoxShape.circle,
                       border: Border.all(
                         color: _beatLit
-                            ? const Color(0xFF8B5E00)
-                            : const Color(0x22000000),
-                        width: _beatLit ? 2 : 1,
+                            ? const Color(0xFFFFC08D)
+                            : const Color(0xFF3A3329),
+                        width: _beatLit ? 5 : 3,
                       ),
                     ),
-                    child: Text(
-                      'Beat',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: const Color(0xFF24323A),
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0.4,
+                    child: Center(
+                      child: Text(
+                        'Beat',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: const Color(0xFFFFF4DE),
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.6,
+                        ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 18),
+                  Text(
+                    timerText,
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: <Widget>[
-                      FilledButton.icon(
-                        onPressed: _toggleRunning,
-                        icon: Icon(_running ? Icons.pause : Icons.play_arrow),
-                        label: Text(_running ? 'Pause' : 'Play'),
+                      SizedBox(
+                        height: 58,
+                        child: FilledButton.icon(
+                          onPressed: _toggleRunning,
+                          icon: Icon(_running ? Icons.pause : Icons.play_arrow),
+                          label: Text(_running ? 'Pause' : 'Play'),
+                        ),
                       ),
                       const SizedBox(width: 12),
                       OutlinedButton(
@@ -375,11 +310,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     }
 
     final PracticeSessionLogV1 session = widget.controller.completeSession(
-      widget.setup.copyWith(
-        practiceMode: _practiceMode,
-        bpm: _bpm,
-        clickEnabled: _clickEnabled,
-      ),
+      widget.setup.copyWith(bpm: _bpm, clickEnabled: _clickEnabled),
       _stopwatch.elapsed,
     );
 
@@ -391,51 +322,6 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
         ),
       ),
     );
-  }
-
-  void _toggleSessionMarking({required String itemId, required int noteIndex}) {
-    final List<PatternNoteMarkingV1> current =
-        _sessionMarkingsByItemId[itemId]!;
-    final String token = widget.controller.noteTokensFor(itemId)[noteIndex];
-    final PatternNoteMarkingV1 next = switch (current[noteIndex]) {
-      PatternNoteMarkingV1.normal =>
-        token == 'K' ? PatternNoteMarkingV1.ghost : PatternNoteMarkingV1.accent,
-      PatternNoteMarkingV1.accent => PatternNoteMarkingV1.ghost,
-      PatternNoteMarkingV1.ghost => PatternNoteMarkingV1.normal,
-    };
-
-    setState(() {
-      final List<PatternNoteMarkingV1> updated =
-          List<PatternNoteMarkingV1>.from(current);
-      updated[noteIndex] = next;
-      _sessionMarkingsByItemId[itemId] = updated;
-    });
-  }
-
-  void _toggleSessionVoice({required String itemId, required int noteIndex}) {
-    final List<DrumVoiceV1> current = _sessionVoicesByItemId[itemId]!;
-    final String token = widget.controller.noteTokensFor(itemId)[noteIndex];
-
-    final DrumVoiceV1 next;
-    if (token == 'K') {
-      next = DrumVoiceV1.kick;
-    } else {
-      const List<DrumVoiceV1> cycle = <DrumVoiceV1>[
-        DrumVoiceV1.snare,
-        DrumVoiceV1.rackTom,
-        DrumVoiceV1.tom2,
-        DrumVoiceV1.floorTom,
-        DrumVoiceV1.hihat,
-      ];
-      final int currentIndex = cycle.indexOf(current[noteIndex]);
-      next = cycle[(currentIndex + 1) % cycle.length];
-    }
-
-    setState(() {
-      final List<DrumVoiceV1> updated = List<DrumVoiceV1>.from(current);
-      updated[noteIndex] = next;
-      _sessionVoicesByItemId[itemId] = updated;
-    });
   }
 
   void _startElapsedTicker() {
