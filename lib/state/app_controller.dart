@@ -1667,6 +1667,9 @@ class AppController extends ChangeNotifier {
     PracticeSessionSetupV1 setup,
     Duration duration, {
     ReflectionRatingV1? reflection,
+    SelfReportControlV1? selfReportControl,
+    SelfReportTensionV1? selfReportTension,
+    SelfReportTempoReadinessV1? selfReportTempoReadiness,
   }) {
     final DateTime endedAt = DateTime.now();
     final PracticeSessionLogV1 session = PracticeSessionLogV1(
@@ -1684,8 +1687,36 @@ class AppController extends ChangeNotifier {
     );
 
     _sessions = <PracticeSessionLogV1>[session, ..._sessions];
+    _recordManualAssessment(
+      session: session,
+      selfReportControl: selfReportControl,
+      selfReportTension: selfReportTension,
+      selfReportTempoReadiness: selfReportTempoReadiness,
+    );
     _notifyChanged();
     return session;
+  }
+
+  void updateSessionAssessment({
+    required String sessionId,
+    required SelfReportControlV1? selfReportControl,
+    required SelfReportTensionV1? selfReportTension,
+    required SelfReportTempoReadinessV1? selfReportTempoReadiness,
+  }) {
+    final PracticeSessionLogV1? session = sessionById(sessionId);
+    if (session == null) return;
+    _assessmentResults = _assessmentResults
+        .where(
+          (SessionAssessmentResultV1 result) => result.sessionId != sessionId,
+        )
+        .toList(growable: false);
+    _recordManualAssessment(
+      session: session,
+      selfReportControl: selfReportControl,
+      selfReportTension: selfReportTension,
+      selfReportTempoReadiness: selfReportTempoReadiness,
+    );
+    _notifyChanged();
   }
 
   void updateSessionReflection(String sessionId, ReflectionRatingV1? rating) {
@@ -1699,6 +1730,292 @@ class AppController extends ChangeNotifier {
         })
         .toList(growable: false);
     _notifyChanged();
+  }
+
+  SessionAssessmentResultV1? assessmentForSession(String sessionId) {
+    for (final SessionAssessmentResultV1 result in _assessmentResults) {
+      if (result.sessionId == sessionId) return result;
+    }
+    return null;
+  }
+
+  void _recordManualAssessment({
+    required PracticeSessionLogV1 session,
+    required SelfReportControlV1? selfReportControl,
+    required SelfReportTensionV1? selfReportTension,
+    required SelfReportTempoReadinessV1? selfReportTempoReadiness,
+  }) {
+    for (final String itemId in _assessmentTargetItemIdsForSession(session)) {
+      final PracticeItemV1? item = itemByIdOrNull(itemId);
+      if (item == null || item.isCustom) continue;
+      final SessionAssessmentResultV1 result = _manualAssessmentForItem(
+        session: session,
+        itemId: itemId,
+        selfReportControl: selfReportControl,
+        selfReportTension: selfReportTension,
+        selfReportTempoReadiness: selfReportTempoReadiness,
+      );
+      _assessmentResults = <SessionAssessmentResultV1>[
+        result,
+        ..._assessmentResults.where(
+          (SessionAssessmentResultV1 existing) =>
+              existing.sessionId != result.sessionId ||
+              existing.practiceItemId != result.practiceItemId,
+        ),
+      ];
+      _assessmentAggregateByItemId[itemId] = _aggregateAssessmentForItem(
+        itemId,
+      );
+    }
+  }
+
+  List<String> _assessmentTargetItemIdsForSession(
+    PracticeSessionLogV1 session,
+  ) {
+    final List<String> itemIds = <String>[];
+    for (final String sessionItemId in session.practiceItemIds) {
+      final PracticeItemV1? sessionItem = itemByIdOrNull(sessionItemId);
+      if (sessionItem == null) continue;
+      itemIds.add(sessionItemId);
+      if (!sessionItem.isCombo) continue;
+      final PracticeCombinationV1? combo = _combinationByIdOrNull(
+        sessionItemId,
+      );
+      if (combo == null) continue;
+      itemIds.addAll(combo.itemIds);
+    }
+    return itemIds.toSet().toList(growable: false);
+  }
+
+  SessionAssessmentResultV1 _manualAssessmentForItem({
+    required PracticeSessionLogV1 session,
+    required String itemId,
+    required SelfReportControlV1? selfReportControl,
+    required SelfReportTensionV1? selfReportTension,
+    required SelfReportTempoReadinessV1? selfReportTempoReadiness,
+  }) {
+    final double controlScore = switch (selfReportControl) {
+      SelfReportControlV1.high => 0.88,
+      SelfReportControlV1.medium => 0.64,
+      SelfReportControlV1.low => 0.34,
+      null => _controlScoreFromReflection(session.reflection),
+    };
+    final double tensionPenalty = switch (selfReportTension) {
+      SelfReportTensionV1.none => 0.0,
+      SelfReportTensionV1.some => 0.12,
+      SelfReportTensionV1.high => 0.28,
+      null => 0.08,
+    };
+    final double readinessAdjustment = switch (selfReportTempoReadiness) {
+      SelfReportTempoReadinessV1.increase => 0.08,
+      SelfReportTempoReadinessV1.same => 0.0,
+      SelfReportTempoReadinessV1.decrease => -0.16,
+      null => 0.0,
+    };
+    final double durationScore = (session.duration.inSeconds / 300)
+        .clamp(0.0, 1.0)
+        .toDouble();
+    final double stability = (controlScore + readinessAdjustment)
+        .clamp(0.0, 1.0)
+        .toDouble();
+    final double jitter = (1.0 - controlScore + tensionPenalty)
+        .clamp(0.0, 1.0)
+        .toDouble();
+    final double drift = switch (selfReportTempoReadiness) {
+      SelfReportTempoReadinessV1.decrease => 0.52,
+      SelfReportTempoReadinessV1.same => 0.28,
+      SelfReportTempoReadinessV1.increase => 0.18,
+      null => 0.35,
+    };
+    final double continuity = ((controlScore * 0.75) + (durationScore * 0.25))
+        .clamp(0.0, 1.0)
+        .toDouble();
+    final AssessmentConfidenceV1 confidence = _manualAssessmentConfidence(
+      session: session,
+      selfReportControl: selfReportControl,
+      selfReportTension: selfReportTension,
+      selfReportTempoReadiness: selfReportTempoReadiness,
+    );
+
+    return SessionAssessmentResultV1(
+      sessionId: session.id,
+      practiceItemId: itemId,
+      practiceMode: session.practiceMode,
+      inputType: AssessmentInputTypeV1.manual,
+      confidence: confidence,
+      attemptedBpm: session.bpm,
+      estimatedBpm: session.bpm.toDouble(),
+      stabilityScore: stability,
+      driftScore: drift,
+      jitterScore: jitter,
+      continuityScore: continuity,
+      breakdownCount: stability < 0.50 ? 1 : 0,
+      successfulRunCount: stability >= 0.72 ? 1 : 0,
+      completedTargetDuration: session.duration.inSeconds >= 60,
+      selfReportControl: selfReportControl,
+      selfReportTension: selfReportTension,
+      selfReportTempoReadiness: selfReportTempoReadiness,
+      assessedAt: session.endedAt,
+    );
+  }
+
+  double _controlScoreFromReflection(ReflectionRatingV1? reflection) {
+    return switch (reflection) {
+      ReflectionRatingV1.easy => 0.78,
+      ReflectionRatingV1.okay => 0.58,
+      ReflectionRatingV1.hard => 0.34,
+      null => 0.50,
+    };
+  }
+
+  AssessmentConfidenceV1 _manualAssessmentConfidence({
+    required PracticeSessionLogV1 session,
+    required SelfReportControlV1? selfReportControl,
+    required SelfReportTensionV1? selfReportTension,
+    required SelfReportTempoReadinessV1? selfReportTempoReadiness,
+  }) {
+    final int answered = <Object?>[
+      selfReportControl,
+      selfReportTension,
+      selfReportTempoReadiness,
+    ].whereType<Object>().length;
+    if (session.duration.inSeconds >= 180 && answered == 3) {
+      return AssessmentConfidenceV1.high;
+    }
+    if (session.duration.inSeconds >= 60 && answered >= 1) {
+      return AssessmentConfidenceV1.medium;
+    }
+    return AssessmentConfidenceV1.low;
+  }
+
+  PracticeAssessmentAggregateV1 _aggregateAssessmentForItem(String itemId) {
+    final List<SessionAssessmentResultV1> results =
+        _assessmentResults
+            .where(
+              (SessionAssessmentResultV1 result) =>
+                  result.practiceItemId == itemId,
+            )
+            .toList(growable: false)
+          ..sort(
+            (SessionAssessmentResultV1 a, SessionAssessmentResultV1 b) =>
+                b.assessedAt.compareTo(a.assessedAt),
+          );
+    if (results.isEmpty) {
+      return PracticeAssessmentAggregateV1(
+        practiceItemId: itemId,
+        lastAssessmentAt: null,
+        recentAttemptedBpm: null,
+        recentStableBpm: null,
+        bestStableBpm: null,
+        stabilityScore: 0,
+        driftScore: 1,
+        jitterScore: 1,
+        continuityScore: 0,
+        confidence: AssessmentConfidenceV1.low,
+        status: MatrixProgressStateV1.notTrained,
+        assessmentCount: 0,
+      );
+    }
+
+    final List<SessionAssessmentResultV1> recent = results
+        .take(5)
+        .toList(growable: false);
+    final double stability = _mean(
+      recent.map((SessionAssessmentResultV1 result) => result.stabilityScore),
+    );
+    final double drift = _mean(
+      recent.map((SessionAssessmentResultV1 result) => result.driftScore),
+    );
+    final double jitter = _mean(
+      recent.map((SessionAssessmentResultV1 result) => result.jitterScore),
+    );
+    final double continuity = _mean(
+      recent.map((SessionAssessmentResultV1 result) => result.continuityScore),
+    );
+    final SessionAssessmentResultV1 latest = results.first;
+    final List<double> stableBpms = results
+        .where(
+          (SessionAssessmentResultV1 result) => _isStrongAssessment(result),
+        )
+        .map(
+          (SessionAssessmentResultV1 result) => result.attemptedBpm.toDouble(),
+        )
+        .toList(growable: false);
+
+    return PracticeAssessmentAggregateV1(
+      practiceItemId: itemId,
+      lastAssessmentAt: latest.assessedAt,
+      recentAttemptedBpm: latest.attemptedBpm,
+      recentStableBpm: _isStrongAssessment(latest)
+          ? latest.attemptedBpm.toDouble()
+          : null,
+      bestStableBpm: stableBpms.isEmpty
+          ? null
+          : stableBpms.reduce((double a, double b) => a > b ? a : b),
+      stabilityScore: stability,
+      driftScore: drift,
+      jitterScore: jitter,
+      continuityScore: continuity,
+      confidence: _highestConfidence(recent),
+      status: _classifyAssessmentAggregate(
+        assessmentCount: results.length,
+        stabilityScore: stability,
+        driftScore: drift,
+        jitterScore: jitter,
+        continuityScore: continuity,
+        confidence: _highestConfidence(recent),
+      ),
+      assessmentCount: results.length,
+    );
+  }
+
+  MatrixProgressStateV1 _classifyAssessmentAggregate({
+    required int assessmentCount,
+    required double stabilityScore,
+    required double driftScore,
+    required double jitterScore,
+    required double continuityScore,
+    required AssessmentConfidenceV1 confidence,
+  }) {
+    if (assessmentCount == 0) return MatrixProgressStateV1.notTrained;
+    if (stabilityScore >= 0.80 &&
+        driftScore <= 0.40 &&
+        jitterScore <= 0.25 &&
+        continuityScore >= 0.80 &&
+        confidence != AssessmentConfidenceV1.low) {
+      return MatrixProgressStateV1.strong;
+    }
+    if (stabilityScore < 0.50 ||
+        driftScore >= 0.45 ||
+        jitterScore >= 0.40 ||
+        continuityScore < 0.55) {
+      return MatrixProgressStateV1.needsWork;
+    }
+    return MatrixProgressStateV1.active;
+  }
+
+  bool _isStrongAssessment(SessionAssessmentResultV1 result) {
+    return result.stabilityScore >= 0.80 &&
+        result.driftScore <= 0.40 &&
+        result.jitterScore <= 0.25 &&
+        result.continuityScore >= 0.80 &&
+        result.confidence != AssessmentConfidenceV1.low;
+  }
+
+  AssessmentConfidenceV1 _highestConfidence(
+    Iterable<SessionAssessmentResultV1> results,
+  ) {
+    AssessmentConfidenceV1 highest = AssessmentConfidenceV1.low;
+    for (final SessionAssessmentResultV1 result in results) {
+      if (result.confidence.index > highest.index) highest = result.confidence;
+    }
+    return highest;
+  }
+
+  double _mean(Iterable<double> values) {
+    final List<double> list = values.toList(growable: false);
+    if (list.isEmpty) return 0;
+    return list.reduce((double a, double b) => a + b) / list.length;
   }
 
   String recentSummaryForItem(String itemId) {

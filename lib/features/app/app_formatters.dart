@@ -69,6 +69,30 @@ extension ReflectionLabel on ReflectionRatingV1 {
   };
 }
 
+extension SelfReportControlLabel on SelfReportControlV1 {
+  String get label => switch (this) {
+    SelfReportControlV1.low => 'Rough',
+    SelfReportControlV1.medium => 'Mostly Controlled',
+    SelfReportControlV1.high => 'Clean',
+  };
+}
+
+extension SelfReportTensionLabel on SelfReportTensionV1 {
+  String get label => switch (this) {
+    SelfReportTensionV1.none => 'Relaxed',
+    SelfReportTensionV1.some => 'Some Tension',
+    SelfReportTensionV1.high => 'Too Tight',
+  };
+}
+
+extension SelfReportTempoReadinessLabel on SelfReportTempoReadinessV1 {
+  String get label => switch (this) {
+    SelfReportTempoReadinessV1.decrease => 'Slow Down',
+    SelfReportTempoReadinessV1.same => 'Stay Here',
+    SelfReportTempoReadinessV1.increase => 'Bump It Up',
+  };
+}
+
 extension HandednessLabel on HandednessV1 {
   String get label => switch (this) {
     HandednessV1.right => 'Right Handed',
