@@ -795,17 +795,21 @@ class AppController extends ChangeNotifier {
     });
   }
 
-  String markedPatternTextFor(String itemId) {
+  String markedPatternTextFor(
+    String itemId, {
+    PatternGroupingV1 grouping = PatternGroupingV1.spaced,
+  }) {
     final List<String> tokens = noteTokensFor(itemId);
     final List<PatternNoteMarkingV1> markings = noteMarkingsFor(itemId);
     return List<String>.generate(tokens.length, (index) {
       final String token = tokens[index];
-      return switch (markings[index]) {
+      final String marked = switch (markings[index]) {
         PatternNoteMarkingV1.normal => token,
         PatternNoteMarkingV1.accent => '^$token',
         PatternNoteMarkingV1.ghost => '($token)',
       };
-    }).join(' ');
+      return '$marked${grouping.separatorAfter(index, tokens.length)}';
+    }).join();
   }
 
   List<DrumVoiceV1> noteVoicesFor(String itemId) {

@@ -9,6 +9,7 @@ class PatternDisplayText extends StatelessWidget {
   final TextAlign textAlign;
   final double ghostScale;
   final double ghostOpacity;
+  final PatternGroupingV1 grouping;
 
   const PatternDisplayText({
     super.key,
@@ -18,11 +19,17 @@ class PatternDisplayText extends StatelessWidget {
     this.textAlign = TextAlign.start,
     this.ghostScale = 0.84,
     this.ghostOpacity = 0.72,
+    this.grouping = PatternGroupingV1.spaced,
   }) : assert(tokens.length == markings.length);
 
   @override
   Widget build(BuildContext context) {
     final TextStyle baseStyle = style ?? DefaultTextStyle.of(context).style;
+    final List<String> separators = List<String>.generate(
+      tokens.length,
+      (int index) => grouping.separatorAfter(index, tokens.length),
+      growable: false,
+    );
 
     return RichText(
       textAlign: textAlign,
@@ -31,8 +38,8 @@ class PatternDisplayText extends StatelessWidget {
         children: <InlineSpan>[
           for (int index = 0; index < tokens.length; index++) ...<InlineSpan>[
             ..._spansForToken(tokens[index], markings[index], baseStyle),
-            if (index != tokens.length - 1)
-              TextSpan(text: ' ', style: baseStyle),
+            if (separators[index].isNotEmpty)
+              TextSpan(text: separators[index], style: baseStyle),
           ],
         ],
       ),

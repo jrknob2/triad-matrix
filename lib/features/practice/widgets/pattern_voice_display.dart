@@ -12,6 +12,7 @@ class PatternVoiceDisplay extends StatelessWidget {
   final double cellWidth;
   final double ghostScale;
   final double ghostOpacity;
+  final PatternGroupingV1 grouping;
 
   const PatternVoiceDisplay({
     super.key,
@@ -23,6 +24,7 @@ class PatternVoiceDisplay extends StatelessWidget {
     this.cellWidth = 46,
     this.ghostScale = 0.84,
     this.ghostOpacity = 0.72,
+    this.grouping = PatternGroupingV1.none,
   }) : assert(tokens.length == markings.length),
        assert(tokens.length == voices.length);
 
@@ -34,6 +36,12 @@ class PatternVoiceDisplay extends StatelessWidget {
         voiceStyle ??
         Theme.of(context).textTheme.labelLarge ??
         DefaultTextStyle.of(context).style;
+    final List<String> separators = List<String>.generate(
+      tokens.length,
+      (int index) => grouping.separatorAfter(index, tokens.length),
+      growable: false,
+    );
+    final double separatorWidth = (cellWidth * 0.45).clamp(14.0, 28.0);
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -41,36 +49,63 @@ class PatternVoiceDisplay extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Row(
-            children: List<Widget>.generate(tokens.length, (int index) {
-              return _PatternVoiceCell(
-                width: cellWidth,
-                child: _patternText(
-                  tokens[index],
-                  markings[index],
-                  resolvedPatternStyle,
-                ),
-              );
-            }),
+            children: _rowCells(
+              tokens,
+              separators,
+              separatorWidth,
+              (int index) => _patternText(
+                tokens[index],
+                markings[index],
+                resolvedPatternStyle,
+              ),
+              resolvedPatternStyle,
+            ),
           ),
           const SizedBox(height: 6),
           Row(
-            children: List<Widget>.generate(tokens.length, (int index) {
-              return _PatternVoiceCell(
-                width: cellWidth,
-                child: Text(
-                  voices[index].shortLabel,
-                  textAlign: TextAlign.center,
-                  style: resolvedVoiceStyle.copyWith(
-                    color: const Color(0xFF5B5345),
-                    fontWeight: FontWeight.w800,
-                  ),
+            children: _rowCells(
+              tokens,
+              separators,
+              separatorWidth,
+              (int index) => Text(
+                voices[index].shortLabel,
+                textAlign: TextAlign.center,
+                style: resolvedVoiceStyle.copyWith(
+                  color: const Color(0xFF5B5345),
+                  fontWeight: FontWeight.w800,
                 ),
-              );
-            }),
+              ),
+              resolvedVoiceStyle,
+              showSeparatorText: false,
+            ),
           ),
         ],
       ),
     );
+  }
+
+  List<Widget> _rowCells(
+    List<String> tokens,
+    List<String> separators,
+    double separatorWidth,
+    Widget Function(int index) noteCellFor,
+    TextStyle separatorStyle, {
+    bool showSeparatorText = true,
+  }) {
+    return <Widget>[
+      for (int index = 0; index < tokens.length; index++) ...<Widget>[
+        _PatternVoiceCell(width: cellWidth, child: noteCellFor(index)),
+        if (separators[index].isNotEmpty)
+          _PatternVoiceCell(
+            width: separatorWidth,
+            child: Text(
+              showSeparatorText ? separators[index] : '',
+              textAlign: TextAlign.center,
+              style: separatorStyle,
+            ),
+          ),
+      ],
+    ];
   }
 
   Widget _patternText(

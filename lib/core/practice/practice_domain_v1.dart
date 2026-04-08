@@ -115,6 +115,42 @@ class UserProfileV1 {
 }
 
 @immutable
+class PatternGroupingV1 {
+  final int? groupSize;
+  final String separator;
+
+  const PatternGroupingV1({this.groupSize, this.separator = '-'})
+    : assert(groupSize == null || groupSize > 0);
+
+  static const PatternGroupingV1 none = PatternGroupingV1(
+    groupSize: null,
+    separator: '',
+  );
+
+  static const PatternGroupingV1 spaced = PatternGroupingV1(
+    groupSize: null,
+    separator: ' ',
+  );
+
+  static const PatternGroupingV1 triads = PatternGroupingV1(
+    groupSize: 3,
+    separator: '-',
+  );
+
+  static const PatternGroupingV1 fourNote = PatternGroupingV1(
+    groupSize: 4,
+    separator: '-',
+  );
+
+  String separatorAfter(int index, int tokenCount) {
+    if (index >= tokenCount - 1) return '';
+    final int? size = groupSize;
+    if (size == null) return separator;
+    return (index + 1) % size == 0 ? separator : '';
+  }
+}
+
+@immutable
 class PracticeItemV1 {
   final String id;
   final MaterialFamilyV1 family;
