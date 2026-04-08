@@ -259,12 +259,11 @@ class _TriadCellButton extends StatelessWidget {
     }
 
     if (filters.filters.contains(TriadMatrixFilterV1.competency)) {
-      backgroundColor = switch (controller.competencyFor(itemId)) {
-        CompetencyLevelV1.notStarted => const Color(0xFFF0B2AA),
-        CompetencyLevelV1.learning => const Color(0xFFD9E9F7),
-        CompetencyLevelV1.comfortable => const Color(0xFFDDEDDD),
-        CompetencyLevelV1.reliable => const Color(0xFFF4E4C8),
-        CompetencyLevelV1.musical => const Color(0xFFF4D8DC),
+      backgroundColor = switch (visualState.progress) {
+        MatrixProgressStateV1.notTrained => const Color(0xFFF1ECE3),
+        MatrixProgressStateV1.active => const Color(0xFFD9E9F7),
+        MatrixProgressStateV1.needsWork => const Color(0xFFF0B2AA),
+        MatrixProgressStateV1.strong => const Color(0xFFDDEDDD),
       };
     }
 

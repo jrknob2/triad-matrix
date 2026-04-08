@@ -207,14 +207,21 @@ class AppController extends ChangeNotifier {
     }
 
     if (activeWorkItems.isNotEmpty) {
-      final PracticeItemV1 target = activeWorkItems.first;
+      final List<PracticeItemV1> candidates = activeWorkItems.toList(
+        growable: false,
+      )..sort(_compareByAssessmentNeed);
+      final PracticeItemV1 target = candidates.first;
+      final PracticeAssessmentAggregateV1? aggregate = assessmentAggregateFor(
+        target.id,
+      );
       return CoachBlockV1(
         id: 'focus_working_on',
         type: CoachBlockTypeV1.focus,
         title: 'Stay with ${target.name}',
         subtitle: 'Focus',
-        body:
-            'Keep the active material moving. Repetition across days is what turns a pattern into vocabulary.',
+        body: aggregate == null
+            ? 'Keep the active material moving. Repetition across days is what turns a pattern into vocabulary.'
+            : _focusBodyForAggregate(aggregate),
         itemIds: <String>[target.id],
         ctaLabel: 'Start Practice',
         ctaAction: CoachActionV1.startPractice,
@@ -251,13 +258,13 @@ class AppController extends ChangeNotifier {
     final List<PracticeItemV1> candidates =
         trackedItems
             .where((PracticeItemV1 item) {
-              if (isUnseen(item.id)) return false;
-              final CompetencyLevelV1 level = competencyFor(item.id);
-              return level.index <= CompetencyLevelV1.learning.index ||
-                  needsAttention(item.id);
+              final PracticeAssessmentAggregateV1? aggregate =
+                  assessmentAggregateFor(item.id);
+              return aggregate != null &&
+                  aggregate.status == MatrixProgressStateV1.needsWork;
             })
             .toList(growable: false)
-          ..sort(_compareByNeed);
+          ..sort(_compareByAssessmentNeed);
 
     if (candidates.isEmpty) return null;
 
@@ -267,8 +274,7 @@ class AppController extends ChangeNotifier {
       type: CoachBlockTypeV1.needsWork,
       title: '${target.name} needs a cleanup pass',
       subtitle: 'Needs Work',
-      body:
-          'This has practice history, but the signal is not strong yet. Keep the tempo controlled and clean it up before pushing.',
+      body: _needsWorkBodyForAggregate(assessmentAggregateFor(target.id)),
       itemIds: <String>[target.id],
       ctaLabel: 'Fix This',
       ctaAction: CoachActionV1.startPractice,
@@ -284,15 +290,18 @@ class AppController extends ChangeNotifier {
     final List<PracticeItemV1> candidates =
         trackedItems
             .where((PracticeItemV1 item) {
-              if (!isRecent(item.id)) return false;
-              final CompetencyLevelV1 level = competencyFor(item.id);
-              return level.index >= CompetencyLevelV1.comfortable.index ||
-                  totalTime(itemId: item.id) >= const Duration(minutes: 10);
+              final PracticeAssessmentAggregateV1? aggregate =
+                  assessmentAggregateFor(item.id);
+              return aggregate != null &&
+                  aggregate.status == MatrixProgressStateV1.strong &&
+                  isRecent(item.id);
             })
             .toList(growable: false)
           ..sort(
             (PracticeItemV1 a, PracticeItemV1 b) =>
-                totalTime(itemId: b.id).compareTo(totalTime(itemId: a.id)),
+                assessmentAggregateFor(b.id)!.stabilityScore.compareTo(
+                  assessmentAggregateFor(a.id)!.stabilityScore,
+                ),
           );
 
     if (candidates.isEmpty) return null;
@@ -303,8 +312,7 @@ class AppController extends ChangeNotifier {
       type: CoachBlockTypeV1.momentum,
       title: '${target.name} is moving',
       subtitle: 'Momentum',
-      body:
-          'This is recent and getting stable. Give it a short review or use it as source material for a longer phrase.',
+      body: _momentumBodyForAggregate(assessmentAggregateFor(target.id)),
       itemIds: <String>[target.id],
       ctaLabel: target.isCombo ? 'Move to Flow' : 'Build Combo',
       ctaAction: target.isCombo
@@ -349,9 +357,8 @@ class AppController extends ChangeNotifier {
     final List<PracticeItemV1> stableTriads = triadMatrixItems
         .where(
           (PracticeItemV1 item) =>
-              competencyFor(item.id).index >=
-                  CompetencyLevelV1.comfortable.index &&
-              totalTime(itemId: item.id) >= const Duration(minutes: 8),
+              assessmentAggregateFor(item.id)?.status ==
+              MatrixProgressStateV1.strong,
         )
         .toList(growable: false);
     if (stableTriads.length < 2) return null;
@@ -379,6 +386,47 @@ class AppController extends ChangeNotifier {
       matrixFilters: const <TriadMatrixFilterV1>{},
       practiceMode: PracticeModeV1.singleSurface,
     );
+  }
+
+  String _focusBodyForAggregate(PracticeAssessmentAggregateV1 aggregate) {
+    return switch (aggregate.status) {
+      MatrixProgressStateV1.notTrained =>
+        'This has not produced enough signal yet. Start with a clean baseline session.',
+      MatrixProgressStateV1.active =>
+        'This is active work. Keep it in rotation until the control and continuity start to hold.',
+      MatrixProgressStateV1.needsWork =>
+        'This is slipping. Slow it down and clean up the motion before adding more speed.',
+      MatrixProgressStateV1.strong =>
+        'This is holding together. Give it a short review or use it to build a longer phrase.',
+    };
+  }
+
+  String _needsWorkBodyForAggregate(PracticeAssessmentAggregateV1? aggregate) {
+    if (aggregate == null) {
+      return 'This has practice history, but the signal is not strong yet. Keep the tempo controlled and clean it up before pushing.';
+    }
+
+    final List<String> reasons = <String>[];
+    if (aggregate.stabilityScore < 0.50) reasons.add('stability');
+    if (aggregate.jitterScore >= 0.40) reasons.add('evenness');
+    if (aggregate.driftScore >= 0.45) reasons.add('tempo');
+    if (aggregate.continuityScore < 0.55) reasons.add('continuity');
+
+    final String reasonText = reasons.isEmpty
+        ? 'the assessment signal'
+        : reasons.join(', ');
+    return 'The weak spot is $reasonText. Keep the tempo controlled and clean it up before pushing.';
+  }
+
+  String _momentumBodyForAggregate(PracticeAssessmentAggregateV1? aggregate) {
+    if (aggregate == null) {
+      return 'This is recent and getting stable. Give it a short review or use it as source material for a longer phrase.';
+    }
+
+    final String stableBpm = aggregate.bestStableBpm == null
+        ? 'the current tempo'
+        : '${aggregate.bestStableBpm!.round()} BPM';
+    return 'This is holding at $stableBpm. Review it briefly, then use it as source material for a longer phrase.';
   }
 
   TodayBriefingV1 buildTodayBriefing() {
@@ -938,6 +986,13 @@ class AppController extends ChangeNotifier {
   }
 
   bool isCloseToToolbox(String itemId) {
+    final PracticeAssessmentAggregateV1? aggregate = assessmentAggregateFor(
+      itemId,
+    );
+    if (aggregate != null && aggregate.assessmentCount > 0) {
+      return aggregate.status == MatrixProgressStateV1.strong;
+    }
+
     final CompetencyLevelV1 level = competencyFor(itemId);
     final bool strongCompetency =
         level == CompetencyLevelV1.comfortable ||
@@ -947,6 +1002,14 @@ class AppController extends ChangeNotifier {
   }
 
   bool needsAttention(String itemId) {
+    final PracticeAssessmentAggregateV1? aggregate = assessmentAggregateFor(
+      itemId,
+    );
+    if (aggregate != null && aggregate.assessmentCount > 0) {
+      return aggregate.status == MatrixProgressStateV1.needsWork;
+    }
+    if (isUnseen(itemId)) return false;
+
     final CompetencyLevelV1 level = competencyFor(itemId);
     final bool weakCompetency =
         level == CompetencyLevelV1.notStarted ||
@@ -2042,6 +2105,36 @@ class AppController extends ChangeNotifier {
         lastSessionForItem(b.id)?.endedAt ??
         DateTime.fromMillisecondsSinceEpoch(0);
     return aDate.compareTo(bDate);
+  }
+
+  int _compareByAssessmentNeed(PracticeItemV1 a, PracticeItemV1 b) {
+    final PracticeAssessmentAggregateV1? aAggregate = assessmentAggregateFor(
+      a.id,
+    );
+    final PracticeAssessmentAggregateV1? bAggregate = assessmentAggregateFor(
+      b.id,
+    );
+    final int statusCompare = _assessmentNeedRank(
+      bAggregate?.status,
+    ).compareTo(_assessmentNeedRank(aAggregate?.status));
+    if (statusCompare != 0) return statusCompare;
+
+    final double aStability = aAggregate?.stabilityScore ?? -1;
+    final double bStability = bAggregate?.stabilityScore ?? -1;
+    final int stabilityCompare = aStability.compareTo(bStability);
+    if (stabilityCompare != 0) return stabilityCompare;
+
+    return _compareByNeed(a, b);
+  }
+
+  int _assessmentNeedRank(MatrixProgressStateV1? status) {
+    return switch (status) {
+      MatrixProgressStateV1.needsWork => 4,
+      MatrixProgressStateV1.active => 3,
+      MatrixProgressStateV1.notTrained => 2,
+      MatrixProgressStateV1.strong => 1,
+      null => 0,
+    };
   }
 
   int _competencyScore(CompetencyLevelV1 level) {
