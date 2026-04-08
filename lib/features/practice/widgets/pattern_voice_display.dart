@@ -14,6 +14,7 @@ class PatternVoiceDisplay extends StatelessWidget {
   final double ghostOpacity;
   final PatternGroupingV1 grouping;
   final bool showRepeatIndicator;
+  final bool scrollable;
 
   const PatternVoiceDisplay({
     super.key,
@@ -27,6 +28,7 @@ class PatternVoiceDisplay extends StatelessWidget {
     this.ghostOpacity = 0.72,
     this.grouping = PatternGroupingV1.none,
     this.showRepeatIndicator = false,
+    this.scrollable = true,
   }) : assert(tokens.length == markings.length),
        assert(tokens.length == voices.length);
 
@@ -45,58 +47,63 @@ class PatternVoiceDisplay extends StatelessWidget {
     );
     final double separatorWidth = (cellWidth * 0.45).clamp(14.0, 28.0);
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: <Widget>[
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Row(
-                children: _rowCells(
-                  tokens,
-                  separators,
-                  separatorWidth,
-                  (int index) => _patternText(
-                    tokens[index],
-                    markings[index],
-                    resolvedPatternStyle,
-                  ),
+    final Widget content = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: <Widget>[
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Row(
+              children: _rowCells(
+                tokens,
+                separators,
+                separatorWidth,
+                (int index) => _patternText(
+                  tokens[index],
+                  markings[index],
                   resolvedPatternStyle,
                 ),
-              ),
-              const SizedBox(height: 6),
-              Row(
-                children: _rowCells(
-                  tokens,
-                  separators,
-                  separatorWidth,
-                  (int index) => Text(
-                    voices[index].shortLabel,
-                    textAlign: TextAlign.center,
-                    style: resolvedVoiceStyle.copyWith(
-                      color: const Color(0xFF5B5345),
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  resolvedVoiceStyle,
-                  showSeparatorText: false,
-                ),
-              ),
-            ],
-          ),
-          if (showRepeatIndicator)
-            Padding(
-              padding: const EdgeInsets.only(left: 10),
-              child: Icon(
-                Icons.repeat_rounded,
-                size: (resolvedPatternStyle.fontSize ?? 20) * 1.05,
-                color: resolvedPatternStyle.color,
+                resolvedPatternStyle,
               ),
             ),
-        ],
-      ),
+            const SizedBox(height: 6),
+            Row(
+              children: _rowCells(
+                tokens,
+                separators,
+                separatorWidth,
+                (int index) => Text(
+                  voices[index].shortLabel,
+                  textAlign: TextAlign.center,
+                  style: resolvedVoiceStyle.copyWith(
+                    color: const Color(0xFF5B5345),
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                resolvedVoiceStyle,
+                showSeparatorText: false,
+              ),
+            ),
+          ],
+        ),
+        if (showRepeatIndicator)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Icon(
+              Icons.repeat_rounded,
+              size: (resolvedPatternStyle.fontSize ?? 20) * 1.05,
+              color: resolvedPatternStyle.color,
+            ),
+          ),
+      ],
+    );
+
+    if (!scrollable) return content;
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: content,
     );
   }
 

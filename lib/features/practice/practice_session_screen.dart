@@ -69,8 +69,6 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     final bool isWarmup = _setup.family == MaterialFamilyV1.warmup;
     final currentItemId = _setup.practiceItemIds[_currentItemIndex];
     final currentItem = widget.controller.itemById(currentItemId);
-    final String? warmupRudimentLabel = widget.controller
-        .warmupRudimentLabelFor(currentItemId);
     final List<String> tokens = widget.controller.noteTokensFor(currentItemId);
     final List<PatternNoteMarkingV1> markings = widget.controller
         .noteMarkingsFor(currentItemId);
@@ -107,66 +105,6 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
             padding: const EdgeInsets.all(16),
             children: <Widget>[
               DrumPanel(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    if (_setup.practiceMode == PracticeModeV1.flow)
-                      PatternVoiceDisplay(
-                        tokens: tokens,
-                        markings: markings,
-                        voices: voices,
-                        grouping: widget.controller.displayGroupingFor(
-                          currentItemId,
-                        ),
-                        showRepeatIndicator: isWarmup,
-                        patternStyle: Theme.of(context).textTheme.displaySmall
-                            ?.copyWith(
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: isWarmup ? 0.8 : -1.0,
-                            ),
-                        voiceStyle: Theme.of(context).textTheme.titleMedium,
-                      )
-                    else
-                      PatternDisplayText(
-                        tokens: tokens,
-                        markings: markings,
-                        grouping: widget.controller.displayGroupingFor(
-                          currentItemId,
-                        ),
-                        showRepeatIndicator: isWarmup,
-                        style: Theme.of(context).textTheme.displaySmall
-                            ?.copyWith(
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: isWarmup ? 0.8 : -1.0,
-                            ),
-                      ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: <Widget>[
-                        if (!isWarmup)
-                          Chip(label: Text(_setup.practiceMode.label))
-                        else
-                          Chip(label: Text(warmupRudimentLabel ?? 'Rudiment')),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      widget.controller.practiceGuidanceFor(
-                        currentItemId,
-                        practiceMode: _setup.practiceMode,
-                      ),
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: const Color(0xFF5B5345),
-                        height: 1.35,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              DrumPanel(
                 tone: DrumPanelTone.dark,
                 padding: const EdgeInsets.all(20),
                 child: Column(
@@ -188,6 +126,17 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                       ),
                       const SizedBox(height: 16),
                     ],
+                    _PlayerNotation(
+                      setup: _setup,
+                      isWarmup: isWarmup,
+                      grouping: widget.controller.displayGroupingFor(
+                        currentItemId,
+                      ),
+                      tokens: tokens,
+                      markings: markings,
+                      voices: voices,
+                    ),
+                    const SizedBox(height: 18),
                     _BeatPulse(
                       beatLit: _beatLit,
                       bpm: _bpm,
@@ -592,6 +541,79 @@ class _BeatPulse extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PlayerNotation extends StatelessWidget {
+  final PracticeSessionSetupV1 setup;
+  final bool isWarmup;
+  final PatternGroupingV1 grouping;
+  final List<String> tokens;
+  final List<PatternNoteMarkingV1> markings;
+  final List<DrumVoiceV1> voices;
+
+  const _PlayerNotation({
+    required this.setup,
+    required this.isWarmup,
+    required this.grouping,
+    required this.tokens,
+    required this.markings,
+    required this.voices,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final TextStyle patternStyle =
+        Theme.of(context).textTheme.displaySmall?.copyWith(
+          color: const Color(0xFFFFF4DE),
+          fontWeight: FontWeight.w900,
+          letterSpacing: isWarmup ? 1.3 : 0.4,
+        ) ??
+        const TextStyle(
+          color: Color(0xFFFFF4DE),
+          fontWeight: FontWeight.w900,
+          fontSize: 34,
+          letterSpacing: 0.4,
+        );
+
+    final TextStyle voiceStyle =
+        Theme.of(context).textTheme.titleMedium?.copyWith(
+          color: const Color(0xFFE5D5BB),
+          fontWeight: FontWeight.w800,
+        ) ??
+        const TextStyle(
+          color: Color(0xFFE5D5BB),
+          fontWeight: FontWeight.w800,
+          fontSize: 16,
+        );
+
+    return SizedBox(
+      width: double.infinity,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.center,
+        child: setup.practiceMode == PracticeModeV1.flow
+            ? PatternVoiceDisplay(
+                tokens: tokens,
+                markings: markings,
+                voices: voices,
+                grouping: grouping,
+                showRepeatIndicator: isWarmup,
+                scrollable: false,
+                cellWidth: isWarmup ? 42 : 40,
+                patternStyle: patternStyle,
+                voiceStyle: voiceStyle,
+              )
+            : PatternDisplayText(
+                tokens: tokens,
+                markings: markings,
+                grouping: grouping,
+                showRepeatIndicator: isWarmup,
+                style: patternStyle,
+                textAlign: TextAlign.center,
+              ),
       ),
     );
   }

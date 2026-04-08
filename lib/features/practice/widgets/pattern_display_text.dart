@@ -32,31 +32,41 @@ class PatternDisplayText extends StatelessWidget {
       (int index) => grouping.separatorAfter(index, tokens.length),
       growable: false,
     );
-
-    return RichText(
-      textAlign: textAlign,
-      text: TextSpan(
-        style: baseStyle,
-        children: <InlineSpan>[
-          for (int index = 0; index < tokens.length; index++) ...<InlineSpan>[
-            ..._spansForToken(tokens[index], markings[index], baseStyle),
-            if (separators[index].isNotEmpty)
-              TextSpan(text: separators[index], style: baseStyle),
-          ],
-          if (showRepeatIndicator)
-            WidgetSpan(
-              alignment: PlaceholderAlignment.middle,
-              child: Padding(
-                padding: const EdgeInsets.only(left: 8),
-                child: Icon(
-                  Icons.repeat_rounded,
-                  size: (baseStyle.fontSize ?? 20) * 1.05,
-                  color: baseStyle.color,
-                ),
-              ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: switch (textAlign) {
+        TextAlign.center => CrossAxisAlignment.center,
+        TextAlign.end || TextAlign.right => CrossAxisAlignment.end,
+        _ => CrossAxisAlignment.start,
+      },
+      children: <Widget>[
+        RichText(
+          textAlign: textAlign,
+          text: TextSpan(
+            style: baseStyle,
+            children: <InlineSpan>[
+              for (
+                int index = 0;
+                index < tokens.length;
+                index++
+              ) ...<InlineSpan>[
+                ..._spansForToken(tokens[index], markings[index], baseStyle),
+                if (separators[index].isNotEmpty)
+                  TextSpan(text: separators[index], style: baseStyle),
+              ],
+            ],
+          ),
+        ),
+        if (showRepeatIndicator)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Icon(
+              Icons.repeat_rounded,
+              size: (baseStyle.fontSize ?? 20) * 1.05,
+              color: baseStyle.color,
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 
