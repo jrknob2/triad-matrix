@@ -4,9 +4,16 @@ import '../../core/practice/practice_domain_v1.dart';
 import '../../state/app_controller.dart';
 import '../practice/widgets/pattern_display_text.dart';
 
+typedef OpenMatrixCallback =
+    void Function({
+      LearningLaneV1? lane,
+      TriadMatrixFilterPaletteV1? palette,
+      Set<TriadMatrixFilterV1>? filters,
+    });
+
 class TodayScreen extends StatelessWidget {
   final AppController controller;
-  final VoidCallback onOpenMatrix;
+  final OpenMatrixCallback onOpenMatrix;
   final VoidCallback onOpenFocus;
   final ValueChanged<String> onOpenItem;
   final ValueChanged<String> onPracticeItem;
@@ -63,6 +70,9 @@ class TodayScreen extends StatelessWidget {
                           controller: controller,
                           onOpenItem: onOpenItem,
                           onAction: () => _handleCoachBlockAction(block),
+                          onOpenMatrix: _blockHasMatrixContext(block)
+                              ? () => _openMatrixForBlock(block)
+                              : null,
                         ),
                       ),
                     ),
@@ -78,10 +88,10 @@ class TodayScreen extends StatelessWidget {
   void _handleCoachBlockAction(CoachBlockV1 block) {
     switch (block.ctaAction) {
       case CoachActionV1.openMatrix:
-        onOpenMatrix();
+        _openMatrixForBlock(block);
       case CoachActionV1.buildCombo:
         if (block.itemIds.isEmpty) {
-          onOpenMatrix();
+          _openMatrixForBlock(block);
         } else {
           onBuildComboFromItems(block.itemIds);
         }
@@ -91,7 +101,7 @@ class TodayScreen extends StatelessWidget {
           createIfMissing: true,
         );
         if (itemId == null) {
-          onOpenMatrix();
+          _openMatrixForBlock(block);
         } else {
           onPracticeItemInMode(itemId, PracticeModeV1.flow);
         }
@@ -102,11 +112,19 @@ class TodayScreen extends StatelessWidget {
           createIfMissing: true,
         );
         if (itemId == null) {
-          onOpenMatrix();
+          _openMatrixForBlock(block);
         } else {
           onPracticeItemInMode(itemId, block.practiceMode);
         }
     }
+  }
+
+  void _openMatrixForBlock(CoachBlockV1 block) {
+    onOpenMatrix(palette: block.matrixPalette, filters: block.matrixFilters);
+  }
+
+  bool _blockHasMatrixContext(CoachBlockV1 block) {
+    return block.matrixPalette != null || block.matrixFilters.isNotEmpty;
   }
 
   String? _blockPracticeItemId(
@@ -124,7 +142,7 @@ class TodayScreen extends StatelessWidget {
 }
 
 class _EmptyCoachCard extends StatelessWidget {
-  final VoidCallback onOpenMatrix;
+  final OpenMatrixCallback onOpenMatrix;
 
   const _EmptyCoachCard({required this.onOpenMatrix});
 
@@ -148,7 +166,7 @@ class _EmptyCoachCard extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             FilledButton(
-              onPressed: onOpenMatrix,
+              onPressed: () => onOpenMatrix(),
               child: const Text('Open Matrix'),
             ),
           ],
@@ -163,12 +181,14 @@ class _CoachBlockCard extends StatelessWidget {
   final AppController controller;
   final ValueChanged<String> onOpenItem;
   final VoidCallback onAction;
+  final VoidCallback? onOpenMatrix;
 
   const _CoachBlockCard({
     required this.block,
     required this.controller,
     required this.onOpenItem,
     required this.onAction,
+    required this.onOpenMatrix,
   });
 
   @override
@@ -221,7 +241,18 @@ class _CoachBlockCard extends StatelessWidget {
               ),
             ],
             const SizedBox(height: 16),
-            FilledButton(onPressed: onAction, child: Text(block.ctaLabel)),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: <Widget>[
+                FilledButton(onPressed: onAction, child: Text(block.ctaLabel)),
+                if (onOpenMatrix != null)
+                  OutlinedButton(
+                    onPressed: onOpenMatrix,
+                    child: const Text('See in Matrix'),
+                  ),
+              ],
+            ),
           ],
         ),
       ),
@@ -283,7 +314,7 @@ class _CoachPatternStrip extends StatelessWidget {
 class _GettingStartedCoachCard extends StatelessWidget {
   final AppController controller;
   final VoidCallback onAddToWorkingOn;
-  final VoidCallback onOpenMatrix;
+  final OpenMatrixCallback onOpenMatrix;
 
   const _GettingStartedCoachCard({
     required this.controller,
@@ -383,7 +414,7 @@ class _GettingStartedCoachCard extends StatelessWidget {
                   ),
                 ),
                 OutlinedButton(
-                  onPressed: onOpenMatrix,
+                  onPressed: () => onOpenMatrix(),
                   style: coachButtonStyle,
                   child: const Text('Open the Matrix'),
                 ),

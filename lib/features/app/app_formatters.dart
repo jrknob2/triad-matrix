@@ -107,6 +107,15 @@ extension PracticeModeLabel on PracticeModeV1 {
   };
 }
 
+extension MatrixProgressStateLabel on MatrixProgressStateV1 {
+  String get label => switch (this) {
+    MatrixProgressStateV1.notTrained => 'Not Trained',
+    MatrixProgressStateV1.active => 'Active',
+    MatrixProgressStateV1.needsWork => 'Needs Work',
+    MatrixProgressStateV1.strong => 'Strong',
+  };
+}
+
 extension LearningLaneLabel on LearningLaneV1 {
   String get label => switch (this) {
     LearningLaneV1.control => 'Control',

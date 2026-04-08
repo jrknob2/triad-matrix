@@ -144,6 +144,8 @@ class _RetentionView extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
+        _AssessmentStatusCard(controller: controller),
+        const SizedBox(height: 12),
         _ItemListCard(
           title: 'Neglected',
           description:
@@ -377,16 +379,16 @@ class _ToolboxView extends StatelessWidget {
               note: 'Near-toolbox items',
             ),
             _MetricData(
-              title: 'Reliable',
+              title: 'Strong',
               value:
-                  '${controller.trackedItems.where((item) => controller.competencyFor(item.id) == CompetencyLevelV1.reliable).length}',
-              note: 'Marked reliable',
+                  '${controller.trackedItems.where((item) => controller.matrixProgressStateFor(item.id) == MatrixProgressStateV1.strong).length}',
+              note: 'Assessment status',
             ),
             _MetricData(
-              title: 'Musical',
+              title: 'Needs Work',
               value:
-                  '${controller.trackedItems.where((item) => controller.competencyFor(item.id) == CompetencyLevelV1.musical).length}',
-              note: 'Marked musical',
+                  '${controller.trackedItems.where((item) => controller.matrixProgressStateFor(item.id) == MatrixProgressStateV1.needsWork).length}',
+              note: 'Assessment status',
             ),
           ],
         ),
@@ -403,6 +405,115 @@ class _ToolboxView extends StatelessWidget {
       ],
     );
   }
+}
+
+class _AssessmentStatusCard extends StatelessWidget {
+  final AppController controller;
+
+  const _AssessmentStatusCard({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    final List<_StatusData> statuses = <_StatusData>[
+      _StatusData(
+        status: MatrixProgressStateV1.notTrained,
+        count: _count(MatrixProgressStateV1.notTrained),
+        color: const Color(0xFFF1ECE3),
+      ),
+      _StatusData(
+        status: MatrixProgressStateV1.active,
+        count: _count(MatrixProgressStateV1.active),
+        color: const Color(0xFFD9E9F7),
+      ),
+      _StatusData(
+        status: MatrixProgressStateV1.needsWork,
+        count: _count(MatrixProgressStateV1.needsWork),
+        color: const Color(0xFFF0B2AA),
+      ),
+      _StatusData(
+        status: MatrixProgressStateV1.strong,
+        count: _count(MatrixProgressStateV1.strong),
+        color: const Color(0xFFDDEDDD),
+      ),
+    ];
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              'Assessment Status',
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'This is the same status language used by Coach and Matrix.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: statuses
+                  .map(
+                    (_StatusData data) => DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: data.color,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0x22000000)),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text(
+                              '${data.count}',
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(fontWeight: FontWeight.w900),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(data.status.label),
+                          ],
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList(growable: false),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  int _count(MatrixProgressStateV1 status) {
+    return controller.trackedItems
+        .where(
+          (PracticeItemV1 item) =>
+              controller.matrixProgressStateFor(item.id) == status,
+        )
+        .length;
+  }
+}
+
+class _StatusData {
+  final MatrixProgressStateV1 status;
+  final int count;
+  final Color color;
+
+  const _StatusData({
+    required this.status,
+    required this.count,
+    required this.color,
+  });
 }
 
 class _MetricData {
@@ -552,7 +663,7 @@ class _ProgressItemTile extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${item.family.label} • ${controller.competencyFor(item.id).label} • ${formatDuration(controller.totalTime(itemId: item.id))}',
+                    '${item.family.label} • ${controller.matrixProgressStateFor(item.id).label} • ${formatDuration(controller.totalTime(itemId: item.id))}',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],

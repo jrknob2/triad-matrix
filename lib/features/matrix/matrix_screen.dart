@@ -7,8 +7,23 @@ import '../practice/widgets/pattern_display_text.dart';
 import '../practice/widgets/pattern_voice_display.dart';
 import 'widgets/triad_matrix_grid.dart';
 
+class MatrixScreenRequest {
+  final int version;
+  final LearningLaneV1? lane;
+  final TriadMatrixFilterPaletteV1? palette;
+  final Set<TriadMatrixFilterV1> filters;
+
+  const MatrixScreenRequest({
+    required this.version,
+    required this.lane,
+    required this.palette,
+    required this.filters,
+  });
+}
+
 class MatrixScreen extends StatefulWidget {
   final AppController controller;
+  final MatrixScreenRequest? request;
   final ValueChanged<String> onOpenItem;
   final ValueChanged<String> onPracticeItem;
   final void Function(String, PracticeModeV1) onPracticeItemInMode;
@@ -17,6 +32,7 @@ class MatrixScreen extends StatefulWidget {
   const MatrixScreen({
     super.key,
     required this.controller,
+    required this.request,
     required this.onOpenItem,
     required this.onPracticeItem,
     required this.onPracticeItemInMode,
@@ -35,6 +51,16 @@ class _MatrixScreenState extends State<MatrixScreen> {
   final Set<String> _selectedRows = <String>{};
   final Set<String> _selectedColumns = <String>{};
   final List<String> _selectedItemIds = <String>[];
+  int? _appliedRequestVersion;
+
+  @override
+  void didUpdateWidget(covariant MatrixScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final MatrixScreenRequest? request = widget.request;
+    if (request == null || request.version == _appliedRequestVersion) return;
+    _appliedRequestVersion = request.version;
+    _applyRequest(request);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -165,6 +191,12 @@ class _MatrixScreenState extends State<MatrixScreen> {
                 child: Row(children: _buildPaletteFilters()),
               ),
             ],
+          ],
+          if (_effectiveFilters.contains(
+            TriadMatrixFilterV1.competency,
+          )) ...<Widget>[
+            const SizedBox(height: 10),
+            const _ProgressLegendCard(),
           ],
           const SizedBox(height: 12),
           TriadMatrixGrid(
@@ -510,6 +542,32 @@ class _MatrixScreenState extends State<MatrixScreen> {
     });
   }
 
+  void _applyRequest(MatrixScreenRequest request) {
+    setState(() {
+      _laneFocus = request.lane;
+      _palette = request.palette;
+      _filters
+        ..clear()
+        ..addAll(request.filters);
+      _selectedComboIds.clear();
+      _selectedRows.clear();
+      _selectedColumns.clear();
+      _selectedItemIds.clear();
+
+      final LearningLaneV1? lane = _laneFocus;
+      if (lane != null && _palette == null && _filters.isEmpty) {
+        _palette = switch (lane) {
+          LearningLaneV1.control => TriadMatrixFilterPaletteV1.technique,
+          LearningLaneV1.balance => TriadMatrixFilterPaletteV1.technique,
+          LearningLaneV1.dynamics => TriadMatrixFilterPaletteV1.coaching,
+          LearningLaneV1.integration => TriadMatrixFilterPaletteV1.technique,
+          LearningLaneV1.phrasing => TriadMatrixFilterPaletteV1.combos,
+          LearningLaneV1.flow => TriadMatrixFilterPaletteV1.combos,
+        };
+      }
+    });
+  }
+
   Set<TriadMatrixFilterV1> _lanePresetFilters() {
     return switch (_laneFocus) {
       LearningLaneV1.control => const <TriadMatrixFilterV1>{
@@ -577,6 +635,58 @@ class _LaneFocusCard extends StatelessWidget {
             const SizedBox(height: 6),
             Text(description, style: Theme.of(context).textTheme.bodyMedium),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ProgressLegendCard extends StatelessWidget {
+  const _ProgressLegendCard();
+
+  @override
+  Widget build(BuildContext context) {
+    const List<({String label, Color color})> items =
+        <({String label, Color color})>[
+          (label: 'Not trained', color: Color(0xFFF1ECE3)),
+          (label: 'Active', color: Color(0xFFD9E9F7)),
+          (label: 'Needs work', color: Color(0xFFF0B2AA)),
+          (label: 'Strong', color: Color(0xFFDDEDDD)),
+        ];
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F0E6),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0x22000000)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Wrap(
+          spacing: 10,
+          runSpacing: 8,
+          children: items
+              .map(
+                (item) => Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: item.color,
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(color: const Color(0x22000000)),
+                      ),
+                      child: const SizedBox(width: 16, height: 16),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      item.label,
+                      style: Theme.of(context).textTheme.labelMedium,
+                    ),
+                  ],
+                ),
+              )
+              .toList(growable: false),
         ),
       ),
     );

@@ -22,6 +22,8 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   int _currentIndex = 0;
+  int _matrixRequestVersion = 0;
+  MatrixScreenRequest? _matrixRequest;
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +34,7 @@ class _AppShellState extends State<AppShell> {
           TodayScreen(
             key: ValueKey<String>('today_${widget.controller.resetVersion}'),
             controller: widget.controller,
-            onOpenMatrix: () => setState(() => _currentIndex = 1),
+            onOpenMatrix: _openMatrix,
             onOpenFocus: () => setState(() => _currentIndex = 2),
             onOpenItem: _openItemDetail,
             onPracticeItem: _openPracticeItem,
@@ -42,6 +44,7 @@ class _AppShellState extends State<AppShell> {
           MatrixScreen(
             key: ValueKey<String>('matrix_${widget.controller.resetVersion}'),
             controller: widget.controller,
+            request: _matrixRequest,
             onOpenItem: _openItemDetail,
             onPracticeItem: _openPracticeItem,
             onPracticeItemInMode: _openPracticeItemInMode,
@@ -111,6 +114,23 @@ class _AppShellState extends State<AppShell> {
         );
       },
     );
+  }
+
+  void _openMatrix({
+    LearningLaneV1? lane,
+    TriadMatrixFilterPaletteV1? palette,
+    Set<TriadMatrixFilterV1>? filters,
+  }) {
+    setState(() {
+      _matrixRequestVersion++;
+      _matrixRequest = MatrixScreenRequest(
+        version: _matrixRequestVersion,
+        lane: lane,
+        palette: palette,
+        filters: filters ?? const <TriadMatrixFilterV1>{},
+      );
+      _currentIndex = 1;
+    });
   }
 
   void _openPracticeItem(String itemId) {

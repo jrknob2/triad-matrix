@@ -125,6 +125,10 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                           itemId: item.id,
                           showHelpText: false,
                         ),
+                        const SizedBox(height: 12),
+                        _FlowReadinessNote(
+                          ready: widget.controller.hasNonSnareVoice(item.id),
+                        ),
                       ],
                     ],
                   ),
@@ -234,6 +238,32 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
           ),
         );
       },
+    );
+  }
+}
+
+class _FlowReadinessNote extends StatelessWidget {
+  final bool ready;
+
+  const _FlowReadinessNote({required this.ready});
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: ready ? const Color(0xFFDDEDDD) : const Color(0xFFF1ECE3),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0x22000000)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Text(
+          ready
+              ? 'Flow is set up. Practice this with the voice row locked in.'
+              : 'Assign at least one non-snare voice before treating this as Flow work.',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+      ),
     );
   }
 }
