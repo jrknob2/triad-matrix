@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/practice/practice_domain_v1.dart';
 import '../../features/app/app_formatters.dart';
+import '../../features/app/drumcabulary_ui.dart';
 import '../../state/app_controller.dart';
 import '../practice/widgets/pattern_display_text.dart';
 import '../practice/widgets/pattern_voice_display.dart';
@@ -35,59 +36,36 @@ class _FocusScreenState extends State<FocusScreen> {
     return AnimatedBuilder(
       animation: widget.controller,
       builder: (BuildContext context, _) {
-        return ListView(
-          padding: EdgeInsets.zero,
-          children: <Widget>[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  _FocusSummary(
-                    controller: widget.controller,
-                    onOpenItem: widget.onOpenItem,
-                    onPracticeItem: widget.onPracticeItem,
-                  ),
-                  const SizedBox(height: 14),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: _FocusSection.values
-                          .map(
-                            (_FocusSection section) => Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: ChoiceChip(
-                                label: _chipText(
-                                  _labelForSection(section),
-                                  _section == section,
-                                ),
-                                selected: _section == section,
-                                onSelected: (_) {
-                                  setState(() => _section = section);
-                                },
-                              ),
-                            ),
-                          )
-                          .toList(growable: false),
+        return DrumScreen(
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: <Widget>[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    _FocusSummary(
+                      controller: widget.controller,
+                      onOpenItem: widget.onOpenItem,
+                      onPracticeItem: widget.onPracticeItem,
                     ),
-                  ),
-                  if (_section == _FocusSection.workingOn) ...<Widget>[
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 14),
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Row(
-                        children: PracticeModeV1.values
+                        children: _FocusSection.values
                             .map(
-                              (PracticeModeV1 mode) => Padding(
+                              (_FocusSection section) => Padding(
                                 padding: const EdgeInsets.only(right: 8),
                                 child: ChoiceChip(
                                   label: _chipText(
-                                    mode.label,
-                                    _viewMode == mode,
+                                    _labelForSection(section),
+                                    _section == section,
                                   ),
-                                  selected: _viewMode == mode,
+                                  selected: _section == section,
                                   onSelected: (_) {
-                                    setState(() => _viewMode = mode);
+                                    setState(() => _section = section);
                                   },
                                 ),
                               ),
@@ -95,12 +73,37 @@ class _FocusScreenState extends State<FocusScreen> {
                             .toList(growable: false),
                       ),
                     ),
+                    if (_section == _FocusSection.workingOn) ...<Widget>[
+                      const SizedBox(height: 10),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: PracticeModeV1.values
+                              .map(
+                                (PracticeModeV1 mode) => Padding(
+                                  padding: const EdgeInsets.only(right: 8),
+                                  child: ChoiceChip(
+                                    label: _chipText(
+                                      mode.label,
+                                      _viewMode == mode,
+                                    ),
+                                    selected: _viewMode == mode,
+                                    onSelected: (_) {
+                                      setState(() => _viewMode = mode);
+                                    },
+                                  ),
+                                ),
+                              )
+                              .toList(growable: false),
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-            _buildBody(),
-          ],
+              _buildBody(),
+            ],
+          ),
         );
       },
     );
@@ -117,9 +120,12 @@ class _FocusScreenState extends State<FocusScreen> {
         onPracticeItem: widget.onPracticeItem,
         onPracticeItemInMode: widget.onPracticeItemInMode,
         practiceMode: _viewMode,
-        trailingFor: (item) => IconButton(
-          icon: const Icon(Icons.remove_circle_outline),
-          onPressed: () => widget.controller.toggleRoutineItem(item.id),
+        trailingFor: (item) => _WorkingOnActions(
+          item: item,
+          practiceMode: _viewMode,
+          onPracticeItemInMode: widget.onPracticeItemInMode,
+          onOpenItem: widget.onOpenItem,
+          onRemoveItem: () => widget.controller.toggleRoutineItem(item.id),
         ),
       ),
       _FocusSection.phraseWork => _FocusList(
@@ -183,26 +189,17 @@ class _FocusSummary extends StatelessWidget {
         .take(3)
         .toList();
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5F0E6),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0x22000000)),
-      ),
+    return DrumPanel(
+      tone: DrumPanelTone.warm,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.zero,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text(
-              'Working On',
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-            ),
+            const DrumSectionTitle(text: 'Working On'),
             const SizedBox(height: 6),
             Text(
-              '${controller.activeWorkItems.length} active items • ${controller.phraseWorkItems.length} saved phrases • ${controller.customBucketItems.length} customs',
+              '${controller.activeWorkItems.length} active items • ${controller.phraseWorkItems.length} saved phrases • ${controller.customBucketItems.length} My Patterns',
               style: Theme.of(
                 context,
               ).textTheme.bodyMedium?.copyWith(color: const Color(0xFF5B5345)),
@@ -362,65 +359,121 @@ class _FocusList extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           if (visibleItems.isEmpty)
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  practiceMode == PracticeModeV1.flow
-                      ? 'Nothing here has a flow voice route yet. Open a practice item, switch to Flow, and assign voices beyond snare.'
-                      : controller.isFirstLight
-                      ? 'Nothing is in this section yet. Build a phrase from the matrix or start practicing and let this area fill in from real work.'
-                      : 'Nothing here yet. Add material from the matrix or save a custom phrase for later.',
-                ),
+            DrumPanel(
+              child: Text(
+                practiceMode == PracticeModeV1.flow
+                    ? 'Nothing here has a Flow voice assignment yet. Open a practice item, switch to Flow, and assign at least one non-snare voice.'
+                    : controller.isFirstLight
+                    ? 'Nothing is in this section yet. Build a phrase from the Matrix or start practicing and let this area fill in from real work.'
+                    : 'Nothing here yet. Add material from the Matrix or save a custom phrase for later.',
               ),
             )
           else
             ...visibleItems.map(
-              (item) => Card(
-                margin: const EdgeInsets.only(bottom: 10),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.all(16),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      if (practiceMode == PracticeModeV1.flow)
-                        PatternVoiceDisplay(
-                          tokens: controller.noteTokensFor(item.id),
-                          markings: controller.noteMarkingsFor(item.id),
-                          voices: controller.noteVoicesFor(item.id),
-                          patternStyle: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: -0.5,
+              (item) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: DrumPanel(
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(18),
+                    onTap: () => onOpenItem(item.id),
+                    onLongPress: () =>
+                        onPracticeItemInMode(item.id, practiceMode),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: <Widget>[
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              if (practiceMode == PracticeModeV1.flow)
+                                PatternVoiceDisplay(
+                                  tokens: controller.noteTokensFor(item.id),
+                                  markings: controller.noteMarkingsFor(item.id),
+                                  voices: controller.noteVoicesFor(item.id),
+                                  patternStyle: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: -0.5,
+                                      ),
+                                  voiceStyle: Theme.of(
+                                    context,
+                                  ).textTheme.labelMedium,
+                                  cellWidth: 34,
+                                )
+                              else
+                                PatternDisplayText(
+                                  tokens: controller.noteTokensFor(item.id),
+                                  markings: controller.noteMarkingsFor(item.id),
+                                  style: Theme.of(context).textTheme.titleMedium
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: -0.5,
+                                      ),
+                                ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${controller.competencyFor(item.id).label} • ${formatDuration(controller.totalTime(itemId: item.id))}',
                               ),
-                          voiceStyle: Theme.of(context).textTheme.labelMedium,
-                          cellWidth: 34,
-                        )
-                      else
-                        PatternDisplayText(
-                          tokens: controller.noteTokensFor(item.id),
-                          markings: controller.noteMarkingsFor(item.id),
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: -0.5,
-                              ),
+                            ],
+                          ),
                         ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${controller.competencyFor(item.id).label} • ${formatDuration(controller.totalTime(itemId: item.id))}',
-                      ),
-                    ],
+                        if (trailingFor != null) ...<Widget>[
+                          const SizedBox(width: 8),
+                          trailingFor!(item),
+                        ],
+                      ],
+                    ),
                   ),
-                  trailing: trailingFor?.call(item),
-                  onTap: () => onOpenItem(item.id),
-                  onLongPress: () =>
-                      onPracticeItemInMode(item.id, practiceMode),
                 ),
               ),
             ),
         ],
       ),
+    );
+  }
+}
+
+class _WorkingOnActions extends StatelessWidget {
+  final PracticeItemV1 item;
+  final PracticeModeV1 practiceMode;
+  final void Function(String, PracticeModeV1) onPracticeItemInMode;
+  final ValueChanged<String> onOpenItem;
+  final VoidCallback onRemoveItem;
+
+  const _WorkingOnActions({
+    required this.item,
+    required this.practiceMode,
+    required this.onPracticeItemInMode,
+    required this.onOpenItem,
+    required this.onRemoveItem,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 2,
+      children: <Widget>[
+        IconButton(
+          tooltip: 'Practice',
+          visualDensity: VisualDensity.compact,
+          icon: const Icon(Icons.play_arrow_rounded),
+          onPressed: () => onPracticeItemInMode(item.id, practiceMode),
+        ),
+        IconButton(
+          tooltip: 'Edit',
+          visualDensity: VisualDensity.compact,
+          icon: const Icon(Icons.edit_outlined),
+          onPressed: () => onOpenItem(item.id),
+        ),
+        IconButton(
+          tooltip: 'Remove from Working On',
+          visualDensity: VisualDensity.compact,
+          icon: const Icon(Icons.remove_circle_outline),
+          onPressed: onRemoveItem,
+        ),
+      ],
     );
   }
 }

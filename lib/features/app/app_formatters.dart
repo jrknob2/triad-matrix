@@ -167,7 +167,7 @@ extension TriadMatrixFilterPaletteLabel on TriadMatrixFilterPaletteV1 {
 extension TriadMatrixFilterLabel on TriadMatrixFilterV1 {
   String get label => switch (this) {
     TriadMatrixFilterV1.competency => 'Competency',
-    TriadMatrixFilterV1.inRoutine => 'In Routine',
+    TriadMatrixFilterV1.inRoutine => 'In Working On',
     TriadMatrixFilterV1.needsAttention => 'Needs Attention',
     TriadMatrixFilterV1.underPracticed => 'Under-Practiced',
     TriadMatrixFilterV1.closeToToolkit => 'Close To Toolbox',

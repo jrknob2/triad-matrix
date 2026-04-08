@@ -138,7 +138,7 @@ class _CombinationBuilderScreenState extends State<CombinationBuilderScreen> {
                 FilledButton.tonal(
                   onPressed: hasSelection ? _toggleRoutine : null,
                   child: Text(
-                    inRoutine ? 'Remove From Routine' : 'Add To Routine',
+                    inRoutine ? 'Remove From Working On' : 'Add To Working On',
                   ),
                 ),
                 FilledButton(

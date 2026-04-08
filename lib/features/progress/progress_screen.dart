@@ -30,40 +30,42 @@ class _ProgressScreenState extends State<ProgressScreen> {
     return AnimatedBuilder(
       animation: widget.controller,
       builder: (BuildContext context, _) {
-        return Column(
-          children: <Widget>[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: SegmentedButton<_ProgressSection>(
-                  segments: const <ButtonSegment<_ProgressSection>>[
-                    ButtonSegment(
-                      value: _ProgressSection.retention,
-                      label: Text('Retention'),
-                    ),
-                    ButtonSegment(
-                      value: _ProgressSection.balance,
-                      label: Text('Balance'),
-                    ),
-                    ButtonSegment(
-                      value: _ProgressSection.coverage,
-                      label: Text('Coverage'),
-                    ),
-                    ButtonSegment(
-                      value: _ProgressSection.toolbox,
-                      label: Text('Toolbox'),
-                    ),
-                  ],
-                  selected: <_ProgressSection>{_section},
-                  onSelectionChanged: (Set<_ProgressSection> next) {
-                    setState(() => _section = next.first);
-                  },
+        return DrumScreen(
+          child: Column(
+            children: <Widget>[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: SegmentedButton<_ProgressSection>(
+                    segments: const <ButtonSegment<_ProgressSection>>[
+                      ButtonSegment(
+                        value: _ProgressSection.retention,
+                        label: Text('Retention'),
+                      ),
+                      ButtonSegment(
+                        value: _ProgressSection.balance,
+                        label: Text('Balance'),
+                      ),
+                      ButtonSegment(
+                        value: _ProgressSection.coverage,
+                        label: Text('Coverage'),
+                      ),
+                      ButtonSegment(
+                        value: _ProgressSection.toolbox,
+                        label: Text('Toolbox'),
+                      ),
+                    ],
+                    selected: <_ProgressSection>{_section},
+                    onSelectionChanged: (Set<_ProgressSection> next) {
+                      setState(() => _section = next.first);
+                    },
+                  ),
                 ),
               ),
-            ),
-            Expanded(child: _buildSection()),
-          ],
+              Expanded(child: _buildSection()),
+            ],
+          ),
         );
       },
     );
@@ -135,7 +137,7 @@ class _RetentionView extends StatelessWidget {
             _MetricData(
               title: 'Tracked Items',
               value: '${controller.trackedItems.length}',
-              note: 'Excludes customs',
+              note: 'Excludes My Patterns',
             ),
             _MetricData(
               title: 'Sessions',

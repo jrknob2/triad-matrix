@@ -155,8 +155,8 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                   },
                   child: Text(
                     widget.controller.isInRoutine(firstItem.id)
-                        ? 'In Routine'
-                        : 'Add to Routine',
+                        ? 'In Working On'
+                        : 'Add to Working On',
                   ),
                 ),
                 OutlinedButton(

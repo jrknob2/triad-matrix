@@ -224,7 +224,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
               const SizedBox(height: 8),
               OutlinedButton(
                 onPressed: () => widget.onBuildComboFromItem(item.id),
-                child: const Text('Edit in Matrix Grid'),
+                child: const Text('Build in Matrix Grid'),
               ),
               const SizedBox(height: 8),
               OutlinedButton(
