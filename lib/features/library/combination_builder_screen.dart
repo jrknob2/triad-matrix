@@ -45,7 +45,7 @@ class _CombinationBuilderScreenState extends State<CombinationBuilderScreen> {
         widget.controller.isDirectRoutineEntry(routineItemId);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Build Combo')),
+      appBar: AppBar(title: const Text('Build Phrase')),
       body: DrumScreen(
         warm: false,
         child: ListView(
@@ -55,12 +55,12 @@ class _CombinationBuilderScreenState extends State<CombinationBuilderScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  const DrumEyebrow(text: 'Combo'),
+                  const DrumEyebrow(text: 'Phrase'),
                   const SizedBox(height: 8),
                   Text(
                     hasSelection
                         ? widget.controller.comboDisplayName(_selectedItemIds)
-                        : 'Tap triads, rows, or columns on the matrix to build a combo.',
+                        : 'Tap triads, rows, or columns on the Matrix to build a phrase.',
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   if (hasSelection) ...<Widget>[
@@ -138,12 +138,12 @@ class _CombinationBuilderScreenState extends State<CombinationBuilderScreen> {
                 FilledButton.tonal(
                   onPressed: hasSelection ? _toggleRoutine : null,
                   child: Text(
-                    inRoutine ? 'Remove From Working On' : 'Add To Working On',
+                    inRoutine ? 'Remove from Working On' : 'Add to Working On',
                   ),
                 ),
                 FilledButton(
                   onPressed: canSaveCombo ? _saveCombo : null,
-                  child: const Text('Save Combo'),
+                  child: const Text('Save Phrase'),
                 ),
               ],
             ),
