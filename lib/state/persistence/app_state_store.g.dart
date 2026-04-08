@@ -17,43 +17,53 @@ const AppStateRecordSchema = CollectionSchema(
   name: r'AppStateRecord',
   id: 4728061756950040693,
   properties: {
-    r'combinationsJson': PropertySchema(
+    r'assessmentAggregatesJson': PropertySchema(
       id: 0,
+      name: r'assessmentAggregatesJson',
+      type: IsarType.string,
+    ),
+    r'assessmentResultsJson': PropertySchema(
+      id: 1,
+      name: r'assessmentResultsJson',
+      type: IsarType.string,
+    ),
+    r'combinationsJson': PropertySchema(
+      id: 2,
       name: r'combinationsJson',
       type: IsarType.string,
     ),
     r'competencyJson': PropertySchema(
-      id: 1,
+      id: 3,
       name: r'competencyJson',
       type: IsarType.string,
     ),
     r'itemsJson': PropertySchema(
-      id: 2,
+      id: 4,
       name: r'itemsJson',
       type: IsarType.string,
     ),
     r'onboardingComplete': PropertySchema(
-      id: 3,
+      id: 5,
       name: r'onboardingComplete',
       type: IsarType.bool,
     ),
     r'profileJson': PropertySchema(
-      id: 4,
+      id: 6,
       name: r'profileJson',
       type: IsarType.string,
     ),
     r'routineJson': PropertySchema(
-      id: 5,
+      id: 7,
       name: r'routineJson',
       type: IsarType.string,
     ),
     r'schemaVersion': PropertySchema(
-      id: 6,
+      id: 8,
       name: r'schemaVersion',
       type: IsarType.long,
     ),
     r'sessionsJson': PropertySchema(
-      id: 7,
+      id: 9,
       name: r'sessionsJson',
       type: IsarType.string,
     )
@@ -78,6 +88,8 @@ int _appStateRecordEstimateSize(
   Map<Type, List<int>> allOffsets,
 ) {
   var bytesCount = offsets.last;
+  bytesCount += 3 + object.assessmentAggregatesJson.length * 3;
+  bytesCount += 3 + object.assessmentResultsJson.length * 3;
   bytesCount += 3 + object.combinationsJson.length * 3;
   bytesCount += 3 + object.competencyJson.length * 3;
   bytesCount += 3 + object.itemsJson.length * 3;
@@ -93,14 +105,16 @@ void _appStateRecordSerialize(
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  writer.writeString(offsets[0], object.combinationsJson);
-  writer.writeString(offsets[1], object.competencyJson);
-  writer.writeString(offsets[2], object.itemsJson);
-  writer.writeBool(offsets[3], object.onboardingComplete);
-  writer.writeString(offsets[4], object.profileJson);
-  writer.writeString(offsets[5], object.routineJson);
-  writer.writeLong(offsets[6], object.schemaVersion);
-  writer.writeString(offsets[7], object.sessionsJson);
+  writer.writeString(offsets[0], object.assessmentAggregatesJson);
+  writer.writeString(offsets[1], object.assessmentResultsJson);
+  writer.writeString(offsets[2], object.combinationsJson);
+  writer.writeString(offsets[3], object.competencyJson);
+  writer.writeString(offsets[4], object.itemsJson);
+  writer.writeBool(offsets[5], object.onboardingComplete);
+  writer.writeString(offsets[6], object.profileJson);
+  writer.writeString(offsets[7], object.routineJson);
+  writer.writeLong(offsets[8], object.schemaVersion);
+  writer.writeString(offsets[9], object.sessionsJson);
 }
 
 AppStateRecord _appStateRecordDeserialize(
@@ -110,15 +124,17 @@ AppStateRecord _appStateRecordDeserialize(
   Map<Type, List<int>> allOffsets,
 ) {
   final object = AppStateRecord();
-  object.combinationsJson = reader.readString(offsets[0]);
-  object.competencyJson = reader.readString(offsets[1]);
+  object.assessmentAggregatesJson = reader.readString(offsets[0]);
+  object.assessmentResultsJson = reader.readString(offsets[1]);
+  object.combinationsJson = reader.readString(offsets[2]);
+  object.competencyJson = reader.readString(offsets[3]);
   object.id = id;
-  object.itemsJson = reader.readString(offsets[2]);
-  object.onboardingComplete = reader.readBool(offsets[3]);
-  object.profileJson = reader.readString(offsets[4]);
-  object.routineJson = reader.readString(offsets[5]);
-  object.schemaVersion = reader.readLong(offsets[6]);
-  object.sessionsJson = reader.readString(offsets[7]);
+  object.itemsJson = reader.readString(offsets[4]);
+  object.onboardingComplete = reader.readBool(offsets[5]);
+  object.profileJson = reader.readString(offsets[6]);
+  object.routineJson = reader.readString(offsets[7]);
+  object.schemaVersion = reader.readLong(offsets[8]);
+  object.sessionsJson = reader.readString(offsets[9]);
   return object;
 }
 
@@ -136,14 +152,18 @@ P _appStateRecordDeserializeProp<P>(
     case 2:
       return (reader.readString(offset)) as P;
     case 3:
-      return (reader.readBool(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 4:
       return (reader.readString(offset)) as P;
     case 5:
-      return (reader.readString(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 6:
-      return (reader.readLong(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 7:
+      return (reader.readString(offset)) as P;
+    case 8:
+      return (reader.readLong(offset)) as P;
+    case 9:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -246,6 +266,281 @@ extension AppStateRecordQueryWhere
 
 extension AppStateRecordQueryFilter
     on QueryBuilder<AppStateRecord, AppStateRecord, QFilterCondition> {
+  QueryBuilder<AppStateRecord, AppStateRecord, QAfterFilterCondition>
+      assessmentAggregatesJsonEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'assessmentAggregatesJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppStateRecord, AppStateRecord, QAfterFilterCondition>
+      assessmentAggregatesJsonGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'assessmentAggregatesJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppStateRecord, AppStateRecord, QAfterFilterCondition>
+      assessmentAggregatesJsonLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'assessmentAggregatesJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppStateRecord, AppStateRecord, QAfterFilterCondition>
+      assessmentAggregatesJsonBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'assessmentAggregatesJson',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppStateRecord, AppStateRecord, QAfterFilterCondition>
+      assessmentAggregatesJsonStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'assessmentAggregatesJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppStateRecord, AppStateRecord, QAfterFilterCondition>
+      assessmentAggregatesJsonEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'assessmentAggregatesJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppStateRecord, AppStateRecord, QAfterFilterCondition>
+      assessmentAggregatesJsonContains(String value,
+          {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'assessmentAggregatesJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppStateRecord, AppStateRecord, QAfterFilterCondition>
+      assessmentAggregatesJsonMatches(String pattern,
+          {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'assessmentAggregatesJson',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppStateRecord, AppStateRecord, QAfterFilterCondition>
+      assessmentAggregatesJsonIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'assessmentAggregatesJson',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<AppStateRecord, AppStateRecord, QAfterFilterCondition>
+      assessmentAggregatesJsonIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'assessmentAggregatesJson',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<AppStateRecord, AppStateRecord, QAfterFilterCondition>
+      assessmentResultsJsonEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'assessmentResultsJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppStateRecord, AppStateRecord, QAfterFilterCondition>
+      assessmentResultsJsonGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'assessmentResultsJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppStateRecord, AppStateRecord, QAfterFilterCondition>
+      assessmentResultsJsonLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'assessmentResultsJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppStateRecord, AppStateRecord, QAfterFilterCondition>
+      assessmentResultsJsonBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'assessmentResultsJson',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppStateRecord, AppStateRecord, QAfterFilterCondition>
+      assessmentResultsJsonStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'assessmentResultsJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppStateRecord, AppStateRecord, QAfterFilterCondition>
+      assessmentResultsJsonEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'assessmentResultsJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppStateRecord, AppStateRecord, QAfterFilterCondition>
+      assessmentResultsJsonContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'assessmentResultsJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppStateRecord, AppStateRecord, QAfterFilterCondition>
+      assessmentResultsJsonMatches(String pattern,
+          {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'assessmentResultsJson',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppStateRecord, AppStateRecord, QAfterFilterCondition>
+      assessmentResultsJsonIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'assessmentResultsJson',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<AppStateRecord, AppStateRecord, QAfterFilterCondition>
+      assessmentResultsJsonIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'assessmentResultsJson',
+        value: '',
+      ));
+    });
+  }
+
   QueryBuilder<AppStateRecord, AppStateRecord, QAfterFilterCondition>
       combinationsJsonEqualTo(
     String value, {
@@ -1193,6 +1488,34 @@ extension AppStateRecordQueryLinks
 extension AppStateRecordQuerySortBy
     on QueryBuilder<AppStateRecord, AppStateRecord, QSortBy> {
   QueryBuilder<AppStateRecord, AppStateRecord, QAfterSortBy>
+      sortByAssessmentAggregatesJson() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'assessmentAggregatesJson', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppStateRecord, AppStateRecord, QAfterSortBy>
+      sortByAssessmentAggregatesJsonDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'assessmentAggregatesJson', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppStateRecord, AppStateRecord, QAfterSortBy>
+      sortByAssessmentResultsJson() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'assessmentResultsJson', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppStateRecord, AppStateRecord, QAfterSortBy>
+      sortByAssessmentResultsJsonDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'assessmentResultsJson', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppStateRecord, AppStateRecord, QAfterSortBy>
       sortByCombinationsJson() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'combinationsJson', Sort.asc);
@@ -1306,6 +1629,34 @@ extension AppStateRecordQuerySortBy
 
 extension AppStateRecordQuerySortThenBy
     on QueryBuilder<AppStateRecord, AppStateRecord, QSortThenBy> {
+  QueryBuilder<AppStateRecord, AppStateRecord, QAfterSortBy>
+      thenByAssessmentAggregatesJson() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'assessmentAggregatesJson', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppStateRecord, AppStateRecord, QAfterSortBy>
+      thenByAssessmentAggregatesJsonDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'assessmentAggregatesJson', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppStateRecord, AppStateRecord, QAfterSortBy>
+      thenByAssessmentResultsJson() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'assessmentResultsJson', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppStateRecord, AppStateRecord, QAfterSortBy>
+      thenByAssessmentResultsJsonDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'assessmentResultsJson', Sort.desc);
+    });
+  }
+
   QueryBuilder<AppStateRecord, AppStateRecord, QAfterSortBy>
       thenByCombinationsJson() {
     return QueryBuilder.apply(this, (query) {
@@ -1433,6 +1784,22 @@ extension AppStateRecordQuerySortThenBy
 extension AppStateRecordQueryWhereDistinct
     on QueryBuilder<AppStateRecord, AppStateRecord, QDistinct> {
   QueryBuilder<AppStateRecord, AppStateRecord, QDistinct>
+      distinctByAssessmentAggregatesJson({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'assessmentAggregatesJson',
+          caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<AppStateRecord, AppStateRecord, QDistinct>
+      distinctByAssessmentResultsJson({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'assessmentResultsJson',
+          caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<AppStateRecord, AppStateRecord, QDistinct>
       distinctByCombinationsJson({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'combinationsJson',
@@ -1496,6 +1863,20 @@ extension AppStateRecordQueryProperty
   QueryBuilder<AppStateRecord, int, QQueryOperations> idProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'id');
+    });
+  }
+
+  QueryBuilder<AppStateRecord, String, QQueryOperations>
+      assessmentAggregatesJsonProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'assessmentAggregatesJson');
+    });
+  }
+
+  QueryBuilder<AppStateRecord, String, QQueryOperations>
+      assessmentResultsJsonProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'assessmentResultsJson');
     });
   }
 

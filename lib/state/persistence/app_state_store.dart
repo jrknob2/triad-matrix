@@ -8,6 +8,7 @@ import '../../core/practice/practice_domain_v1.dart';
 part 'app_state_store.g.dart';
 
 class AppStateSnapshotData {
+  final int schemaVersion;
   final bool onboardingComplete;
   final UserProfileV1 profile;
   final List<PracticeItemV1> items;
@@ -15,8 +16,11 @@ class AppStateSnapshotData {
   final PracticeRoutineV1 routine;
   final List<PracticeSessionLogV1> sessions;
   final List<CompetencyRecordV1> competencyRecords;
+  final List<SessionAssessmentResultV1> assessmentResults;
+  final List<PracticeAssessmentAggregateV1> assessmentAggregates;
 
   const AppStateSnapshotData({
+    required this.schemaVersion,
     required this.onboardingComplete,
     required this.profile,
     required this.items,
@@ -24,6 +28,8 @@ class AppStateSnapshotData {
     required this.routine,
     required this.sessions,
     required this.competencyRecords,
+    required this.assessmentResults,
+    required this.assessmentAggregates,
   });
 }
 
@@ -38,12 +44,14 @@ class AppStateRecord {
   String routineJson = '{}';
   String sessionsJson = '[]';
   String competencyJson = '[]';
+  String assessmentResultsJson = '[]';
+  String assessmentAggregatesJson = '[]';
 }
 
 class AppStateStore {
   AppStateStore._(this._isar);
 
-  static const int currentSchemaVersion = 1;
+  static const int currentSchemaVersion = 2;
   static const String _dbName = 'triad_trainer';
   final Isar _isar;
 
@@ -74,8 +82,13 @@ class AppStateStore {
         jsonDecode(record.sessionsJson) as List<dynamic>;
     final List<dynamic> competencyList =
         jsonDecode(record.competencyJson) as List<dynamic>;
+    final List<dynamic> assessmentResultsList =
+        jsonDecode(record.assessmentResultsJson) as List<dynamic>;
+    final List<dynamic> assessmentAggregatesList =
+        jsonDecode(record.assessmentAggregatesJson) as List<dynamic>;
 
     return AppStateSnapshotData(
+      schemaVersion: record.schemaVersion,
       onboardingComplete: record.onboardingComplete,
       profile: _userProfileFromMap(profileMap),
       items: itemsList
@@ -103,6 +116,18 @@ class AppStateStore {
                 _competencyRecordFromMap(item as Map<String, dynamic>),
           )
           .toList(growable: false),
+      assessmentResults: assessmentResultsList
+          .map(
+            (dynamic item) =>
+                _assessmentResultFromMap(item as Map<String, dynamic>),
+          )
+          .toList(growable: false),
+      assessmentAggregates: assessmentAggregatesList
+          .map(
+            (dynamic item) =>
+                _assessmentAggregateFromMap(item as Map<String, dynamic>),
+          )
+          .toList(growable: false),
     );
   }
 
@@ -127,6 +152,16 @@ class AppStateStore {
       ..competencyJson = jsonEncode(
         snapshot.competencyRecords
             .map(_competencyRecordToMap)
+            .toList(growable: false),
+      )
+      ..assessmentResultsJson = jsonEncode(
+        snapshot.assessmentResults
+            .map(_assessmentResultToMap)
+            .toList(growable: false),
+      )
+      ..assessmentAggregatesJson = jsonEncode(
+        snapshot.assessmentAggregates
+            .map(_assessmentAggregateToMap)
             .toList(growable: false),
       );
 
@@ -290,6 +325,112 @@ class AppStateStore {
       practiceItemId: map['practiceItemId'] as String,
       level: CompetencyLevelV1.values.byName(map['level'] as String),
       updatedAt: DateTime.parse(map['updatedAt'] as String),
+    );
+  }
+
+  Map<String, dynamic> _assessmentResultToMap(
+    SessionAssessmentResultV1 result,
+  ) {
+    return <String, dynamic>{
+      'sessionId': result.sessionId,
+      'practiceItemId': result.practiceItemId,
+      'practiceMode': result.practiceMode.name,
+      'inputType': result.inputType.name,
+      'confidence': result.confidence.name,
+      'attemptedBpm': result.attemptedBpm,
+      'estimatedBpm': result.estimatedBpm,
+      'stabilityScore': result.stabilityScore,
+      'driftScore': result.driftScore,
+      'jitterScore': result.jitterScore,
+      'continuityScore': result.continuityScore,
+      'breakdownCount': result.breakdownCount,
+      'successfulRunCount': result.successfulRunCount,
+      'completedTargetDuration': result.completedTargetDuration,
+      'selfReportControl': result.selfReportControl?.name,
+      'selfReportTension': result.selfReportTension?.name,
+      'selfReportTempoReadiness': result.selfReportTempoReadiness?.name,
+      'assessedAt': result.assessedAt.toIso8601String(),
+    };
+  }
+
+  SessionAssessmentResultV1 _assessmentResultFromMap(Map<String, dynamic> map) {
+    return SessionAssessmentResultV1(
+      sessionId: map['sessionId'] as String,
+      practiceItemId: map['practiceItemId'] as String,
+      practiceMode: PracticeModeV1.values.byName(map['practiceMode'] as String),
+      inputType: AssessmentInputTypeV1.values.byName(
+        map['inputType'] as String,
+      ),
+      confidence: AssessmentConfidenceV1.values.byName(
+        map['confidence'] as String,
+      ),
+      attemptedBpm: map['attemptedBpm'] as int,
+      estimatedBpm: (map['estimatedBpm'] as num?)?.toDouble(),
+      stabilityScore: (map['stabilityScore'] as num).toDouble(),
+      driftScore: (map['driftScore'] as num).toDouble(),
+      jitterScore: (map['jitterScore'] as num).toDouble(),
+      continuityScore: (map['continuityScore'] as num).toDouble(),
+      breakdownCount: map['breakdownCount'] as int,
+      successfulRunCount: map['successfulRunCount'] as int,
+      completedTargetDuration: map['completedTargetDuration'] as bool,
+      selfReportControl: map['selfReportControl'] == null
+          ? null
+          : SelfReportControlV1.values.byName(
+              map['selfReportControl'] as String,
+            ),
+      selfReportTension: map['selfReportTension'] == null
+          ? null
+          : SelfReportTensionV1.values.byName(
+              map['selfReportTension'] as String,
+            ),
+      selfReportTempoReadiness: map['selfReportTempoReadiness'] == null
+          ? null
+          : SelfReportTempoReadinessV1.values.byName(
+              map['selfReportTempoReadiness'] as String,
+            ),
+      assessedAt: DateTime.parse(map['assessedAt'] as String),
+    );
+  }
+
+  Map<String, dynamic> _assessmentAggregateToMap(
+    PracticeAssessmentAggregateV1 aggregate,
+  ) {
+    return <String, dynamic>{
+      'practiceItemId': aggregate.practiceItemId,
+      'lastAssessmentAt': aggregate.lastAssessmentAt?.toIso8601String(),
+      'recentAttemptedBpm': aggregate.recentAttemptedBpm,
+      'recentStableBpm': aggregate.recentStableBpm,
+      'bestStableBpm': aggregate.bestStableBpm,
+      'stabilityScore': aggregate.stabilityScore,
+      'driftScore': aggregate.driftScore,
+      'jitterScore': aggregate.jitterScore,
+      'continuityScore': aggregate.continuityScore,
+      'confidence': aggregate.confidence.name,
+      'status': aggregate.status.name,
+      'assessmentCount': aggregate.assessmentCount,
+    };
+  }
+
+  PracticeAssessmentAggregateV1 _assessmentAggregateFromMap(
+    Map<String, dynamic> map,
+  ) {
+    return PracticeAssessmentAggregateV1(
+      practiceItemId: map['practiceItemId'] as String,
+      lastAssessmentAt: map['lastAssessmentAt'] == null
+          ? null
+          : DateTime.parse(map['lastAssessmentAt'] as String),
+      recentAttemptedBpm: map['recentAttemptedBpm'] as int?,
+      recentStableBpm: (map['recentStableBpm'] as num?)?.toDouble(),
+      bestStableBpm: (map['bestStableBpm'] as num?)?.toDouble(),
+      stabilityScore: (map['stabilityScore'] as num).toDouble(),
+      driftScore: (map['driftScore'] as num).toDouble(),
+      jitterScore: (map['jitterScore'] as num).toDouble(),
+      continuityScore: (map['continuityScore'] as num).toDouble(),
+      confidence: AssessmentConfidenceV1.values.byName(
+        map['confidence'] as String,
+      ),
+      status: MatrixProgressStateV1.values.byName(map['status'] as String),
+      assessmentCount: map['assessmentCount'] as int,
     );
   }
 }

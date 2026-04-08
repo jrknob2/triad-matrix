@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'features/app/app_shell.dart';
+import 'features/app/drumcabulary_theme.dart';
 import 'state/app_controller.dart';
 
 Future<void> main() async {
@@ -21,12 +22,7 @@ class DrumcabularyApp extends StatelessWidget {
       builder: (BuildContext context, _) {
         return MaterialApp(
           title: 'Drumcabulary',
-          theme: ThemeData(
-            useMaterial3: true,
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: const Color(0xFF194B7A),
-            ),
-          ),
+          theme: DrumcabularyTheme.light,
           home: AppShell(controller: controller),
         );
       },

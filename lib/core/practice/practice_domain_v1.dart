@@ -51,6 +51,28 @@ enum TriadMatrixFilterV1 {
 
 enum PatternNoteMarkingV1 { normal, accent, ghost }
 
+enum MatrixProgressStateV1 { notTrained, active, needsWork, strong }
+
+enum CoachBlockTypeV1 { focus, needsWork, momentum, resume, nextUnlock }
+
+enum CoachActionV1 {
+  startPractice,
+  resumePractice,
+  openMatrix,
+  buildCombo,
+  moveToFlow,
+}
+
+enum AssessmentInputTypeV1 { manual, singleSurfaceAudio, eDrumAudio, eDrumMidi }
+
+enum AssessmentConfidenceV1 { low, medium, high }
+
+enum SelfReportControlV1 { low, medium, high }
+
+enum SelfReportTensionV1 { none, some, high }
+
+enum SelfReportTempoReadinessV1 { decrease, same, increase }
+
 /* -------------------------------------------------------------------------- */
 /* Value Objects                                                              */
 /* -------------------------------------------------------------------------- */
@@ -200,6 +222,100 @@ class TodayBriefingV1 {
     required this.summary,
     required this.laneRecommendations,
     required this.momentumRecommendations,
+  });
+}
+
+@immutable
+class CoachBlockV1 {
+  final String id;
+  final CoachBlockTypeV1 type;
+  final String title;
+  final String? subtitle;
+  final String? body;
+  final List<String> itemIds;
+  final String ctaLabel;
+  final CoachActionV1 ctaAction;
+  final TriadMatrixFilterPaletteV1? matrixPalette;
+  final Set<TriadMatrixFilterV1> matrixFilters;
+  final PracticeModeV1 practiceMode;
+
+  const CoachBlockV1({
+    required this.id,
+    required this.type,
+    required this.title,
+    required this.subtitle,
+    required this.body,
+    required this.itemIds,
+    required this.ctaLabel,
+    required this.ctaAction,
+    required this.matrixPalette,
+    required this.matrixFilters,
+    required this.practiceMode,
+  });
+}
+
+@immutable
+class CoachBriefingV1 {
+  final List<CoachBlockV1> blocks;
+
+  const CoachBriefingV1({required this.blocks});
+
+  CoachBlockV1? firstBlockOfType(CoachBlockTypeV1 type) {
+    for (final CoachBlockV1 block in blocks) {
+      if (block.type == type) return block;
+    }
+    return null;
+  }
+}
+
+@immutable
+class MatrixFiltersV1 {
+  final LearningLaneV1? lane;
+  final TriadMatrixFilterPaletteV1? palette;
+  final Set<TriadMatrixFilterV1> filters;
+  final Set<String> selectedComboIds;
+  final Set<String> selectedRows;
+  final Set<String> selectedColumns;
+
+  const MatrixFiltersV1({
+    required this.lane,
+    required this.palette,
+    required this.filters,
+    required this.selectedComboIds,
+    required this.selectedRows,
+    required this.selectedColumns,
+  });
+}
+
+@immutable
+class MatrixSelectionStateV1 {
+  final List<String> orderedItemIds;
+
+  const MatrixSelectionStateV1({required this.orderedItemIds});
+
+  bool contains(String itemId) => orderedItemIds.contains(itemId);
+
+  int countOf(String itemId) {
+    return orderedItemIds.where((String id) => id == itemId).length;
+  }
+}
+
+@immutable
+class MatrixCellVisualStateV1 {
+  final String itemId;
+  final bool inScope;
+  final bool muted;
+  final MatrixProgressStateV1 progress;
+  final bool selected;
+  final int selectedCount;
+
+  const MatrixCellVisualStateV1({
+    required this.itemId,
+    required this.inScope,
+    required this.muted,
+    required this.progress,
+    required this.selected,
+    required this.selectedCount,
   });
 }
 
@@ -367,6 +483,80 @@ class PracticeSessionLogV1 {
       reflection: clearReflection ? null : (reflection ?? this.reflection),
     );
   }
+}
+
+@immutable
+class SessionAssessmentResultV1 {
+  final String sessionId;
+  final String practiceItemId;
+  final PracticeModeV1 practiceMode;
+  final AssessmentInputTypeV1 inputType;
+  final AssessmentConfidenceV1 confidence;
+  final int attemptedBpm;
+  final double? estimatedBpm;
+  final double stabilityScore;
+  final double driftScore;
+  final double jitterScore;
+  final double continuityScore;
+  final int breakdownCount;
+  final int successfulRunCount;
+  final bool completedTargetDuration;
+  final SelfReportControlV1? selfReportControl;
+  final SelfReportTensionV1? selfReportTension;
+  final SelfReportTempoReadinessV1? selfReportTempoReadiness;
+  final DateTime assessedAt;
+
+  const SessionAssessmentResultV1({
+    required this.sessionId,
+    required this.practiceItemId,
+    required this.practiceMode,
+    required this.inputType,
+    required this.confidence,
+    required this.attemptedBpm,
+    required this.estimatedBpm,
+    required this.stabilityScore,
+    required this.driftScore,
+    required this.jitterScore,
+    required this.continuityScore,
+    required this.breakdownCount,
+    required this.successfulRunCount,
+    required this.completedTargetDuration,
+    required this.selfReportControl,
+    required this.selfReportTension,
+    required this.selfReportTempoReadiness,
+    required this.assessedAt,
+  });
+}
+
+@immutable
+class PracticeAssessmentAggregateV1 {
+  final String practiceItemId;
+  final DateTime? lastAssessmentAt;
+  final int? recentAttemptedBpm;
+  final double? recentStableBpm;
+  final double? bestStableBpm;
+  final double stabilityScore;
+  final double driftScore;
+  final double jitterScore;
+  final double continuityScore;
+  final AssessmentConfidenceV1 confidence;
+  final MatrixProgressStateV1 status;
+  final int assessmentCount;
+
+  const PracticeAssessmentAggregateV1({
+    required this.practiceItemId,
+    required this.lastAssessmentAt,
+    required this.recentAttemptedBpm,
+    required this.recentStableBpm,
+    required this.bestStableBpm,
+    required this.stabilityScore,
+    required this.driftScore,
+    required this.jitterScore,
+    required this.continuityScore,
+    required this.confidence,
+    required this.status,
+    required this.assessmentCount,
+  });
 }
 
 @immutable

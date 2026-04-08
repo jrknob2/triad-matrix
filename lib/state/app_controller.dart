@@ -26,6 +26,8 @@ class AppController extends ChangeNotifier {
   late List<PracticeCombinationV1> _combinations;
   late PracticeRoutineV1 _routine;
   late List<PracticeSessionLogV1> _sessions;
+  late List<SessionAssessmentResultV1> _assessmentResults;
+  late Map<String, PracticeAssessmentAggregateV1> _assessmentAggregateByItemId;
   late Map<String, CompetencyRecordV1> _competencyByItemId;
   bool _onboardingComplete = false;
   int _resetVersion = 0;
@@ -35,6 +37,8 @@ class AppController extends ChangeNotifier {
   List<PracticeCombinationV1> get combinations =>
       List<PracticeCombinationV1>.unmodifiable(_combinations);
   PracticeRoutineV1 get routine => _routine;
+  List<SessionAssessmentResultV1> get assessmentResults =>
+      List<SessionAssessmentResultV1>.unmodifiable(_assessmentResults);
   bool get onboardingComplete => _onboardingComplete;
   int get resetVersion => _resetVersion;
   bool get hasLoggedPractice => _sessions.isNotEmpty;
@@ -58,6 +62,12 @@ class AppController extends ChangeNotifier {
     _combinations = snapshot.combinations;
     _routine = snapshot.routine;
     _sessions = snapshot.sessions;
+    _assessmentResults = snapshot.assessmentResults;
+    _assessmentAggregateByItemId = <String, PracticeAssessmentAggregateV1>{
+      for (final PracticeAssessmentAggregateV1 aggregate
+          in snapshot.assessmentAggregates)
+        aggregate.practiceItemId: aggregate,
+    };
     _competencyByItemId = <String, CompetencyRecordV1>{
       for (final CompetencyRecordV1 record in snapshot.competencyRecords)
         record.practiceItemId: record,
@@ -76,6 +86,7 @@ class AppController extends ChangeNotifier {
   Future<void> _persistState() async {
     await _store.save(
       AppStateSnapshotData(
+        schemaVersion: AppStateStore.currentSchemaVersion,
         onboardingComplete: _onboardingComplete,
         profile: _profile,
         items: _items,
@@ -83,6 +94,10 @@ class AppController extends ChangeNotifier {
         routine: _routine,
         sessions: _sessions,
         competencyRecords: _competencyByItemId.values.toList(growable: false),
+        assessmentResults: _assessmentResults,
+        assessmentAggregates: _assessmentAggregateByItemId.values.toList(
+          growable: false,
+        ),
       ),
     );
   }
@@ -99,6 +114,10 @@ class AppController extends ChangeNotifier {
     );
     copy.sort((a, b) => b.endedAt.compareTo(a.endedAt));
     return List<PracticeSessionLogV1>.unmodifiable(copy);
+  }
+
+  PracticeAssessmentAggregateV1? assessmentAggregateFor(String itemId) {
+    return _assessmentAggregateByItemId[itemId];
   }
 
   List<PracticeItemV1> get triadMatrixItems {
@@ -1557,6 +1576,8 @@ class AppController extends ChangeNotifier {
       entries: <RoutineEntryV1>[],
     );
     _sessions = const <PracticeSessionLogV1>[];
+    _assessmentResults = const <SessionAssessmentResultV1>[];
+    _assessmentAggregateByItemId = <String, PracticeAssessmentAggregateV1>{};
     _competencyByItemId = <String, CompetencyRecordV1>{};
   }
 
