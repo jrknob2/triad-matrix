@@ -326,7 +326,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     if (!mounted) return;
     _beatFlashTimer?.cancel();
     setState(() => _beatLit = true);
-    _beatFlashTimer = Timer(const Duration(milliseconds: 110), () {
+    _beatFlashTimer = Timer(const Duration(milliseconds: 170), () {
       if (mounted) setState(() => _beatLit = false);
     });
   }
@@ -374,28 +374,40 @@ class _BeatPulse extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 190,
-      height: 190,
+      width: 230,
+      height: 230,
       child: Stack(
         alignment: Alignment.center,
         children: <Widget>[
           _PulseRing(
             active: beatLit,
-            size: beatLit ? 188 : 118,
-            opacity: beatLit ? 0.34 : 0,
-            duration: const Duration(milliseconds: 260),
+            size: beatLit ? 226 : 112,
+            opacity: beatLit ? 0.48 : 0,
+            width: 4,
+            duration: const Duration(milliseconds: 360),
+            color: const Color(0xFFFFC08D),
           ),
           _PulseRing(
             active: beatLit,
-            size: beatLit ? 160 : 104,
-            opacity: beatLit ? 0.42 : 0,
-            duration: const Duration(milliseconds: 180),
+            size: beatLit ? 184 : 104,
+            opacity: beatLit ? 0.58 : 0,
+            width: 5,
+            duration: const Duration(milliseconds: 250),
+            color: const Color(0xFFF05A28),
+          ),
+          _PulseRing(
+            active: beatLit,
+            size: beatLit ? 150 : 96,
+            opacity: beatLit ? 0.70 : 0,
+            width: 6,
+            duration: const Duration(milliseconds: 170),
+            color: const Color(0xFFFFE2B5),
           ),
           AnimatedContainer(
-            duration: const Duration(milliseconds: 110),
+            duration: const Duration(milliseconds: 150),
             curve: Curves.easeOutCubic,
-            width: beatLit ? 132 : 120,
-            height: beatLit ? 132 : 120,
+            width: beatLit ? 146 : 116,
+            height: beatLit ? 146 : 116,
             decoration: BoxDecoration(
               color: beatLit
                   ? const Color(0xFFF05A28)
@@ -411,8 +423,8 @@ class _BeatPulse extends StatelessWidget {
                 if (beatLit)
                   const BoxShadow(
                     color: Color(0x88F05A28),
-                    blurRadius: 28,
-                    spreadRadius: 4,
+                    blurRadius: 42,
+                    spreadRadius: 9,
                   ),
               ],
             ),
@@ -438,12 +450,16 @@ class _PulseRing extends StatelessWidget {
   final double size;
   final double opacity;
   final Duration duration;
+  final double width;
+  final Color color;
 
   const _PulseRing({
     required this.active,
     required this.size,
     required this.opacity,
     required this.duration,
+    required this.width,
+    required this.color,
   });
 
   @override
@@ -460,8 +476,8 @@ class _PulseRing extends StatelessWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           border: Border.all(
-            color: active ? const Color(0xFFFFC08D) : Colors.transparent,
-            width: 3,
+            color: active ? color : Colors.transparent,
+            width: width,
           ),
         ),
       ),
