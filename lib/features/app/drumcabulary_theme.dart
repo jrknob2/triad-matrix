@@ -19,7 +19,10 @@ class DrumcabularyTheme {
           brightness: Brightness.light,
         ).copyWith(
           primary: orange,
+          onPrimary: surface,
           secondary: gold,
+          secondaryContainer: ink,
+          onSecondaryContainer: surface,
           tertiary: blue,
           surface: surface,
           onSurface: ink,

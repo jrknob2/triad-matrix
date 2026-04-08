@@ -123,34 +123,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: <Widget>[
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 90),
-                    curve: Curves.easeOut,
-                    width: 150,
-                    height: 150,
-                    decoration: BoxDecoration(
-                      color: _beatLit
-                          ? const Color(0xFFF05A28)
-                          : const Color(0xFF1F1A14),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: _beatLit
-                            ? const Color(0xFFFFC08D)
-                            : const Color(0xFF3A3329),
-                        width: _beatLit ? 5 : 3,
-                      ),
-                    ),
-                    child: Center(
-                      child: Text(
-                        'Beat',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: const Color(0xFFFFF4DE),
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0.6,
-                        ),
-                      ),
-                    ),
-                  ),
+                  _BeatPulse(beatLit: _beatLit),
                   const SizedBox(height: 18),
                   Text(
                     timerText,
@@ -160,8 +133,10 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                     ),
                   ),
                   const SizedBox(height: 18),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 12,
+                    runSpacing: 12,
                     children: <Widget>[
                       SizedBox(
                         height: 58,
@@ -171,9 +146,12 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                           label: Text(_running ? 'Pause' : 'Play'),
                         ),
                       ),
-                      const SizedBox(width: 12),
                       OutlinedButton(
                         onPressed: _endSession,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFFFFF4DE),
+                          side: const BorderSide(color: Color(0xFFFFF4DE)),
+                        ),
                         child: const Text('End Session'),
                       ),
                     ],
@@ -385,5 +363,108 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     } catch (_) {
       // Ignore transient playback errors during rapid BPM changes.
     }
+  }
+}
+
+class _BeatPulse extends StatelessWidget {
+  final bool beatLit;
+
+  const _BeatPulse({required this.beatLit});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 190,
+      height: 190,
+      child: Stack(
+        alignment: Alignment.center,
+        children: <Widget>[
+          _PulseRing(
+            active: beatLit,
+            size: beatLit ? 188 : 118,
+            opacity: beatLit ? 0.34 : 0,
+            duration: const Duration(milliseconds: 260),
+          ),
+          _PulseRing(
+            active: beatLit,
+            size: beatLit ? 160 : 104,
+            opacity: beatLit ? 0.42 : 0,
+            duration: const Duration(milliseconds: 180),
+          ),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 110),
+            curve: Curves.easeOutCubic,
+            width: beatLit ? 132 : 120,
+            height: beatLit ? 132 : 120,
+            decoration: BoxDecoration(
+              color: beatLit
+                  ? const Color(0xFFF05A28)
+                  : const Color(0xFF1F1A14),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: beatLit
+                    ? const Color(0xFFFFC08D)
+                    : const Color(0xFF3A3329),
+                width: beatLit ? 5 : 3,
+              ),
+              boxShadow: <BoxShadow>[
+                if (beatLit)
+                  const BoxShadow(
+                    color: Color(0x88F05A28),
+                    blurRadius: 28,
+                    spreadRadius: 4,
+                  ),
+              ],
+            ),
+            child: Center(
+              child: Text(
+                'Beat',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: const Color(0xFFFFF4DE),
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.6,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PulseRing extends StatelessWidget {
+  final bool active;
+  final double size;
+  final double opacity;
+  final Duration duration;
+
+  const _PulseRing({
+    required this.active,
+    required this.size,
+    required this.opacity,
+    required this.duration,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedOpacity(
+      duration: duration,
+      curve: Curves.easeOut,
+      opacity: opacity,
+      child: AnimatedContainer(
+        duration: duration,
+        curve: Curves.easeOutCubic,
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: active ? const Color(0xFFFFC08D) : Colors.transparent,
+            width: 3,
+          ),
+        ),
+      ),
+    );
   }
 }

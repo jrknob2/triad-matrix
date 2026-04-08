@@ -57,7 +57,10 @@ class _FocusScreenState extends State<FocusScreen> {
                             (_FocusSection section) => Padding(
                               padding: const EdgeInsets.only(right: 8),
                               child: ChoiceChip(
-                                label: Text(_labelForSection(section)),
+                                label: _chipText(
+                                  _labelForSection(section),
+                                  _section == section,
+                                ),
                                 selected: _section == section,
                                 onSelected: (_) {
                                   setState(() => _section = section);
@@ -78,7 +81,10 @@ class _FocusScreenState extends State<FocusScreen> {
                               (PracticeModeV1 mode) => Padding(
                                 padding: const EdgeInsets.only(right: 8),
                                 child: ChoiceChip(
-                                  label: Text(mode.label),
+                                  label: _chipText(
+                                    mode.label,
+                                    _viewMode == mode,
+                                  ),
                                   selected: _viewMode == mode,
                                   onSelected: (_) {
                                     setState(() => _viewMode = mode);
@@ -147,6 +153,16 @@ class _FocusScreenState extends State<FocusScreen> {
       _FocusSection.phraseWork => 'Phrase Work',
       _FocusSection.myPatterns => 'My Patterns',
     };
+  }
+
+  Widget _chipText(String label, bool selected) {
+    return Text(
+      label,
+      style: TextStyle(
+        color: selected ? Colors.white : null,
+        fontWeight: FontWeight.w900,
+      ),
+    );
   }
 }
 

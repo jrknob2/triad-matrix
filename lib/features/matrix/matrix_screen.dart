@@ -99,7 +99,7 @@ class _MatrixScreenState extends State<MatrixScreen> {
                     (LearningLaneV1 lane) => Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: ChoiceChip(
-                        label: Text(lane.label),
+                        label: _chipText(lane.label, _laneFocus == lane),
                         selected: _laneFocus == lane,
                         onSelected: (_) => _toggleLaneFocus(lane),
                       ),
@@ -170,7 +170,7 @@ class _MatrixScreenState extends State<MatrixScreen> {
                       (palette) => Padding(
                         padding: const EdgeInsets.only(right: 8),
                         child: ChoiceChip(
-                          label: Text(palette.label),
+                          label: _chipText(palette.label, _palette == palette),
                           selected: _palette == palette,
                           onSelected: (_) => _togglePalette(palette),
                         ),
@@ -236,7 +236,10 @@ class _MatrixScreenState extends State<MatrixScreen> {
             return Padding(
               padding: const EdgeInsets.only(right: 8),
               child: FilterChip(
-                label: _comboFilterLabel(comboId),
+                label: _comboFilterLabel(
+                  comboId,
+                  selected: _selectedComboIds.contains(comboId),
+                ),
                 selected: _selectedComboIds.contains(comboId),
                 onSelected: (bool selected) {
                   setState(() {
@@ -260,7 +263,7 @@ class _MatrixScreenState extends State<MatrixScreen> {
           (filter) => Padding(
             padding: const EdgeInsets.only(right: 8),
             child: FilterChip(
-              label: Text(filter.label),
+              label: _chipText(filter.label, _filters.contains(filter)),
               selected: _filters.contains(filter),
               onSelected: (bool selected) {
                 setState(() {
@@ -351,10 +354,13 @@ class _MatrixScreenState extends State<MatrixScreen> {
     return pills;
   }
 
-  Widget _comboFilterLabel(String comboId) {
+  Widget _comboFilterLabel(String comboId, {required bool selected}) {
     final bool showVoices = _laneFocus == LearningLaneV1.flow;
     if (!showVoices) {
-      return Text(widget.controller.matrixLabelForCombination(comboId));
+      return _chipText(
+        widget.controller.matrixLabelForCombination(comboId),
+        selected,
+      );
     }
 
     return PatternVoiceDisplay(
@@ -363,10 +369,22 @@ class _MatrixScreenState extends State<MatrixScreen> {
       voices: widget.controller.noteVoicesFor(comboId),
       patternStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
         fontWeight: FontWeight.w900,
-        color: const Color(0xFF101010),
+        color: selected ? Colors.white : const Color(0xFF101010),
       ),
-      voiceStyle: Theme.of(context).textTheme.labelSmall,
+      voiceStyle: Theme.of(
+        context,
+      ).textTheme.labelSmall?.copyWith(color: selected ? Colors.white : null),
       cellWidth: 30,
+    );
+  }
+
+  Widget _chipText(String label, bool selected) {
+    return Text(
+      label,
+      style: TextStyle(
+        color: selected ? Colors.white : null,
+        fontWeight: FontWeight.w900,
+      ),
     );
   }
 
@@ -635,7 +653,7 @@ class _ProgressLegendCard extends StatelessWidget {
   Widget build(BuildContext context) {
     const List<({String label, Color color})> items =
         <({String label, Color color})>[
-          (label: 'Not trained', color: Color(0xFFF1ECE3)),
+          (label: 'Not trained', color: Color(0xFFF0B2AA)),
           (label: 'Active', color: Color(0xFFD9E9F7)),
           (label: 'Needs work', color: Color(0xFFF0B2AA)),
           (label: 'Strong', color: Color(0xFFDDEDDD)),

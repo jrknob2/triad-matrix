@@ -4,6 +4,8 @@ import '../../core/practice/practice_domain_v1.dart';
 import '../../features/app/app_formatters.dart';
 import '../../features/app/drumcabulary_ui.dart';
 import '../../state/app_controller.dart';
+import 'widgets/pattern_display_text.dart';
+import 'widgets/pattern_voice_display.dart';
 import 'practice_session_screen.dart';
 
 class SessionSummaryScreen extends StatefulWidget {
@@ -34,10 +36,8 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
     }
     _loadAssessmentOnce(session.id);
 
-    final String sessionTitle = session.practiceItemIds.length == 1
-        ? widget.controller.itemById(session.practiceItemIds.first).name
-        : widget.controller.comboDisplayName(session.practiceItemIds);
     final firstItem = widget.controller.itemById(session.practiceItemIds.first);
+    final String primaryItemId = session.practiceItemIds.first;
     final _SessionRecommendation recommendation = _recommendationFor(session);
 
     return Scaffold(
@@ -51,18 +51,47 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Text(
-                    sessionTitle,
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(session.family.label),
-                  const SizedBox(height: 4),
-                  Text(session.practiceMode.label),
+                  if (session.practiceMode == PracticeModeV1.flow)
+                    PatternVoiceDisplay(
+                      tokens: widget.controller.noteTokensFor(primaryItemId),
+                      markings: widget.controller.noteMarkingsFor(
+                        primaryItemId,
+                      ),
+                      voices: widget.controller.noteVoicesFor(primaryItemId),
+                      patternStyle: Theme.of(context).textTheme.headlineMedium
+                          ?.copyWith(
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.8,
+                          ),
+                      voiceStyle: Theme.of(context).textTheme.titleMedium,
+                    )
+                  else
+                    PatternDisplayText(
+                      tokens: widget.controller.noteTokensFor(primaryItemId),
+                      markings: widget.controller.noteMarkingsFor(
+                        primaryItemId,
+                      ),
+                      style: Theme.of(context).textTheme.headlineMedium
+                          ?.copyWith(
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.8,
+                          ),
+                    ),
                   const SizedBox(height: 12),
-                  Text('Duration: ${formatDuration(session.duration)}'),
-                  Text('BPM: ${session.bpm}'),
-                  Text('Click: ${session.clickEnabled ? 'On' : 'Off'}'),
+                  _SummaryMetric(
+                    label: 'Mode',
+                    value: session.practiceMode.label,
+                  ),
+                  _SummaryMetric(label: 'Family', value: session.family.label),
+                  _SummaryMetric(
+                    label: 'Duration',
+                    value: formatDuration(session.duration),
+                  ),
+                  _SummaryMetric(label: 'BPM', value: '${session.bpm}'),
+                  _SummaryMetric(
+                    label: 'Click',
+                    value: session.clickEnabled ? 'On' : 'Off',
+                  ),
                 ],
               ),
             ),
@@ -250,6 +279,33 @@ class _SessionRecommendation {
   int nextBpm(int currentBpm) => (currentBpm + bpmAdjustment).clamp(40, 240);
 }
 
+class _SummaryMetric extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _SummaryMetric({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        children: <Widget>[
+          Text(
+            '$label: ',
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w900),
+          ),
+          Flexible(
+            child: Text(value, style: Theme.of(context).textTheme.bodyMedium),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _RecommendationPanel extends StatelessWidget {
   final _SessionRecommendation recommendation;
 
@@ -316,7 +372,13 @@ class _AssessmentChoiceGroup<T> extends StatelessWidget {
           children: values
               .map(
                 (T option) => ChoiceChip(
-                  label: Text(labelFor(option)),
+                  label: Text(
+                    labelFor(option),
+                    style: TextStyle(
+                      color: value == option ? Colors.white : null,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
                   selected: value == option,
                   onSelected: (_) => onSelected(option),
                 ),
