@@ -36,13 +36,15 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   bool _beatLit = false;
   late int _bpm;
   late bool _clickEnabled;
+  late PracticeSessionSetupV1 _setup;
   int _currentItemIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    _bpm = widget.setup.bpm;
-    _clickEnabled = widget.setup.clickEnabled;
+    _setup = widget.setup;
+    _bpm = _setup.bpm;
+    _clickEnabled = _setup.clickEnabled;
     _configureAudio();
   }
 
@@ -57,7 +59,8 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final currentItemId = widget.setup.practiceItemIds[_currentItemIndex];
+    final bool isWarmup = _setup.family == MaterialFamilyV1.warmup;
+    final currentItemId = _setup.practiceItemIds[_currentItemIndex];
     final currentItem = widget.controller.itemById(currentItemId);
     final List<String> tokens = widget.controller.noteTokensFor(currentItemId);
     final List<PatternNoteMarkingV1> markings = widget.controller
@@ -65,13 +68,15 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     final List<DrumVoiceV1> voices = widget.controller.noteVoicesFor(
       currentItemId,
     );
-    final Duration? target = timerPresetToDuration(widget.setup.timerPreset);
+    final Duration? target = timerPresetToDuration(_setup.timerPreset);
     final String timerText = target == null
         ? formatDuration(_stopwatch.elapsed)
         : '${formatDuration(_stopwatch.elapsed)} / ${formatDuration(target)}';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Practice Session')),
+      appBar: AppBar(
+        title: Text(isWarmup ? 'Warmup Session' : 'Practice Session'),
+      ),
       body: DrumScreen(
         warm: false,
         child: ListView(
@@ -81,7 +86,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  if (widget.setup.practiceMode == PracticeModeV1.flow)
+                  if (_setup.practiceMode == PracticeModeV1.flow)
                     PatternVoiceDisplay(
                       tokens: tokens,
                       markings: markings,
@@ -113,16 +118,17 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                     spacing: 8,
                     runSpacing: 8,
                     children: <Widget>[
-                      Chip(label: Text(widget.setup.practiceMode.label)),
-                      if (widget.setup.sourceName.isNotEmpty)
-                        Chip(label: Text(widget.setup.sourceName)),
+                      if (!isWarmup)
+                        Chip(label: Text(_setup.practiceMode.label))
+                      else
+                        const Chip(label: Text('Rudiments')),
                     ],
                   ),
                   const SizedBox(height: 12),
                   Text(
                     widget.controller.practiceGuidanceFor(
                       currentItemId,
-                      practiceMode: widget.setup.practiceMode,
+                      practiceMode: _setup.practiceMode,
                     ),
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: const Color(0xFF5B5345),
@@ -138,6 +144,22 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: <Widget>[
+                  if (_setup.practiceItemIds.length > 1) ...<Widget>[
+                    _SessionStepper(
+                      currentIndex: _currentItemIndex,
+                      itemCount: _setup.practiceItemIds.length,
+                      label: currentItem.name,
+                      onPrevious: _currentItemIndex == 0
+                          ? null
+                          : () => setState(() => _currentItemIndex -= 1),
+                      onNext:
+                          _currentItemIndex == _setup.practiceItemIds.length - 1
+                          ? null
+                          : () => setState(() => _currentItemIndex += 1),
+                      dark: true,
+                    ),
+                    const SizedBox(height: 16),
+                  ],
                   _BeatPulse(beatLit: _beatLit),
                   const SizedBox(height: 18),
                   Text(
@@ -161,7 +183,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                           label: Text(_running ? 'Pause' : 'Play'),
                         ),
                       ),
-                      if (widget.setup.family != MaterialFamilyV1.warmup)
+                      if (!isWarmup)
                         OutlinedButton.icon(
                           onPressed: _openWarmup,
                           style: OutlinedButton.styleFrom(
@@ -242,47 +264,6 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                 ],
               ),
             ),
-            if (widget.setup.practiceItemIds.length > 1) ...<Widget>[
-              const SizedBox(height: 16),
-              DrumPanel(
-                child: Column(
-                  children: <Widget>[
-                    Row(
-                      children: <Widget>[
-                        IconButton(
-                          onPressed: _currentItemIndex == 0
-                              ? null
-                              : () => setState(() => _currentItemIndex -= 1),
-                          icon: const Icon(Icons.chevron_left),
-                        ),
-                        Expanded(
-                          child: Center(
-                            child: Text(
-                              '${_currentItemIndex + 1} / ${widget.setup.practiceItemIds.length}',
-                              style: Theme.of(context).textTheme.titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.w900),
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          onPressed:
-                              _currentItemIndex ==
-                                  widget.setup.practiceItemIds.length - 1
-                              ? null
-                              : () => setState(() => _currentItemIndex += 1),
-                          icon: const Icon(Icons.chevron_right),
-                        ),
-                      ],
-                    ),
-                    Text(
-                      currentItem.name,
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ],
-                ),
-              ),
-            ],
           ],
         ),
       ),
@@ -321,9 +302,14 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     }
 
     final PracticeSessionLogV1 session = widget.controller.completeSession(
-      widget.setup.copyWith(bpm: _bpm, clickEnabled: _clickEnabled),
+      _setup.copyWith(bpm: _bpm, clickEnabled: _clickEnabled),
       _stopwatch.elapsed,
     );
+
+    if (_setup.family == MaterialFamilyV1.warmup) {
+      Navigator.of(context).pop();
+      return;
+    }
 
     Navigator.of(context).pushReplacement(
       MaterialPageRoute<void>(
@@ -345,18 +331,15 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
       _beatLit = false;
     }
 
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(
-        builder: (_) => PracticeSessionScreen(
-          controller: widget.controller,
-          setup: widget.controller.buildWarmupSession().copyWith(
-            bpm: _bpm,
-            timerPreset: widget.setup.timerPreset,
-            clickEnabled: _clickEnabled,
-          ),
-        ),
-      ),
-    );
+    setState(() {
+      _setup = widget.controller.buildWarmupSession().copyWith(
+        bpm: _bpm,
+        clickEnabled: _clickEnabled,
+      );
+      _currentItemIndex = 0;
+      _running = false;
+      _beatLit = false;
+    });
   }
 
   void _startElapsedTicker() {
@@ -503,6 +486,73 @@ class _BeatPulse extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _SessionStepper extends StatelessWidget {
+  final int currentIndex;
+  final int itemCount;
+  final String label;
+  final VoidCallback? onPrevious;
+  final VoidCallback? onNext;
+  final bool dark;
+
+  const _SessionStepper({
+    required this.currentIndex,
+    required this.itemCount,
+    required this.label,
+    required this.onPrevious,
+    required this.onNext,
+    required this.dark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final Color textColor = dark
+        ? const Color(0xFFFFF4DE)
+        : const Color(0xFF211B14);
+    final Color mutedColor = dark
+        ? const Color(0xCCFFF4DE)
+        : const Color(0xFF5B5345);
+
+    return Row(
+      children: <Widget>[
+        IconButton(
+          onPressed: onPrevious,
+          color: textColor,
+          disabledColor: mutedColor.withValues(alpha: 0.35),
+          icon: const Icon(Icons.chevron_left),
+        ),
+        Expanded(
+          child: Column(
+            children: <Widget>[
+              Text(
+                '${currentIndex + 1} / $itemCount',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: textColor,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: mutedColor,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+        IconButton(
+          onPressed: onNext,
+          color: textColor,
+          disabledColor: mutedColor.withValues(alpha: 0.35),
+          icon: const Icon(Icons.chevron_right),
+        ),
+      ],
     );
   }
 }

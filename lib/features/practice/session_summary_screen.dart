@@ -38,7 +38,6 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
 
     final firstItem = widget.controller.itemById(session.practiceItemIds.first);
     final String primaryItemId = session.practiceItemIds.first;
-    final bool isWarmup = session.family == MaterialFamilyV1.warmup;
     final bool isWorkingOnSource = session.sourceName == 'Working On';
     final _SessionRecommendation recommendation = _recommendationFor(session);
 
@@ -104,86 +103,69 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            if (isWarmup)
-              DrumPanel(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    const DrumSectionTitle(text: 'Warmup Logged'),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Warmup time is saved separately from coached progress. It will not change Matrix coverage, toolbox readiness, or Coach priorities.',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ],
-                ),
-              )
-            else
-              DrumPanel(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    const DrumSectionTitle(text: 'Session Check'),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Use this to guide the next recommendation. This is not a test.',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                    const SizedBox(height: 16),
-                    _AssessmentChoiceGroup<SelfReportControlV1>(
-                      title: 'Control',
-                      value: _control,
-                      values: SelfReportControlV1.values,
-                      labelFor: (SelfReportControlV1 value) => value.label,
-                      onSelected: (SelfReportControlV1 value) {
-                        setState(() => _control = value);
-                        _saveAssessment(session.id);
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    _AssessmentChoiceGroup<SelfReportTensionV1>(
-                      title: 'Tension',
-                      value: _tension,
-                      values: SelfReportTensionV1.values,
-                      labelFor: (SelfReportTensionV1 value) => value.label,
-                      onSelected: (SelfReportTensionV1 value) {
-                        setState(() => _tension = value);
-                        _saveAssessment(session.id);
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    _AssessmentChoiceGroup<SelfReportTempoReadinessV1>(
-                      title: 'Tempo',
-                      value: _tempoReadiness,
-                      values: SelfReportTempoReadinessV1.values,
-                      labelFor: (SelfReportTempoReadinessV1 value) =>
-                          value.label,
-                      onSelected: (SelfReportTempoReadinessV1 value) {
-                        setState(() => _tempoReadiness = value);
-                        _saveAssessment(session.id);
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    _RecommendationPanel(recommendation: recommendation),
-                  ],
-                ),
+            DrumPanel(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  const DrumSectionTitle(text: 'Session Check'),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Use this to guide the next recommendation. This is not a test.',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 16),
+                  _AssessmentChoiceGroup<SelfReportControlV1>(
+                    title: 'Control',
+                    value: _control,
+                    values: SelfReportControlV1.values,
+                    labelFor: (SelfReportControlV1 value) => value.label,
+                    onSelected: (SelfReportControlV1 value) {
+                      setState(() => _control = value);
+                      _saveAssessment(session.id);
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  _AssessmentChoiceGroup<SelfReportTensionV1>(
+                    title: 'Tension',
+                    value: _tension,
+                    values: SelfReportTensionV1.values,
+                    labelFor: (SelfReportTensionV1 value) => value.label,
+                    onSelected: (SelfReportTensionV1 value) {
+                      setState(() => _tension = value);
+                      _saveAssessment(session.id);
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  _AssessmentChoiceGroup<SelfReportTempoReadinessV1>(
+                    title: 'Tempo',
+                    value: _tempoReadiness,
+                    values: SelfReportTempoReadinessV1.values,
+                    labelFor: (SelfReportTempoReadinessV1 value) => value.label,
+                    onSelected: (SelfReportTempoReadinessV1 value) {
+                      setState(() => _tempoReadiness = value);
+                      _saveAssessment(session.id);
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  _RecommendationPanel(recommendation: recommendation),
+                ],
               ),
+            ),
             const SizedBox(height: 16),
             DrumActionRow(
               children: <Widget>[
-                if (!isWarmup)
-                  FilledButton(
-                    onPressed: () {
-                      if (!widget.controller.isInRoutine(firstItem.id)) {
-                        widget.controller.toggleRoutineItem(firstItem.id);
-                      }
-                    },
-                    child: Text(
-                      widget.controller.isInRoutine(firstItem.id)
-                          ? 'In Working On'
-                          : 'Add to Working On',
-                    ),
+                FilledButton(
+                  onPressed: () {
+                    if (!widget.controller.isInRoutine(firstItem.id)) {
+                      widget.controller.toggleRoutineItem(firstItem.id);
+                    }
+                  },
+                  child: Text(
+                    widget.controller.isInRoutine(firstItem.id)
+                        ? 'In Working On'
+                        : 'Add to Working On',
                   ),
+                ),
                 OutlinedButton(
                   onPressed: () {
                     Navigator.of(context).pushReplacement(
@@ -191,9 +173,7 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                         builder: (_) => PracticeSessionScreen(
                           controller: widget.controller,
                           setup:
-                              (isWarmup
-                                      ? widget.controller.buildWarmupSession()
-                                      : isWorkingOnSource
+                              (isWorkingOnSource
                                       ? widget.controller
                                             .buildSessionForWorkingOn(
                                               practiceMode:
@@ -210,9 +190,7 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                       ),
                     );
                   },
-                  child: Text(
-                    isWarmup ? 'Warm Up Again' : recommendation.practiceLabel,
-                  ),
+                  child: Text(recommendation.practiceLabel),
                 ),
                 TextButton(
                   onPressed: () {

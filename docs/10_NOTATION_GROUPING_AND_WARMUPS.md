@@ -43,10 +43,11 @@ Warmups should:
 
 - use built-in exercise phrases
 - be launched optionally before or during a practice session
-- use the current BPM, timer, and click settings
+- use a standard 5-minute timer
+- carry the current BPM and click setting when launched from a practice session
 - be excluded from Matrix coverage, Toolbox readiness, and Coach priority scoring unless deliberately changed later
 
-Candidate warmup phrases:
+Candidate warmup phrases considered earlier:
 
 - `LLLL-LLLL-LLLL`
 - `RRRR-RRRR-RRRR`
@@ -55,21 +56,19 @@ Candidate warmup phrases:
 
 Implemented MVP warmups:
 
-- `warmup_left_isolation`: `LLLL-LLLL-LLLL`
-- `warmup_right_isolation`: `RRRR-RRRR-RRRR`
-- `warmup_alternating_leads`: `LRLR-RLRL-LRLR-RLRL`
-- `warmup_doubles_shapes`: `RLLR-RRLL-LRRL-LLRR`
+- `warmup_singles`: `LRLR-RLRL-LRLR-RLRL`
+- `warmup_doubles`: `RRLL-RRLL-RRLL-RRLL`
+- `warmup_paradiddles`: `RLRR-LRLL-RLRR-LRLL`
+- `warmup_paradiddle_diddles`: `RLRRLL-LRLLRR`
 
-Warmups use `MaterialFamilyV1.warmup` so they can be practiced and logged
-without becoming coached curriculum. They are excluded from:
+Warmups use `MaterialFamilyV1.warmup` so they can be practiced without becoming
+coached curriculum. They are excluded from:
 
 - Coach "has logged practice" gating
 - Matrix coverage and progress status
 - Toolbox readiness
 - Working On / tracked-item progress analysis
-
-Warmup time can still appear as logged session time where the app is showing
-all practice activity.
+- session logging and Session Summary
 
 ## Practice Source
 
@@ -79,10 +78,14 @@ navigation is driven by the setup's `practiceItemIds`.
 Current multi-item sources:
 
 - `Working On`
-- `Warmups`
+- `Warmup`
 
 Single-item practice still uses the same session screen, so the execution view
 does not fork by source.
+
+Warmup mode switches the current practice surface in place instead of pushing a
+new route. That keeps Back navigation pointed at the previous screen, not a
+stacked warmup session.
 
 The exact grouping should reflect the exercise intention:
 

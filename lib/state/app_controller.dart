@@ -1806,10 +1806,10 @@ class AppController extends ChangeNotifier {
       family: MaterialFamilyV1.warmup,
       practiceMode: PracticeModeV1.singleSurface,
       bpm: _profile.defaultBpm,
-      timerPreset: _profile.defaultTimerPreset,
+      timerPreset: TimerPresetV1.minutes5,
       clickEnabled: _profile.clickEnabledByDefault,
       routineId: null,
-      sourceName: 'Warmups',
+      sourceName: 'Warmup',
     );
   }
 
@@ -2471,28 +2471,28 @@ class AppController extends ChangeNotifier {
   List<PracticeItemV1> _baseWarmupItems() {
     return <PracticeItemV1>[
       _warmupItem(
-        id: 'warmup_left_isolation',
-        name: 'LLLL-LLLL-LLLL',
-        sticking: 'LLLLLLLLLLLL',
-        tags: const <String>['warmup', 'left-hand'],
-      ),
-      _warmupItem(
-        id: 'warmup_right_isolation',
-        name: 'RRRR-RRRR-RRRR',
-        sticking: 'RRRRRRRRRRRR',
-        tags: const <String>['warmup', 'right-hand'],
-      ),
-      _warmupItem(
-        id: 'warmup_alternating_leads',
-        name: 'LRLR-RLRL-LRLR-RLRL',
+        id: 'warmup_singles',
+        name: 'Singles',
         sticking: 'LRLRRLRLLRLRRLRL',
-        tags: const <String>['warmup', 'singles', 'lead-switching'],
+        tags: const <String>['warmup', 'rudiment', 'singles'],
       ),
       _warmupItem(
-        id: 'warmup_doubles_shapes',
-        name: 'RLLR-RRLL-LRRL-LLRR',
-        sticking: 'RLLRRRLLLRRLLLRR',
-        tags: const <String>['warmup', 'doubles', 'balance'],
+        id: 'warmup_doubles',
+        name: 'Doubles',
+        sticking: 'RRLLRRLLRRLLRRLL',
+        tags: const <String>['warmup', 'rudiment', 'doubles'],
+      ),
+      _warmupItem(
+        id: 'warmup_paradiddles',
+        name: 'Paradiddles',
+        sticking: 'RLRRLRLLRLRRLRLL',
+        tags: const <String>['warmup', 'rudiment', 'paradiddle'],
+      ),
+      _warmupItem(
+        id: 'warmup_paradiddle_diddles',
+        name: 'Paradiddle-Diddles',
+        sticking: 'RLRRLLLRLLRR',
+        tags: const <String>['warmup', 'rudiment', 'paradiddle-diddle'],
       ),
     ];
   }
