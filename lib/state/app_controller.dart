@@ -540,6 +540,10 @@ class AppController extends ChangeNotifier {
     return List<DrumVoiceV1>.unmodifiable(item.voiceAssignments);
   }
 
+  bool hasNonSnareVoice(String itemId) {
+    return noteVoicesFor(itemId).any((voice) => voice != DrumVoiceV1.snare);
+  }
+
   bool hasKick(String itemId) => usesKick(itemId);
 
   bool handsOnly(String itemId) => !usesKick(itemId);

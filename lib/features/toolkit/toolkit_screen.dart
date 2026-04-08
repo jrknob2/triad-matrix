@@ -104,8 +104,7 @@ class _FocusScreenState extends State<FocusScreen> {
     return switch (_section) {
       _FocusSection.workingOn => _FocusList(
         title: 'Working On',
-        summary:
-            'These are the assignments that should get repeated attention. This is coached work, not storage.',
+        summary: 'These are the assignments getting repeated attention.',
         items: widget.controller.activeWorkItems,
         controller: widget.controller,
         onOpenItem: widget.onOpenItem,
@@ -311,7 +310,15 @@ class _FocusList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Duration totalLoggedTime = items.fold<Duration>(
+    final List<PracticeItemV1> visibleItems =
+        practiceMode == PracticeModeV1.flow
+        ? items
+              .where(
+                (PracticeItemV1 item) => controller.hasNonSnareVoice(item.id),
+              )
+              .toList(growable: false)
+        : items;
+    final Duration totalLoggedTime = visibleItems.fold<Duration>(
       Duration.zero,
       (Duration sum, PracticeItemV1 item) =>
           sum + controller.totalTime(itemId: item.id),
@@ -332,25 +339,27 @@ class _FocusList extends StatelessWidget {
           Text(summary, style: Theme.of(context).textTheme.bodyMedium),
           const SizedBox(height: 10),
           Text(
-            '${items.length == 1 ? '1 item' : '${items.length} items'} • ${formatDuration(totalLoggedTime)} logged',
+            '${visibleItems.length == 1 ? '1 item' : '${visibleItems.length} items'} • ${formatDuration(totalLoggedTime)} logged',
             style: Theme.of(
               context,
             ).textTheme.bodyLarge?.copyWith(color: const Color(0xFF5B5345)),
           ),
           const SizedBox(height: 12),
-          if (items.isEmpty)
+          if (visibleItems.isEmpty)
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Text(
-                  controller.isFirstLight
+                  practiceMode == PracticeModeV1.flow
+                      ? 'Nothing here has a flow voice route yet. Open a practice item, switch to Flow, and assign voices beyond snare.'
+                      : controller.isFirstLight
                       ? 'Nothing is in this section yet. Build a phrase from the matrix or start practicing and let this area fill in from real work.'
                       : 'Nothing here yet. Add material from the matrix or save a custom phrase for later.',
                 ),
               ),
             )
           else
-            ...items.map(
+            ...visibleItems.map(
               (item) => Card(
                 margin: const EdgeInsets.only(bottom: 10),
                 child: ListTile(
