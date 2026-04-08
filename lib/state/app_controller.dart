@@ -114,12 +114,15 @@ class AppController extends ChangeNotifier {
   }
 
   Future<void> _persistState() async {
+    final List<PracticeItemV1> persistedItems = _items
+        .where((PracticeItemV1 item) => !item.isWarmup)
+        .toList(growable: false);
     await _store.save(
       AppStateSnapshotData(
         schemaVersion: AppStateStore.currentSchemaVersion,
         onboardingComplete: _onboardingComplete,
         profile: _profile,
-        items: _items,
+        items: persistedItems,
         combinations: _combinations,
         routine: _routine,
         sessions: _sessions,
@@ -1846,7 +1849,7 @@ class AppController extends ChangeNotifier {
       practiceMode: PracticeModeV1.singleSurface,
       bpm: _profile.defaultBpm,
       timerPreset: TimerPresetV1.none,
-      clickEnabled: _profile.clickEnabledByDefault,
+      clickEnabled: false,
       routineId: null,
       sourceName: 'Warmup',
     );

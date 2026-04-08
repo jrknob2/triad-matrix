@@ -45,6 +45,7 @@ Warmups should:
 - be launched optionally before or during a practice session
 - use a standard 1-minute timer per exercise
 - carry the current BPM and click setting when launched from a practice session
+- default to `click off` and `pulse off`
 - be excluded from Matrix coverage, Toolbox readiness, and Coach priority scoring unless deliberately changed later
 
 Candidate warmup phrases considered earlier:
@@ -72,6 +73,9 @@ coached curriculum. They are excluded from:
 - Toolbox readiness
 - Working On / tracked-item progress analysis
 - session logging and Session Summary
+
+Warmup items are runtime-only built-ins. They are not persisted as stored
+practice items.
 
 ## Practice Source
 

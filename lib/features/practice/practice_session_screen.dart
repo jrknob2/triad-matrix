@@ -34,11 +34,13 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   Timer? _beatFlashTimer;
   bool _running = false;
   bool _beatLit = false;
+  late bool _pulseEnabled;
   late int _bpm;
   late bool _clickEnabled;
   late PracticeSessionSetupV1 _setup;
   PracticeSessionSetupV1? _returnSetup;
   int _returnItemIndex = 0;
+  bool? _returnPulseEnabled;
   int _currentItemIndex = 0;
 
   @override
@@ -46,7 +48,10 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     super.initState();
     _setup = widget.setup;
     _bpm = _setup.bpm;
-    _clickEnabled = _setup.clickEnabled;
+    _clickEnabled = _setup.family == MaterialFamilyV1.warmup
+        ? false
+        : _setup.clickEnabled;
+    _pulseEnabled = _setup.family != MaterialFamilyV1.warmup;
     _configureAudio();
   }
 
@@ -183,7 +188,11 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                       ),
                       const SizedBox(height: 16),
                     ],
-                    _BeatPulse(beatLit: _beatLit, bpm: _bpm),
+                    _BeatPulse(
+                      beatLit: _beatLit,
+                      bpm: _bpm,
+                      enabled: _pulseEnabled,
+                    ),
                     const SizedBox(height: 18),
                     Text(
                       timerText,
@@ -286,6 +295,19 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                       value: _clickEnabled,
                       onChanged: _updateClickEnabled,
                     ),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Pulse'),
+                      value: _pulseEnabled,
+                      onChanged: (bool value) {
+                        setState(() {
+                          _pulseEnabled = value;
+                          if (!value) {
+                            _beatLit = false;
+                          }
+                        });
+                      },
+                    ),
                   ],
                 ),
               ),
@@ -343,13 +365,16 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   void _openWarmup() {
     _returnSetup = _setup.copyWith(bpm: _bpm, clickEnabled: _clickEnabled);
     _returnItemIndex = _currentItemIndex;
+    _returnPulseEnabled = _pulseEnabled;
     _resetRunState();
 
     setState(() {
       _setup = widget.controller.buildWarmupSession().copyWith(
         bpm: _bpm,
-        clickEnabled: _clickEnabled,
+        clickEnabled: false,
       );
+      _clickEnabled = false;
+      _pulseEnabled = false;
       _currentItemIndex = 0;
     });
   }
@@ -365,12 +390,14 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
       _setup = returnSetup;
       _bpm = returnSetup.bpm;
       _clickEnabled = returnSetup.clickEnabled;
+      _pulseEnabled = _returnPulseEnabled ?? true;
       _currentItemIndex = _returnItemIndex.clamp(
         0,
         returnSetup.practiceItemIds.length - 1,
       );
       _returnSetup = null;
       _returnItemIndex = 0;
+      _returnPulseEnabled = null;
     });
   }
 
@@ -416,7 +443,9 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   }
 
   void _handleBeat() {
-    _pulseBeat();
+    if (_pulseEnabled) {
+      _pulseBeat();
+    }
     if (_clickEnabled) {
       _playClick();
     }
@@ -469,8 +498,13 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
 class _BeatPulse extends StatelessWidget {
   final bool beatLit;
   final int bpm;
+  final bool enabled;
 
-  const _BeatPulse({required this.beatLit, required this.bpm});
+  const _BeatPulse({
+    required this.beatLit,
+    required this.bpm,
+    required this.enabled,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -512,12 +546,16 @@ class _BeatPulse extends StatelessWidget {
             decoration: BoxDecoration(
               color: beatLit
                   ? const Color(0xFFF05A28)
-                  : const Color(0xFF1F1A14),
+                  : enabled
+                  ? const Color(0xFF1F1A14)
+                  : const Color(0xFF14100C),
               shape: BoxShape.circle,
               border: Border.all(
                 color: beatLit
                     ? const Color(0xFFFFC08D)
-                    : const Color(0xFF3A3329),
+                    : enabled
+                    ? const Color(0xFF3A3329)
+                    : const Color(0xFF2A231C),
                 width: beatLit ? 5 : 3,
               ),
               boxShadow: <BoxShadow>[
@@ -542,7 +580,7 @@ class _BeatPulse extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    'BPM',
+                    enabled ? 'BPM' : 'PULSE OFF',
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
                       color: const Color(0xFFFFF4DE),
                       fontWeight: FontWeight.w900,
