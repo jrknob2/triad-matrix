@@ -86,14 +86,31 @@ class AppController extends ChangeNotifier {
   }
 
   List<PracticeItemV1> _itemsWithMissingBuiltIns(List<PracticeItemV1> items) {
-    final Set<String> existingIds = items
+    final List<PracticeItemV1> canonicalWarmups = _baseWarmupItems();
+    final Set<String> canonicalWarmupIds = canonicalWarmups
+        .map((PracticeItemV1 item) => item.id)
+        .toSet();
+    final List<PracticeItemV1> filteredItems = items
+        .where(
+          (PracticeItemV1 item) =>
+              !(item.source == PracticeItemSourceV1.builtIn &&
+                  item.isWarmup &&
+                  !canonicalWarmupIds.contains(item.id)),
+        )
+        .where(
+          (PracticeItemV1 item) =>
+              !(item.source == PracticeItemSourceV1.builtIn && item.isWarmup),
+        )
+        .toList(growable: false);
+
+    final Set<String> existingIds = filteredItems
         .map((PracticeItemV1 item) => item.id)
         .toSet();
     final List<PracticeItemV1> missingBuiltIns = _basePracticeItems()
         .where((PracticeItemV1 item) => !existingIds.contains(item.id))
         .toList(growable: false);
-    if (missingBuiltIns.isEmpty) return items;
-    return <PracticeItemV1>[...items, ...missingBuiltIns];
+    if (missingBuiltIns.isEmpty) return filteredItems;
+    return <PracticeItemV1>[...filteredItems, ...missingBuiltIns];
   }
 
   Future<void> _persistState() async {
@@ -692,8 +709,10 @@ class AppController extends ChangeNotifier {
   }
 
   List<PracticeItemV1> get warmupItems {
-    return _items
-        .where((PracticeItemV1 item) => item.family == MaterialFamilyV1.warmup)
+    final List<String> orderedIds = _warmupItemIdsInOrder();
+    return orderedIds
+        .map(itemByIdOrNull)
+        .whereType<PracticeItemV1>()
         .toList(growable: false);
   }
 
@@ -2537,6 +2556,18 @@ class AppController extends ChangeNotifier {
         sticking: 'LRLLRRLRLLRRLRLLRRLRLLRR',
         tags: const <String>['warmup', 'rudiment', 'paradiddle-diddle', 'left'],
       ),
+    ];
+  }
+
+  List<String> _warmupItemIdsInOrder() {
+    return const <String>[
+      'warmup_right_hand_singles',
+      'warmup_left_hand_singles',
+      'warmup_singles',
+      'warmup_doubles',
+      'warmup_paradiddles',
+      'warmup_paradiddle_diddles',
+      'warmup_left_paradiddle_diddles',
     ];
   }
 
