@@ -37,6 +37,7 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
         ? widget.controller.itemById(session.practiceItemIds.first).name
         : widget.controller.comboDisplayName(session.practiceItemIds);
     final firstItem = widget.controller.itemById(session.practiceItemIds.first);
+    final _SessionRecommendation recommendation = _recommendationFor(session);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Session Summary')),
@@ -116,6 +117,8 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                       _saveAssessment(session.id);
                     },
                   ),
+                  const SizedBox(height: 16),
+                  _RecommendationPanel(recommendation: recommendation),
                 ],
               ),
             ),
@@ -140,12 +143,17 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                 MaterialPageRoute<void>(
                   builder: (_) => PracticeSessionScreen(
                     controller: widget.controller,
-                    setup: widget.controller.buildSessionForItem(firstItem.id),
+                    setup: widget.controller
+                        .buildSessionForItem(
+                          firstItem.id,
+                          practiceMode: session.practiceMode,
+                        )
+                        .copyWith(bpm: recommendation.nextBpm(session.bpm)),
                   ),
                 ),
               );
             },
-            child: const Text('Practice Again'),
+            child: Text(recommendation.practiceLabel),
           ),
           const SizedBox(height: 8),
           TextButton(
@@ -175,6 +183,107 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
       selfReportControl: _control,
       selfReportTension: _tension,
       selfReportTempoReadiness: _tempoReadiness,
+    );
+  }
+
+  _SessionRecommendation _recommendationFor(PracticeSessionLogV1 session) {
+    final bool incomplete =
+        _control == null || _tension == null || _tempoReadiness == null;
+    if (incomplete) {
+      return const _SessionRecommendation(
+        title: 'Mark the rep',
+        body:
+            'Answer the three checks above and the next rep will get a clearer direction.',
+        practiceLabel: 'Practice Again',
+        bpmAdjustment: 0,
+      );
+    }
+
+    final bool slowDown =
+        _control == SelfReportControlV1.low ||
+        _tension == SelfReportTensionV1.high ||
+        _tempoReadiness == SelfReportTempoReadinessV1.decrease;
+    if (slowDown) {
+      return const _SessionRecommendation(
+        title: 'Next rep: slow it down',
+        body:
+            'Keep the phrase smaller and cleaner. The next win is relaxed control, not more tempo.',
+        practiceLabel: 'Practice Slower',
+        bpmAdjustment: -6,
+      );
+    }
+
+    final bool bumpUp =
+        _control == SelfReportControlV1.high &&
+        _tension == SelfReportTensionV1.none &&
+        _tempoReadiness == SelfReportTempoReadinessV1.increase;
+    if (bumpUp) {
+      return const _SessionRecommendation(
+        title: 'Next rep: bump it up',
+        body:
+            'The phrase held together. Add a little tempo and make sure the sound stays relaxed.',
+        practiceLabel: 'Bump It Up',
+        bpmAdjustment: 4,
+      );
+    }
+
+    return const _SessionRecommendation(
+      title: 'Next rep: stay here',
+      body:
+          'This tempo still has work in it. Repeat it until the motion and sound feel dependable.',
+      practiceLabel: 'Stay Here',
+      bpmAdjustment: 0,
+    );
+  }
+}
+
+class _SessionRecommendation {
+  final String title;
+  final String body;
+  final String practiceLabel;
+  final int bpmAdjustment;
+
+  const _SessionRecommendation({
+    required this.title,
+    required this.body,
+    required this.practiceLabel,
+    required this.bpmAdjustment,
+  });
+
+  int nextBpm(int currentBpm) => (currentBpm + bpmAdjustment).clamp(40, 240);
+}
+
+class _RecommendationPanel extends StatelessWidget {
+  final _SessionRecommendation recommendation;
+
+  const _RecommendationPanel({required this.recommendation});
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              recommendation.title,
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              recommendation.body,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
