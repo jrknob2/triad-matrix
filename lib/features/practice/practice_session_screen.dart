@@ -565,16 +565,23 @@ class _PlayerNotation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final double fontSize = switch (tokens.length) {
+      >= 24 => 24,
+      >= 16 => 28,
+      >= 12 => 31,
+      _ => 34,
+    };
     final TextStyle patternStyle =
         Theme.of(context).textTheme.displaySmall?.copyWith(
           color: const Color(0xFFFFF4DE),
           fontWeight: FontWeight.w900,
+          fontSize: fontSize,
           letterSpacing: isWarmup ? 1.3 : 0.4,
         ) ??
-        const TextStyle(
+        TextStyle(
           color: Color(0xFFFFF4DE),
           fontWeight: FontWeight.w900,
-          fontSize: 34,
+          fontSize: fontSize,
           letterSpacing: 0.4,
         );
 
@@ -591,18 +598,16 @@ class _PlayerNotation extends StatelessWidget {
 
     return SizedBox(
       width: double.infinity,
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        alignment: Alignment.center,
+      child: Center(
         child: setup.practiceMode == PracticeModeV1.flow
             ? PatternVoiceDisplay(
                 tokens: tokens,
                 markings: markings,
                 voices: voices,
                 grouping: grouping,
-                showRepeatIndicator: isWarmup,
+                showRepeatIndicator: true,
                 scrollable: false,
-                cellWidth: isWarmup ? 42 : 40,
+                cellWidth: tokens.length >= 24 ? 32 : (isWarmup ? 42 : 40),
                 patternStyle: patternStyle,
                 voiceStyle: voiceStyle,
               )
@@ -610,9 +615,10 @@ class _PlayerNotation extends StatelessWidget {
                 tokens: tokens,
                 markings: markings,
                 grouping: grouping,
-                showRepeatIndicator: isWarmup,
+                showRepeatIndicator: true,
                 style: patternStyle,
                 textAlign: TextAlign.center,
+                maxLines: 2,
               ),
       ),
     );

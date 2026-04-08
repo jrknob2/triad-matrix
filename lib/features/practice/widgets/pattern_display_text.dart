@@ -11,6 +11,7 @@ class PatternDisplayText extends StatelessWidget {
   final double ghostOpacity;
   final PatternGroupingV1 grouping;
   final bool showRepeatIndicator;
+  final int? maxLines;
 
   const PatternDisplayText({
     super.key,
@@ -22,6 +23,7 @@ class PatternDisplayText extends StatelessWidget {
     this.ghostOpacity = 0.72,
     this.grouping = PatternGroupingV1.spaced,
     this.showRepeatIndicator = false,
+    this.maxLines,
   }) : assert(tokens.length == markings.length);
 
   @override
@@ -42,6 +44,8 @@ class PatternDisplayText extends StatelessWidget {
       children: <Widget>[
         RichText(
           textAlign: textAlign,
+          maxLines: maxLines,
+          overflow: TextOverflow.visible,
           text: TextSpan(
             style: baseStyle,
             children: <InlineSpan>[
