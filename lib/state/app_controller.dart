@@ -154,6 +154,13 @@ class AppController extends ChangeNotifier {
     return List<PracticeSessionLogV1>.unmodifiable(copy);
   }
 
+  PracticeSessionLogV1? get lastTrackedSession {
+    for (final PracticeSessionLogV1 session in recentSessions) {
+      if (!_isWarmupSession(session)) return session;
+    }
+    return null;
+  }
+
   PracticeAssessmentAggregateV1? assessmentAggregateFor(String itemId) {
     return _assessmentAggregateByItemId[itemId];
   }
@@ -1889,6 +1896,27 @@ class AppController extends ChangeNotifier {
       clickEnabled: false,
       routineId: null,
       sourceName: 'Warmup',
+    );
+  }
+
+  PracticeSessionSetupV1? buildSessionFromLastSessionOrNull() {
+    final PracticeSessionLogV1? session = lastTrackedSession;
+    if (session == null) return null;
+    final List<String> itemIds = session.practiceItemIds
+        .where((String itemId) => itemByIdOrNull(itemId) != null)
+        .toList(growable: false);
+    if (itemIds.isEmpty) return null;
+    return PracticeSessionSetupV1(
+      practiceItemIds: itemIds,
+      family: itemIds.length == 1
+          ? itemById(itemIds.first).family
+          : MaterialFamilyV1.combo,
+      practiceMode: session.practiceMode,
+      bpm: session.bpm,
+      timerPreset: _profile.defaultTimerPreset,
+      clickEnabled: session.clickEnabled,
+      routineId: session.routineId,
+      sourceName: 'Repeat Last Session',
     );
   }
 

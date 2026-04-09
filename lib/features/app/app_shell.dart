@@ -5,6 +5,7 @@ import '../../state/app_controller.dart';
 import '../matrix/matrix_screen.dart';
 import '../library/combination_builder_screen.dart';
 import '../library/item_detail_screen.dart';
+import '../practice/practice_screen.dart';
 import '../practice/practice_session_screen.dart';
 import '../progress/progress_screen.dart';
 import '../settings/app_settings_screen.dart';
@@ -35,7 +36,7 @@ class _AppShellState extends State<AppShell> {
             key: ValueKey<String>('today_${widget.controller.resetVersion}'),
             controller: widget.controller,
             onOpenMatrix: _openMatrix,
-            onOpenFocus: () => setState(() => _currentIndex = 2),
+            onOpenFocus: () => setState(() => _currentIndex = 3),
             onOpenItem: _openItemDetail,
             onPracticeItem: _openPracticeItem,
             onPracticeItemInMode: _openPracticeItemInMode,
@@ -50,14 +51,22 @@ class _AppShellState extends State<AppShell> {
             onPracticeItemInMode: _openPracticeItemInMode,
             onBuildComboFromItems: _openCombinationBuilderFromItems,
           ),
+          PracticeScreen(
+            key: ValueKey<String>('practice_${widget.controller.resetVersion}'),
+            controller: widget.controller,
+            onRepeatLastSession: _repeatLastSession,
+            onPracticeWorkingOn: _openWorkingOnPractice,
+            onPracticeWarmup: _openWarmupPractice,
+            onPracticeItemInMode: _openPracticeItemInMode,
+            onOpenMatrix: () => setState(() => _currentIndex = 1),
+            onOpenFocus: () => setState(() => _currentIndex = 3),
+          ),
           FocusScreen(
             key: ValueKey<String>('focus_${widget.controller.resetVersion}'),
             controller: widget.controller,
             onOpenItem: _openItemDetail,
-            onPracticeItem: _openPracticeItem,
             onPracticeItemInMode: _openPracticeItemInMode,
-            onPracticeWorkingOn: _openWorkingOnPractice,
-            onPracticeWarmup: _openWarmupPractice,
+            onOpenMatrix: () => setState(() => _currentIndex = 1),
           ),
           ProgressScreen(
             key: ValueKey<String>('progress_${widget.controller.resetVersion}'),
@@ -69,6 +78,7 @@ class _AppShellState extends State<AppShell> {
         final List<String> titles = <String>[
           'Coach',
           'Matrix',
+          'Practice',
           'Working On',
           'Progress',
         ];
@@ -100,6 +110,11 @@ class _AppShellState extends State<AppShell> {
                 icon: Icon(Icons.grid_view_outlined),
                 selectedIcon: Icon(Icons.grid_view_rounded),
                 label: 'Matrix',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.play_circle_outline_rounded),
+                selectedIcon: Icon(Icons.play_circle_rounded),
+                label: 'Practice',
               ),
               NavigationDestination(
                 icon: Icon(Icons.backpack_outlined),
@@ -172,6 +187,18 @@ class _AppShellState extends State<AppShell> {
           controller: widget.controller,
           setup: widget.controller.buildWarmupSession(),
         ),
+      ),
+    );
+  }
+
+  void _repeatLastSession() {
+    final PracticeSessionSetupV1? setup = widget.controller
+        .buildSessionFromLastSessionOrNull();
+    if (setup == null) return;
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            PracticeSessionScreen(controller: widget.controller, setup: setup),
       ),
     );
   }

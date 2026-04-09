@@ -34,6 +34,7 @@ Define how triads are grouped, filtered, and displayed.
 - ordered sequence stored
 - grid cells show membership only
 - exact occurrence removal happens in the ordered phrase header, not inside cells
+- matrix cells must not show per-cell remove buttons or `x` badges
 
 ## Rules
 - do not collapse grid into simple heatmap
