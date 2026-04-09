@@ -303,6 +303,8 @@ Coach answers:
 
 ### Allowed Card Types
 
+Internal only:
+
 - `Getting Started`
 - `Start Here`
 - `Focus`
@@ -311,12 +313,27 @@ Coach answers:
 - `Next Unlock`
 - `Resume` later
 
+Visible card identity should be a coaching move, not the internal type.
+
 ### Required Information On A Card
 
 - title
 - short body
 - one concrete reason
 - one primary CTA
+
+Preferred visible title shapes:
+
+- `Try this`
+- `Think about`
+- `Put more attention on...`
+- `Slow it down`
+- `Speed it up now`
+- `You are ready for...`
+- `Spend more time here`
+- `Keep this going`
+- `Clean this up`
+- `Move this around the kit`
 
 ### Forbidden Wording
 
@@ -326,6 +343,8 @@ Coach answers:
 - `status language`
 - `this view shows`
 - `reference point`
+- robotic diagnostic phrases like `the weak spot is`
+- visible category labels that read like framework buckets
 
 ### Primary Controls
 
@@ -339,6 +358,7 @@ Coach answers:
 - every CTA must map to a real flow
 - every card must be actionable
 - no display-only chips with no action value
+- each card should feel like observation plus advice, not category plus label
 
 ### Coach State Matrix
 

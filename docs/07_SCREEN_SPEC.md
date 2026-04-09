@@ -61,6 +61,7 @@ Coach tells the player what to do next and why.
 - point the player back to current work when momentum matters
 - surface cleanup needs
 - surface next-step opportunities
+- sound like a teacher noticing a problem or readiness signal and responding to it
 
 ### Must Not Do
 
@@ -68,6 +69,7 @@ Coach tells the player what to do next and why.
 - list all possible recommendations
 - explain internal ranking logic
 - duplicate Progress
+- expose internal block types as visible card identity
 
 ### Primary States
 
@@ -163,6 +165,7 @@ Must show:
 - no internal/framework wording may appear
 - no static filler cards may appear once real data exists
 - the screen should feel sparse, not busy
+- visible card titles should read like coaching advice, not loose categories
 
 ---
 

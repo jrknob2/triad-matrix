@@ -241,26 +241,59 @@ Contract:
 
 Coach may use teaching voice.
 
+Coach should sound like:
+
+- a teacher watching a rep
+- noticing what is happening
+- giving one experienced adjustment
+
 Coach copy should:
 
-- name the task
-- tell the student what to do
-- give one concrete reason
+- start from an observed practice problem or readiness signal
+- tell the student what to do next
+- name the concrete thing to notice or correct
+- sound like advice, not a status label
 
 Coach copy should not:
 
 - explain ranking logic
 - explain the screen
 - sound like motivational filler
+- expose internal card categories as the visible card identity
+
+Coach card titles should read like coaching moves, not buckets.
+
+Prefer visible card starters like:
+
+- `Try this`
+- `Think about`
+- `Put more attention on`
+- `Slow it down`
+- `Speed it up now`
+- `You are ready for`
+- `Spend more time here`
+- `Keep this going`
+- `Clean this up`
+- `Move this around the kit`
+
+Avoid visible card labels like:
+
+- `Focus`
+- `Needs Work`
+- `Momentum`
+- `Next Unlock`
 
 Preferred structure:
 
-1. instruction
-2. reason
+1. observation
+2. instruction
+3. reason if needed
 
 Example shape:
 
-- `Start with RLL. Keep it even and relaxed until it repeats cleanly.`
+- `Slow RLL down. The handoff is where it starts to rush.`
+- `You are ready for flow on RLR. Keep the sticking the same and move the voices.`
+- `Spend more time on LRR. It is close, but the loop still has a gap in it.`
 
 ### Matrix
 
