@@ -391,12 +391,16 @@ Progress measures development.
 - total time
 - recent activity trend
 - coverage summary
+- rolled-up assessment graph
 
 #### By Item
 
 - item list with progress state
 - logged time
 - recent work
+- selected-item assessment graph
+- selected-item BPM graph
+- selected-item time graph
 
 #### By Group
 

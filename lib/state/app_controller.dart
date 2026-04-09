@@ -165,6 +165,40 @@ class AppController extends ChangeNotifier {
     return _assessmentAggregateByItemId[itemId];
   }
 
+  List<SessionAssessmentResultV1> assessmentHistoryForItem(String itemId) {
+    final List<SessionAssessmentResultV1> copy = _assessmentResults
+        .where(
+          (SessionAssessmentResultV1 result) => result.practiceItemId == itemId,
+        )
+        .toList(growable: false);
+    copy.sort((a, b) => a.assessedAt.compareTo(b.assessedAt));
+    return List<SessionAssessmentResultV1>.unmodifiable(copy);
+  }
+
+  List<PracticeSessionLogV1> sessionHistoryForItem(String itemId) {
+    final List<PracticeSessionLogV1> copy = _sessions
+        .where(
+          (PracticeSessionLogV1 session) =>
+              _sessionContainsItem(session, itemId),
+        )
+        .toList(growable: false);
+    copy.sort((a, b) => a.endedAt.compareTo(b.endedAt));
+    return List<PracticeSessionLogV1>.unmodifiable(copy);
+  }
+
+  MatrixProgressStateV1 statusForAssessmentResult(
+    SessionAssessmentResultV1 result,
+  ) {
+    return _classifyAssessmentAggregate(
+      assessmentCount: 1,
+      stabilityScore: result.stabilityScore,
+      driftScore: result.driftScore,
+      jitterScore: result.jitterScore,
+      continuityScore: result.continuityScore,
+      confidence: result.confidence,
+    );
+  }
+
   List<PracticeItemV1> get triadMatrixItems {
     return triadMatrixAll()
         .map((cell) => itemById(_triadItemId(cell.id)))

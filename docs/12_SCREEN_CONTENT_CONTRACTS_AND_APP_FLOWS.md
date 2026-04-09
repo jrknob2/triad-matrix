@@ -173,6 +173,7 @@ Required controls:
 Goal:
 
 - inspect development over time
+- inspect assessment trends visually
 
 Path:
 
@@ -191,6 +192,7 @@ Required controls:
 - view switcher
 - filter scope
 - drill-down rows
+- selected-item graph/detail panel
 
 ### Flow G: Flow Preparation
 
@@ -699,6 +701,7 @@ Progress measures development.
 - overview metrics
 - charts
 - item-level progress rows
+- item-level graph panels
 - grouped/category summaries
 - filters for scope and time
 
@@ -716,12 +719,16 @@ Progress measures development.
 - total time
 - recent trend
 - overall coverage
+- rolled-up assessment graph
 
 #### By Item
 
 - item progress state
 - time logged
 - recent work
+- selected-item assessment graph
+- selected-item BPM graph
+- selected-item session-time graph
 
 #### By Group
 
