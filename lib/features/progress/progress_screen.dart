@@ -422,7 +422,7 @@ class _AssessmentStatusCard extends StatelessWidget {
       _StatusData(
         status: MatrixProgressStateV1.notTrained,
         count: _count(MatrixProgressStateV1.notTrained),
-        color: const Color(0xFFF0B2AA),
+        color: const Color(0xFFE6E1D7),
       ),
       _StatusData(
         status: MatrixProgressStateV1.active,

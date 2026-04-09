@@ -653,7 +653,7 @@ class _ProgressLegendCard extends StatelessWidget {
   Widget build(BuildContext context) {
     const List<({String label, Color color})> items =
         <({String label, Color color})>[
-          (label: 'Not trained', color: Color(0xFFF0B2AA)),
+          (label: 'Not trained', color: Color(0xFFE6E1D7)),
           (label: 'Active', color: Color(0xFFD9E9F7)),
           (label: 'Needs work', color: Color(0xFFF0B2AA)),
           (label: 'Strong', color: Color(0xFFDDEDDD)),

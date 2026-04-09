@@ -96,6 +96,10 @@ new route. If launched from an active practice session, ending warmup returns to
 that practice session. If launched directly from Focus, ending warmup returns to
 Focus.
 
+During warmup, manual prev/next does not restart the deck timer. It scrubs the
+current one-minute slot to the selected exercise and preserves the second offset
+inside that minute.
+
 The exact grouping should reflect the exercise intention:
 
 - isolation/stamina work can use 4-note grouping

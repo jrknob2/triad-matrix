@@ -37,6 +37,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   bool _targetReached = false;
   bool _warmupComplete = false;
   bool _completionChimed = false;
+  Duration _elapsedOffset = Duration.zero;
   late bool _pulseEnabled;
   late int _bpm;
   late bool _clickEnabled;
@@ -44,6 +45,10 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   PracticeSessionSetupV1? _returnSetup;
   int _returnItemIndex = 0;
   bool? _returnPulseEnabled;
+  bool _returnRunning = false;
+  Duration _returnElapsed = Duration.zero;
+  bool _returnTargetReached = false;
+  bool _returnCompletionChimed = false;
   int _currentItemIndex = 0;
 
   @override
@@ -78,9 +83,10 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
       currentItemId,
     );
     final Duration? target = _targetDuration();
+    final Duration elapsed = _elapsed;
     final String timerText = target == null
-        ? formatDuration(_stopwatch.elapsed)
-        : '${formatDuration(_stopwatch.elapsed)} / ${formatDuration(target)}';
+        ? formatDuration(elapsed)
+        : '${formatDuration(elapsed)} / ${formatDuration(target)}';
 
     return PopScope(
       canPop: !isWarmup || _returnSetup == null,
@@ -284,6 +290,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     setState(() {
       if (shouldStart) {
         if (_setup.family == MaterialFamilyV1.warmup && _warmupComplete) {
+          _elapsedOffset = Duration.zero;
           _stopwatch.reset();
           _currentItemIndex = 0;
           _warmupComplete = false;
@@ -317,7 +324,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
 
     final PracticeSessionLogV1 session = widget.controller.completeSession(
       _setup.copyWith(bpm: _bpm, clickEnabled: _clickEnabled),
-      _stopwatch.elapsed,
+      _elapsed,
     );
 
     Navigator.of(context).pushReplacement(
@@ -334,6 +341,10 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     _returnSetup = _setup.copyWith(bpm: _bpm, clickEnabled: _clickEnabled);
     _returnItemIndex = _currentItemIndex;
     _returnPulseEnabled = _pulseEnabled;
+    _returnRunning = _running;
+    _returnElapsed = _elapsed;
+    _returnTargetReached = _targetReached;
+    _returnCompletionChimed = _completionChimed;
     _resetRunState(clearFlags: true);
 
     setState(() {
@@ -341,6 +352,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
         bpm: _bpm,
         clickEnabled: false,
       );
+      _elapsedOffset = Duration.zero;
       _clickEnabled = false;
       _pulseEnabled = false;
       _currentItemIndex = 0;
@@ -353,9 +365,11 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
       Navigator.of(context).pop();
       return;
     }
+    final bool resumeRunning = _returnRunning;
     _resetRunState(clearFlags: true);
     setState(() {
       _setup = returnSetup;
+      _elapsedOffset = _returnElapsed;
       _bpm = returnSetup.bpm;
       _clickEnabled = returnSetup.clickEnabled;
       _pulseEnabled = _returnPulseEnabled ?? true;
@@ -363,15 +377,64 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
         0,
         returnSetup.practiceItemIds.length - 1,
       );
+      _targetReached = _returnTargetReached;
+      _completionChimed = _returnCompletionChimed;
       _returnSetup = null;
       _returnItemIndex = 0;
       _returnPulseEnabled = null;
+      _returnRunning = false;
+      _returnElapsed = Duration.zero;
+      _returnTargetReached = false;
+      _returnCompletionChimed = false;
     });
+    if (resumeRunning) {
+      setState(() {
+        _running = true;
+        _stopwatch.start();
+        _startElapsedTicker();
+      });
+      _restartBeatTicker();
+    }
   }
 
   void _changeItem(int nextIndex) {
+    if (_setup.family == MaterialFamilyV1.warmup) {
+      _scrubWarmupToItem(nextIndex);
+      return;
+    }
     setState(() {
       _currentItemIndex = nextIndex;
+    });
+  }
+
+  void _scrubWarmupToItem(int nextIndex) {
+    final int itemCount = _setup.practiceItemIds.length;
+    if (itemCount == 0) return;
+    final int clampedIndex = nextIndex.clamp(0, itemCount - 1);
+    final Duration currentElapsed = _elapsed;
+    final Duration secondIntoMinute = Duration(
+      seconds: currentElapsed.inSeconds % 60,
+      milliseconds:
+          currentElapsed.inMilliseconds - (currentElapsed.inSeconds * 1000),
+    );
+    final Duration desiredElapsed =
+        Duration(minutes: clampedIndex) + secondIntoMinute;
+    final bool shouldClearCompletion = desiredElapsed < _targetDuration()!;
+
+    setState(() {
+      _currentItemIndex = clampedIndex;
+      _elapsedOffset = desiredElapsed;
+      _stopwatch
+        ..stop()
+        ..reset();
+      if (_running) {
+        _stopwatch.start();
+      }
+      if (shouldClearCompletion) {
+        _warmupComplete = false;
+        _targetReached = false;
+        _completionChimed = false;
+      }
     });
   }
 
@@ -380,6 +443,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
       _stopwatch.stop();
     }
     if (clearElapsed) {
+      _elapsedOffset = Duration.zero;
       _stopwatch.reset();
     }
     _elapsedTicker?.cancel();
@@ -401,6 +465,8 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     return timerPresetToDuration(_setup.timerPreset);
   }
 
+  Duration get _elapsed => _elapsedOffset + _stopwatch.elapsed;
+
   void _startElapsedTicker() {
     _elapsedTicker?.cancel();
     _elapsedTicker = Timer.periodic(const Duration(milliseconds: 250), (_) {
@@ -417,7 +483,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     final int itemCount = _setup.practiceItemIds.length;
     if (itemCount == 0) return;
 
-    final int elapsedSeconds = _stopwatch.elapsed.inSeconds;
+    final int elapsedSeconds = _elapsed.inSeconds;
     final int nextIndex = (elapsedSeconds ~/ 60).clamp(0, itemCount - 1);
     if (nextIndex != _currentItemIndex && mounted) {
       setState(() {
@@ -437,7 +503,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   void _syncPracticeTargetProgress() {
     final Duration? target = _targetDuration();
     if (target == null) return;
-    if (_stopwatch.elapsed >= target) {
+    if (_elapsed >= target) {
       _targetReached = true;
       _playCompletionChimeOnce();
     }
