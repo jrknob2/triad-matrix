@@ -11,6 +11,10 @@ The app will support **embedded assessment during practice**.
 
 Assessment is **not** a separate primary workflow. Practice sessions should naturally generate assessment data while the student plays.
 
+For multi-item practice sources, a session check should attach to the **currently
+focused item only**. One self-report result should not be smeared across every
+item in a multi-item session.
+
 However, the system should still support the reality that:
 - some users are beginners
 - some users are experienced drummers but new to triads

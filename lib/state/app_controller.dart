@@ -1858,6 +1858,7 @@ class AppController extends ChangeNotifier {
   PracticeSessionLogV1 completeSession(
     PracticeSessionSetupV1 setup,
     Duration duration, {
+    String? assessmentItemId,
     ReflectionRatingV1? reflection,
     SelfReportControlV1? selfReportControl,
     SelfReportTensionV1? selfReportTension,
@@ -1870,6 +1871,9 @@ class AppController extends ChangeNotifier {
       endedAt: endedAt,
       duration: duration,
       practiceItemIds: setup.practiceItemIds,
+      assessmentItemId:
+          assessmentItemId ??
+          (setup.practiceItemIds.isEmpty ? null : setup.practiceItemIds.first),
       family: setup.family,
       practiceMode: setup.practiceMode,
       bpm: setup.bpm,
@@ -1944,46 +1948,30 @@ class AppController extends ChangeNotifier {
     required SelfReportTensionV1? selfReportTension,
     required SelfReportTempoReadinessV1? selfReportTempoReadiness,
   }) {
-    for (final String itemId in _assessmentTargetItemIdsForSession(session)) {
-      final PracticeItemV1? item = itemByIdOrNull(itemId);
-      if (item == null || item.isCustom || item.isWarmup) continue;
-      final SessionAssessmentResultV1 result = _manualAssessmentForItem(
-        session: session,
-        itemId: itemId,
-        selfReportControl: selfReportControl,
-        selfReportTension: selfReportTension,
-        selfReportTempoReadiness: selfReportTempoReadiness,
-      );
-      _assessmentResults = <SessionAssessmentResultV1>[
-        result,
-        ..._assessmentResults.where(
-          (SessionAssessmentResultV1 existing) =>
-              existing.sessionId != result.sessionId ||
-              existing.practiceItemId != result.practiceItemId,
-        ),
-      ];
-      _assessmentAggregateByItemId[itemId] = _aggregateAssessmentForItem(
-        itemId,
-      );
-    }
-  }
-
-  List<String> _assessmentTargetItemIdsForSession(
-    PracticeSessionLogV1 session,
-  ) {
-    final List<String> itemIds = <String>[];
-    for (final String sessionItemId in session.practiceItemIds) {
-      final PracticeItemV1? sessionItem = itemByIdOrNull(sessionItemId);
-      if (sessionItem == null) continue;
-      itemIds.add(sessionItemId);
-      if (!sessionItem.isCombo) continue;
-      final PracticeCombinationV1? combo = _combinationByIdOrNull(
-        sessionItemId,
-      );
-      if (combo == null) continue;
-      itemIds.addAll(combo.itemIds);
-    }
-    return itemIds.toSet().toList(growable: false);
+    final String? itemId =
+        session.assessmentItemId ??
+        (session.practiceItemIds.isEmpty
+            ? null
+            : session.practiceItemIds.first);
+    if (itemId == null) return;
+    final PracticeItemV1? item = itemByIdOrNull(itemId);
+    if (item == null || item.isCustom || item.isWarmup) return;
+    final SessionAssessmentResultV1 result = _manualAssessmentForItem(
+      session: session,
+      itemId: itemId,
+      selfReportControl: selfReportControl,
+      selfReportTension: selfReportTension,
+      selfReportTempoReadiness: selfReportTempoReadiness,
+    );
+    _assessmentResults = <SessionAssessmentResultV1>[
+      result,
+      ..._assessmentResults.where(
+        (SessionAssessmentResultV1 existing) =>
+            existing.sessionId != result.sessionId ||
+            existing.practiceItemId != result.practiceItemId,
+      ),
+    ];
+    _assessmentAggregateByItemId[itemId] = _aggregateAssessmentForItem(itemId);
   }
 
   SessionAssessmentResultV1 _manualAssessmentForItem({

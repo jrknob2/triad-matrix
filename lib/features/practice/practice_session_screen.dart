@@ -355,6 +355,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     final PracticeSessionLogV1 session = widget.controller.completeSession(
       _setup.copyWith(bpm: _bpm, clickEnabled: _clickEnabled),
       _elapsed,
+      assessmentItemId: _currentItemId,
     );
 
     Navigator.of(context).pushReplacement(

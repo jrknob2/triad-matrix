@@ -36,8 +36,13 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
     }
     _loadAssessmentOnce(session.id);
 
-    final firstItem = widget.controller.itemById(session.practiceItemIds.first);
-    final String primaryItemId = session.practiceItemIds.first;
+    final String primaryItemId =
+        session.assessmentItemId ??
+        (session.practiceItemIds.isEmpty ? '' : session.practiceItemIds.first);
+    if (primaryItemId.isEmpty) {
+      return const Scaffold(body: Center(child: Text('Session not found.')));
+    }
+    final firstItem = widget.controller.itemById(primaryItemId);
     final bool isWorkingOnSource = session.sourceName == 'Working On';
     final _SessionRecommendation recommendation = _recommendationFor(session);
 

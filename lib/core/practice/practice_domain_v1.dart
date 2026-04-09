@@ -474,6 +474,7 @@ class PracticeSessionLogV1 {
   final DateTime endedAt;
   final Duration duration;
   final List<String> practiceItemIds;
+  final String? assessmentItemId;
   final MaterialFamilyV1 family;
   final PracticeModeV1 practiceMode;
   final int bpm;
@@ -488,6 +489,7 @@ class PracticeSessionLogV1 {
     required this.endedAt,
     required this.duration,
     required this.practiceItemIds,
+    required this.assessmentItemId,
     required this.family,
     required this.practiceMode,
     required this.bpm,
@@ -503,6 +505,8 @@ class PracticeSessionLogV1 {
     DateTime? endedAt,
     Duration? duration,
     List<String>? practiceItemIds,
+    String? assessmentItemId,
+    bool clearAssessmentItemId = false,
     MaterialFamilyV1? family,
     PracticeModeV1? practiceMode,
     int? bpm,
@@ -519,6 +523,9 @@ class PracticeSessionLogV1 {
       endedAt: endedAt ?? this.endedAt,
       duration: duration ?? this.duration,
       practiceItemIds: practiceItemIds ?? this.practiceItemIds,
+      assessmentItemId: clearAssessmentItemId
+          ? null
+          : (assessmentItemId ?? this.assessmentItemId),
       family: family ?? this.family,
       practiceMode: practiceMode ?? this.practiceMode,
       bpm: bpm ?? this.bpm,
