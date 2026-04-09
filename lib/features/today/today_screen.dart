@@ -183,6 +183,25 @@ class _CoachBlockCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool prominent = block.type == CoachBlockTypeV1.focus;
+    final ButtonStyle? primaryButtonStyle = prominent
+        ? FilledButton.styleFrom(
+            backgroundColor: const Color(0xFFFFF4DE),
+            foregroundColor: const Color(0xFF17130F),
+            side: const BorderSide(color: Color(0xFFFFC08D), width: 1.5),
+            textStyle: const TextStyle(fontWeight: FontWeight.w900),
+          ).copyWith(
+            overlayColor: WidgetStateProperty.resolveWith((states) {
+              if (states.contains(WidgetState.pressed)) {
+                return const Color(0x2217130F);
+              }
+              if (states.contains(WidgetState.hovered) ||
+                  states.contains(WidgetState.focused)) {
+                return const Color(0x14F05A28);
+              }
+              return null;
+            }),
+          )
+        : null;
 
     return DrumPanel(
       tone: prominent ? DrumPanelTone.dark : DrumPanelTone.surface,
@@ -227,7 +246,11 @@ class _CoachBlockCard extends StatelessWidget {
             const SizedBox(height: 16),
             DrumActionRow(
               children: <Widget>[
-                FilledButton(onPressed: onAction, child: Text(block.ctaLabel)),
+                FilledButton(
+                  style: primaryButtonStyle,
+                  onPressed: onAction,
+                  child: Text(block.ctaLabel),
+                ),
                 if (onOpenMatrix != null)
                   OutlinedButton(
                     onPressed: onOpenMatrix,

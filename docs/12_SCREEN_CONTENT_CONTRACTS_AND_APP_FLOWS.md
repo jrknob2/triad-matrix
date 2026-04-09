@@ -51,6 +51,18 @@ Interpretation:
 - when a screen feels tall before it feels clear, the layout is probably wrong
 - charts and summaries should prefer row-based composition when the viewport allows it
 
+## Control Affordance Rule
+
+Interactive controls must look interactive without helper text.
+
+Rules:
+
+- buttons must have a visible container, border, fill, or elevation separation from their background
+- text alone is not enough to signal a button
+- primary and secondary actions must remain visually distinct on both light and dark surfaces
+- if a surface is dark or visually busy, action controls must use stronger contrast and edge definition than they use on light surfaces
+- the user should not have to tap to discover whether a label is actionable
+
 ---
 
 ## Primary App Flows
