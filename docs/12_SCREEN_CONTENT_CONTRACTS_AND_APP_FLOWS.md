@@ -432,6 +432,8 @@ Rules:
   - `Progress`
 - each view exposes only the filters that belong to that view
 - row and column selectors are structural slicers, not part of the main filter bar
+- row and column selectors must look interactive on touch screens
+- interactive labels must read as controls through shape, contrast, spacing, or iconography rather than relying on helper text
 - Coach may deep-link Matrix into a preset state, but Coach lane labels do not remain as a persistent Matrix control
 - conflicting filters resolve by replacement, not disablement
 - selecting a conflicting filter clears the incompatible one and applies the new one
@@ -612,6 +614,8 @@ Practice Session is execution only.
 - rudiment label visible
 - `End Warmup` replaces `End Session`
 - warmup is not logged
+- warmup is entered from `Practice` only
+- warmup is not launched from inside an active session
 
 ### Normal Session Rules
 
@@ -623,6 +627,7 @@ Practice Session is execution only.
 - prev/next appears only for multi-item sources
 - notation is the primary visual signal
 - pulse/click/BPM/timer support the playing, not the screen narrative
+- the player must not contain controls that switch the session into a different source type
 
 ---
 

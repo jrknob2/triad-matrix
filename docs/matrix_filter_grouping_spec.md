@@ -132,6 +132,11 @@ Final in-scope set:
 - and selected rows
 - and selected columns
 
+Touch rule:
+
+- row and column slicers must look interactive on touch screens
+- they may use pill, button, segmented, or chip styling, but they must not read as plain static labels
+
 ## Invalid Combination Rules
 
 - `Hands Only` conflicts with `Has Kick`

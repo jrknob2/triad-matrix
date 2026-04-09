@@ -237,6 +237,7 @@ Phrase rule:
 - deep links from Coach land in a meaningful matrix view
 - invalid filter combinations are prevented by design, not explained after the fact
 - compact horizontal controls are preferred before adding more stacked filter rows
+- row and column slicers must look touchable, not like passive labels
 
 ---
 
@@ -303,12 +304,14 @@ Warmup rules:
 - continuous deck timer
 - auto-advance
 - untracked
+- entered from `Practice` only
 
 ### Acceptance Criteria
 
 - user can reach practice directly from nav
 - session player feels like an execution surface, not a config form
 - warmup behaves like temporary prep, not core curriculum
+- the player must not contain an in-session `Warm Up` entry point
 
 ---
 
