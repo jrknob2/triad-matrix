@@ -49,7 +49,7 @@ class PracticeScreen extends StatelessWidget {
                     const DrumSectionTitle(text: 'Start Practice'),
                     const SizedBox(height: 8),
                     Text(
-                      'Use this screen to jump straight into playing. Choose a source and start.',
+                      'Choose what you want to play, then start.',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: const Color(0xFF5B5345),
                         height: 1.35,
@@ -69,8 +69,8 @@ class PracticeScreen extends StatelessWidget {
                     _PracticeLaunchTile(
                       title: 'Practice Working On',
                       subtitle: workingOn.isEmpty
-                          ? 'Add a few items to Working On first.'
-                          : '${workingOn.length} active item${workingOn.length == 1 ? '' : 's'} ready to go.',
+                          ? 'Put a few items in Working On first.'
+                          : '${workingOn.length} item${workingOn.length == 1 ? '' : 's'} ready.',
                       icon: Icons.play_circle_outline_rounded,
                       enabled: workingOn.isNotEmpty,
                       onTap: workingOn.isEmpty
@@ -84,7 +84,7 @@ class PracticeScreen extends StatelessWidget {
                       _PracticeLaunchTile(
                         title: 'Practice Working On in Flow',
                         subtitle:
-                            'Start the flow-ready items in your current working set.',
+                            'Take the flow-ready items in Working On around the kit.',
                         icon: Icons.alt_route_rounded,
                         enabled: true,
                         onTap: () => onPracticeWorkingOn(PracticeModeV1.flow),
@@ -94,7 +94,7 @@ class PracticeScreen extends StatelessWidget {
                     _PracticeLaunchTile(
                       title: 'Warm Up',
                       subtitle:
-                          'Run the built-in rudiment deck without logging it.',
+                          'Singles, doubles, paradiddles, and paradiddle-diddles. Not logged.',
                       icon: Icons.local_fire_department_outlined,
                       enabled: true,
                       onTap: onPracticeWarmup,
@@ -126,8 +126,8 @@ class PracticeScreen extends StatelessWidget {
                     const SizedBox(height: 8),
                     Text(
                       workingOn.isEmpty
-                          ? 'There is nothing in Working On yet. Add a few items from Coach or Matrix, then start here.'
-                          : 'Pick one item directly when you know exactly what you want to work on.',
+                          ? 'Working On is empty. Add a few items from Coach or Matrix.'
+                          : 'Pick one item when you want to stay on a single pattern.',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: const Color(0xFF5E584D),
                         height: 1.35,
@@ -259,7 +259,7 @@ class _WorkingOnPracticeRow extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${item.family.label} • ${controller.matrixProgressStateFor(item.id).label}',
+                    controller.matrixProgressStateFor(item.id).label,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: const Color(0xFF6A5E4C),
                     ),

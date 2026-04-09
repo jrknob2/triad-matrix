@@ -233,42 +233,6 @@ class PracticeItemV1 {
 }
 
 @immutable
-class TodayLaneRecommendationV1 {
-  final LearningLaneV1 lane;
-  final String title;
-  final String reason;
-  final String actionLabel;
-  final List<String> itemIds;
-  final String evidence;
-
-  const TodayLaneRecommendationV1({
-    required this.lane,
-    required this.title,
-    required this.reason,
-    required this.actionLabel,
-    required this.itemIds,
-    required this.evidence,
-  });
-}
-
-@immutable
-class TodayBriefingV1 {
-  final LearningLaneV1 primaryLane;
-  final String headline;
-  final String summary;
-  final List<TodayLaneRecommendationV1> laneRecommendations;
-  final List<TodayLaneRecommendationV1> momentumRecommendations;
-
-  const TodayBriefingV1({
-    required this.primaryLane,
-    required this.headline,
-    required this.summary,
-    required this.laneRecommendations,
-    required this.momentumRecommendations,
-  });
-}
-
-@immutable
 class CoachBlockV1 {
   final String id;
   final CoachBlockTypeV1 type;

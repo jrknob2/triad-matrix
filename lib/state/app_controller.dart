@@ -301,12 +301,12 @@ class AppController extends ChangeNotifier {
       return CoachBlockV1(
         id: 'focus_first_session',
         type: CoachBlockTypeV1.focus,
-        title: 'Start here',
-        subtitle: 'Focus',
+        title: 'Start with ${target.name}',
+        subtitle: 'Work Now',
         body:
-            'You already picked the first material. Start with one clean, relaxed pass and let the sound settle in.',
+            'Play it on one surface first. Keep the sound even and the motion relaxed.',
         itemIds: <String>[target.id],
-        ctaLabel: 'Start Practice',
+        ctaLabel: 'Practice',
         ctaAction: CoachActionV1.startPractice,
         matrixFilters: const <TriadMatrixFilterV1>{},
         practiceMode: PracticeModeV1.singleSurface,
@@ -324,13 +324,13 @@ class AppController extends ChangeNotifier {
       return CoachBlockV1(
         id: 'focus_working_on',
         type: CoachBlockTypeV1.focus,
-        title: 'Stay with ${target.name}',
-        subtitle: 'Focus',
+        title: 'Work ${target.name}',
+        subtitle: 'Work Now',
         body: aggregate == null
-            ? 'Stay with the same phrase long enough for it to feel familiar instead of forced.'
+            ? 'Stay on it until it comes back around smoothly with no gap.'
             : _focusBodyForAggregate(aggregate),
         itemIds: <String>[target.id],
-        ctaLabel: 'Start Practice',
+        ctaLabel: 'Practice',
         ctaAction: CoachActionV1.startPractice,
         matrixFilters: const <TriadMatrixFilterV1>{},
         practiceMode: PracticeModeV1.singleSurface,
@@ -345,11 +345,11 @@ class AppController extends ChangeNotifier {
     return CoachBlockV1(
       id: 'focus_balanced_triads',
       type: CoachBlockTypeV1.focus,
-      title: 'Bring ${target.name} into the day',
-      subtitle: 'Focus',
-      body: 'This is the clearest next triad to put under your hands today.',
+      title: 'Work ${target.name}',
+      subtitle: 'Work Now',
+      body: 'Give it clean repetitions before you move on to something wider.',
       itemIds: <String>[target.id],
-      ctaLabel: 'Start Practice',
+      ctaLabel: 'Practice',
       ctaAction: CoachActionV1.startPractice,
       matrixFilters: const <TriadMatrixFilterV1>{
         TriadMatrixFilterV1.underPracticed,
@@ -376,11 +376,11 @@ class AppController extends ChangeNotifier {
     return CoachBlockV1(
       id: 'needs_work_${target.id}',
       type: CoachBlockTypeV1.needsWork,
-      title: 'Clean up ${target.name}',
-      subtitle: 'Needs Work',
+      title: 'Straighten out ${target.name}',
+      subtitle: 'Clean Up',
       body: _needsWorkBodyForAggregate(assessmentAggregateFor(target.id)),
       itemIds: <String>[target.id],
-      ctaLabel: 'Fix This',
+      ctaLabel: 'Practice',
       ctaAction: CoachActionV1.startPractice,
       matrixFilters: const <TriadMatrixFilterV1>{
         TriadMatrixFilterV1.needsWorkStatus,
@@ -413,11 +413,11 @@ class AppController extends ChangeNotifier {
     return CoachBlockV1(
       id: 'momentum_${target.id}',
       type: CoachBlockTypeV1.momentum,
-      title: '${target.name} is starting to settle in',
-      subtitle: 'Momentum',
+      title: 'Keep ${target.name} moving',
+      subtitle: 'Keep Going',
       body: _momentumBodyForAggregate(assessmentAggregateFor(target.id)),
       itemIds: <String>[target.id],
-      ctaLabel: target.isCombo ? 'Move to Flow' : 'Build Combo',
+      ctaLabel: target.isCombo ? 'Move to Flow' : 'Build Phrase',
       ctaAction: target.isCombo
           ? CoachActionV1.moveToFlow
           : CoachActionV1.buildCombo,
@@ -443,10 +443,10 @@ class AppController extends ChangeNotifier {
       return CoachBlockV1(
         id: 'unlock_flow_${target.id}',
         type: CoachBlockTypeV1.nextUnlock,
-        title: 'Take ${target.name} around the kit',
-        subtitle: 'Next Unlock',
+        title: 'Move ${target.name} around the kit',
+        subtitle: 'Next Step',
         body:
-            'This phrase is ready to leave one surface. Assign voices and make it speak clearly around the kit.',
+            'The phrase holds on one surface. Keep the sticking the same and change the voices.',
         itemIds: <String>[target.id],
         ctaLabel: 'Move to Flow',
         ctaAction: CoachActionV1.moveToFlow,
@@ -476,12 +476,12 @@ class AppController extends ChangeNotifier {
     return CoachBlockV1(
       id: 'unlock_combo_${itemIds.join('_')}',
       type: CoachBlockTypeV1.nextUnlock,
-      title: 'Build a phrase',
-      subtitle: 'Next Unlock',
+      title: 'Join these into one phrase',
+      subtitle: 'Next Step',
       body:
-          'These cells are ready to be joined. Work the handoff until the whole phrase feels like one thought.',
+          'They are ready to be connected. Repeat the handoff until the phrase comes back around with no gap.',
       itemIds: itemIds,
-      ctaLabel: 'Build Combo',
+      ctaLabel: 'Build Phrase',
       ctaAction: CoachActionV1.buildCombo,
       matrixFilters: const <TriadMatrixFilterV1>{},
       practiceMode: PracticeModeV1.singleSurface,
@@ -491,222 +491,42 @@ class AppController extends ChangeNotifier {
   String _focusBodyForAggregate(PracticeAssessmentAggregateV1 aggregate) {
     return switch (aggregate.status) {
       MatrixProgressStateV1.notTrained =>
-        'You have not spent enough real time with this yet. Give it a clean first pass.',
+        'Get the cycle going first. Repeat it evenly with no gap back to the beginning.',
       MatrixProgressStateV1.active =>
-        'This is still taking shape. Stay with it until the motion and sound start to feel dependable.',
+        'Stay on it. Keep the sound even and the motion relaxed until it repeats cleanly.',
       MatrixProgressStateV1.needsWork =>
-        'This is getting away from you a little. Slow it down and straighten it out before pushing.',
+        'Slow it down. Get the sticking even again before you add speed.',
       MatrixProgressStateV1.strong =>
-        'This is holding together. Give it a short review or use it to build something longer.',
+        'It is holding. Review it briefly, then connect it to something longer.',
     };
   }
 
   String _needsWorkBodyForAggregate(PracticeAssessmentAggregateV1? aggregate) {
     if (aggregate == null) {
-      return 'There is some history here, but it is not settled yet. Keep the tempo controlled and clean it up before pushing.';
+      return 'It is not holding yet. Slow it down and make the cycle clean again.';
     }
 
     final List<String> reasons = <String>[];
-    if (aggregate.stabilityScore < 0.50) reasons.add('stability');
+    if (aggregate.stabilityScore < 0.50) reasons.add('shape');
     if (aggregate.jitterScore >= 0.40) reasons.add('evenness');
-    if (aggregate.driftScore >= 0.45) reasons.add('tempo');
-    if (aggregate.continuityScore < 0.55) reasons.add('continuity');
+    if (aggregate.driftScore >= 0.45) reasons.add('time');
+    if (aggregate.continuityScore < 0.55) reasons.add('the handoff');
 
     final String reasonText = reasons.isEmpty
-        ? 'the way it is feeling'
+        ? 'the cycle'
         : reasons.join(', ');
-    return 'The weak spot right now is $reasonText. Slow it down enough to get it even again.';
+    return 'The weak spot is $reasonText. Slow it down and make it clean again.';
   }
 
   String _momentumBodyForAggregate(PracticeAssessmentAggregateV1? aggregate) {
     if (aggregate == null) {
-      return 'This is recent and starting to hold. Review it briefly, then use it to grow a longer phrase.';
+      return 'This one is holding. Review it briefly, then build from it while it is still clean.';
     }
 
     final String stableBpm = aggregate.bestStableBpm == null
         ? 'the current tempo'
         : '${aggregate.bestStableBpm!.round()} BPM';
-    return 'This is holding at $stableBpm. Review it briefly, then build from it while it still feels fresh.';
-  }
-
-  TodayBriefingV1 buildTodayBriefing() {
-    if (!hasLoggedPractice) {
-      return TodayBriefingV1(
-        primaryLane: LearningLaneV1.control,
-        headline: 'Start with control.',
-        summary:
-            'Use one clear cell on one surface first. Build even sound and relaxed motion before you widen the phrase.',
-        laneRecommendations: <TodayLaneRecommendationV1>[
-          TodayLaneRecommendationV1(
-            lane: LearningLaneV1.control,
-            title: 'Control',
-            reason:
-                'Hands-only triads are the cleanest place to establish pulse, rebound, and sound.',
-            actionLabel: 'Practice',
-            itemIds: <String>[triadMatrixItems.first.id],
-            evidence:
-                'No sessions yet. Start on one surface and let the sound settle in first.',
-          ),
-          TodayLaneRecommendationV1(
-            lane: LearningLaneV1.balance,
-            title: 'Balance',
-            reason:
-                'Very early on, learn the phrase on both leads so the vocabulary does not become one-sided.',
-            actionLabel: 'Open Matrix',
-            itemIds: const <String>[],
-            evidence:
-                '$weakHandLabel lead still has no time on it. Start balancing that from day one.',
-          ),
-          TodayLaneRecommendationV1(
-            lane: LearningLaneV1.dynamics,
-            title: 'Dynamics',
-            reason:
-                'Add accents and ghosts after the base sticking feels steady. Do not force dynamic shape too early.',
-            actionLabel: 'Open Matrix',
-            itemIds: const <String>[],
-            evidence: 'Keep the base version plain first, then add shape.',
-          ),
-          TodayLaneRecommendationV1(
-            lane: LearningLaneV1.integration,
-            title: 'Integration',
-            reason:
-                'Kick material comes after the hands are clear. Keep it in view, but do not start there.',
-            actionLabel: 'Open Matrix',
-            itemIds: const <String>[],
-            evidence:
-                '$totalKickTriadCount kick-based cells are waiting once the hands are clean.',
-          ),
-          TodayLaneRecommendationV1(
-            lane: LearningLaneV1.phrasing,
-            title: 'Phrasing',
-            reason:
-                'Phrase work matters, but it should rest on a few stable cells first.',
-            actionLabel: 'Open Matrix',
-            itemIds: const <String>[],
-            evidence:
-                'Build phrases after a few core cells start to feel natural.',
-          ),
-          TodayLaneRecommendationV1(
-            lane: LearningLaneV1.flow,
-            title: 'Flow',
-            reason:
-                'Flow is where phrases move across voices on the kit. It comes after the phrase feels stable on one surface.',
-            actionLabel: 'Open Matrix',
-            itemIds: const <String>[],
-            evidence:
-                'Voice work starts once the phrase is under your hands on one surface.',
-          ),
-        ],
-        momentumRecommendations: <TodayLaneRecommendationV1>[
-          TodayLaneRecommendationV1(
-            lane: LearningLaneV1.control,
-            title: 'First Step',
-            reason:
-                'Pick one hands-only triad, stay with it for a few minutes, then match it on the opposite lead.',
-            actionLabel: 'Practice',
-            itemIds: <String>[triadMatrixItems.first.id],
-            evidence: 'Built-in vocabulary is ready to use',
-          ),
-          TodayLaneRecommendationV1(
-            lane: LearningLaneV1.phrasing,
-            title: 'What Stays Built In',
-            reason:
-                'The app always keeps the core vocabulary. Resetting clears your work, not the built-in material.',
-            actionLabel: 'Open Matrix',
-            itemIds: const <String>[],
-            evidence:
-                '${triadMatrixItems.length} built-in triads are ready whenever you are',
-          ),
-          TodayLaneRecommendationV1(
-            lane: LearningLaneV1.flow,
-            title: 'What Comes Later',
-            reason:
-                'Once a phrase is stable, take it into Flow and assign voices deliberately.',
-            actionLabel: 'Open Matrix',
-            itemIds: const <String>[],
-            evidence: 'Single-surface first. Kit movement comes after that.',
-          ),
-        ],
-      );
-    }
-
-    final List<TodayLaneRecommendationV1> lanes = <TodayLaneRecommendationV1>[
-      _buildControlLane(),
-      _buildBalanceLane(),
-      _buildDynamicsLane(),
-      _buildIntegrationLane(),
-      _buildPhrasingLane(),
-      _buildFlowLane(),
-    ];
-    final List<TodayLaneRecommendationV1> rankedLanes =
-        _rankedLaneRecommendations(lanes);
-
-    final LearningLaneV1 primaryLane = rankedLanes.first.lane;
-
-    final List<TodayLaneRecommendationV1> momentum =
-        <TodayLaneRecommendationV1>[
-          _buildWorkingOnMomentum(),
-          _buildToolboxMomentum(),
-          _buildNeglectedMomentum(),
-          _buildReviewMomentum(),
-        ].where(_isActionableRecommendation).take(2).toList(growable: false);
-
-    return TodayBriefingV1(
-      primaryLane: primaryLane,
-      headline: 'Today centers on ${primaryLane.label.toLowerCase()}.',
-      summary: _summaryForPrimaryLane(primaryLane),
-      laneRecommendations: rankedLanes.take(3).toList(growable: false),
-      momentumRecommendations: momentum,
-    );
-  }
-
-  List<TodayLaneRecommendationV1> _rankedLaneRecommendations(
-    List<TodayLaneRecommendationV1> lanes,
-  ) {
-    final List<TodayLaneRecommendationV1> ranked = lanes.toList(growable: false)
-      ..sort((a, b) {
-        final int priorityCompare = _lanePriority(
-          b.lane,
-        ).compareTo(_lanePriority(a.lane));
-        if (priorityCompare != 0) return priorityCompare;
-        final bool aInFocus = a.itemIds.any(isInRoutine);
-        final bool bInFocus = b.itemIds.any(isInRoutine);
-        if (aInFocus != bInFocus) return bInFocus ? 1 : -1;
-        return a.title.compareTo(b.title);
-      });
-    return ranked;
-  }
-
-  bool _isActionableRecommendation(TodayLaneRecommendationV1 recommendation) {
-    if (recommendation.itemIds.isEmpty) return true;
-    return recommendation.itemIds.any(
-      (String itemId) => itemByIdOrNull(itemId) != null,
-    );
-  }
-
-  TodayLaneRecommendationV1 _buildWorkingOnMomentum() {
-    if (activeWorkItems.isEmpty) {
-      return TodayLaneRecommendationV1(
-        lane: LearningLaneV1.control,
-        title: 'Working On',
-        reason:
-            'Add a few cells to Working On so practice has a clear center of gravity.',
-        actionLabel: 'Open Matrix',
-        itemIds: const <String>[],
-        evidence: 'No active work selected yet',
-      );
-    }
-
-    final PracticeItemV1 target = activeWorkItems.first;
-    return TodayLaneRecommendationV1(
-      lane: laneForPracticeItem(target.id),
-      title: 'Working On',
-      reason:
-          'Keep your active material moving. Repetition across days is what turns a pattern into vocabulary.',
-      actionLabel: 'Practice',
-      itemIds: <String>[target.id],
-      evidence: _statusAndTimeEvidence(target.id),
-    );
+    return 'This one is holding at $stableBpm. Review it briefly, then build from it while it is still clean.';
   }
 
   List<PracticeItemV1> itemsByFamily(MaterialFamilyV1 family) {
@@ -840,6 +660,16 @@ class AppController extends ChangeNotifier {
 
   Duration leadTime(HandednessV1 handedness) {
     return _timeForLead(handedness == HandednessV1.right ? 'R' : 'L');
+  }
+
+  Duration _timeForLead(String leadChar) {
+    Duration total = Duration.zero;
+    for (final PracticeItemV1 item in triadMatrixItems) {
+      if (_firstNormalizedChar(item.id) == leadChar) {
+        total += totalTime(itemId: item.id);
+      }
+    }
+    return total;
   }
 
   int get practicedTriadCount {
@@ -1258,286 +1088,6 @@ class AppController extends ChangeNotifier {
     return _compareByNeed(a, b);
   }
 
-  TodayLaneRecommendationV1 _buildControlLane() {
-    final List<PracticeItemV1> candidates =
-        triadMatrixItems
-            .where((item) => handsOnly(item.id))
-            .toList(growable: false)
-          ..sort(_compareByNeed);
-    final PracticeItemV1 target = candidates.first;
-
-    return TodayLaneRecommendationV1(
-      lane: LearningLaneV1.control,
-      title: 'Control',
-      reason:
-          'Start on one surface and clean up the pulse before adding more variables.',
-      actionLabel: 'Practice',
-      itemIds: <String>[target.id],
-      evidence: _statusAndTimeEvidence(target.id),
-    );
-  }
-
-  TodayLaneRecommendationV1 _buildBalanceLane() {
-    final List<PracticeItemV1> candidates =
-        triadMatrixItems.where(_isWeakHandLead).toList(growable: false)
-          ..sort(_compareByNeed);
-    final PracticeItemV1 target = candidates.isNotEmpty
-        ? candidates.first
-        : triadMatrixItems.first;
-    final Duration weakLeadTime = _timeForLead(weakHandLabel[0]);
-    final Duration strongLeadTime = _timeForLead(strongHandLabel[0]);
-
-    return TodayLaneRecommendationV1(
-      lane: LearningLaneV1.balance,
-      title: 'Balance',
-      reason:
-          '$weakHandLabel-hand lead is lagging. Put it first while your hands are fresh.',
-      actionLabel: 'Practice',
-      itemIds: <String>[target.id],
-      evidence:
-          '$weakHandLabel lead ${formatDuration(weakLeadTime)} vs ${strongHandLabel.toLowerCase()} lead ${formatDuration(strongLeadTime)}',
-    );
-  }
-
-  TodayLaneRecommendationV1 _buildDynamicsLane() {
-    final List<PracticeItemV1> candidates =
-        triadMatrixItems
-            .where((item) => handsOnly(item.id))
-            .toList(growable: false)
-          ..sort((a, b) {
-            final int dynamicGap = _dynamicGapScore(
-              b.id,
-            ).compareTo(_dynamicGapScore(a.id));
-            if (dynamicGap != 0) return dynamicGap;
-            return _compareByNeed(a, b);
-          });
-    final PracticeItemV1 target = candidates.first;
-
-    return TodayLaneRecommendationV1(
-      lane: LearningLaneV1.dynamics,
-      title: 'Dynamics',
-      reason:
-          'Use one stable cell to work accent height and ghost-note touch without changing the sticking.',
-      actionLabel: 'Practice',
-      itemIds: <String>[target.id],
-      evidence: _dynamicEvidenceFor(target.id),
-    );
-  }
-
-  TodayLaneRecommendationV1 _buildIntegrationLane() {
-    final List<PracticeItemV1> candidates =
-        triadMatrixItems
-            .where((item) => hasKick(item.id))
-            .toList(growable: false)
-          ..sort(_compareByNeed);
-    final PracticeItemV1 target = candidates.first;
-
-    return TodayLaneRecommendationV1(
-      lane: LearningLaneV1.integration,
-      title: 'Integration',
-      reason:
-          'Bring the kick in only after the phrase is clear. This keeps coordination honest.',
-      actionLabel: 'Practice',
-      itemIds: <String>[target.id],
-      evidence:
-          '${formatDuration(totalTime(itemId: target.id))} on kick-based work • ${matrixProgressStateFor(target.id).label}',
-    );
-  }
-
-  TodayLaneRecommendationV1 _buildPhrasingLane() {
-    final List<PracticeItemV1> comboItems = itemsByFamily(
-      MaterialFamilyV1.combo,
-    );
-    final PracticeItemV1 target;
-    final String evidence;
-    if (comboItems.isNotEmpty) {
-      comboItems.sort(_compareByNeed);
-      target = comboItems.first;
-      evidence =
-          '${formatDuration(totalTime(itemId: target.id))} logged • ${sessionCount(itemId: target.id)} sessions';
-    } else {
-      final List<PracticeItemV1> source = triadMatrixItems.toList()
-        ..sort(_compareByNeed);
-      target = source.first;
-      evidence = 'No saved phrase work yet. Start by chaining stable cells.';
-    }
-
-    return TodayLaneRecommendationV1(
-      lane: LearningLaneV1.phrasing,
-      title: 'Phrasing',
-      reason:
-          'Move beyond single cells. Phrase length and transitions are where the vocabulary starts to sound musical.',
-      actionLabel: comboItems.isNotEmpty ? 'Practice' : 'Open in Matrix',
-      itemIds: <String>[target.id],
-      evidence: evidence,
-    );
-  }
-
-  TodayLaneRecommendationV1 _buildFlowLane() {
-    final List<PracticeItemV1> candidates = _flowReadyItems();
-    final PracticeItemV1 target = candidates.isNotEmpty
-        ? candidates.first
-        : triadMatrixItems.first;
-
-    return TodayLaneRecommendationV1(
-      lane: LearningLaneV1.flow,
-      title: 'Flow',
-      reason:
-          'Take a phrase that already feels stable and assign voices so it starts behaving like kit vocabulary.',
-      actionLabel: 'Practice',
-      itemIds: <String>[target.id],
-      evidence: _flowEvidenceFor(target.id),
-    );
-  }
-
-  TodayLaneRecommendationV1 _buildToolboxMomentum() {
-    final List<PracticeItemV1> items =
-        triadMatrixItems
-            .where(
-              (item) =>
-                  matrixProgressStateFor(item.id) ==
-                  MatrixProgressStateV1.strong,
-            )
-            .toList(growable: false)
-          ..sort(
-            (a, b) =>
-                totalTime(itemId: b.id).compareTo(totalTime(itemId: a.id)),
-          );
-    final PracticeItemV1? target = items.isNotEmpty ? items.first : null;
-
-    return TodayLaneRecommendationV1(
-      lane: LearningLaneV1.control,
-      title: 'Close To Toolbox',
-      reason: target == null
-          ? 'Nothing is near-ready yet. Stay with consistency and revisit the same few cells.'
-          : 'This phrase is getting close. One focused pass could move it into your toolbox.',
-      actionLabel: target == null ? 'Open Matrix' : 'Practice',
-      itemIds: target == null ? const <String>[] : <String>[target.id],
-      evidence: target == null
-          ? '${recentSessions.length} sessions logged so far'
-          : _statusAndTimeEvidence(target.id),
-    );
-  }
-
-  TodayLaneRecommendationV1 _buildNeglectedMomentum() {
-    final List<PracticeItemV1> items = triadMatrixItems.toList(
-      growable: false,
-    )..sort((a, b) => _lastPracticedAt(a.id).compareTo(_lastPracticedAt(b.id)));
-    final PracticeItemV1 target = items.first;
-
-    return TodayLaneRecommendationV1(
-      lane: LearningLaneV1.balance,
-      title: 'Neglected',
-      reason:
-          'Bring back material that has drifted out of rotation before it disappears.',
-      actionLabel: 'Practice',
-      itemIds: <String>[target.id],
-      evidence: lastSessionForItem(target.id) == null
-          ? 'No sessions yet'
-          : 'Last touched ${formatShortDate(lastSessionForItem(target.id)!.endedAt)}',
-    );
-  }
-
-  TodayLaneRecommendationV1 _buildReviewMomentum() {
-    final List<PracticeItemV1> items =
-        triadMatrixItems
-            .where(
-              (item) => competencyFor(item.id) == CompetencyLevelV1.reliable,
-            )
-            .toList(growable: false)
-          ..sort(
-            (a, b) => _lastPracticedAt(a.id).compareTo(_lastPracticedAt(b.id)),
-          );
-    final PracticeItemV1? target = items.isNotEmpty ? items.first : null;
-
-    return TodayLaneRecommendationV1(
-      lane: LearningLaneV1.phrasing,
-      title: 'Needs Review',
-      reason: target == null
-          ? 'Nothing is established enough for review yet.'
-          : 'Strong material still needs revisits so it stays available on demand.',
-      actionLabel: target == null ? 'Open Matrix' : 'Practice',
-      itemIds: target == null ? const <String>[] : <String>[target.id],
-      evidence: target == null
-          ? '${triadMatrixItems.length} triads available'
-          : '${recentSummaryForItem(target.id)} • ${formatDuration(totalTime(itemId: target.id))} logged',
-    );
-  }
-
-  String _statusAndTimeEvidence(String itemId) {
-    return '${matrixProgressStateFor(itemId).label} • ${formatDuration(totalTime(itemId: itemId))} logged';
-  }
-
-  int _lanePriority(LearningLaneV1 lane) {
-    return switch (lane) {
-      LearningLaneV1.control => _controlPriority(),
-      LearningLaneV1.balance => _balancePriority(),
-      LearningLaneV1.dynamics => _dynamicsPriority(),
-      LearningLaneV1.integration => _integrationPriority(),
-      LearningLaneV1.phrasing => _phrasingPriority(),
-      LearningLaneV1.flow => _flowPriority(),
-    };
-  }
-
-  int _controlPriority() =>
-      _notStartedCount(triadMatrixItems.where((item) => handsOnly(item.id)));
-
-  int _balancePriority() {
-    final Duration weakLeadTime = _timeForLead(weakHandLabel[0]);
-    final Duration strongLeadTime = _timeForLead(strongHandLabel[0]);
-    return (strongLeadTime - weakLeadTime).inMinutes.abs() +
-        _notStartedCount(triadMatrixItems.where(_isWeakHandLead));
-  }
-
-  int _dynamicsPriority() => triadMatrixItems.fold<int>(
-    0,
-    (sum, item) => sum + _dynamicGapScore(item.id),
-  );
-
-  int _integrationPriority() =>
-      _notStartedCount(triadMatrixItems.where((item) => hasKick(item.id)));
-
-  int _phrasingPriority() {
-    final int comboSessions = sessionCount(family: MaterialFamilyV1.combo);
-    return comboSessions == 0 ? 10 : (4 - comboSessions).clamp(0, 4);
-  }
-
-  int _flowPriority() => _flowReadyItems().length;
-
-  int _notStartedCount(Iterable<PracticeItemV1> items) {
-    return items
-        .where((item) => competencyFor(item.id) == CompetencyLevelV1.notStarted)
-        .length;
-  }
-
-  Duration _timeForLead(String leadChar) {
-    Duration total = Duration.zero;
-    for (final PracticeItemV1 item in triadMatrixItems) {
-      if (_firstNormalizedChar(item.id) == leadChar) {
-        total += totalTime(itemId: item.id);
-      }
-    }
-    return total;
-  }
-
-  int _dynamicGapScore(String itemId) {
-    final PracticeItemV1 item = itemById(itemId);
-    int score = 0;
-    if (!item.hasAccents) score += 2;
-    if (!item.hasGhostNotes) score += 2;
-    if (totalTime(itemId: itemId) >= const Duration(minutes: 6)) score += 2;
-    return score;
-  }
-
-  String _dynamicEvidenceFor(String itemId) {
-    final PracticeItemV1 item = itemById(itemId);
-    final List<String> parts = <String>[];
-    parts.add(item.hasAccents ? 'accent-ready' : 'plain only');
-    parts.add(item.hasGhostNotes ? 'ghosts present' : 'no ghost work');
-    parts.add(formatDuration(totalTime(itemId: itemId)));
-    return parts.join(' • ');
-  }
-
   List<PracticeItemV1> _flowReadyItems() {
     final List<PracticeItemV1> items = <PracticeItemV1>[
       ...itemsByFamily(MaterialFamilyV1.combo),
@@ -1572,34 +1122,9 @@ class AppController extends ChangeNotifier {
     return total;
   }
 
-  String _flowEvidenceFor(String itemId) {
-    final int flowSessions = _flowSessionCount(itemId);
-    if (flowSessions == 0) {
-      return 'Stable on the surface, not yet applied in flow';
-    }
-    return '$flowSessions flow session${flowSessions == 1 ? '' : 's'} logged';
-  }
-
   DateTime _lastPracticedAt(String itemId) {
     return lastSessionForItem(itemId)?.endedAt ??
         DateTime.fromMillisecondsSinceEpoch(0);
-  }
-
-  String _summaryForPrimaryLane(LearningLaneV1 lane) {
-    return switch (lane) {
-      LearningLaneV1.control =>
-        'Keep the surface simple and tighten the pulse before adding more variables.',
-      LearningLaneV1.balance =>
-        '$weakHandLabel-hand lead is lagging. Today should rebalance the phrase work.',
-      LearningLaneV1.dynamics =>
-        'The next gain is in touch. Use stable material and shape it deliberately.',
-      LearningLaneV1.integration =>
-        'Kick-based material needs attention. Add it without letting the hands smear.',
-      LearningLaneV1.phrasing =>
-        'Single cells are not enough today. Extend them into phrases that have shape.',
-      LearningLaneV1.flow =>
-        'Some material is ready to leave the pad and behave like kit vocabulary.',
-    };
   }
 
   void updateProfile(UserProfileV1 next) {

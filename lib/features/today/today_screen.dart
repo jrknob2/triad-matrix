@@ -147,7 +147,7 @@ class _EmptyCoachCard extends StatelessWidget {
             const DrumSectionTitle(text: 'Coach'),
             const SizedBox(height: 8),
             const Text(
-              'Put in a few honest sessions and Coach will start pointing more clearly. Until then, start from the Matrix or Practice.',
+              'Start from Matrix or Practice. After a few tracked sessions, Coach will have something more specific to point to.',
             ),
             const SizedBox(height: 14),
             DrumActionRow(
@@ -364,7 +364,7 @@ class _GettingStartedCoachCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'Your Triad Matrix work is just starting. We recommend that you start working on these triads. Add them to Working On, or open the Matrix and choose your own.',
+              'Start with these four triads. Put them in Working On, then repeat them smoothly with no gap back to the beginning. Or open the Matrix and choose your own.',
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 color: const Color(0xFFE8F2EF),
                 height: 1.35,
