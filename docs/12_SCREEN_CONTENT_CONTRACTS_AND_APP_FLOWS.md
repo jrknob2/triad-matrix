@@ -17,6 +17,10 @@ If a control or block cannot be justified by a defined flow in this document, it
 The bottom app navigation must remain visible across primary and detail flows.
 Detail screens and session flows should live inside the shell, not cover it.
 
+Communication rules for all student-facing text are defined in:
+
+- [13_COMMUNICATION_STYLE_CONTRACT.md](/Users/terryknoblock/Development/flutter-projects/traid_trainer/docs/13_COMMUNICATION_STYLE_CONTRACT.md)
+
 ---
 
 ## Core Rule

@@ -18,6 +18,10 @@ Detailed content inventory, control ownership, and end-to-end flow mapping now l
 
 - [12_SCREEN_CONTENT_CONTRACTS_AND_APP_FLOWS.md](/Users/terryknoblock/Development/flutter-projects/traid_trainer/docs/12_SCREEN_CONTENT_CONTRACTS_AND_APP_FLOWS.md)
 
+Communication voice and wording rules now live in:
+
+- [13_COMMUNICATION_STYLE_CONTRACT.md](/Users/terryknoblock/Development/flutter-projects/traid_trainer/docs/13_COMMUNICATION_STYLE_CONTRACT.md)
+
 ---
 
 ## Navigation Model

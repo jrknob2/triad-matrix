@@ -228,6 +228,24 @@ Outcome:
 - active code and active docs describe the same app
 - refactors do not leave behind transitional behavior as permanent baggage
 
+### Phase 10. Communication style rewrite
+
+Goal:
+
+- make the app sound like one coherent teacher-led product
+
+Tasks:
+
+- lock a communication-style contract
+- distinguish UI voice from teaching voice
+- rewrite Coach, Practice, Practice Item, Session Summary, and Matrix context text against that contract
+- keep instructional guidance separate from authored notation or voice data
+
+Outcome:
+
+- the app's wording matches the product model and the teaching source material
+- copy no longer drifts between framework language, UX filler, and teacher voice
+
 ---
 
 ## Recommended Execution Order
@@ -244,7 +262,9 @@ Recommended order:
 6. redesign `Coach` with mock states
 7. do one full visual polish pass
 8. remove compatibility residue introduced during the reset
-9. then resume forward feature work
+9. lock the communication-style contract
+10. do a batched copy rewrite pass by screen
+11. then resume forward feature work
 
 ---
 
