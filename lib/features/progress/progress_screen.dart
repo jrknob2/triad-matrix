@@ -559,7 +559,7 @@ class _TrendView extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              const DrumSectionTitle(text: 'Last 7 Days'),
+              const DrumSectionTitle(text: 'Practice Time, Last 7 Days'),
               const SizedBox(height: 12),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
@@ -741,8 +741,8 @@ class _ItemAssessmentPanel extends StatelessWidget {
   static double _statusValue(MatrixProgressStateV1 status) {
     return switch (status) {
       MatrixProgressStateV1.notTrained => 1,
-      MatrixProgressStateV1.active => 2,
-      MatrixProgressStateV1.needsWork => 3,
+      MatrixProgressStateV1.needsWork => 2,
+      MatrixProgressStateV1.active => 3,
       MatrixProgressStateV1.strong => 4,
     }.toDouble();
   }
@@ -750,9 +750,9 @@ class _ItemAssessmentPanel extends StatelessWidget {
   static Color _statusColor(MatrixProgressStateV1 status) {
     return switch (status) {
       MatrixProgressStateV1.notTrained => const Color(0xFFE0DDD8),
-      MatrixProgressStateV1.active => const Color(0xFF83A9D6),
-      MatrixProgressStateV1.needsWork => const Color(0xFFE29A90),
-      MatrixProgressStateV1.strong => const Color(0xFF8FB58F),
+      MatrixProgressStateV1.active => const Color(0xFF6F9ECB),
+      MatrixProgressStateV1.needsWork => const Color(0xFFD98D82),
+      MatrixProgressStateV1.strong => const Color(0xFF80AC80),
     };
   }
 }
@@ -1020,12 +1020,17 @@ class _TrendBar extends StatelessWidget {
           height: 110,
           child: Align(
             alignment: Alignment.bottomCenter,
-            child: Container(
-              width: double.infinity,
-              height: 18 + (92 * heightFactor),
-              decoration: BoxDecoration(
-                color: const Color(0xFF26211C),
-                borderRadius: BorderRadius.circular(999),
+            child: FractionallySizedBox(
+              widthFactor: 0.78,
+              child: Container(
+                height: 18 + (92 * heightFactor),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF26211C),
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(20),
+                    bottom: Radius.circular(4),
+                  ),
+                ),
               ),
             ),
           ),
@@ -1115,20 +1120,27 @@ class _StackedStatusBar extends StatelessWidget {
     final List<({int count, Color color})> segments =
         <({int count, Color color})>[
           (count: bucket.notPracticed, color: const Color(0xFFFFFFFF)),
-          (count: bucket.active, color: const Color(0xFFD9E9F7)),
-          (count: bucket.needsWork, color: const Color(0xFFF0B2AA)),
-          (count: bucket.strong, color: const Color(0xFFDDEDDD)),
+          (count: bucket.active, color: const Color(0xFFBCD5EC)),
+          (count: bucket.needsWork, color: const Color(0xFFE2A196)),
+          (count: bucket.strong, color: const Color(0xFFB7D2B7)),
         ];
 
     return Container(
-      width: 32,
-      height: 120,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0x22000000)),
+      width: 34,
+      height: 124,
+      decoration: const BoxDecoration(
+        color: Color(0xFFF1ECE2),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(14),
+          bottom: Radius.circular(4),
+        ),
+        border: Border.fromBorderSide(BorderSide(color: Color(0x26000000))),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(14),
+          bottom: Radius.circular(4),
+        ),
         child: Column(
           children: segments
               .map(
@@ -1187,8 +1199,8 @@ class _StatusTimelineChart extends StatelessWidget {
       maxValue: 4,
       yLabels: const <int, String>{
         1: 'Not Practiced',
-        2: 'Active',
-        3: 'Needs Work',
+        2: 'Needs Work',
+        3: 'Active',
         4: 'Strong',
       },
     );
@@ -1222,7 +1234,7 @@ class _MiniLineChart extends StatelessWidget {
         children: <Widget>[
           if (yLabels != null)
             SizedBox(
-              width: 78,
+              width: 86,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.end,
@@ -1233,6 +1245,7 @@ class _MiniLineChart extends StatelessWidget {
                       (entry) => Text(
                         entry.value,
                         textAlign: TextAlign.right,
+                        maxLines: 2,
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     )
@@ -1387,15 +1400,22 @@ class _MiniBarChart extends StatelessWidget {
                       Expanded(
                         child: Align(
                           alignment: Alignment.bottomCenter,
-                          child: Container(
-                            width: double.infinity,
-                            height:
-                                20 +
-                                (90 *
-                                    (maxValue == 0 ? 0 : bar.value / maxValue)),
-                            decoration: BoxDecoration(
-                              color: bar.color,
-                              borderRadius: BorderRadius.circular(999),
+                          child: FractionallySizedBox(
+                            widthFactor: 0.74,
+                            child: Container(
+                              height:
+                                  20 +
+                                  (90 *
+                                      (maxValue == 0
+                                          ? 0
+                                          : bar.value / maxValue)),
+                              decoration: BoxDecoration(
+                                color: bar.color,
+                                borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(22),
+                                  bottom: Radius.circular(4),
+                                ),
+                              ),
                             ),
                           ),
                         ),
