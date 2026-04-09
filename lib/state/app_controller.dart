@@ -31,6 +31,8 @@ class AppController extends ChangeNotifier {
   late Map<String, CompetencyRecordV1> _competencyByItemId;
   bool _onboardingComplete = false;
   int _resetVersion = 0;
+  AppMockScenarioV1? _activeMockScenario;
+  _ControllerRuntimeSnapshot? _liveStateBeforeMock;
 
   UserProfileV1 get profile => _profile;
   List<PracticeItemV1> get items => List<PracticeItemV1>.unmodifiable(_items);
@@ -41,6 +43,8 @@ class AppController extends ChangeNotifier {
       List<SessionAssessmentResultV1>.unmodifiable(_assessmentResults);
   bool get onboardingComplete => _onboardingComplete;
   int get resetVersion => _resetVersion;
+  AppMockScenarioV1? get activeMockScenario => _activeMockScenario;
+  bool get isMockScenarioActive => _activeMockScenario != null;
   bool get hasLoggedPractice => _sessions.any(
     (PracticeSessionLogV1 session) => !_isWarmupSession(session),
   );
@@ -114,6 +118,7 @@ class AppController extends ChangeNotifier {
   }
 
   Future<void> _persistState() async {
+    if (isMockScenarioActive) return;
     final List<PracticeItemV1> persistedItems = _items
         .where((PracticeItemV1 item) => !item.isWarmup)
         .toList(growable: false);
@@ -1563,8 +1568,34 @@ class AppController extends ChangeNotifier {
   }
 
   void clearAppData() {
+    if (isMockScenarioActive) {
+      _liveStateBeforeMock = _buildFirstLightRuntimeSnapshot(
+        onboardingComplete: false,
+      );
+      _applyRuntimeSnapshot(_buildMockScenarioSnapshot(_activeMockScenario!));
+      _notifyChanged(bumpResetVersion: true);
+      return;
+    }
     _initializeFirstLightState();
     _onboardingComplete = false;
+    _notifyChanged(bumpResetVersion: true);
+  }
+
+  void setMockScenario(AppMockScenarioV1? scenario) {
+    if (!kDebugMode) return;
+    if (scenario == null) {
+      if (_liveStateBeforeMock != null) {
+        _applyRuntimeSnapshot(_liveStateBeforeMock!);
+      }
+      _liveStateBeforeMock = null;
+      _activeMockScenario = null;
+      _notifyChanged(bumpResetVersion: true);
+      return;
+    }
+
+    _liveStateBeforeMock ??= _captureRuntimeSnapshot();
+    _applyRuntimeSnapshot(_buildMockScenarioSnapshot(scenario));
+    _activeMockScenario = scenario;
     _notifyChanged(bumpResetVersion: true);
   }
 
@@ -2441,6 +2472,281 @@ class AppController extends ChangeNotifier {
     _competencyByItemId = <String, CompetencyRecordV1>{};
   }
 
+  _ControllerRuntimeSnapshot _captureRuntimeSnapshot() {
+    return _ControllerRuntimeSnapshot(
+      profile: _profile,
+      items: List<PracticeItemV1>.from(_items),
+      combinations: List<PracticeCombinationV1>.from(_combinations),
+      routine: _routine,
+      sessions: List<PracticeSessionLogV1>.from(_sessions),
+      assessmentResults: List<SessionAssessmentResultV1>.from(
+        _assessmentResults,
+      ),
+      assessmentAggregateByItemId:
+          Map<String, PracticeAssessmentAggregateV1>.from(
+            _assessmentAggregateByItemId,
+          ),
+      competencyByItemId: Map<String, CompetencyRecordV1>.from(
+        _competencyByItemId,
+      ),
+      onboardingComplete: _onboardingComplete,
+    );
+  }
+
+  _ControllerRuntimeSnapshot _buildFirstLightRuntimeSnapshot({
+    bool onboardingComplete = false,
+  }) {
+    return _ControllerRuntimeSnapshot(
+      profile: UserProfileV1.initial,
+      items: _basePracticeItems(),
+      combinations: const <PracticeCombinationV1>[],
+      routine: const PracticeRoutineV1(
+        id: 'main_routine',
+        name: 'Working On',
+        entries: <RoutineEntryV1>[],
+      ),
+      sessions: const <PracticeSessionLogV1>[],
+      assessmentResults: const <SessionAssessmentResultV1>[],
+      assessmentAggregateByItemId:
+          const <String, PracticeAssessmentAggregateV1>{},
+      competencyByItemId: const <String, CompetencyRecordV1>{},
+      onboardingComplete: onboardingComplete,
+    );
+  }
+
+  void _applyRuntimeSnapshot(_ControllerRuntimeSnapshot snapshot) {
+    _profile = snapshot.profile;
+    _items = List<PracticeItemV1>.from(snapshot.items);
+    _combinations = List<PracticeCombinationV1>.from(snapshot.combinations);
+    _routine = snapshot.routine;
+    _sessions = List<PracticeSessionLogV1>.from(snapshot.sessions);
+    _assessmentResults = List<SessionAssessmentResultV1>.from(
+      snapshot.assessmentResults,
+    );
+    _assessmentAggregateByItemId =
+        Map<String, PracticeAssessmentAggregateV1>.from(
+          snapshot.assessmentAggregateByItemId,
+        );
+    _competencyByItemId = Map<String, CompetencyRecordV1>.from(
+      snapshot.competencyByItemId,
+    );
+    _onboardingComplete = snapshot.onboardingComplete;
+  }
+
+  _ControllerRuntimeSnapshot _buildMockScenarioSnapshot(
+    AppMockScenarioV1 scenario,
+  ) {
+    return switch (scenario) {
+      AppMockScenarioV1.firstLight => _buildFirstLightRuntimeSnapshot(
+        onboardingComplete: true,
+      ),
+      AppMockScenarioV1.starterItemsSelected => _mockStarterItemsSelected(),
+      AppMockScenarioV1.earlyStruggle => _mockEarlyStruggle(),
+      AppMockScenarioV1.steadyProgress => _mockSteadyProgress(),
+      AppMockScenarioV1.phraseReady => _mockPhraseReady(),
+      AppMockScenarioV1.flowReady => _mockFlowReady(),
+    };
+  }
+
+  _ControllerRuntimeSnapshot _mockStarterItemsSelected() {
+    final _MockScenarioBuilder builder = _MockScenarioBuilder(
+      this,
+      onboardingComplete: true,
+    )..addRoutineItems(recommendedStartingTriadItemIds);
+    return builder.build();
+  }
+
+  _ControllerRuntimeSnapshot _mockEarlyStruggle() {
+    final _MockScenarioBuilder builder =
+        _MockScenarioBuilder(this, onboardingComplete: true)
+          ..addRoutineItems(recommendedStartingTriadItemIds)
+          ..setCompetency(_triadItemId('RRR'), CompetencyLevelV1.learning)
+          ..setCompetency(_triadItemId('LLL'), CompetencyLevelV1.learning)
+          ..setCompetency(_triadItemId('RLL'), CompetencyLevelV1.learning)
+          ..addManualSession(
+            itemId: _triadItemId('RRR'),
+            practiceMode: PracticeModeV1.singleSurface,
+            bpm: 78,
+            duration: const Duration(minutes: 4),
+            endedAt: DateTime.now().subtract(const Duration(days: 2)),
+            selfReportControl: SelfReportControlV1.low,
+            selfReportTension: SelfReportTensionV1.some,
+            selfReportTempoReadiness: SelfReportTempoReadinessV1.decrease,
+          )
+          ..addManualSession(
+            itemId: _triadItemId('LLL'),
+            practiceMode: PracticeModeV1.singleSurface,
+            bpm: 76,
+            duration: const Duration(minutes: 5),
+            endedAt: DateTime.now().subtract(const Duration(days: 1, hours: 3)),
+            selfReportControl: SelfReportControlV1.medium,
+            selfReportTension: SelfReportTensionV1.some,
+            selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+          )
+          ..addManualSession(
+            itemId: _triadItemId('RLL'),
+            practiceMode: PracticeModeV1.singleSurface,
+            bpm: 80,
+            duration: const Duration(minutes: 6),
+            endedAt: DateTime.now().subtract(const Duration(hours: 20)),
+            selfReportControl: SelfReportControlV1.medium,
+            selfReportTension: SelfReportTensionV1.none,
+            selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+          );
+    return builder.build();
+  }
+
+  _ControllerRuntimeSnapshot _mockSteadyProgress() {
+    final _MockScenarioBuilder builder =
+        _MockScenarioBuilder(this, onboardingComplete: true)
+          ..addRoutineItems(<String>[
+            _triadItemId('RLL'),
+            _triadItemId('LRR'),
+            _triadItemId('RLR'),
+            _triadItemId('KRL'),
+          ])
+          ..setCompetency(_triadItemId('RLL'), CompetencyLevelV1.comfortable)
+          ..setCompetency(_triadItemId('LRR'), CompetencyLevelV1.learning)
+          ..setCompetency(_triadItemId('RLR'), CompetencyLevelV1.comfortable)
+          ..setCompetency(_triadItemId('KRL'), CompetencyLevelV1.learning)
+          ..addManualSession(
+            itemId: _triadItemId('RLL'),
+            practiceMode: PracticeModeV1.singleSurface,
+            bpm: 88,
+            duration: const Duration(minutes: 6),
+            endedAt: DateTime.now().subtract(const Duration(days: 3)),
+            selfReportControl: SelfReportControlV1.medium,
+            selfReportTension: SelfReportTensionV1.none,
+            selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+          )
+          ..addManualSession(
+            itemId: _triadItemId('RLL'),
+            practiceMode: PracticeModeV1.singleSurface,
+            bpm: 92,
+            duration: const Duration(minutes: 7),
+            endedAt: DateTime.now().subtract(const Duration(days: 1)),
+            selfReportControl: SelfReportControlV1.high,
+            selfReportTension: SelfReportTensionV1.none,
+            selfReportTempoReadiness: SelfReportTempoReadinessV1.increase,
+          )
+          ..addManualSession(
+            itemId: _triadItemId('LRR'),
+            practiceMode: PracticeModeV1.singleSurface,
+            bpm: 82,
+            duration: const Duration(minutes: 5),
+            endedAt: DateTime.now().subtract(const Duration(hours: 30)),
+            selfReportControl: SelfReportControlV1.medium,
+            selfReportTension: SelfReportTensionV1.some,
+            selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+          )
+          ..addManualSession(
+            itemId: _triadItemId('RLR'),
+            practiceMode: PracticeModeV1.singleSurface,
+            bpm: 86,
+            duration: const Duration(minutes: 5),
+            endedAt: DateTime.now().subtract(const Duration(hours: 12)),
+            selfReportControl: SelfReportControlV1.low,
+            selfReportTension: SelfReportTensionV1.some,
+            selfReportTempoReadiness: SelfReportTempoReadinessV1.decrease,
+          )
+          ..addManualSession(
+            itemId: _triadItemId('KRL'),
+            practiceMode: PracticeModeV1.singleSurface,
+            bpm: 74,
+            duration: const Duration(minutes: 4),
+            endedAt: DateTime.now().subtract(const Duration(days: 2, hours: 4)),
+            selfReportControl: SelfReportControlV1.medium,
+            selfReportTension: SelfReportTensionV1.some,
+            selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+          );
+    return builder.build();
+  }
+
+  _ControllerRuntimeSnapshot _mockPhraseReady() {
+    final _MockScenarioBuilder builder =
+        _MockScenarioBuilder(this, onboardingComplete: true)
+          ..addRoutineItems(<String>[
+            _triadItemId('RLL'),
+            _triadItemId('LRR'),
+            _triadItemId('RLR'),
+          ])
+          ..addManualSession(
+            itemId: _triadItemId('RLL'),
+            practiceMode: PracticeModeV1.singleSurface,
+            bpm: 96,
+            duration: const Duration(minutes: 7),
+            endedAt: DateTime.now().subtract(const Duration(days: 2)),
+            selfReportControl: SelfReportControlV1.high,
+            selfReportTension: SelfReportTensionV1.none,
+            selfReportTempoReadiness: SelfReportTempoReadinessV1.increase,
+          )
+          ..addManualSession(
+            itemId: _triadItemId('RLL'),
+            practiceMode: PracticeModeV1.singleSurface,
+            bpm: 102,
+            duration: const Duration(minutes: 6),
+            endedAt: DateTime.now().subtract(const Duration(hours: 18)),
+            selfReportControl: SelfReportControlV1.high,
+            selfReportTension: SelfReportTensionV1.none,
+            selfReportTempoReadiness: SelfReportTempoReadinessV1.increase,
+          )
+          ..addManualSession(
+            itemId: _triadItemId('LRR'),
+            practiceMode: PracticeModeV1.singleSurface,
+            bpm: 94,
+            duration: const Duration(minutes: 6),
+            endedAt: DateTime.now().subtract(const Duration(days: 1, hours: 6)),
+            selfReportControl: SelfReportControlV1.high,
+            selfReportTension: SelfReportTensionV1.none,
+            selfReportTempoReadiness: SelfReportTempoReadinessV1.increase,
+          )
+          ..setCompetency(_triadItemId('RLL'), CompetencyLevelV1.learning)
+          ..setCompetency(_triadItemId('LRR'), CompetencyLevelV1.learning)
+          ..setCompetency(_triadItemId('RLR'), CompetencyLevelV1.comfortable);
+    return builder.build();
+  }
+
+  _ControllerRuntimeSnapshot _mockFlowReady() {
+    final _MockScenarioBuilder builder = _MockScenarioBuilder(
+      this,
+      onboardingComplete: true,
+    );
+    final PracticeCombinationV1 combo = builder.addSavedPhrase(
+      id: 'combo_rll_lrr_rlr',
+      name: 'RLL - LRR - RLR',
+      itemIds: <String>[
+        _triadItemId('RLL'),
+        _triadItemId('LRR'),
+        _triadItemId('RLR'),
+      ],
+    );
+    builder
+      ..addRoutineItems(<String>[combo.id, _triadItemId('KRL')])
+      ..addManualSession(
+        itemId: combo.id,
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 90,
+        duration: const Duration(minutes: 8),
+        endedAt: DateTime.now().subtract(const Duration(days: 2)),
+        selfReportControl: SelfReportControlV1.high,
+        selfReportTension: SelfReportTensionV1.none,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.increase,
+      )
+      ..addManualSession(
+        itemId: combo.id,
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 96,
+        duration: const Duration(minutes: 7),
+        endedAt: DateTime.now().subtract(const Duration(hours: 20)),
+        selfReportControl: SelfReportControlV1.high,
+        selfReportTension: SelfReportTensionV1.none,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.increase,
+      )
+      ..setCompetency(combo.id, CompetencyLevelV1.reliable)
+      ..setCompetency(_triadItemId('KRL'), CompetencyLevelV1.comfortable);
+    return builder.build();
+  }
+
   List<PracticeItemV1> _basePracticeItems() {
     final List<PracticeItemV1> triadItems = triadMatrixAll()
         .map(
@@ -2586,6 +2892,302 @@ class AppController extends ChangeNotifier {
       source: PracticeItemSourceV1.builtIn,
       tags: tags,
       saved: true,
+    );
+  }
+}
+
+class _ControllerRuntimeSnapshot {
+  final UserProfileV1 profile;
+  final List<PracticeItemV1> items;
+  final List<PracticeCombinationV1> combinations;
+  final PracticeRoutineV1 routine;
+  final List<PracticeSessionLogV1> sessions;
+  final List<SessionAssessmentResultV1> assessmentResults;
+  final Map<String, PracticeAssessmentAggregateV1> assessmentAggregateByItemId;
+  final Map<String, CompetencyRecordV1> competencyByItemId;
+  final bool onboardingComplete;
+
+  const _ControllerRuntimeSnapshot({
+    required this.profile,
+    required this.items,
+    required this.combinations,
+    required this.routine,
+    required this.sessions,
+    required this.assessmentResults,
+    required this.assessmentAggregateByItemId,
+    required this.competencyByItemId,
+    required this.onboardingComplete,
+  });
+}
+
+class _MockScenarioBuilder {
+  _MockScenarioBuilder(this.controller, {required this.onboardingComplete})
+    : profile = UserProfileV1.initial,
+      items = List<PracticeItemV1>.from(controller._basePracticeItems()),
+      combinations = <PracticeCombinationV1>[],
+      routine = const PracticeRoutineV1(
+        id: 'main_routine',
+        name: 'Working On',
+        entries: <RoutineEntryV1>[],
+      ),
+      sessions = <PracticeSessionLogV1>[],
+      assessmentResults = <SessionAssessmentResultV1>[],
+      assessmentAggregateByItemId = <String, PracticeAssessmentAggregateV1>{},
+      competencyByItemId = <String, CompetencyRecordV1>{};
+
+  final AppController controller;
+  final UserProfileV1 profile;
+  List<PracticeItemV1> items;
+  List<PracticeCombinationV1> combinations;
+  PracticeRoutineV1 routine;
+  final List<PracticeSessionLogV1> sessions;
+  final List<SessionAssessmentResultV1> assessmentResults;
+  final Map<String, PracticeAssessmentAggregateV1> assessmentAggregateByItemId;
+  final Map<String, CompetencyRecordV1> competencyByItemId;
+  final bool onboardingComplete;
+
+  void addRoutineItems(List<String> itemIds) {
+    final Set<String> existing = routine.entries
+        .map((RoutineEntryV1 entry) => entry.practiceItemId)
+        .toSet();
+    final DateTime now = DateTime.now();
+    final List<RoutineEntryV1> nextEntries = <RoutineEntryV1>[
+      ...routine.entries,
+      ...itemIds
+          .where(existing.add)
+          .map(
+            (String itemId) =>
+                RoutineEntryV1(practiceItemId: itemId, addedAt: now),
+          ),
+    ];
+    routine = routine.copyWith(entries: nextEntries);
+  }
+
+  void setCompetency(String itemId, CompetencyLevelV1 level) {
+    competencyByItemId[itemId] = CompetencyRecordV1(
+      practiceItemId: itemId,
+      level: level,
+      updatedAt: DateTime.now(),
+    );
+  }
+
+  PracticeCombinationV1 addSavedPhrase({
+    required String id,
+    required String name,
+    required List<String> itemIds,
+  }) {
+    final PracticeCombinationV1 combo = PracticeCombinationV1(
+      id: id,
+      name: name,
+      itemIds: itemIds,
+    );
+    combinations = <PracticeCombinationV1>[...combinations, combo];
+    items = <PracticeItemV1>[
+      ...items,
+      _comboItem(id: id, name: name, itemIds: itemIds),
+    ];
+    return combo;
+  }
+
+  void addManualSession({
+    required String itemId,
+    required PracticeModeV1 practiceMode,
+    required int bpm,
+    required Duration duration,
+    required DateTime endedAt,
+    required SelfReportControlV1 selfReportControl,
+    required SelfReportTensionV1 selfReportTension,
+    required SelfReportTempoReadinessV1 selfReportTempoReadiness,
+  }) {
+    final PracticeItemV1 item = items.firstWhere(
+      (PracticeItemV1 entry) => entry.id == itemId,
+    );
+    final PracticeSessionLogV1 session = PracticeSessionLogV1(
+      id: 'mock_session_${sessions.length + 1}_${itemId.replaceAll('-', '_')}',
+      startedAt: endedAt.subtract(duration),
+      endedAt: endedAt,
+      duration: duration,
+      practiceItemIds: <String>[itemId],
+      assessmentItemId: itemId,
+      family: item.family,
+      practiceMode: practiceMode,
+      bpm: bpm,
+      clickEnabled: true,
+      routineId:
+          routine.entries.any(
+            (RoutineEntryV1 entry) => entry.practiceItemId == itemId,
+          )
+          ? routine.id
+          : null,
+      reflection: null,
+      sourceName:
+          routine.entries.any(
+            (RoutineEntryV1 entry) => entry.practiceItemId == itemId,
+          )
+          ? 'Working On'
+          : 'Mock',
+    );
+    sessions.add(session);
+
+    final SessionAssessmentResultV1 result = controller
+        ._manualAssessmentForItem(
+          session: session,
+          itemId: itemId,
+          selfReportControl: selfReportControl,
+          selfReportTension: selfReportTension,
+          selfReportTempoReadiness: selfReportTempoReadiness,
+        );
+    assessmentResults.add(result);
+    assessmentAggregateByItemId[itemId] = _aggregateForItem(itemId);
+  }
+
+  PracticeItemV1 _comboItem({
+    required String id,
+    required String name,
+    required List<String> itemIds,
+  }) {
+    final List<PracticeItemV1> comboItems = itemIds
+        .map(
+          (String itemId) =>
+              items.firstWhere((PracticeItemV1 item) => item.id == itemId),
+        )
+        .toList(growable: false);
+    int offset = 0;
+    final List<int> accents = <int>[];
+    final List<int> ghosts = <int>[];
+    final List<DrumVoiceV1> voices = <DrumVoiceV1>[];
+    for (final PracticeItemV1 item in comboItems) {
+      accents.addAll(
+        item.accentedNoteIndices.map((int index) => index + offset),
+      );
+      ghosts.addAll(item.ghostNoteIndices.map((int index) => index + offset));
+      voices.addAll(item.voiceAssignments);
+      offset += item.noteCount;
+    }
+    return controller._sanitizedItem(
+      PracticeItemV1(
+        id: id,
+        family: MaterialFamilyV1.combo,
+        name: name,
+        sticking: name,
+        noteCount: comboItems.fold<int>(
+          0,
+          (int sum, PracticeItemV1 item) => sum + item.noteCount,
+        ),
+        accentedNoteIndices: accents,
+        ghostNoteIndices: ghosts,
+        voiceAssignments: voices,
+        source: PracticeItemSourceV1.userDefined,
+        tags: const <String>['combo'],
+        saved: true,
+      ),
+    );
+  }
+
+  PracticeAssessmentAggregateV1 _aggregateForItem(String itemId) {
+    final List<SessionAssessmentResultV1> results =
+        assessmentResults
+            .where(
+              (SessionAssessmentResultV1 result) =>
+                  result.practiceItemId == itemId,
+            )
+            .toList(growable: false)
+          ..sort(
+            (SessionAssessmentResultV1 a, SessionAssessmentResultV1 b) =>
+                b.assessedAt.compareTo(a.assessedAt),
+          );
+    if (results.isEmpty) {
+      return PracticeAssessmentAggregateV1(
+        practiceItemId: itemId,
+        lastAssessmentAt: null,
+        recentAttemptedBpm: null,
+        recentStableBpm: null,
+        bestStableBpm: null,
+        stabilityScore: 0,
+        driftScore: 1,
+        jitterScore: 1,
+        continuityScore: 0,
+        confidence: AssessmentConfidenceV1.low,
+        status: MatrixProgressStateV1.notTrained,
+        assessmentCount: 0,
+      );
+    }
+    final List<SessionAssessmentResultV1> recent = results
+        .take(5)
+        .toList(growable: false);
+    final List<double> stableBpms = results
+        .where(controller._isStrongAssessment)
+        .map(
+          (SessionAssessmentResultV1 result) => result.attemptedBpm.toDouble(),
+        )
+        .toList(growable: false);
+    final SessionAssessmentResultV1 latest = results.first;
+    final double stability = controller._mean(
+      recent.map((SessionAssessmentResultV1 result) => result.stabilityScore),
+    );
+    final double drift = controller._mean(
+      recent.map((SessionAssessmentResultV1 result) => result.driftScore),
+    );
+    final double jitter = controller._mean(
+      recent.map((SessionAssessmentResultV1 result) => result.jitterScore),
+    );
+    final double continuity = controller._mean(
+      recent.map((SessionAssessmentResultV1 result) => result.continuityScore),
+    );
+    final AssessmentConfidenceV1 confidence = controller._highestConfidence(
+      recent,
+    );
+    return PracticeAssessmentAggregateV1(
+      practiceItemId: itemId,
+      lastAssessmentAt: latest.assessedAt,
+      recentAttemptedBpm: latest.attemptedBpm,
+      recentStableBpm: controller._isStrongAssessment(latest)
+          ? latest.attemptedBpm.toDouble()
+          : null,
+      bestStableBpm: stableBpms.isEmpty
+          ? null
+          : stableBpms.reduce((double a, double b) => a > b ? a : b),
+      stabilityScore: stability,
+      driftScore: drift,
+      jitterScore: jitter,
+      continuityScore: continuity,
+      confidence: confidence,
+      status: controller._classifyAssessmentAggregate(
+        assessmentCount: results.length,
+        stabilityScore: stability,
+        driftScore: drift,
+        jitterScore: jitter,
+        continuityScore: continuity,
+        confidence: confidence,
+      ),
+      assessmentCount: results.length,
+    );
+  }
+
+  _ControllerRuntimeSnapshot build() {
+    return _ControllerRuntimeSnapshot(
+      profile: profile,
+      items: items,
+      combinations: combinations,
+      routine: routine,
+      sessions: List<PracticeSessionLogV1>.from(sessions)
+        ..sort(
+          (PracticeSessionLogV1 a, PracticeSessionLogV1 b) =>
+              b.endedAt.compareTo(a.endedAt),
+        ),
+      assessmentResults: List<SessionAssessmentResultV1>.from(assessmentResults)
+        ..sort(
+          (SessionAssessmentResultV1 a, SessionAssessmentResultV1 b) =>
+              b.assessedAt.compareTo(a.assessedAt),
+        ),
+      assessmentAggregateByItemId:
+          Map<String, PracticeAssessmentAggregateV1>.from(
+            assessmentAggregateByItemId,
+          ),
+      competencyByItemId: Map<String, CompetencyRecordV1>.from(
+        competencyByItemId,
+      ),
+      onboardingComplete: onboardingComplete,
     );
   }
 }

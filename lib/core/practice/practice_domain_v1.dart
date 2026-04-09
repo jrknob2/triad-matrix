@@ -73,6 +73,15 @@ enum SelfReportTensionV1 { none, some, high }
 
 enum SelfReportTempoReadinessV1 { decrease, same, increase }
 
+enum AppMockScenarioV1 {
+  firstLight,
+  starterItemsSelected,
+  earlyStruggle,
+  steadyProgress,
+  phraseReady,
+  flowReady,
+}
+
 /* -------------------------------------------------------------------------- */
 /* Value Objects                                                              */
 /* -------------------------------------------------------------------------- */

@@ -148,6 +148,17 @@ extension DrumVoiceLabel on DrumVoiceV1 {
   };
 }
 
+extension AppMockScenarioLabel on AppMockScenarioV1 {
+  String get label => switch (this) {
+    AppMockScenarioV1.firstLight => 'First Light',
+    AppMockScenarioV1.starterItemsSelected => 'Starter Items Selected',
+    AppMockScenarioV1.earlyStruggle => 'Early Struggle',
+    AppMockScenarioV1.steadyProgress => 'Steady Progress',
+    AppMockScenarioV1.phraseReady => 'Phrase Ready',
+    AppMockScenarioV1.flowReady => 'Flow Ready',
+  };
+}
+
 extension TriadMatrixViewModeLabel on TriadMatrixViewModeV1 {
   String get label => switch (this) {
     TriadMatrixViewModeV1.competency => 'Competency',

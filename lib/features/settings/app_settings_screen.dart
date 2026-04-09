@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/practice/practice_domain_v1.dart';
@@ -158,6 +159,60 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
             onPressed: () => _confirmClearAppData(context),
             child: const Text('Clear App Data'),
           ),
+          if (kDebugMode) ...<Widget>[
+            const SizedBox(height: 24),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      'Mock Scenarios',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'These are runtime-only screen states for design and QA. Leaving mock mode restores the real app state.',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<AppMockScenarioV1?>(
+                      initialValue: widget.controller.activeMockScenario,
+                      decoration: const InputDecoration(
+                        labelText: 'Scenario',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: <DropdownMenuItem<AppMockScenarioV1?>>[
+                        const DropdownMenuItem<AppMockScenarioV1?>(
+                          value: null,
+                          child: Text('Live App State'),
+                        ),
+                        ...AppMockScenarioV1.values.map(
+                          (AppMockScenarioV1 scenario) =>
+                              DropdownMenuItem<AppMockScenarioV1?>(
+                                value: scenario,
+                                child: Text(scenario.label),
+                              ),
+                        ),
+                      ],
+                      onChanged: (AppMockScenarioV1? value) {
+                        widget.controller.setMockScenario(value);
+                        setState(() => _draft = widget.controller.profile);
+                      },
+                    ),
+                    if (widget.controller.isMockScenarioActive) ...<Widget>[
+                      const SizedBox(height: 8),
+                      Text(
+                        'Active: ${widget.controller.activeMockScenario!.label}',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

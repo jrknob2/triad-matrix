@@ -226,6 +226,12 @@ State:
 4. The mock state layer must not require destructive data resets to use.
 5. Designers and QA should be able to test a screen state without recreating it manually.
 
+Current implementation rule:
+
+- debug builds expose a runtime-only scenario switch
+- activating a scenario must not overwrite persisted user data
+- leaving mock mode restores the live app state from before the scenario was activated
+
 ---
 
 ## Acceptance Rule
