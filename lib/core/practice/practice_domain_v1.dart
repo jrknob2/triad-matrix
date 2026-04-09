@@ -28,19 +28,11 @@ enum ReflectionRatingV1 { easy, okay, hard }
 
 enum TimerPresetV1 { none, minutes5, minutes10, minutes20, minutes30 }
 
-enum TriadMatrixViewModeV1 { competency, rightLead, leftLead, handsOnly }
-
-enum TriadMatrixFilterPaletteV1 { coaching, technique, combos }
-
 enum TriadMatrixFilterV1 {
-  competency,
   inRoutine,
   inPhrases,
-  needsAttention,
   underPracticed,
-  closeToToolkit,
   recent,
-  unseen,
   notTrained,
   activeStatus,
   needsWorkStatus,
@@ -286,7 +278,6 @@ class CoachBlockV1 {
   final List<String> itemIds;
   final String ctaLabel;
   final CoachActionV1 ctaAction;
-  final TriadMatrixFilterPaletteV1? matrixPalette;
   final Set<TriadMatrixFilterV1> matrixFilters;
   final PracticeModeV1 practiceMode;
 
@@ -299,7 +290,6 @@ class CoachBlockV1 {
     required this.itemIds,
     required this.ctaLabel,
     required this.ctaAction,
-    required this.matrixPalette,
     required this.matrixFilters,
     required this.practiceMode,
   });
@@ -322,14 +312,12 @@ class CoachBriefingV1 {
 @immutable
 class MatrixFiltersV1 {
   final LearningLaneV1? lane;
-  final TriadMatrixFilterPaletteV1? palette;
   final Set<TriadMatrixFilterV1> filters;
   final Set<String> selectedRows;
   final Set<String> selectedColumns;
 
   const MatrixFiltersV1({
     required this.lane,
-    required this.palette,
     required this.filters,
     required this.selectedRows,
     required this.selectedColumns,

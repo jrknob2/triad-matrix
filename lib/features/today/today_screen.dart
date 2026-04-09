@@ -6,11 +6,7 @@ import '../app/drumcabulary_ui.dart';
 import '../practice/widgets/pattern_display_text.dart';
 
 typedef OpenMatrixCallback =
-    void Function({
-      LearningLaneV1? lane,
-      TriadMatrixFilterPaletteV1? palette,
-      Set<TriadMatrixFilterV1>? filters,
-    });
+    void Function({LearningLaneV1? lane, Set<TriadMatrixFilterV1>? filters});
 
 class TodayScreen extends StatelessWidget {
   final AppController controller;
@@ -114,11 +110,11 @@ class TodayScreen extends StatelessWidget {
   }
 
   void _openMatrixForBlock(CoachBlockV1 block) {
-    onOpenMatrix(palette: block.matrixPalette, filters: block.matrixFilters);
+    onOpenMatrix(filters: block.matrixFilters);
   }
 
   bool _blockHasMatrixContext(CoachBlockV1 block) {
-    return block.matrixPalette != null || block.matrixFilters.isNotEmpty;
+    return block.matrixFilters.isNotEmpty;
   }
 
   String? _blockPracticeItemId(

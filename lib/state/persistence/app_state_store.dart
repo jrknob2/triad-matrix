@@ -8,8 +8,6 @@ import '../../core/practice/practice_domain_v1.dart';
 part 'app_state_store.g.dart';
 
 class AppStateSnapshotData {
-  final int schemaVersion;
-  final bool onboardingComplete;
   final UserProfileV1 profile;
   final List<PracticeItemV1> items;
   final List<PracticeCombinationV1> combinations;
@@ -20,8 +18,6 @@ class AppStateSnapshotData {
   final List<PracticeAssessmentAggregateV1> assessmentAggregates;
 
   const AppStateSnapshotData({
-    required this.schemaVersion,
-    required this.onboardingComplete,
     required this.profile,
     required this.items,
     required this.combinations,
@@ -36,8 +32,6 @@ class AppStateSnapshotData {
 @collection
 class AppStateRecord {
   Id id = 0;
-  int schemaVersion = 1;
-  bool onboardingComplete = false;
   String profileJson = '{}';
   String itemsJson = '[]';
   String combinationsJson = '[]';
@@ -51,7 +45,6 @@ class AppStateRecord {
 class AppStateStore {
   AppStateStore._(this._isar);
 
-  static const int currentSchemaVersion = 2;
   static const String _dbName = 'triad_trainer';
   final Isar _isar;
 
@@ -70,34 +63,24 @@ class AppStateStore {
     final AppStateRecord? record = await _isar.appStateRecords.get(0);
     if (record == null) return null;
 
-    final Map<String, dynamic> profileMap = _decodeMap(
-      record.profileJson,
-      fallback: _userProfileToMap(UserProfileV1.initial),
-    );
-    final List<dynamic> itemsList = _decodeList(record.itemsJson);
-    final List<dynamic> combinationsList = _decodeList(record.combinationsJson);
-    final Map<String, dynamic> routineMap = _decodeMap(
-      record.routineJson,
-      fallback: _practiceRoutineToMap(
-        const PracticeRoutineV1(
-          id: 'main_routine',
-          name: 'Working On',
-          entries: <RoutineEntryV1>[],
-        ),
-      ),
-    );
-    final List<dynamic> sessionsList = _decodeList(record.sessionsJson);
-    final List<dynamic> competencyList = _decodeList(record.competencyJson);
-    final List<dynamic> assessmentResultsList = _decodeList(
-      record.assessmentResultsJson,
-    );
-    final List<dynamic> assessmentAggregatesList = _decodeList(
-      record.assessmentAggregatesJson,
-    );
+    final Map<String, dynamic> profileMap =
+        jsonDecode(record.profileJson) as Map<String, dynamic>;
+    final List<dynamic> itemsList =
+        jsonDecode(record.itemsJson) as List<dynamic>;
+    final List<dynamic> combinationsList =
+        jsonDecode(record.combinationsJson) as List<dynamic>;
+    final Map<String, dynamic> routineMap =
+        jsonDecode(record.routineJson) as Map<String, dynamic>;
+    final List<dynamic> sessionsList =
+        jsonDecode(record.sessionsJson) as List<dynamic>;
+    final List<dynamic> competencyList =
+        jsonDecode(record.competencyJson) as List<dynamic>;
+    final List<dynamic> assessmentResultsList =
+        jsonDecode(record.assessmentResultsJson) as List<dynamic>;
+    final List<dynamic> assessmentAggregatesList =
+        jsonDecode(record.assessmentAggregatesJson) as List<dynamic>;
 
     return AppStateSnapshotData(
-      schemaVersion: record.schemaVersion,
-      onboardingComplete: record.onboardingComplete,
       profile: _userProfileFromMap(profileMap),
       items: itemsList
           .map(
@@ -142,8 +125,6 @@ class AppStateStore {
   Future<void> save(AppStateSnapshotData snapshot) async {
     final AppStateRecord record = AppStateRecord()
       ..id = 0
-      ..schemaVersion = currentSchemaVersion
-      ..onboardingComplete = snapshot.onboardingComplete
       ..profileJson = jsonEncode(_userProfileToMap(snapshot.profile))
       ..itemsJson = jsonEncode(
         snapshot.items.map(_practiceItemToMap).toList(growable: false),
@@ -176,23 +157,6 @@ class AppStateStore {
     await _isar.writeTxn(() async {
       await _isar.appStateRecords.put(record);
     });
-  }
-
-  Map<String, dynamic> _decodeMap(
-    String encoded, {
-    required Map<String, dynamic> fallback,
-  }) {
-    if (encoded.trim().isEmpty) return fallback;
-    final Object? decoded = jsonDecode(encoded);
-    if (decoded is Map<String, dynamic>) return decoded;
-    return fallback;
-  }
-
-  List<dynamic> _decodeList(String encoded) {
-    if (encoded.trim().isEmpty) return const <dynamic>[];
-    final Object? decoded = jsonDecode(encoded);
-    if (decoded is List<dynamic>) return decoded;
-    return const <dynamic>[];
   }
 
   Map<String, dynamic> _userProfileToMap(UserProfileV1 profile) {

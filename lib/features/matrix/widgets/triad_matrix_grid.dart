@@ -206,11 +206,8 @@ class _TriadCellButton extends StatelessWidget {
     final bool endsWithKick = controller.endsWithKick(itemId);
     final bool hasDoubles = controller.hasDoubles(itemId);
     final bool inRoutine = controller.isInRoutine(itemId);
-    final bool needsAttention = controller.needsAttention(itemId);
     final bool underPracticed = controller.isUnderPracticed(itemId);
-    final bool closeToToolkit = controller.isCloseToToolbox(itemId);
     final bool recent = controller.isRecent(itemId);
-    final bool unseen = controller.isUnseen(itemId);
     if (visualState.muted) {
       backgroundColor =
           Color.lerp(backgroundColor, const Color(0xFFE6E1D7), 0.5) ??
@@ -283,13 +280,6 @@ class _TriadCellButton extends StatelessWidget {
     }
 
     if (!visualState.muted &&
-        filters.filters.contains(TriadMatrixFilterV1.needsAttention) &&
-        needsAttention) {
-      borderColor = const Color(0xFF9C3D2C);
-      borderWidth = borderWidth < 3 ? 3 : borderWidth;
-    }
-
-    if (!visualState.muted &&
         filters.filters.contains(TriadMatrixFilterV1.underPracticed) &&
         underPracticed) {
       borderColor = const Color(0xFF5E7A8A);
@@ -297,23 +287,9 @@ class _TriadCellButton extends StatelessWidget {
     }
 
     if (!visualState.muted &&
-        filters.filters.contains(TriadMatrixFilterV1.closeToToolkit) &&
-        closeToToolkit) {
-      borderColor = const Color(0xFFB37A22);
-      borderWidth = borderWidth < 3 ? 3 : borderWidth;
-    }
-
-    if (!visualState.muted &&
         filters.filters.contains(TriadMatrixFilterV1.recent) &&
         recent) {
       borderColor = const Color(0xFF2F7C72);
-      borderWidth = borderWidth < 3 ? 3 : borderWidth;
-    }
-
-    if (!visualState.muted &&
-        filters.filters.contains(TriadMatrixFilterV1.unseen) &&
-        unseen) {
-      borderColor = const Color(0xFF6B6B6B);
       borderWidth = borderWidth < 3 ? 3 : borderWidth;
     }
 

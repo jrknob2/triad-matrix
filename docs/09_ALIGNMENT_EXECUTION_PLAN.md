@@ -210,6 +210,24 @@ Note:
 
 - explicitly deferred until after the structural/product reset is stable
 
+### Phase 9. Remove compatibility residue
+
+Goal:
+
+- keep the v1 codebase aligned to the current app instead of adapting to abandoned paths
+
+Tasks:
+
+- remove dead compatibility shims
+- remove onboarding state and screen residue
+- remove obsolete Matrix and Progress vocabulary from the active model
+- keep persistence plain and current instead of carrying compatibility scaffolding that no longer serves the product
+
+Outcome:
+
+- active code and active docs describe the same app
+- refactors do not leave behind transitional behavior as permanent baggage
+
 ---
 
 ## Recommended Execution Order
@@ -225,7 +243,8 @@ Recommended order:
 5. redesign `Progress`
 6. redesign `Coach` with mock states
 7. do one full visual polish pass
-8. then resume forward feature work
+8. remove compatibility residue introduced during the reset
+9. then resume forward feature work
 
 ---
 

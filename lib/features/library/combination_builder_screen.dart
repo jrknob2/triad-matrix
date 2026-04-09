@@ -104,7 +104,6 @@ class _CombinationBuilderScreenState extends State<CombinationBuilderScreen> {
               controller: widget.controller,
               filters: const MatrixFiltersV1(
                 lane: null,
-                palette: null,
                 filters: <TriadMatrixFilterV1>{},
                 selectedRows: <String>{},
                 selectedColumns: <String>{},

@@ -29,7 +29,6 @@ class AppController extends ChangeNotifier {
   late List<SessionAssessmentResultV1> _assessmentResults;
   late Map<String, PracticeAssessmentAggregateV1> _assessmentAggregateByItemId;
   late Map<String, CompetencyRecordV1> _competencyByItemId;
-  bool _onboardingComplete = false;
   int _resetVersion = 0;
   AppMockScenarioV1? _activeMockScenario;
   _ControllerRuntimeSnapshot? _liveStateBeforeMock;
@@ -41,7 +40,6 @@ class AppController extends ChangeNotifier {
   PracticeRoutineV1 get routine => _routine;
   List<SessionAssessmentResultV1> get assessmentResults =>
       List<SessionAssessmentResultV1>.unmodifiable(_assessmentResults);
-  bool get onboardingComplete => _onboardingComplete;
   int get resetVersion => _resetVersion;
   AppMockScenarioV1? get activeMockScenario => _activeMockScenario;
   bool get isMockScenarioActive => _activeMockScenario != null;
@@ -78,7 +76,6 @@ class AppController extends ChangeNotifier {
       for (final CompetencyRecordV1 record in snapshot.competencyRecords)
         record.practiceItemId: record,
     };
-    _onboardingComplete = snapshot.onboardingComplete;
   }
 
   void _notifyChanged({bool bumpResetVersion = false}) {
@@ -105,7 +102,7 @@ class AppController extends ChangeNotifier {
           (PracticeItemV1 item) =>
               !(item.source == PracticeItemSourceV1.builtIn && item.isWarmup),
         )
-        .map(_migrateLegacyBuiltInAuthoring)
+        .map(_sanitizedItem)
         .toList(growable: false);
 
     final Set<String> existingIds = filteredItems
@@ -118,72 +115,6 @@ class AppController extends ChangeNotifier {
     return <PracticeItemV1>[...filteredItems, ...missingBuiltIns];
   }
 
-  PracticeItemV1 _migrateLegacyBuiltInAuthoring(PracticeItemV1 item) {
-    if (item.source != PracticeItemSourceV1.builtIn) {
-      return _sanitizedItem(item);
-    }
-
-    final bool accentsMatchLegacy = listEquals(
-      item.accentedNoteIndices,
-      _legacyAccentIndicesFor(item),
-    );
-    final bool ghostsMatchLegacy = item.ghostNoteIndices.isEmpty;
-    final bool voicesMatchLegacy = listEquals(
-      item.voiceAssignments,
-      _legacyVoiceAssignmentsFor(item),
-    );
-
-    final PracticeItemV1 migrated = item.copyWith(
-      accentedNoteIndices: accentsMatchLegacy
-          ? const <int>[]
-          : item.accentedNoteIndices,
-      ghostNoteIndices: ghostsMatchLegacy
-          ? const <int>[]
-          : item.ghostNoteIndices,
-      voiceAssignments: voicesMatchLegacy
-          ? const <DrumVoiceV1>[]
-          : item.voiceAssignments,
-    );
-
-    return _sanitizedItem(migrated);
-  }
-
-  List<int> _legacyAccentIndicesFor(PracticeItemV1 item) {
-    if (item.isTriad) {
-      for (final TriadMatrixCell cell in triadMatrixAll()) {
-        if (cell.id == item.name) return _accentIndicesForTriadCell(cell);
-      }
-    }
-
-    return switch (item.id) {
-      'five_rlrlk' => const <int>[0],
-      'five_rllrl' => const <int>[0, 3],
-      _ => const <int>[],
-    };
-  }
-
-  List<DrumVoiceV1> _legacyVoiceAssignmentsFor(PracticeItemV1 item) {
-    return switch (item.id) {
-      'five_rlrlk' => const <DrumVoiceV1>[
-        DrumVoiceV1.snare,
-        DrumVoiceV1.snare,
-        DrumVoiceV1.snare,
-        DrumVoiceV1.snare,
-        DrumVoiceV1.kick,
-      ],
-      'five_rllrl' => const <DrumVoiceV1>[
-        DrumVoiceV1.snare,
-        DrumVoiceV1.snare,
-        DrumVoiceV1.snare,
-        DrumVoiceV1.snare,
-        DrumVoiceV1.snare,
-      ],
-      _ => _defaultVoiceAssignmentsForSticking(
-        _patternSignature(item.sticking),
-      ),
-    };
-  }
-
   Future<void> _persistState() async {
     if (isMockScenarioActive) return;
     final List<PracticeItemV1> persistedItems = _items
@@ -191,8 +122,6 @@ class AppController extends ChangeNotifier {
         .toList(growable: false);
     await _store.save(
       AppStateSnapshotData(
-        schemaVersion: AppStateStore.currentSchemaVersion,
-        onboardingComplete: _onboardingComplete,
         profile: _profile,
         items: persistedItems,
         combinations: _combinations,
@@ -379,7 +308,6 @@ class AppController extends ChangeNotifier {
         itemIds: <String>[target.id],
         ctaLabel: 'Start Practice',
         ctaAction: CoachActionV1.startPractice,
-        matrixPalette: null,
         matrixFilters: const <TriadMatrixFilterV1>{},
         practiceMode: PracticeModeV1.singleSurface,
       );
@@ -404,7 +332,6 @@ class AppController extends ChangeNotifier {
         itemIds: <String>[target.id],
         ctaLabel: 'Start Practice',
         ctaAction: CoachActionV1.startPractice,
-        matrixPalette: null,
         matrixFilters: const <TriadMatrixFilterV1>{},
         practiceMode: PracticeModeV1.singleSurface,
       );
@@ -424,7 +351,6 @@ class AppController extends ChangeNotifier {
       itemIds: <String>[target.id],
       ctaLabel: 'Start Practice',
       ctaAction: CoachActionV1.startPractice,
-      matrixPalette: TriadMatrixFilterPaletteV1.coaching,
       matrixFilters: const <TriadMatrixFilterV1>{
         TriadMatrixFilterV1.underPracticed,
       },
@@ -456,9 +382,8 @@ class AppController extends ChangeNotifier {
       itemIds: <String>[target.id],
       ctaLabel: 'Fix This',
       ctaAction: CoachActionV1.startPractice,
-      matrixPalette: TriadMatrixFilterPaletteV1.coaching,
       matrixFilters: const <TriadMatrixFilterV1>{
-        TriadMatrixFilterV1.needsAttention,
+        TriadMatrixFilterV1.needsWorkStatus,
       },
       practiceMode: PracticeModeV1.singleSurface,
     );
@@ -496,7 +421,6 @@ class AppController extends ChangeNotifier {
       ctaAction: target.isCombo
           ? CoachActionV1.moveToFlow
           : CoachActionV1.buildCombo,
-      matrixPalette: TriadMatrixFilterPaletteV1.coaching,
       matrixFilters: const <TriadMatrixFilterV1>{TriadMatrixFilterV1.recent},
       practiceMode: target.isCombo
           ? PracticeModeV1.flow
@@ -526,7 +450,6 @@ class AppController extends ChangeNotifier {
         itemIds: <String>[target.id],
         ctaLabel: 'Move to Flow',
         ctaAction: CoachActionV1.moveToFlow,
-        matrixPalette: TriadMatrixFilterPaletteV1.combos,
         matrixFilters: const <TriadMatrixFilterV1>{},
         practiceMode: PracticeModeV1.flow,
       );
@@ -560,7 +483,6 @@ class AppController extends ChangeNotifier {
       itemIds: itemIds,
       ctaLabel: 'Build Combo',
       ctaAction: CoachActionV1.buildCombo,
-      matrixPalette: TriadMatrixFilterPaletteV1.combos,
       matrixFilters: const <TriadMatrixFilterV1>{},
       practiceMode: PracticeModeV1.singleSurface,
     );
@@ -882,7 +804,9 @@ class AppController extends ChangeNotifier {
     final List<PracticeItemV1> items = _items
         .where(
           (item) =>
-              !item.isCustom && !item.isWarmup && isCloseToToolbox(item.id),
+              !item.isCustom &&
+              !item.isWarmup &&
+              matrixProgressStateFor(item.id) == MatrixProgressStateV1.strong,
         )
         .toList(growable: false);
     items.sort(
@@ -919,18 +843,18 @@ class AppController extends ChangeNotifier {
   }
 
   int get practicedTriadCount {
-    return triadMatrixItems.where((item) => !isUnseen(item.id)).length;
+    return triadMatrixItems.where((item) => _hasAssessment(item.id)).length;
   }
 
   int get practicedHandsOnlyTriadCount {
     return triadMatrixItems
-        .where((item) => handsOnly(item.id) && !isUnseen(item.id))
+        .where((item) => handsOnly(item.id) && _hasAssessment(item.id))
         .length;
   }
 
   int get practicedKickTriadCount {
     return triadMatrixItems
-        .where((item) => hasKick(item.id) && !isUnseen(item.id))
+        .where((item) => hasKick(item.id) && _hasAssessment(item.id))
         .length;
   }
 
@@ -1090,14 +1014,7 @@ class AppController extends ChangeNotifier {
     if (aggregate != null && aggregate.assessmentCount > 0) {
       return aggregate.status;
     }
-
-    if (isUnseen(itemId)) return MatrixProgressStateV1.notTrained;
-    if (competencyFor(itemId).index >= CompetencyLevelV1.reliable.index ||
-        isCloseToToolbox(itemId)) {
-      return MatrixProgressStateV1.strong;
-    }
-    if (needsAttention(itemId)) return MatrixProgressStateV1.needsWork;
-    return MatrixProgressStateV1.active;
+    return MatrixProgressStateV1.notTrained;
   }
 
   bool _matrixCellIsInScope(String itemId, MatrixFiltersV1 filters) {
@@ -1150,24 +1067,12 @@ class AppController extends ChangeNotifier {
         !isInAnyPhrase(itemId)) {
       return false;
     }
-    if (activeFilters.contains(TriadMatrixFilterV1.needsAttention) &&
-        !needsAttention(itemId)) {
-      return false;
-    }
     if (activeFilters.contains(TriadMatrixFilterV1.underPracticed) &&
         !isUnderPracticed(itemId)) {
       return false;
     }
-    if (activeFilters.contains(TriadMatrixFilterV1.closeToToolkit) &&
-        !isCloseToToolbox(itemId)) {
-      return false;
-    }
     if (activeFilters.contains(TriadMatrixFilterV1.recent) &&
         !isRecent(itemId)) {
-      return false;
-    }
-    if (activeFilters.contains(TriadMatrixFilterV1.unseen) &&
-        !isUnseen(itemId)) {
       return false;
     }
     if (activeFilters.contains(TriadMatrixFilterV1.notTrained) &&
@@ -1210,7 +1115,12 @@ class AppController extends ChangeNotifier {
     return mirror?.id;
   }
 
-  bool isUnseen(String itemId) => lastSessionForItem(itemId) == null;
+  bool _hasAssessment(String itemId) {
+    final PracticeAssessmentAggregateV1? aggregate = assessmentAggregateFor(
+      itemId,
+    );
+    return aggregate != null && aggregate.assessmentCount > 0;
+  }
 
   bool isRecent(String itemId) {
     final PracticeSessionLogV1? session = lastSessionForItem(itemId);
@@ -1221,41 +1131,6 @@ class AppController extends ChangeNotifier {
 
   bool isUnderPracticed(String itemId) {
     return totalTime(itemId: itemId) < const Duration(minutes: 12);
-  }
-
-  bool isCloseToToolbox(String itemId) {
-    final PracticeAssessmentAggregateV1? aggregate = assessmentAggregateFor(
-      itemId,
-    );
-    if (aggregate != null && aggregate.assessmentCount > 0) {
-      return aggregate.status == MatrixProgressStateV1.strong;
-    }
-
-    final CompetencyLevelV1 level = competencyFor(itemId);
-    final bool strongCompetency =
-        level == CompetencyLevelV1.comfortable ||
-        level == CompetencyLevelV1.reliable;
-    return strongCompetency &&
-        totalTime(itemId: itemId) >= const Duration(minutes: 10);
-  }
-
-  bool needsAttention(String itemId) {
-    final PracticeAssessmentAggregateV1? aggregate = assessmentAggregateFor(
-      itemId,
-    );
-    if (aggregate != null && aggregate.assessmentCount > 0) {
-      return aggregate.status == MatrixProgressStateV1.needsWork;
-    }
-    if (isUnseen(itemId)) return false;
-
-    final CompetencyLevelV1 level = competencyFor(itemId);
-    final bool weakCompetency =
-        level == CompetencyLevelV1.notStarted ||
-        level == CompetencyLevelV1.learning;
-    final bool stale = !isRecent(itemId);
-    final bool lightTime =
-        totalTime(itemId: itemId) < const Duration(minutes: 8);
-    return weakCompetency && (stale || lightTime);
   }
 
   List<PracticeCombinationV1> get triadCombinations {
@@ -1518,7 +1393,11 @@ class AppController extends ChangeNotifier {
   TodayLaneRecommendationV1 _buildToolboxMomentum() {
     final List<PracticeItemV1> items =
         triadMatrixItems
-            .where((item) => isCloseToToolbox(item.id))
+            .where(
+              (item) =>
+                  matrixProgressStateFor(item.id) ==
+                  MatrixProgressStateV1.strong,
+            )
             .toList(growable: false)
           ..sort(
             (a, b) =>
@@ -1728,23 +1607,14 @@ class AppController extends ChangeNotifier {
     _notifyChanged();
   }
 
-  void completeOnboarding(UserProfileV1 profile) {
-    _profile = profile;
-    _onboardingComplete = true;
-    _notifyChanged();
-  }
-
   void clearAppData() {
     if (isMockScenarioActive) {
-      _liveStateBeforeMock = _buildFirstLightRuntimeSnapshot(
-        onboardingComplete: false,
-      );
+      _liveStateBeforeMock = _buildFirstLightRuntimeSnapshot();
       _applyRuntimeSnapshot(_buildMockScenarioSnapshot(_activeMockScenario!));
       _notifyChanged(bumpResetVersion: true);
       return;
     }
     _initializeFirstLightState();
-    _onboardingComplete = false;
     _notifyChanged(bumpResetVersion: true);
   }
 
@@ -2599,27 +2469,6 @@ class AppController extends ChangeNotifier {
     return tokens.isEmpty ? sticking.length : tokens.length;
   }
 
-  List<int> _defaultAccentIndicesForSticking(String sticking) {
-    final List<String> tokens = _normalizedTokensFromSticking(sticking);
-    if (tokens.isEmpty) return const <int>[];
-
-    final List<int> handIndices = <int>[
-      for (int index = 0; index < tokens.length; index++)
-        if (tokens[index] != 'K') index,
-    ];
-    if (handIndices.isEmpty) return const <int>[];
-    if (handIndices.length >= 3) {
-      return <int>[handIndices.first, handIndices[2]];
-    }
-    return <int>[handIndices.first];
-  }
-
-  List<DrumVoiceV1> _defaultVoiceAssignmentsForSticking(String sticking) {
-    return _normalizedTokensFromSticking(
-      sticking,
-    ).map(_defaultVoiceForToken).toList(growable: false);
-  }
-
   DrumVoiceV1 _defaultVoiceForToken(String token) {
     return token == 'K' ? DrumVoiceV1.kick : DrumVoiceV1.snare;
   }
@@ -2639,10 +2488,6 @@ class AppController extends ChangeNotifier {
     if (cell.id.startsWith('L')) tags.add('lead-left');
     if (cell.id.startsWith('K')) tags.add('lead-kick');
     return tags;
-  }
-
-  List<int> _accentIndicesForTriadCell(TriadMatrixCell cell) {
-    return _defaultAccentIndicesForSticking(cell.id);
   }
 
   void _initializeFirstLightState() {
@@ -2677,13 +2522,10 @@ class AppController extends ChangeNotifier {
       competencyByItemId: Map<String, CompetencyRecordV1>.from(
         _competencyByItemId,
       ),
-      onboardingComplete: _onboardingComplete,
     );
   }
 
-  _ControllerRuntimeSnapshot _buildFirstLightRuntimeSnapshot({
-    bool onboardingComplete = false,
-  }) {
+  _ControllerRuntimeSnapshot _buildFirstLightRuntimeSnapshot() {
     return _ControllerRuntimeSnapshot(
       profile: UserProfileV1.initial,
       items: _basePracticeItems(),
@@ -2698,7 +2540,6 @@ class AppController extends ChangeNotifier {
       assessmentAggregateByItemId:
           const <String, PracticeAssessmentAggregateV1>{},
       competencyByItemId: const <String, CompetencyRecordV1>{},
-      onboardingComplete: onboardingComplete,
     );
   }
 
@@ -2718,16 +2559,13 @@ class AppController extends ChangeNotifier {
     _competencyByItemId = Map<String, CompetencyRecordV1>.from(
       snapshot.competencyByItemId,
     );
-    _onboardingComplete = snapshot.onboardingComplete;
   }
 
   _ControllerRuntimeSnapshot _buildMockScenarioSnapshot(
     AppMockScenarioV1 scenario,
   ) {
     return switch (scenario) {
-      AppMockScenarioV1.firstLight => _buildFirstLightRuntimeSnapshot(
-        onboardingComplete: true,
-      ),
+      AppMockScenarioV1.firstLight => _buildFirstLightRuntimeSnapshot(),
       AppMockScenarioV1.starterItemsSelected => _mockStarterItemsSelected(),
       AppMockScenarioV1.earlyStruggle => _mockEarlyStruggle(),
       AppMockScenarioV1.steadyProgress => _mockSteadyProgress(),
@@ -2737,362 +2575,354 @@ class AppController extends ChangeNotifier {
   }
 
   _ControllerRuntimeSnapshot _mockStarterItemsSelected() {
-    final _MockScenarioBuilder builder = _MockScenarioBuilder(
-      this,
-      onboardingComplete: true,
-    )..addRoutineItems(recommendedStartingTriadItemIds);
+    final _MockScenarioBuilder builder = _MockScenarioBuilder(this)
+      ..addRoutineItems(recommendedStartingTriadItemIds);
     return builder.build();
   }
 
   _ControllerRuntimeSnapshot _mockEarlyStruggle() {
     final DateTime now = DateTime.now();
-    final _MockScenarioBuilder builder =
-        _MockScenarioBuilder(this, onboardingComplete: true)
-          ..addRoutineItems(recommendedStartingTriadItemIds)
-          ..setCompetency(_triadItemId('RRR'), CompetencyLevelV1.learning)
-          ..setCompetency(_triadItemId('LLL'), CompetencyLevelV1.learning)
-          ..setCompetency(_triadItemId('RLL'), CompetencyLevelV1.learning)
-          ..addManualSession(
-            itemId: _triadItemId('RRR'),
-            practiceMode: PracticeModeV1.singleSurface,
-            bpm: 72,
-            duration: const Duration(minutes: 3),
-            endedAt: now.subtract(const Duration(days: 14)),
-            selfReportControl: SelfReportControlV1.low,
-            selfReportTension: SelfReportTensionV1.high,
-            selfReportTempoReadiness: SelfReportTempoReadinessV1.decrease,
-          )
-          ..addManualSession(
-            itemId: _triadItemId('RRR'),
-            practiceMode: PracticeModeV1.singleSurface,
-            bpm: 74,
-            duration: const Duration(minutes: 4),
-            endedAt: now.subtract(const Duration(days: 9)),
-            selfReportControl: SelfReportControlV1.low,
-            selfReportTension: SelfReportTensionV1.some,
-            selfReportTempoReadiness: SelfReportTempoReadinessV1.decrease,
-          )
-          ..addManualSession(
-            itemId: _triadItemId('LLL'),
-            practiceMode: PracticeModeV1.singleSurface,
-            bpm: 76,
-            duration: const Duration(minutes: 4),
-            endedAt: now.subtract(const Duration(days: 7)),
-            selfReportControl: SelfReportControlV1.low,
-            selfReportTension: SelfReportTensionV1.some,
-            selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
-          )
-          ..addManualSession(
-            itemId: _triadItemId('LLL'),
-            practiceMode: PracticeModeV1.singleSurface,
-            bpm: 76,
-            duration: const Duration(minutes: 5),
-            endedAt: now.subtract(const Duration(days: 3, hours: 6)),
-            selfReportControl: SelfReportControlV1.medium,
-            selfReportTension: SelfReportTensionV1.some,
-            selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
-          )
-          ..addManualSession(
-            itemId: _triadItemId('RLL'),
-            practiceMode: PracticeModeV1.singleSurface,
-            bpm: 78,
-            duration: const Duration(minutes: 5),
-            endedAt: now.subtract(const Duration(days: 5)),
-            selfReportControl: SelfReportControlV1.medium,
-            selfReportTension: SelfReportTensionV1.some,
-            selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
-          )
-          ..addManualSession(
-            itemId: _triadItemId('RLL'),
-            practiceMode: PracticeModeV1.singleSurface,
-            bpm: 80,
-            duration: const Duration(minutes: 6),
-            endedAt: now.subtract(const Duration(hours: 20)),
-            selfReportControl: SelfReportControlV1.medium,
-            selfReportTension: SelfReportTensionV1.none,
-            selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
-          );
+    final _MockScenarioBuilder builder = _MockScenarioBuilder(this)
+      ..addRoutineItems(recommendedStartingTriadItemIds)
+      ..setCompetency(_triadItemId('RRR'), CompetencyLevelV1.learning)
+      ..setCompetency(_triadItemId('LLL'), CompetencyLevelV1.learning)
+      ..setCompetency(_triadItemId('RLL'), CompetencyLevelV1.learning)
+      ..addManualSession(
+        itemId: _triadItemId('RRR'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 72,
+        duration: const Duration(minutes: 3),
+        endedAt: now.subtract(const Duration(days: 14)),
+        selfReportControl: SelfReportControlV1.low,
+        selfReportTension: SelfReportTensionV1.high,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.decrease,
+      )
+      ..addManualSession(
+        itemId: _triadItemId('RRR'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 74,
+        duration: const Duration(minutes: 4),
+        endedAt: now.subtract(const Duration(days: 9)),
+        selfReportControl: SelfReportControlV1.low,
+        selfReportTension: SelfReportTensionV1.some,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.decrease,
+      )
+      ..addManualSession(
+        itemId: _triadItemId('LLL'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 76,
+        duration: const Duration(minutes: 4),
+        endedAt: now.subtract(const Duration(days: 7)),
+        selfReportControl: SelfReportControlV1.low,
+        selfReportTension: SelfReportTensionV1.some,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+      )
+      ..addManualSession(
+        itemId: _triadItemId('LLL'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 76,
+        duration: const Duration(minutes: 5),
+        endedAt: now.subtract(const Duration(days: 3, hours: 6)),
+        selfReportControl: SelfReportControlV1.medium,
+        selfReportTension: SelfReportTensionV1.some,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+      )
+      ..addManualSession(
+        itemId: _triadItemId('RLL'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 78,
+        duration: const Duration(minutes: 5),
+        endedAt: now.subtract(const Duration(days: 5)),
+        selfReportControl: SelfReportControlV1.medium,
+        selfReportTension: SelfReportTensionV1.some,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+      )
+      ..addManualSession(
+        itemId: _triadItemId('RLL'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 80,
+        duration: const Duration(minutes: 6),
+        endedAt: now.subtract(const Duration(hours: 20)),
+        selfReportControl: SelfReportControlV1.medium,
+        selfReportTension: SelfReportTensionV1.none,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+      );
     return builder.build();
   }
 
   _ControllerRuntimeSnapshot _mockSteadyProgress() {
     final DateTime now = DateTime.now();
-    final _MockScenarioBuilder builder =
-        _MockScenarioBuilder(this, onboardingComplete: true)
-          ..addRoutineItems(<String>[
-            _triadItemId('RLL'),
-            _triadItemId('LRR'),
-            _triadItemId('RLR'),
-            _triadItemId('KRL'),
-          ])
-          ..setCompetency(_triadItemId('RLL'), CompetencyLevelV1.comfortable)
-          ..setCompetency(_triadItemId('LRR'), CompetencyLevelV1.learning)
-          ..setCompetency(_triadItemId('RLR'), CompetencyLevelV1.comfortable)
-          ..setCompetency(_triadItemId('KRL'), CompetencyLevelV1.learning)
-          ..addManualSession(
-            itemId: _triadItemId('RLL'),
-            practiceMode: PracticeModeV1.singleSurface,
-            bpm: 78,
-            duration: const Duration(minutes: 4),
-            endedAt: now.subtract(const Duration(days: 27)),
-            selfReportControl: SelfReportControlV1.medium,
-            selfReportTension: SelfReportTensionV1.some,
-            selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
-          )
-          ..addManualSession(
-            itemId: _triadItemId('RLL'),
-            practiceMode: PracticeModeV1.singleSurface,
-            bpm: 84,
-            duration: const Duration(minutes: 5),
-            endedAt: now.subtract(const Duration(days: 20)),
-            selfReportControl: SelfReportControlV1.medium,
-            selfReportTension: SelfReportTensionV1.none,
-            selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
-          )
-          ..addManualSession(
-            itemId: _triadItemId('RLL'),
-            practiceMode: PracticeModeV1.singleSurface,
-            bpm: 88,
-            duration: const Duration(minutes: 6),
-            endedAt: now.subtract(const Duration(days: 13)),
-            selfReportControl: SelfReportControlV1.medium,
-            selfReportTension: SelfReportTensionV1.none,
-            selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
-          )
-          ..addManualSession(
-            itemId: _triadItemId('RLL'),
-            practiceMode: PracticeModeV1.singleSurface,
-            bpm: 92,
-            duration: const Duration(minutes: 7),
-            endedAt: now.subtract(const Duration(days: 6)),
-            selfReportControl: SelfReportControlV1.high,
-            selfReportTension: SelfReportTensionV1.none,
-            selfReportTempoReadiness: SelfReportTempoReadinessV1.increase,
-          )
-          ..addManualSession(
-            itemId: _triadItemId('RLL'),
-            practiceMode: PracticeModeV1.singleSurface,
-            bpm: 96,
-            duration: const Duration(minutes: 8),
-            endedAt: now.subtract(const Duration(days: 1)),
-            selfReportControl: SelfReportControlV1.high,
-            selfReportTension: SelfReportTensionV1.none,
-            selfReportTempoReadiness: SelfReportTempoReadinessV1.increase,
-          )
-          ..addManualSession(
-            itemId: _triadItemId('LRR'),
-            practiceMode: PracticeModeV1.singleSurface,
-            bpm: 74,
-            duration: const Duration(minutes: 4),
-            endedAt: now.subtract(const Duration(days: 18)),
-            selfReportControl: SelfReportControlV1.low,
-            selfReportTension: SelfReportTensionV1.some,
-            selfReportTempoReadiness: SelfReportTempoReadinessV1.decrease,
-          )
-          ..addManualSession(
-            itemId: _triadItemId('LRR'),
-            practiceMode: PracticeModeV1.singleSurface,
-            bpm: 82,
-            duration: const Duration(minutes: 5),
-            endedAt: now.subtract(const Duration(days: 8)),
-            selfReportControl: SelfReportControlV1.medium,
-            selfReportTension: SelfReportTensionV1.some,
-            selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
-          )
-          ..addManualSession(
-            itemId: _triadItemId('LRR'),
-            practiceMode: PracticeModeV1.singleSurface,
-            bpm: 86,
-            duration: const Duration(minutes: 6),
-            endedAt: now.subtract(const Duration(days: 2)),
-            selfReportControl: SelfReportControlV1.medium,
-            selfReportTension: SelfReportTensionV1.none,
-            selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
-          )
-          ..addManualSession(
-            itemId: _triadItemId('RLR'),
-            practiceMode: PracticeModeV1.singleSurface,
-            bpm: 82,
-            duration: const Duration(minutes: 5),
-            endedAt: now.subtract(const Duration(days: 15)),
-            selfReportControl: SelfReportControlV1.medium,
-            selfReportTension: SelfReportTensionV1.some,
-            selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
-          )
-          ..addManualSession(
-            itemId: _triadItemId('RLR'),
-            practiceMode: PracticeModeV1.singleSurface,
-            bpm: 86,
-            duration: const Duration(minutes: 5),
-            endedAt: now.subtract(const Duration(days: 9)),
-            selfReportControl: SelfReportControlV1.low,
-            selfReportTension: SelfReportTensionV1.some,
-            selfReportTempoReadiness: SelfReportTempoReadinessV1.decrease,
-          )
-          ..addManualSession(
-            itemId: _triadItemId('RLR'),
-            practiceMode: PracticeModeV1.singleSurface,
-            bpm: 84,
-            duration: const Duration(minutes: 6),
-            endedAt: now.subtract(const Duration(days: 4)),
-            selfReportControl: SelfReportControlV1.medium,
-            selfReportTension: SelfReportTensionV1.some,
-            selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
-          )
-          ..addManualSession(
-            itemId: _triadItemId('KRL'),
-            practiceMode: PracticeModeV1.singleSurface,
-            bpm: 68,
-            duration: const Duration(minutes: 4),
-            endedAt: now.subtract(const Duration(days: 16)),
-            selfReportControl: SelfReportControlV1.low,
-            selfReportTension: SelfReportTensionV1.some,
-            selfReportTempoReadiness: SelfReportTempoReadinessV1.decrease,
-          )
-          ..addManualSession(
-            itemId: _triadItemId('KRL'),
-            practiceMode: PracticeModeV1.singleSurface,
-            bpm: 72,
-            duration: const Duration(minutes: 4),
-            endedAt: now.subtract(const Duration(days: 10)),
-            selfReportControl: SelfReportControlV1.medium,
-            selfReportTension: SelfReportTensionV1.some,
-            selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
-          )
-          ..addManualSession(
-            itemId: _triadItemId('KRL'),
-            practiceMode: PracticeModeV1.singleSurface,
-            bpm: 76,
-            duration: const Duration(minutes: 5),
-            endedAt: now.subtract(const Duration(days: 3)),
-            selfReportControl: SelfReportControlV1.medium,
-            selfReportTension: SelfReportTensionV1.none,
-            selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
-          );
+    final _MockScenarioBuilder builder = _MockScenarioBuilder(this)
+      ..addRoutineItems(<String>[
+        _triadItemId('RLL'),
+        _triadItemId('LRR'),
+        _triadItemId('RLR'),
+        _triadItemId('KRL'),
+      ])
+      ..setCompetency(_triadItemId('RLL'), CompetencyLevelV1.comfortable)
+      ..setCompetency(_triadItemId('LRR'), CompetencyLevelV1.learning)
+      ..setCompetency(_triadItemId('RLR'), CompetencyLevelV1.comfortable)
+      ..setCompetency(_triadItemId('KRL'), CompetencyLevelV1.learning)
+      ..addManualSession(
+        itemId: _triadItemId('RLL'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 78,
+        duration: const Duration(minutes: 4),
+        endedAt: now.subtract(const Duration(days: 27)),
+        selfReportControl: SelfReportControlV1.medium,
+        selfReportTension: SelfReportTensionV1.some,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+      )
+      ..addManualSession(
+        itemId: _triadItemId('RLL'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 84,
+        duration: const Duration(minutes: 5),
+        endedAt: now.subtract(const Duration(days: 20)),
+        selfReportControl: SelfReportControlV1.medium,
+        selfReportTension: SelfReportTensionV1.none,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+      )
+      ..addManualSession(
+        itemId: _triadItemId('RLL'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 88,
+        duration: const Duration(minutes: 6),
+        endedAt: now.subtract(const Duration(days: 13)),
+        selfReportControl: SelfReportControlV1.medium,
+        selfReportTension: SelfReportTensionV1.none,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+      )
+      ..addManualSession(
+        itemId: _triadItemId('RLL'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 92,
+        duration: const Duration(minutes: 7),
+        endedAt: now.subtract(const Duration(days: 6)),
+        selfReportControl: SelfReportControlV1.high,
+        selfReportTension: SelfReportTensionV1.none,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.increase,
+      )
+      ..addManualSession(
+        itemId: _triadItemId('RLL'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 96,
+        duration: const Duration(minutes: 8),
+        endedAt: now.subtract(const Duration(days: 1)),
+        selfReportControl: SelfReportControlV1.high,
+        selfReportTension: SelfReportTensionV1.none,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.increase,
+      )
+      ..addManualSession(
+        itemId: _triadItemId('LRR'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 74,
+        duration: const Duration(minutes: 4),
+        endedAt: now.subtract(const Duration(days: 18)),
+        selfReportControl: SelfReportControlV1.low,
+        selfReportTension: SelfReportTensionV1.some,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.decrease,
+      )
+      ..addManualSession(
+        itemId: _triadItemId('LRR'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 82,
+        duration: const Duration(minutes: 5),
+        endedAt: now.subtract(const Duration(days: 8)),
+        selfReportControl: SelfReportControlV1.medium,
+        selfReportTension: SelfReportTensionV1.some,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+      )
+      ..addManualSession(
+        itemId: _triadItemId('LRR'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 86,
+        duration: const Duration(minutes: 6),
+        endedAt: now.subtract(const Duration(days: 2)),
+        selfReportControl: SelfReportControlV1.medium,
+        selfReportTension: SelfReportTensionV1.none,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+      )
+      ..addManualSession(
+        itemId: _triadItemId('RLR'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 82,
+        duration: const Duration(minutes: 5),
+        endedAt: now.subtract(const Duration(days: 15)),
+        selfReportControl: SelfReportControlV1.medium,
+        selfReportTension: SelfReportTensionV1.some,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+      )
+      ..addManualSession(
+        itemId: _triadItemId('RLR'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 86,
+        duration: const Duration(minutes: 5),
+        endedAt: now.subtract(const Duration(days: 9)),
+        selfReportControl: SelfReportControlV1.low,
+        selfReportTension: SelfReportTensionV1.some,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.decrease,
+      )
+      ..addManualSession(
+        itemId: _triadItemId('RLR'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 84,
+        duration: const Duration(minutes: 6),
+        endedAt: now.subtract(const Duration(days: 4)),
+        selfReportControl: SelfReportControlV1.medium,
+        selfReportTension: SelfReportTensionV1.some,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+      )
+      ..addManualSession(
+        itemId: _triadItemId('KRL'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 68,
+        duration: const Duration(minutes: 4),
+        endedAt: now.subtract(const Duration(days: 16)),
+        selfReportControl: SelfReportControlV1.low,
+        selfReportTension: SelfReportTensionV1.some,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.decrease,
+      )
+      ..addManualSession(
+        itemId: _triadItemId('KRL'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 72,
+        duration: const Duration(minutes: 4),
+        endedAt: now.subtract(const Duration(days: 10)),
+        selfReportControl: SelfReportControlV1.medium,
+        selfReportTension: SelfReportTensionV1.some,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+      )
+      ..addManualSession(
+        itemId: _triadItemId('KRL'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 76,
+        duration: const Duration(minutes: 5),
+        endedAt: now.subtract(const Duration(days: 3)),
+        selfReportControl: SelfReportControlV1.medium,
+        selfReportTension: SelfReportTensionV1.none,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+      );
     return builder.build();
   }
 
   _ControllerRuntimeSnapshot _mockPhraseReady() {
     final DateTime now = DateTime.now();
-    final _MockScenarioBuilder builder =
-        _MockScenarioBuilder(this, onboardingComplete: true)
-          ..addRoutineItems(<String>[
-            _triadItemId('RLL'),
-            _triadItemId('LRR'),
-            _triadItemId('RLR'),
-          ])
-          ..addManualSession(
-            itemId: _triadItemId('RLL'),
-            practiceMode: PracticeModeV1.singleSurface,
-            bpm: 88,
-            duration: const Duration(minutes: 5),
-            endedAt: now.subtract(const Duration(days: 28)),
-            selfReportControl: SelfReportControlV1.medium,
-            selfReportTension: SelfReportTensionV1.some,
-            selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
-          )
-          ..addManualSession(
-            itemId: _triadItemId('RLL'),
-            practiceMode: PracticeModeV1.singleSurface,
-            bpm: 92,
-            duration: const Duration(minutes: 6),
-            endedAt: now.subtract(const Duration(days: 21)),
-            selfReportControl: SelfReportControlV1.high,
-            selfReportTension: SelfReportTensionV1.none,
-            selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
-          )
-          ..addManualSession(
-            itemId: _triadItemId('RLL'),
-            practiceMode: PracticeModeV1.singleSurface,
-            bpm: 96,
-            duration: const Duration(minutes: 7),
-            endedAt: now.subtract(const Duration(days: 14)),
-            selfReportControl: SelfReportControlV1.high,
-            selfReportTension: SelfReportTensionV1.none,
-            selfReportTempoReadiness: SelfReportTempoReadinessV1.increase,
-          )
-          ..addManualSession(
-            itemId: _triadItemId('RLL'),
-            practiceMode: PracticeModeV1.singleSurface,
-            bpm: 102,
-            duration: const Duration(minutes: 6),
-            endedAt: now.subtract(const Duration(days: 7)),
-            selfReportControl: SelfReportControlV1.high,
-            selfReportTension: SelfReportTensionV1.none,
-            selfReportTempoReadiness: SelfReportTempoReadinessV1.increase,
-          )
-          ..addManualSession(
-            itemId: _triadItemId('RLL'),
-            practiceMode: PracticeModeV1.singleSurface,
-            bpm: 106,
-            duration: const Duration(minutes: 7),
-            endedAt: now.subtract(const Duration(days: 1)),
-            selfReportControl: SelfReportControlV1.high,
-            selfReportTension: SelfReportTensionV1.none,
-            selfReportTempoReadiness: SelfReportTempoReadinessV1.increase,
-          )
-          ..addManualSession(
-            itemId: _triadItemId('LRR'),
-            practiceMode: PracticeModeV1.singleSurface,
-            bpm: 86,
-            duration: const Duration(minutes: 5),
-            endedAt: now.subtract(const Duration(days: 24)),
-            selfReportControl: SelfReportControlV1.medium,
-            selfReportTension: SelfReportTensionV1.some,
-            selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
-          )
-          ..addManualSession(
-            itemId: _triadItemId('LRR'),
-            practiceMode: PracticeModeV1.singleSurface,
-            bpm: 94,
-            duration: const Duration(minutes: 6),
-            endedAt: now.subtract(const Duration(days: 12)),
-            selfReportControl: SelfReportControlV1.high,
-            selfReportTension: SelfReportTensionV1.none,
-            selfReportTempoReadiness: SelfReportTempoReadinessV1.increase,
-          )
-          ..addManualSession(
-            itemId: _triadItemId('LRR'),
-            practiceMode: PracticeModeV1.singleSurface,
-            bpm: 98,
-            duration: const Duration(minutes: 6),
-            endedAt: now.subtract(const Duration(days: 3)),
-            selfReportControl: SelfReportControlV1.high,
-            selfReportTension: SelfReportTensionV1.none,
-            selfReportTempoReadiness: SelfReportTempoReadinessV1.increase,
-          )
-          ..addManualSession(
-            itemId: _triadItemId('RLR'),
-            practiceMode: PracticeModeV1.singleSurface,
-            bpm: 84,
-            duration: const Duration(minutes: 5),
-            endedAt: now.subtract(const Duration(days: 20)),
-            selfReportControl: SelfReportControlV1.medium,
-            selfReportTension: SelfReportTensionV1.some,
-            selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
-          )
-          ..addManualSession(
-            itemId: _triadItemId('RLR'),
-            practiceMode: PracticeModeV1.singleSurface,
-            bpm: 90,
-            duration: const Duration(minutes: 6),
-            endedAt: now.subtract(const Duration(days: 9)),
-            selfReportControl: SelfReportControlV1.medium,
-            selfReportTension: SelfReportTensionV1.none,
-            selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
-          )
-          ..setCompetency(_triadItemId('RLL'), CompetencyLevelV1.comfortable)
-          ..setCompetency(_triadItemId('LRR'), CompetencyLevelV1.comfortable)
-          ..setCompetency(_triadItemId('RLR'), CompetencyLevelV1.comfortable);
+    final _MockScenarioBuilder builder = _MockScenarioBuilder(this)
+      ..addRoutineItems(<String>[
+        _triadItemId('RLL'),
+        _triadItemId('LRR'),
+        _triadItemId('RLR'),
+      ])
+      ..addManualSession(
+        itemId: _triadItemId('RLL'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 88,
+        duration: const Duration(minutes: 5),
+        endedAt: now.subtract(const Duration(days: 28)),
+        selfReportControl: SelfReportControlV1.medium,
+        selfReportTension: SelfReportTensionV1.some,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+      )
+      ..addManualSession(
+        itemId: _triadItemId('RLL'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 92,
+        duration: const Duration(minutes: 6),
+        endedAt: now.subtract(const Duration(days: 21)),
+        selfReportControl: SelfReportControlV1.high,
+        selfReportTension: SelfReportTensionV1.none,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+      )
+      ..addManualSession(
+        itemId: _triadItemId('RLL'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 96,
+        duration: const Duration(minutes: 7),
+        endedAt: now.subtract(const Duration(days: 14)),
+        selfReportControl: SelfReportControlV1.high,
+        selfReportTension: SelfReportTensionV1.none,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.increase,
+      )
+      ..addManualSession(
+        itemId: _triadItemId('RLL'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 102,
+        duration: const Duration(minutes: 6),
+        endedAt: now.subtract(const Duration(days: 7)),
+        selfReportControl: SelfReportControlV1.high,
+        selfReportTension: SelfReportTensionV1.none,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.increase,
+      )
+      ..addManualSession(
+        itemId: _triadItemId('RLL'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 106,
+        duration: const Duration(minutes: 7),
+        endedAt: now.subtract(const Duration(days: 1)),
+        selfReportControl: SelfReportControlV1.high,
+        selfReportTension: SelfReportTensionV1.none,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.increase,
+      )
+      ..addManualSession(
+        itemId: _triadItemId('LRR'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 86,
+        duration: const Duration(minutes: 5),
+        endedAt: now.subtract(const Duration(days: 24)),
+        selfReportControl: SelfReportControlV1.medium,
+        selfReportTension: SelfReportTensionV1.some,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+      )
+      ..addManualSession(
+        itemId: _triadItemId('LRR'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 94,
+        duration: const Duration(minutes: 6),
+        endedAt: now.subtract(const Duration(days: 12)),
+        selfReportControl: SelfReportControlV1.high,
+        selfReportTension: SelfReportTensionV1.none,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.increase,
+      )
+      ..addManualSession(
+        itemId: _triadItemId('LRR'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 98,
+        duration: const Duration(minutes: 6),
+        endedAt: now.subtract(const Duration(days: 3)),
+        selfReportControl: SelfReportControlV1.high,
+        selfReportTension: SelfReportTensionV1.none,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.increase,
+      )
+      ..addManualSession(
+        itemId: _triadItemId('RLR'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 84,
+        duration: const Duration(minutes: 5),
+        endedAt: now.subtract(const Duration(days: 20)),
+        selfReportControl: SelfReportControlV1.medium,
+        selfReportTension: SelfReportTensionV1.some,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+      )
+      ..addManualSession(
+        itemId: _triadItemId('RLR'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 90,
+        duration: const Duration(minutes: 6),
+        endedAt: now.subtract(const Duration(days: 9)),
+        selfReportControl: SelfReportControlV1.medium,
+        selfReportTension: SelfReportTensionV1.none,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+      )
+      ..setCompetency(_triadItemId('RLL'), CompetencyLevelV1.comfortable)
+      ..setCompetency(_triadItemId('LRR'), CompetencyLevelV1.comfortable)
+      ..setCompetency(_triadItemId('RLR'), CompetencyLevelV1.comfortable);
     return builder.build();
   }
 
   _ControllerRuntimeSnapshot _mockFlowReady() {
     final DateTime now = DateTime.now();
-    final _MockScenarioBuilder builder = _MockScenarioBuilder(
-      this,
-      onboardingComplete: true,
-    );
+    final _MockScenarioBuilder builder = _MockScenarioBuilder(this);
     final PracticeCombinationV1 combo = builder.addSavedPhrase(
       id: 'combo_rll_lrr_rlr',
       name: 'RLL - LRR - RLR',
@@ -3325,7 +3155,6 @@ class _ControllerRuntimeSnapshot {
   final List<SessionAssessmentResultV1> assessmentResults;
   final Map<String, PracticeAssessmentAggregateV1> assessmentAggregateByItemId;
   final Map<String, CompetencyRecordV1> competencyByItemId;
-  final bool onboardingComplete;
 
   const _ControllerRuntimeSnapshot({
     required this.profile,
@@ -3336,12 +3165,11 @@ class _ControllerRuntimeSnapshot {
     required this.assessmentResults,
     required this.assessmentAggregateByItemId,
     required this.competencyByItemId,
-    required this.onboardingComplete,
   });
 }
 
 class _MockScenarioBuilder {
-  _MockScenarioBuilder(this.controller, {required this.onboardingComplete})
+  _MockScenarioBuilder(this.controller)
     : profile = UserProfileV1.initial,
       items = List<PracticeItemV1>.from(controller._basePracticeItems()),
       combinations = <PracticeCombinationV1>[],
@@ -3364,7 +3192,6 @@ class _MockScenarioBuilder {
   final List<SessionAssessmentResultV1> assessmentResults;
   final Map<String, PracticeAssessmentAggregateV1> assessmentAggregateByItemId;
   final Map<String, CompetencyRecordV1> competencyByItemId;
-  final bool onboardingComplete;
 
   void addRoutineItems(List<String> itemIds) {
     final Set<String> existing = routine.entries
@@ -3607,7 +3434,6 @@ class _MockScenarioBuilder {
       competencyByItemId: Map<String, CompetencyRecordV1>.from(
         competencyByItemId,
       ),
-      onboardingComplete: onboardingComplete,
     );
   }
 }

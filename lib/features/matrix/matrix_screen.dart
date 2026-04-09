@@ -12,13 +12,11 @@ enum _MatrixPrimaryView { traits, progress }
 class MatrixScreenRequest {
   final int version;
   final LearningLaneV1? lane;
-  final TriadMatrixFilterPaletteV1? palette;
   final Set<TriadMatrixFilterV1> filters;
 
   const MatrixScreenRequest({
     required this.version,
     required this.lane,
-    required this.palette,
     required this.filters,
   });
 }
@@ -66,7 +64,6 @@ class _MatrixScreenState extends State<MatrixScreen> {
   Widget build(BuildContext context) {
     final MatrixFiltersV1 matrixFilters = MatrixFiltersV1(
       lane: null,
-      palette: _paletteForView(_view),
       filters: _effectiveFilters,
       selectedRows: _selectedRows,
       selectedColumns: _selectedColumns,
@@ -461,7 +458,6 @@ class _MatrixScreenState extends State<MatrixScreen> {
 
   _MatrixPrimaryView _viewForRequest(MatrixScreenRequest request) {
     if (request.lane == LearningLaneV1.dynamics ||
-        request.palette == TriadMatrixFilterPaletteV1.coaching ||
         request.filters.any(_progressFilters.contains)) {
       return _MatrixPrimaryView.progress;
     }
@@ -497,13 +493,6 @@ class _MatrixScreenState extends State<MatrixScreen> {
     return switch (view) {
       _MatrixPrimaryView.traits => 'Traits',
       _MatrixPrimaryView.progress => 'Progress',
-    };
-  }
-
-  TriadMatrixFilterPaletteV1 _paletteForView(_MatrixPrimaryView view) {
-    return switch (view) {
-      _MatrixPrimaryView.traits => TriadMatrixFilterPaletteV1.technique,
-      _MatrixPrimaryView.progress => TriadMatrixFilterPaletteV1.coaching,
     };
   }
 

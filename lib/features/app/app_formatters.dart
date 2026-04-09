@@ -159,33 +159,12 @@ extension AppMockScenarioLabel on AppMockScenarioV1 {
   };
 }
 
-extension TriadMatrixViewModeLabel on TriadMatrixViewModeV1 {
-  String get label => switch (this) {
-    TriadMatrixViewModeV1.competency => 'Competency',
-    TriadMatrixViewModeV1.rightLead => 'Right Lead',
-    TriadMatrixViewModeV1.leftLead => 'Left Lead',
-    TriadMatrixViewModeV1.handsOnly => 'Hands Only',
-  };
-}
-
-extension TriadMatrixFilterPaletteLabel on TriadMatrixFilterPaletteV1 {
-  String get label => switch (this) {
-    TriadMatrixFilterPaletteV1.coaching => 'Coaching',
-    TriadMatrixFilterPaletteV1.technique => 'Technique',
-    TriadMatrixFilterPaletteV1.combos => 'Combos',
-  };
-}
-
 extension TriadMatrixFilterLabel on TriadMatrixFilterV1 {
   String get label => switch (this) {
-    TriadMatrixFilterV1.competency => 'Competency',
     TriadMatrixFilterV1.inRoutine => 'Working On',
     TriadMatrixFilterV1.inPhrases => 'In Phrases',
-    TriadMatrixFilterV1.needsAttention => 'Needs Attention',
     TriadMatrixFilterV1.underPracticed => 'Light Time',
-    TriadMatrixFilterV1.closeToToolkit => 'Close To Toolbox',
     TriadMatrixFilterV1.recent => 'Recent',
-    TriadMatrixFilterV1.unseen => 'Unseen',
     TriadMatrixFilterV1.notTrained => 'Not Practiced',
     TriadMatrixFilterV1.activeStatus => 'Active',
     TriadMatrixFilterV1.needsWorkStatus => 'Needs Work',

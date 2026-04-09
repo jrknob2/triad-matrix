@@ -42,28 +42,18 @@ const AppStateRecordSchema = CollectionSchema(
       name: r'itemsJson',
       type: IsarType.string,
     ),
-    r'onboardingComplete': PropertySchema(
-      id: 5,
-      name: r'onboardingComplete',
-      type: IsarType.bool,
-    ),
     r'profileJson': PropertySchema(
-      id: 6,
+      id: 5,
       name: r'profileJson',
       type: IsarType.string,
     ),
     r'routineJson': PropertySchema(
-      id: 7,
+      id: 6,
       name: r'routineJson',
       type: IsarType.string,
     ),
-    r'schemaVersion': PropertySchema(
-      id: 8,
-      name: r'schemaVersion',
-      type: IsarType.long,
-    ),
     r'sessionsJson': PropertySchema(
-      id: 9,
+      id: 7,
       name: r'sessionsJson',
       type: IsarType.string,
     )
@@ -110,11 +100,9 @@ void _appStateRecordSerialize(
   writer.writeString(offsets[2], object.combinationsJson);
   writer.writeString(offsets[3], object.competencyJson);
   writer.writeString(offsets[4], object.itemsJson);
-  writer.writeBool(offsets[5], object.onboardingComplete);
-  writer.writeString(offsets[6], object.profileJson);
-  writer.writeString(offsets[7], object.routineJson);
-  writer.writeLong(offsets[8], object.schemaVersion);
-  writer.writeString(offsets[9], object.sessionsJson);
+  writer.writeString(offsets[5], object.profileJson);
+  writer.writeString(offsets[6], object.routineJson);
+  writer.writeString(offsets[7], object.sessionsJson);
 }
 
 AppStateRecord _appStateRecordDeserialize(
@@ -130,11 +118,9 @@ AppStateRecord _appStateRecordDeserialize(
   object.competencyJson = reader.readString(offsets[3]);
   object.id = id;
   object.itemsJson = reader.readString(offsets[4]);
-  object.onboardingComplete = reader.readBool(offsets[5]);
-  object.profileJson = reader.readString(offsets[6]);
-  object.routineJson = reader.readString(offsets[7]);
-  object.schemaVersion = reader.readLong(offsets[8]);
-  object.sessionsJson = reader.readString(offsets[9]);
+  object.profileJson = reader.readString(offsets[5]);
+  object.routineJson = reader.readString(offsets[6]);
+  object.sessionsJson = reader.readString(offsets[7]);
   return object;
 }
 
@@ -156,14 +142,10 @@ P _appStateRecordDeserializeProp<P>(
     case 4:
       return (reader.readString(offset)) as P;
     case 5:
-      return (reader.readBool(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 6:
       return (reader.readString(offset)) as P;
     case 7:
-      return (reader.readString(offset)) as P;
-    case 8:
-      return (reader.readLong(offset)) as P;
-    case 9:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -1005,16 +987,6 @@ extension AppStateRecordQueryFilter
   }
 
   QueryBuilder<AppStateRecord, AppStateRecord, QAfterFilterCondition>
-      onboardingCompleteEqualTo(bool value) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'onboardingComplete',
-        value: value,
-      ));
-    });
-  }
-
-  QueryBuilder<AppStateRecord, AppStateRecord, QAfterFilterCondition>
       profileJsonEqualTo(
     String value, {
     bool caseSensitive = true,
@@ -1287,62 +1259,6 @@ extension AppStateRecordQueryFilter
   }
 
   QueryBuilder<AppStateRecord, AppStateRecord, QAfterFilterCondition>
-      schemaVersionEqualTo(int value) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'schemaVersion',
-        value: value,
-      ));
-    });
-  }
-
-  QueryBuilder<AppStateRecord, AppStateRecord, QAfterFilterCondition>
-      schemaVersionGreaterThan(
-    int value, {
-    bool include = false,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'schemaVersion',
-        value: value,
-      ));
-    });
-  }
-
-  QueryBuilder<AppStateRecord, AppStateRecord, QAfterFilterCondition>
-      schemaVersionLessThan(
-    int value, {
-    bool include = false,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'schemaVersion',
-        value: value,
-      ));
-    });
-  }
-
-  QueryBuilder<AppStateRecord, AppStateRecord, QAfterFilterCondition>
-      schemaVersionBetween(
-    int lower,
-    int upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'schemaVersion',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-      ));
-    });
-  }
-
-  QueryBuilder<AppStateRecord, AppStateRecord, QAfterFilterCondition>
       sessionsJsonEqualTo(
     String value, {
     bool caseSensitive = true,
@@ -1557,20 +1473,6 @@ extension AppStateRecordQuerySortBy
   }
 
   QueryBuilder<AppStateRecord, AppStateRecord, QAfterSortBy>
-      sortByOnboardingComplete() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'onboardingComplete', Sort.asc);
-    });
-  }
-
-  QueryBuilder<AppStateRecord, AppStateRecord, QAfterSortBy>
-      sortByOnboardingCompleteDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'onboardingComplete', Sort.desc);
-    });
-  }
-
-  QueryBuilder<AppStateRecord, AppStateRecord, QAfterSortBy>
       sortByProfileJson() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'profileJson', Sort.asc);
@@ -1595,20 +1497,6 @@ extension AppStateRecordQuerySortBy
       sortByRoutineJsonDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'routineJson', Sort.desc);
-    });
-  }
-
-  QueryBuilder<AppStateRecord, AppStateRecord, QAfterSortBy>
-      sortBySchemaVersion() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'schemaVersion', Sort.asc);
-    });
-  }
-
-  QueryBuilder<AppStateRecord, AppStateRecord, QAfterSortBy>
-      sortBySchemaVersionDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'schemaVersion', Sort.desc);
     });
   }
 
@@ -1711,20 +1599,6 @@ extension AppStateRecordQuerySortThenBy
   }
 
   QueryBuilder<AppStateRecord, AppStateRecord, QAfterSortBy>
-      thenByOnboardingComplete() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'onboardingComplete', Sort.asc);
-    });
-  }
-
-  QueryBuilder<AppStateRecord, AppStateRecord, QAfterSortBy>
-      thenByOnboardingCompleteDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'onboardingComplete', Sort.desc);
-    });
-  }
-
-  QueryBuilder<AppStateRecord, AppStateRecord, QAfterSortBy>
       thenByProfileJson() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'profileJson', Sort.asc);
@@ -1749,20 +1623,6 @@ extension AppStateRecordQuerySortThenBy
       thenByRoutineJsonDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'routineJson', Sort.desc);
-    });
-  }
-
-  QueryBuilder<AppStateRecord, AppStateRecord, QAfterSortBy>
-      thenBySchemaVersion() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'schemaVersion', Sort.asc);
-    });
-  }
-
-  QueryBuilder<AppStateRecord, AppStateRecord, QAfterSortBy>
-      thenBySchemaVersionDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'schemaVersion', Sort.desc);
     });
   }
 
@@ -1822,13 +1682,6 @@ extension AppStateRecordQueryWhereDistinct
     });
   }
 
-  QueryBuilder<AppStateRecord, AppStateRecord, QDistinct>
-      distinctByOnboardingComplete() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'onboardingComplete');
-    });
-  }
-
   QueryBuilder<AppStateRecord, AppStateRecord, QDistinct> distinctByProfileJson(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -1840,13 +1693,6 @@ extension AppStateRecordQueryWhereDistinct
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'routineJson', caseSensitive: caseSensitive);
-    });
-  }
-
-  QueryBuilder<AppStateRecord, AppStateRecord, QDistinct>
-      distinctBySchemaVersion() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'schemaVersion');
     });
   }
 
@@ -1900,13 +1746,6 @@ extension AppStateRecordQueryProperty
     });
   }
 
-  QueryBuilder<AppStateRecord, bool, QQueryOperations>
-      onboardingCompleteProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'onboardingComplete');
-    });
-  }
-
   QueryBuilder<AppStateRecord, String, QQueryOperations> profileJsonProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'profileJson');
@@ -1916,12 +1755,6 @@ extension AppStateRecordQueryProperty
   QueryBuilder<AppStateRecord, String, QQueryOperations> routineJsonProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'routineJson');
-    });
-  }
-
-  QueryBuilder<AppStateRecord, int, QQueryOperations> schemaVersionProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'schemaVersion');
     });
   }
 

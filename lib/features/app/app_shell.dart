@@ -163,17 +163,12 @@ class _AppShellState extends State<AppShell> {
     'Progress',
   ];
 
-  void _openMatrix({
-    LearningLaneV1? lane,
-    TriadMatrixFilterPaletteV1? palette,
-    Set<TriadMatrixFilterV1>? filters,
-  }) {
+  void _openMatrix({LearningLaneV1? lane, Set<TriadMatrixFilterV1>? filters}) {
     setState(() {
       _matrixRequestVersion++;
       _matrixRequest = MatrixScreenRequest(
         version: _matrixRequestVersion,
         lane: lane,
-        palette: palette,
         filters: filters ?? const <TriadMatrixFilterV1>{},
       );
       _currentIndex = 1;

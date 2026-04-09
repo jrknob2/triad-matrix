@@ -1,5 +1,9 @@
 # Product / Teaching Reset
 
+> Historical note:
+> This document captures the earlier teaching reset that led into the current product spec work.
+> It is not an active screen or flow contract, and references to onboarding reflect an abandoned path.
+
 ## Purpose
 
 This document resets the product around a clearer teaching philosophy.
