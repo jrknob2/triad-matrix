@@ -4,7 +4,7 @@ import '../../core/practice/practice_domain_v1.dart';
 import '../../features/app/app_formatters.dart';
 import '../../features/app/drumcabulary_ui.dart';
 import '../../state/app_controller.dart';
-import '../practice/widgets/pattern_display_text.dart';
+import '../practice/widgets/pattern_sequence_editor.dart';
 import '../practice/widgets/pattern_voice_display.dart';
 import 'widgets/triad_matrix_grid.dart';
 
@@ -118,43 +118,20 @@ class _MatrixScreenState extends State<MatrixScreen> {
           ] else
             const SizedBox(height: 10),
           if (showBuildHeader) ...<Widget>[
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SizedBox(
-                height: 38,
-                child: Row(
-                  children: <Widget>[
-                    if (_laneFocus != null) ...<Widget>[
-                      Chip(
-                        label: Text(_laneFocus!.label),
-                        visualDensity: VisualDensity.compact,
-                      ),
-                      const SizedBox(width: 8),
-                    ],
-                    if (_selectedItemIds.length == 1)
-                      PatternDisplayText(
-                        tokens: widget.controller.noteTokensFor(
-                          _selectedItemIds.first,
-                        ),
-                        markings: widget.controller.noteMarkingsFor(
-                          _selectedItemIds.first,
-                        ),
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: -0.6,
-                        ),
-                      )
-                    else
-                      Text(
-                        _selectedLabel,
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: -0.6,
-                        ),
-                      ),
-                  ],
+            if (_laneFocus != null) ...<Widget>[
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Chip(
+                  label: Text(_laneFocus!.label),
+                  visualDensity: VisualDensity.compact,
                 ),
               ),
+              const SizedBox(height: 10),
+            ],
+            PatternSequenceEditor(
+              controller: widget.controller,
+              itemIds: _selectedItemIds,
+              onRemoveAt: _removeSelectedAt,
             ),
             const SizedBox(height: 10),
             SingleChildScrollView(
@@ -201,7 +178,6 @@ class _MatrixScreenState extends State<MatrixScreen> {
             onToggleRow: _toggleRow,
             onToggleColumn: _toggleColumn,
             onTapItem: _toggleItemSelection,
-            onRemoveItem: _removeSelectedItem,
           ),
         ],
       ),
@@ -442,13 +418,6 @@ class _MatrixScreenState extends State<MatrixScreen> {
     return <TriadMatrixFilterV1>{..._filters, ..._lanePresetFilters()};
   }
 
-  String get _selectedLabel {
-    if (_selectedItemIds.length == 1) {
-      return widget.controller.markedPatternTextFor(_selectedItemIds.first);
-    }
-    return widget.controller.comboDisplayName(_selectedItemIds);
-  }
-
   bool get _selectionIsInRoutine {
     final String? itemId = _selectionRoutineItemId;
     return itemId != null && widget.controller.isDirectRoutineEntry(itemId);
@@ -466,8 +435,7 @@ class _MatrixScreenState extends State<MatrixScreen> {
     });
   }
 
-  void _removeSelectedItem(String itemId) {
-    final int index = _selectedItemIds.lastIndexOf(itemId);
+  void _removeSelectedAt(int index) {
     if (index < 0) return;
     setState(() {
       _selectedItemIds.removeAt(index);

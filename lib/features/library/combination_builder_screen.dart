@@ -6,6 +6,7 @@ import '../../state/app_controller.dart';
 import '../app/drumcabulary_ui.dart';
 import '../matrix/widgets/triad_matrix_grid.dart';
 import '../practice/practice_session_screen.dart';
+import '../practice/widgets/pattern_sequence_editor.dart';
 
 class CombinationBuilderScreen extends StatefulWidget {
   final AppController controller;
@@ -65,23 +66,12 @@ class _CombinationBuilderScreenState extends State<CombinationBuilderScreen> {
                   ),
                   if (hasSelection) ...<Widget>[
                     const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: List<Widget>.generate(_selectedItemIds.length, (
-                        index,
-                      ) {
-                        final String itemId = _selectedItemIds[index];
-                        final PracticeItemV1 item = widget.controller.itemById(
-                          itemId,
-                        );
-                        return InputChip(
-                          label: Text('${index + 1}. ${item.name}'),
-                          onDeleted: () {
-                            setState(() => _selectedItemIds.removeAt(index));
-                          },
-                        );
-                      }),
+                    PatternSequenceEditor(
+                      controller: widget.controller,
+                      itemIds: _selectedItemIds,
+                      onRemoveAt: (int index) {
+                        setState(() => _selectedItemIds.removeAt(index));
+                      },
                     ),
                     const SizedBox(height: 12),
                     Row(
@@ -126,7 +116,6 @@ class _CombinationBuilderScreenState extends State<CombinationBuilderScreen> {
               onToggleRow: _appendRow,
               onToggleColumn: _appendColumn,
               onTapItem: _toggleItemSelection,
-              onRemoveItem: _removeLastOccurrence,
             ),
             const SizedBox(height: 16),
             DrumActionRow(
@@ -156,14 +145,6 @@ class _CombinationBuilderScreenState extends State<CombinationBuilderScreen> {
   void _toggleItemSelection(String itemId) {
     setState(() {
       _selectedItemIds.add(itemId);
-    });
-  }
-
-  void _removeLastOccurrence(String itemId) {
-    final int index = _selectedItemIds.lastIndexOf(itemId);
-    if (index < 0) return;
-    setState(() {
-      _selectedItemIds.removeAt(index);
     });
   }
 

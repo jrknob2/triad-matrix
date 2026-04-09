@@ -32,6 +32,8 @@ Define how triads are grouped, filtered, and displayed.
 ## Selection
 - multi-select allowed
 - ordered sequence stored
+- grid cells show membership only
+- exact occurrence removal happens in the ordered phrase header, not inside cells
 
 ## Rules
 - do not collapse grid into simple heatmap

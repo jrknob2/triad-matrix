@@ -11,7 +11,6 @@ class TriadMatrixGrid extends StatelessWidget {
   final ValueChanged<String> onToggleRow;
   final ValueChanged<String> onToggleColumn;
   final ValueChanged<String> onTapItem;
-  final ValueChanged<String>? onRemoveItem;
 
   const TriadMatrixGrid({
     super.key,
@@ -21,7 +20,6 @@ class TriadMatrixGrid extends StatelessWidget {
     required this.onToggleRow,
     required this.onToggleColumn,
     required this.onTapItem,
-    this.onRemoveItem,
   });
 
   @override
@@ -80,7 +78,6 @@ class TriadMatrixGrid extends StatelessWidget {
                         filters: filters,
                         selection: selection,
                         onTapItem: onTapItem,
-                        onRemoveItem: onRemoveItem,
                       ),
                     ),
                 ],
@@ -137,7 +134,6 @@ class _TriadCellButton extends StatelessWidget {
   final MatrixFiltersV1 filters;
   final MatrixSelectionStateV1 selection;
   final ValueChanged<String> onTapItem;
-  final ValueChanged<String>? onRemoveItem;
 
   const _TriadCellButton({
     required this.controller,
@@ -145,7 +141,6 @@ class _TriadCellButton extends StatelessWidget {
     required this.filters,
     required this.selection,
     required this.onTapItem,
-    required this.onRemoveItem,
   });
 
   @override
@@ -174,44 +169,15 @@ class _TriadCellButton extends StatelessWidget {
               width: style.borderWidth,
             ),
           ),
-          child: Stack(
-            children: <Widget>[
-              Center(
-                child: Text(
-                  cell.id,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: style.textColor,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0.1,
-                  ),
-                ),
+          child: Center(
+            child: Text(
+              cell.id,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: style.textColor,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.1,
               ),
-              if (visualState.selected && onRemoveItem != null)
-                Positioned(
-                  top: 6,
-                  right: 6,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(999),
-                    onTap: () => onRemoveItem!(itemId),
-                    child: Container(
-                      width: 18,
-                      height: 18,
-                      alignment: Alignment.center,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF101010),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Text(
-                        'x',
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
+            ),
           ),
         ),
       ),
