@@ -478,7 +478,8 @@ class AppController extends ChangeNotifier {
                 'Hands-only triads are the cleanest place to establish pulse, rebound, and sound.',
             actionLabel: 'Practice',
             itemIds: <String>[triadMatrixItems.first.id],
-            evidence: 'No practice logged yet',
+            evidence:
+                'No sessions yet. Start on one surface and let the sound settle in first.',
           ),
           TodayLaneRecommendationV1(
             lane: LearningLaneV1.balance,
@@ -487,7 +488,8 @@ class AppController extends ChangeNotifier {
                 'Very early on, learn the phrase on both leads so the vocabulary does not become one-sided.',
             actionLabel: 'Open Matrix',
             itemIds: const <String>[],
-            evidence: '$weakHandLabel lead has not been worked yet',
+            evidence:
+                '$weakHandLabel lead still has no time on it. Start balancing that from day one.',
           ),
           TodayLaneRecommendationV1(
             lane: LearningLaneV1.dynamics,
@@ -496,7 +498,7 @@ class AppController extends ChangeNotifier {
                 'Add accents and ghosts after the base sticking feels steady. Do not force dynamic shape too early.',
             actionLabel: 'Open Matrix',
             itemIds: const <String>[],
-            evidence: 'Start with plain strokes first',
+            evidence: 'Keep the base version plain first, then add shape.',
           ),
           TodayLaneRecommendationV1(
             lane: LearningLaneV1.integration,
@@ -505,7 +507,8 @@ class AppController extends ChangeNotifier {
                 'Kick material comes after the hands are clear. Keep it in view, but do not start there.',
             actionLabel: 'Open Matrix',
             itemIds: const <String>[],
-            evidence: '$totalKickTriadCount kick-based triads available later',
+            evidence:
+                '$totalKickTriadCount kick-based cells are waiting once the hands are clean.',
           ),
           TodayLaneRecommendationV1(
             lane: LearningLaneV1.phrasing,
@@ -514,7 +517,8 @@ class AppController extends ChangeNotifier {
                 'Phrase work matters, but it should rest on a few stable cells first.',
             actionLabel: 'Open Matrix',
             itemIds: const <String>[],
-            evidence: 'Build phrases after core cells settle in',
+            evidence:
+                'Build phrases after a few core cells start to feel natural.',
           ),
           TodayLaneRecommendationV1(
             lane: LearningLaneV1.flow,
@@ -523,7 +527,8 @@ class AppController extends ChangeNotifier {
                 'Flow is where phrases move across voices on the kit. It comes after the phrase feels stable on one surface.',
             actionLabel: 'Open Matrix',
             itemIds: const <String>[],
-            evidence: 'Voice work starts once the phrase is under your hands',
+            evidence:
+                'Voice work starts once the phrase is under your hands on one surface.',
           ),
         ],
         momentumRecommendations: <TodayLaneRecommendationV1>[
@@ -553,7 +558,7 @@ class AppController extends ChangeNotifier {
                 'Once a phrase is stable, take it into Flow and assign voices deliberately.',
             actionLabel: 'Open Matrix',
             itemIds: const <String>[],
-            evidence: 'Single-surface first, flow second',
+            evidence: 'Single-surface first. Kit movement comes after that.',
           ),
         ],
       );
@@ -634,8 +639,7 @@ class AppController extends ChangeNotifier {
           'Keep your active material moving. Repetition across days is what turns a pattern into vocabulary.',
       actionLabel: 'Practice',
       itemIds: <String>[target.id],
-      evidence:
-          '${formatDuration(totalTime(itemId: target.id))} logged • ${competencyFor(target.id).label}',
+      evidence: _statusAndTimeEvidence(target.id),
     );
   }
 
@@ -1222,8 +1226,7 @@ class AppController extends ChangeNotifier {
           'Start on one surface and clean up the pulse before adding more variables.',
       actionLabel: 'Practice',
       itemIds: <String>[target.id],
-      evidence:
-          '${formatDuration(totalTime(itemId: target.id))} logged • ${competencyFor(target.id).label}',
+      evidence: _statusAndTimeEvidence(target.id),
     );
   }
 
@@ -1290,7 +1293,7 @@ class AppController extends ChangeNotifier {
       actionLabel: 'Practice',
       itemIds: <String>[target.id],
       evidence:
-          '${formatDuration(totalTime(itemId: target.id))} logged on kick-based material',
+          '${formatDuration(totalTime(itemId: target.id))} on kick-based work • ${matrixProgressStateFor(target.id).label}',
     );
   }
 
@@ -1334,7 +1337,7 @@ class AppController extends ChangeNotifier {
       title: 'Flow',
       reason:
           'Take a phrase that already feels stable and assign voices so it starts behaving like kit vocabulary.',
-      actionLabel: 'Practice in Flow',
+      actionLabel: 'Practice',
       itemIds: <String>[target.id],
       evidence: _flowEvidenceFor(target.id),
     );
@@ -1356,12 +1359,12 @@ class AppController extends ChangeNotifier {
       title: 'Close To Toolbox',
       reason: target == null
           ? 'Nothing is near-ready yet. Stay with consistency and revisit the same few cells.'
-          : 'This phrase is close to reliable. One focused pass could move it into your toolbox.',
+          : 'This phrase is getting close. One focused pass could move it into your toolbox.',
       actionLabel: target == null ? 'Open Matrix' : 'Practice',
       itemIds: target == null ? const <String>[] : <String>[target.id],
       evidence: target == null
-          ? '${recentSessions.length} total sessions logged'
-          : '${competencyFor(target.id).label} • ${formatDuration(totalTime(itemId: target.id))}',
+          ? '${recentSessions.length} sessions logged so far'
+          : _statusAndTimeEvidence(target.id),
     );
   }
 
@@ -1401,13 +1404,17 @@ class AppController extends ChangeNotifier {
       title: 'Needs Review',
       reason: target == null
           ? 'Nothing is established enough for review yet.'
-          : 'Reliable material still needs revisits so it stays available on demand.',
+          : 'Strong material still needs revisits so it stays available on demand.',
       actionLabel: target == null ? 'Open Matrix' : 'Practice',
       itemIds: target == null ? const <String>[] : <String>[target.id],
       evidence: target == null
           ? '${triadMatrixItems.length} triads available'
-          : '${formatDuration(totalTime(itemId: target.id))} total • ${competencyFor(target.id).label}',
+          : '${recentSummaryForItem(target.id)} • ${formatDuration(totalTime(itemId: target.id))} logged',
     );
+  }
+
+  String _statusAndTimeEvidence(String itemId) {
+    return '${matrixProgressStateFor(itemId).label} • ${formatDuration(totalTime(itemId: itemId))} logged';
   }
 
   int _lanePriority(LearningLaneV1 lane) {
