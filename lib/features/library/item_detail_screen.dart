@@ -53,7 +53,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         );
 
         return Scaffold(
-          appBar: AppBar(title: const Text('Practice Items')),
+          appBar: AppBar(title: const Text('Practice Item')),
           body: ListView(
             padding: const EdgeInsets.all(16),
             children: <Widget>[
@@ -188,12 +188,6 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                         ],
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        competency.label,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: const Color(0xFF6B5D42),
-                        ),
-                      ),
                       const SizedBox(height: 10),
                       Text(
                         widget.controller.competencyGuidanceFor(
@@ -214,7 +208,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                 child: Column(
                   children: <Widget>[
                     ListTile(
-                      title: const Text('Total Time'),
+                      title: const Text('Logged Time'),
                       trailing: Text(formatDuration(totalTime)),
                     ),
                     ListTile(
@@ -222,7 +216,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                       trailing: Text('$sessionCount'),
                     ),
                     ListTile(
-                      title: const Text('Last Session'),
+                      title: const Text('Last Worked'),
                       trailing: Text(
                         widget.controller.recentSummaryForItem(item.id),
                       ),
@@ -234,12 +228,16 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
               FilledButton(
                 onPressed: () =>
                     widget.onPracticeItemInMode(item.id, _viewMode),
-                child: Text('Practice ${_viewMode.label}'),
+                child: Text(
+                  _viewMode == PracticeModeV1.flow
+                      ? 'Practice in Flow'
+                      : 'Practice on One Surface',
+                ),
               ),
               const SizedBox(height: 8),
               OutlinedButton(
                 onPressed: () => widget.onBuildComboFromItem(item.id),
-                child: const Text('Build in Matrix Grid'),
+                child: const Text('Open in Matrix'),
               ),
               const SizedBox(height: 8),
               OutlinedButton(
@@ -275,8 +273,8 @@ class _FlowReadinessNote extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         child: Text(
           ready
-              ? 'Flow is set up. Practice this with the voice row locked in.'
-              : 'Assign at least one non-snare voice before treating this as Flow work.',
+              ? 'The voices are set. Keep the sticking the same and let the voices do the moving.'
+              : 'Set at least one note off the snare before you treat this as flow.',
           style: Theme.of(context).textTheme.bodyMedium,
         ),
       ),

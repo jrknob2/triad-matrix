@@ -112,10 +112,10 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  const DrumSectionTitle(text: 'Session Check'),
+                  const DrumSectionTitle(text: 'Check The Rep'),
                   const SizedBox(height: 8),
                   Text(
-                    'Use this to guide the next recommendation. This is not a test.',
+                    'Mark how it felt, then decide what the next rep needs.',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 16),
@@ -235,10 +235,9 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
         _control == null || _tension == null || _tempoReadiness == null;
     if (incomplete) {
       return const _SessionRecommendation(
-        title: 'Mark the rep',
-        body:
-            'Answer the three checks above and the next rep will get a clearer direction.',
-        practiceLabel: 'Practice Again',
+        title: 'Check this rep first',
+        body: 'Answer the three checks above, then choose the next rep.',
+        practiceLabel: 'Play It Again',
         bpmAdjustment: 0,
       );
     }
@@ -249,10 +248,10 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
         _tempoReadiness == SelfReportTempoReadinessV1.decrease;
     if (slowDown) {
       return const _SessionRecommendation(
-        title: 'Next rep: slow it down',
+        title: 'Next rep: slow down',
         body:
-            'Keep the phrase smaller and cleaner. The next win is relaxed control, not more tempo.',
-        practiceLabel: 'Practice Slower',
+            'Keep it smaller and cleaner. The next win is evenness and relaxed motion, not more tempo.',
+        practiceLabel: 'Play It Slower',
         bpmAdjustment: -6,
       );
     }
@@ -263,10 +262,10 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
         _tempoReadiness == SelfReportTempoReadinessV1.increase;
     if (bumpUp) {
       return const _SessionRecommendation(
-        title: 'Next rep: bump it up',
+        title: 'Next rep: bring it up',
         body:
             'The phrase held together. Add a little tempo and make sure the sound stays relaxed.',
-        practiceLabel: 'Bump It Up',
+        practiceLabel: 'Bring It Up',
         bpmAdjustment: 4,
       );
     }
@@ -274,7 +273,7 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
     return const _SessionRecommendation(
       title: 'Next rep: stay here',
       body:
-          'This tempo still has work in it. Repeat it until the motion and sound feel dependable.',
+          'This tempo still has work in it. Stay here until the motion and sound come back cleanly.',
       practiceLabel: 'Stay Here',
       bpmAdjustment: 0,
     );

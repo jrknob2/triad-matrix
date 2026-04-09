@@ -77,7 +77,7 @@ class _MatrixScreenState extends State<MatrixScreen> {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
         children: <Widget>[
-          const DrumEyebrow(text: 'View'),
+          const DrumEyebrow(text: 'Look At'),
           const SizedBox(height: 8),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -113,6 +113,8 @@ class _MatrixScreenState extends State<MatrixScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
+                  const DrumEyebrow(text: 'Phrase'),
+                  const SizedBox(height: 8),
                   PatternSequenceEditor(
                     controller: widget.controller,
                     itemIds: _selectedItemIds,
@@ -179,14 +181,14 @@ class _MatrixScreenState extends State<MatrixScreen> {
       Padding(
         padding: const EdgeInsets.only(right: 8),
         child: DrumActionPill(
-          label: const Text('Single Surface'),
+          label: const Text('Practice Here'),
           onPressed: _practiceSelection,
         ),
       ),
       Padding(
         padding: const EdgeInsets.only(right: 8),
         child: DrumActionPill(
-          label: const Text('Flow'),
+          label: const Text('Practice in Flow'),
           onPressed: _practiceSelectionInFlow,
         ),
       ),
@@ -205,7 +207,7 @@ class _MatrixScreenState extends State<MatrixScreen> {
         Padding(
           padding: const EdgeInsets.only(right: 8),
           child: DrumActionPill(
-            label: const Text('Save Phrase'),
+            label: const Text('Save'),
             onPressed: _saveSelection,
           ),
         ),
@@ -213,7 +215,7 @@ class _MatrixScreenState extends State<MatrixScreen> {
         Padding(
           padding: const EdgeInsets.only(right: 8),
           child: DrumActionPill(
-            label: const Text('View Details'),
+            label: const Text('Open Item'),
             onPressed: () => widget.onOpenItem(_selectedItemIds.first),
           ),
         ),

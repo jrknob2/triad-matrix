@@ -1382,17 +1382,17 @@ class AppController extends ChangeNotifier {
     final PracticeItemV1 item = itemById(itemId);
     return switch (level) {
       CompetencyLevelV1.notStarted =>
-        'Start plain and slow. Keep the sound even before adding tempo, accents, or movement.',
+        'Start plain and slow. Get the cycle even before you add speed, accents, or movement.',
       CompetencyLevelV1.learning =>
-        'Stay with the pattern until the motion stops fighting you. Clean repetition matters more than speed here.',
+        'Stay with it until the motion stops fighting you. Even repetition matters more than speed here.',
       CompetencyLevelV1.comfortable =>
-        'Now test the edges: raise the tempo a little, shape the dynamics, and check whether the phrase still feels relaxed.',
+        'Raise the tempo a little. Then check whether the phrase still feels relaxed and even.',
       CompetencyLevelV1.reliable =>
         item.isCombo
-            ? 'This phrase is close to usable vocabulary. Review it, then try it in flow so the connections hold together around the kit.'
-            : 'This pattern is close to dependable. Review it, then connect it to another idea so it becomes vocabulary, not just a cell.',
+            ? 'Review it, then move it into flow. Keep the handoff clean as the phrase moves around the kit.'
+            : 'Review it, then connect it to another cell. The goal is a phrase, not an isolated pattern.',
       CompetencyLevelV1.musical =>
-        'Keep this in rotation. The goal now is musical use: fills, transitions, flow, and decisions made without overthinking.',
+        'Keep it in rotation. Use it in fills, transitions, and longer lines until it comes out without forcing it.',
     };
   }
 
