@@ -43,7 +43,8 @@ Warmups should:
 
 - use built-in exercise phrases
 - be launched optionally before or during a practice session
-- use a standard 1-minute timer per exercise
+- use a continuous timer across the full warmup deck
+- auto-advance to the next exercise every 1 minute
 - carry the current BPM and click setting when launched from a practice session
 - default to `click off` and `pulse off`
 - be excluded from Matrix coverage, Toolbox readiness, and Coach priority scoring unless deliberately changed later

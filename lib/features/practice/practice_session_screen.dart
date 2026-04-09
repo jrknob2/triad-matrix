@@ -76,7 +76,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
       currentItemId,
     );
     final Duration? target = isWarmup
-        ? const Duration(minutes: 1)
+        ? Duration(minutes: _setup.practiceItemIds.length)
         : timerPresetToDuration(_setup.timerPreset);
     final String timerText = target == null
         ? formatDuration(_stopwatch.elapsed)
@@ -351,9 +351,6 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   }
 
   void _changeItem(int nextIndex) {
-    if (_setup.family == MaterialFamilyV1.warmup) {
-      _resetRunState();
-    }
     setState(() {
       _currentItemIndex = nextIndex;
     });
@@ -376,8 +373,29 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   void _startElapsedTicker() {
     _elapsedTicker?.cancel();
     _elapsedTicker = Timer.periodic(const Duration(milliseconds: 250), (_) {
+      if (_setup.family == MaterialFamilyV1.warmup) {
+        _syncWarmupProgress();
+      }
       if (mounted) setState(() {});
     });
+  }
+
+  void _syncWarmupProgress() {
+    final int itemCount = _setup.practiceItemIds.length;
+    if (itemCount == 0) return;
+
+    final int elapsedSeconds = _stopwatch.elapsed.inSeconds;
+    final int nextIndex = (elapsedSeconds ~/ 60).clamp(0, itemCount - 1);
+    if (nextIndex != _currentItemIndex && mounted) {
+      setState(() {
+        _currentItemIndex = nextIndex;
+      });
+    }
+
+    final int totalSeconds = itemCount * 60;
+    if (_running && elapsedSeconds >= totalSeconds) {
+      _resetRunState(clearElapsed: false);
+    }
   }
 
   void _restartBeatTicker() {
