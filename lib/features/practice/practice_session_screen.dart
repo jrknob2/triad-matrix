@@ -34,6 +34,9 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   Timer? _beatFlashTimer;
   bool _running = false;
   bool _beatLit = false;
+  bool _targetReached = false;
+  bool _warmupComplete = false;
+  bool _completionChimed = false;
   late bool _pulseEnabled;
   late int _bpm;
   late bool _clickEnabled;
@@ -74,9 +77,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     final List<DrumVoiceV1> voices = widget.controller.noteVoicesFor(
       currentItemId,
     );
-    final Duration? target = isWarmup
-        ? Duration(minutes: _setup.practiceItemIds.length)
-        : timerPresetToDuration(_setup.timerPreset);
+    final Duration? target = _targetDuration();
     final String timerText = target == null
         ? formatDuration(_stopwatch.elapsed)
         : '${formatDuration(_stopwatch.elapsed)} / ${formatDuration(target)}';
@@ -145,10 +146,23 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                       timerText,
                       style: Theme.of(context).textTheme.headlineMedium
                           ?.copyWith(
-                            color: const Color(0xFFFFF4DE),
+                            color: _warmupComplete || _targetReached
+                                ? const Color(0xFFFFC08D)
+                                : const Color(0xFFFFF4DE),
                             fontWeight: FontWeight.w900,
                           ),
                     ),
+                    if (_warmupComplete || _targetReached) ...<Widget>[
+                      const SizedBox(height: 8),
+                      Text(
+                        _warmupComplete ? 'Warmup complete' : 'Target reached',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              color: const Color(0xFFFFC08D),
+                              fontWeight: FontWeight.w900,
+                            ),
+                      ),
+                    ],
                     const SizedBox(height: 18),
                     Wrap(
                       alignment: WrapAlignment.center,
@@ -269,6 +283,13 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     final bool shouldStart = !_running;
     setState(() {
       if (shouldStart) {
+        if (_setup.family == MaterialFamilyV1.warmup && _warmupComplete) {
+          _stopwatch.reset();
+          _currentItemIndex = 0;
+          _warmupComplete = false;
+          _targetReached = false;
+          _completionChimed = false;
+        }
         _running = true;
         _stopwatch.start();
         _startElapsedTicker();
@@ -313,7 +334,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     _returnSetup = _setup.copyWith(bpm: _bpm, clickEnabled: _clickEnabled);
     _returnItemIndex = _currentItemIndex;
     _returnPulseEnabled = _pulseEnabled;
-    _resetRunState();
+    _resetRunState(clearFlags: true);
 
     setState(() {
       _setup = widget.controller.buildWarmupSession().copyWith(
@@ -332,7 +353,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
       Navigator.of(context).pop();
       return;
     }
-    _resetRunState();
+    _resetRunState(clearFlags: true);
     setState(() {
       _setup = returnSetup;
       _bpm = returnSetup.bpm;
@@ -354,7 +375,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     });
   }
 
-  void _resetRunState({bool clearElapsed = true}) {
+  void _resetRunState({bool clearElapsed = true, bool clearFlags = false}) {
     if (_running) {
       _stopwatch.stop();
     }
@@ -366,6 +387,18 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     _beatFlashTimer?.cancel();
     _running = false;
     _beatLit = false;
+    if (clearFlags) {
+      _targetReached = false;
+      _warmupComplete = false;
+      _completionChimed = false;
+    }
+  }
+
+  Duration? _targetDuration() {
+    if (_setup.family == MaterialFamilyV1.warmup) {
+      return Duration(minutes: _setup.practiceItemIds.length);
+    }
+    return timerPresetToDuration(_setup.timerPreset);
   }
 
   void _startElapsedTicker() {
@@ -373,6 +406,8 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     _elapsedTicker = Timer.periodic(const Duration(milliseconds: 250), (_) {
       if (_setup.family == MaterialFamilyV1.warmup) {
         _syncWarmupProgress();
+      } else {
+        _syncPracticeTargetProgress();
       }
       if (mounted) setState(() {});
     });
@@ -392,7 +427,19 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
 
     final int totalSeconds = itemCount * 60;
     if (_running && elapsedSeconds >= totalSeconds) {
+      _warmupComplete = true;
+      _targetReached = true;
+      _playCompletionChimeOnce();
       _resetRunState(clearElapsed: false);
+    }
+  }
+
+  void _syncPracticeTargetProgress() {
+    final Duration? target = _targetDuration();
+    if (target == null) return;
+    if (_stopwatch.elapsed >= target) {
+      _targetReached = true;
+      _playCompletionChimeOnce();
     }
   }
 
@@ -429,6 +476,12 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     unawaited(_triggerClick());
   }
 
+  void _playCompletionChimeOnce() {
+    if (_completionChimed) return;
+    _completionChimed = true;
+    unawaited(_triggerCompletionChime());
+  }
+
   void _updateBpm(int bpm) {
     setState(() {
       _bpm = bpm.clamp(30, 260);
@@ -456,6 +509,18 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
       await _clickPlayer.play();
     } catch (_) {
       // Ignore transient playback errors during rapid BPM changes.
+    }
+  }
+
+  Future<void> _triggerCompletionChime() async {
+    try {
+      await _clickPlayer.seek(Duration.zero);
+      await _clickPlayer.play();
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+      await _clickPlayer.seek(Duration.zero);
+      await _clickPlayer.play();
+    } catch (_) {
+      // Ignore transient playback errors during completion chime.
     }
   }
 }
