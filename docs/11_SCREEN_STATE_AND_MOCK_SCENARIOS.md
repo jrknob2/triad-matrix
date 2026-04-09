@@ -6,6 +6,8 @@ This document defines the named mock scenarios the app must support for design, 
 
 These scenarios are not optional test data. They are required to keep Coach, Practice, Focus, and Progress aligned with the product model.
 
+They must also contain enough longitudinal data to exercise Progress graphs in a believable way.
+
 ---
 
 ## Scenario 1: `first_light`
@@ -123,6 +125,7 @@ State:
 - visible early activity
 - item and group progress
 - no misleading “mastery” summaries
+- short, uneven assessment histories that show struggle more than momentum
 
 ---
 
@@ -159,6 +162,7 @@ State:
 
 - time trend visible
 - per-item and per-group measurement visible
+- assessment graphs should show believable upward movement, not a flat placeholder
 
 ---
 
@@ -188,6 +192,7 @@ State:
 
 - strong items visible
 - group progress should show meaningful coverage
+- item graphs should show multiple strong assessments over time
 
 ---
 
@@ -215,6 +220,7 @@ State:
 #### Progress
 
 - later can surface flow readiness and flow history
+- graphs should show phrase and flow trajectories, not just single-surface points
 
 ---
 
@@ -225,6 +231,11 @@ State:
 3. Scenarios must be easy to switch in debug builds.
 4. The mock state layer must not require destructive data resets to use.
 5. Designers and QA should be able to test a screen state without recreating it manually.
+
+Graph-support rule:
+
+- scenarios that imply real practice history must include enough assessed sessions over time to make `Overview` and `By Item` graphs meaningful
+- this usually means at least 3 to 5 assessed sessions on one item, and enough total assessed sessions across weeks to exercise the overview graph
 
 Current implementation rule:
 

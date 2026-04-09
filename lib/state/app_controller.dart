@@ -2681,6 +2681,7 @@ class AppController extends ChangeNotifier {
   }
 
   _ControllerRuntimeSnapshot _mockEarlyStruggle() {
+    final DateTime now = DateTime.now();
     final _MockScenarioBuilder builder =
         _MockScenarioBuilder(this, onboardingComplete: true)
           ..addRoutineItems(recommendedStartingTriadItemIds)
@@ -2690,9 +2691,19 @@ class AppController extends ChangeNotifier {
           ..addManualSession(
             itemId: _triadItemId('RRR'),
             practiceMode: PracticeModeV1.singleSurface,
-            bpm: 78,
+            bpm: 72,
+            duration: const Duration(minutes: 3),
+            endedAt: now.subtract(const Duration(days: 14)),
+            selfReportControl: SelfReportControlV1.low,
+            selfReportTension: SelfReportTensionV1.high,
+            selfReportTempoReadiness: SelfReportTempoReadinessV1.decrease,
+          )
+          ..addManualSession(
+            itemId: _triadItemId('RRR'),
+            practiceMode: PracticeModeV1.singleSurface,
+            bpm: 74,
             duration: const Duration(minutes: 4),
-            endedAt: DateTime.now().subtract(const Duration(days: 2)),
+            endedAt: now.subtract(const Duration(days: 9)),
             selfReportControl: SelfReportControlV1.low,
             selfReportTension: SelfReportTensionV1.some,
             selfReportTempoReadiness: SelfReportTempoReadinessV1.decrease,
@@ -2701,8 +2712,28 @@ class AppController extends ChangeNotifier {
             itemId: _triadItemId('LLL'),
             practiceMode: PracticeModeV1.singleSurface,
             bpm: 76,
+            duration: const Duration(minutes: 4),
+            endedAt: now.subtract(const Duration(days: 7)),
+            selfReportControl: SelfReportControlV1.low,
+            selfReportTension: SelfReportTensionV1.some,
+            selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+          )
+          ..addManualSession(
+            itemId: _triadItemId('LLL'),
+            practiceMode: PracticeModeV1.singleSurface,
+            bpm: 76,
             duration: const Duration(minutes: 5),
-            endedAt: DateTime.now().subtract(const Duration(days: 1, hours: 3)),
+            endedAt: now.subtract(const Duration(days: 3, hours: 6)),
+            selfReportControl: SelfReportControlV1.medium,
+            selfReportTension: SelfReportTensionV1.some,
+            selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+          )
+          ..addManualSession(
+            itemId: _triadItemId('RLL'),
+            practiceMode: PracticeModeV1.singleSurface,
+            bpm: 78,
+            duration: const Duration(minutes: 5),
+            endedAt: now.subtract(const Duration(days: 5)),
             selfReportControl: SelfReportControlV1.medium,
             selfReportTension: SelfReportTensionV1.some,
             selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
@@ -2712,7 +2743,7 @@ class AppController extends ChangeNotifier {
             practiceMode: PracticeModeV1.singleSurface,
             bpm: 80,
             duration: const Duration(minutes: 6),
-            endedAt: DateTime.now().subtract(const Duration(hours: 20)),
+            endedAt: now.subtract(const Duration(hours: 20)),
             selfReportControl: SelfReportControlV1.medium,
             selfReportTension: SelfReportTensionV1.none,
             selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
@@ -2721,6 +2752,7 @@ class AppController extends ChangeNotifier {
   }
 
   _ControllerRuntimeSnapshot _mockSteadyProgress() {
+    final DateTime now = DateTime.now();
     final _MockScenarioBuilder builder =
         _MockScenarioBuilder(this, onboardingComplete: true)
           ..addRoutineItems(<String>[
@@ -2736,9 +2768,29 @@ class AppController extends ChangeNotifier {
           ..addManualSession(
             itemId: _triadItemId('RLL'),
             practiceMode: PracticeModeV1.singleSurface,
+            bpm: 78,
+            duration: const Duration(minutes: 4),
+            endedAt: now.subtract(const Duration(days: 27)),
+            selfReportControl: SelfReportControlV1.medium,
+            selfReportTension: SelfReportTensionV1.some,
+            selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+          )
+          ..addManualSession(
+            itemId: _triadItemId('RLL'),
+            practiceMode: PracticeModeV1.singleSurface,
+            bpm: 84,
+            duration: const Duration(minutes: 5),
+            endedAt: now.subtract(const Duration(days: 20)),
+            selfReportControl: SelfReportControlV1.medium,
+            selfReportTension: SelfReportTensionV1.none,
+            selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+          )
+          ..addManualSession(
+            itemId: _triadItemId('RLL'),
+            practiceMode: PracticeModeV1.singleSurface,
             bpm: 88,
             duration: const Duration(minutes: 6),
-            endedAt: DateTime.now().subtract(const Duration(days: 3)),
+            endedAt: now.subtract(const Duration(days: 13)),
             selfReportControl: SelfReportControlV1.medium,
             selfReportTension: SelfReportTensionV1.none,
             selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
@@ -2748,7 +2800,17 @@ class AppController extends ChangeNotifier {
             practiceMode: PracticeModeV1.singleSurface,
             bpm: 92,
             duration: const Duration(minutes: 7),
-            endedAt: DateTime.now().subtract(const Duration(days: 1)),
+            endedAt: now.subtract(const Duration(days: 6)),
+            selfReportControl: SelfReportControlV1.high,
+            selfReportTension: SelfReportTensionV1.none,
+            selfReportTempoReadiness: SelfReportTempoReadinessV1.increase,
+          )
+          ..addManualSession(
+            itemId: _triadItemId('RLL'),
+            practiceMode: PracticeModeV1.singleSurface,
+            bpm: 96,
+            duration: const Duration(minutes: 8),
+            endedAt: now.subtract(const Duration(days: 1)),
             selfReportControl: SelfReportControlV1.high,
             selfReportTension: SelfReportTensionV1.none,
             selfReportTempoReadiness: SelfReportTempoReadinessV1.increase,
@@ -2756,9 +2818,39 @@ class AppController extends ChangeNotifier {
           ..addManualSession(
             itemId: _triadItemId('LRR'),
             practiceMode: PracticeModeV1.singleSurface,
+            bpm: 74,
+            duration: const Duration(minutes: 4),
+            endedAt: now.subtract(const Duration(days: 18)),
+            selfReportControl: SelfReportControlV1.low,
+            selfReportTension: SelfReportTensionV1.some,
+            selfReportTempoReadiness: SelfReportTempoReadinessV1.decrease,
+          )
+          ..addManualSession(
+            itemId: _triadItemId('LRR'),
+            practiceMode: PracticeModeV1.singleSurface,
             bpm: 82,
             duration: const Duration(minutes: 5),
-            endedAt: DateTime.now().subtract(const Duration(hours: 30)),
+            endedAt: now.subtract(const Duration(days: 8)),
+            selfReportControl: SelfReportControlV1.medium,
+            selfReportTension: SelfReportTensionV1.some,
+            selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+          )
+          ..addManualSession(
+            itemId: _triadItemId('LRR'),
+            practiceMode: PracticeModeV1.singleSurface,
+            bpm: 86,
+            duration: const Duration(minutes: 6),
+            endedAt: now.subtract(const Duration(days: 2)),
+            selfReportControl: SelfReportControlV1.medium,
+            selfReportTension: SelfReportTensionV1.none,
+            selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+          )
+          ..addManualSession(
+            itemId: _triadItemId('RLR'),
+            practiceMode: PracticeModeV1.singleSurface,
+            bpm: 82,
+            duration: const Duration(minutes: 5),
+            endedAt: now.subtract(const Duration(days: 15)),
             selfReportControl: SelfReportControlV1.medium,
             selfReportTension: SelfReportTensionV1.some,
             selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
@@ -2768,7 +2860,27 @@ class AppController extends ChangeNotifier {
             practiceMode: PracticeModeV1.singleSurface,
             bpm: 86,
             duration: const Duration(minutes: 5),
-            endedAt: DateTime.now().subtract(const Duration(hours: 12)),
+            endedAt: now.subtract(const Duration(days: 9)),
+            selfReportControl: SelfReportControlV1.low,
+            selfReportTension: SelfReportTensionV1.some,
+            selfReportTempoReadiness: SelfReportTempoReadinessV1.decrease,
+          )
+          ..addManualSession(
+            itemId: _triadItemId('RLR'),
+            practiceMode: PracticeModeV1.singleSurface,
+            bpm: 84,
+            duration: const Duration(minutes: 6),
+            endedAt: now.subtract(const Duration(days: 4)),
+            selfReportControl: SelfReportControlV1.medium,
+            selfReportTension: SelfReportTensionV1.some,
+            selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+          )
+          ..addManualSession(
+            itemId: _triadItemId('KRL'),
+            practiceMode: PracticeModeV1.singleSurface,
+            bpm: 68,
+            duration: const Duration(minutes: 4),
+            endedAt: now.subtract(const Duration(days: 16)),
             selfReportControl: SelfReportControlV1.low,
             selfReportTension: SelfReportTensionV1.some,
             selfReportTempoReadiness: SelfReportTempoReadinessV1.decrease,
@@ -2776,17 +2888,28 @@ class AppController extends ChangeNotifier {
           ..addManualSession(
             itemId: _triadItemId('KRL'),
             practiceMode: PracticeModeV1.singleSurface,
-            bpm: 74,
+            bpm: 72,
             duration: const Duration(minutes: 4),
-            endedAt: DateTime.now().subtract(const Duration(days: 2, hours: 4)),
+            endedAt: now.subtract(const Duration(days: 10)),
             selfReportControl: SelfReportControlV1.medium,
             selfReportTension: SelfReportTensionV1.some,
+            selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+          )
+          ..addManualSession(
+            itemId: _triadItemId('KRL'),
+            practiceMode: PracticeModeV1.singleSurface,
+            bpm: 76,
+            duration: const Duration(minutes: 5),
+            endedAt: now.subtract(const Duration(days: 3)),
+            selfReportControl: SelfReportControlV1.medium,
+            selfReportTension: SelfReportTensionV1.none,
             selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
           );
     return builder.build();
   }
 
   _ControllerRuntimeSnapshot _mockPhraseReady() {
+    final DateTime now = DateTime.now();
     final _MockScenarioBuilder builder =
         _MockScenarioBuilder(this, onboardingComplete: true)
           ..addRoutineItems(<String>[
@@ -2797,9 +2920,29 @@ class AppController extends ChangeNotifier {
           ..addManualSession(
             itemId: _triadItemId('RLL'),
             practiceMode: PracticeModeV1.singleSurface,
+            bpm: 88,
+            duration: const Duration(minutes: 5),
+            endedAt: now.subtract(const Duration(days: 28)),
+            selfReportControl: SelfReportControlV1.medium,
+            selfReportTension: SelfReportTensionV1.some,
+            selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+          )
+          ..addManualSession(
+            itemId: _triadItemId('RLL'),
+            practiceMode: PracticeModeV1.singleSurface,
+            bpm: 92,
+            duration: const Duration(minutes: 6),
+            endedAt: now.subtract(const Duration(days: 21)),
+            selfReportControl: SelfReportControlV1.high,
+            selfReportTension: SelfReportTensionV1.none,
+            selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+          )
+          ..addManualSession(
+            itemId: _triadItemId('RLL'),
+            practiceMode: PracticeModeV1.singleSurface,
             bpm: 96,
             duration: const Duration(minutes: 7),
-            endedAt: DateTime.now().subtract(const Duration(days: 2)),
+            endedAt: now.subtract(const Duration(days: 14)),
             selfReportControl: SelfReportControlV1.high,
             selfReportTension: SelfReportTensionV1.none,
             selfReportTempoReadiness: SelfReportTempoReadinessV1.increase,
@@ -2809,7 +2952,17 @@ class AppController extends ChangeNotifier {
             practiceMode: PracticeModeV1.singleSurface,
             bpm: 102,
             duration: const Duration(minutes: 6),
-            endedAt: DateTime.now().subtract(const Duration(hours: 18)),
+            endedAt: now.subtract(const Duration(days: 7)),
+            selfReportControl: SelfReportControlV1.high,
+            selfReportTension: SelfReportTensionV1.none,
+            selfReportTempoReadiness: SelfReportTempoReadinessV1.increase,
+          )
+          ..addManualSession(
+            itemId: _triadItemId('RLL'),
+            practiceMode: PracticeModeV1.singleSurface,
+            bpm: 106,
+            duration: const Duration(minutes: 7),
+            endedAt: now.subtract(const Duration(days: 1)),
             selfReportControl: SelfReportControlV1.high,
             selfReportTension: SelfReportTensionV1.none,
             selfReportTempoReadiness: SelfReportTempoReadinessV1.increase,
@@ -2817,20 +2970,61 @@ class AppController extends ChangeNotifier {
           ..addManualSession(
             itemId: _triadItemId('LRR'),
             practiceMode: PracticeModeV1.singleSurface,
+            bpm: 86,
+            duration: const Duration(minutes: 5),
+            endedAt: now.subtract(const Duration(days: 24)),
+            selfReportControl: SelfReportControlV1.medium,
+            selfReportTension: SelfReportTensionV1.some,
+            selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+          )
+          ..addManualSession(
+            itemId: _triadItemId('LRR'),
+            practiceMode: PracticeModeV1.singleSurface,
             bpm: 94,
             duration: const Duration(minutes: 6),
-            endedAt: DateTime.now().subtract(const Duration(days: 1, hours: 6)),
+            endedAt: now.subtract(const Duration(days: 12)),
             selfReportControl: SelfReportControlV1.high,
             selfReportTension: SelfReportTensionV1.none,
             selfReportTempoReadiness: SelfReportTempoReadinessV1.increase,
           )
-          ..setCompetency(_triadItemId('RLL'), CompetencyLevelV1.learning)
-          ..setCompetency(_triadItemId('LRR'), CompetencyLevelV1.learning)
+          ..addManualSession(
+            itemId: _triadItemId('LRR'),
+            practiceMode: PracticeModeV1.singleSurface,
+            bpm: 98,
+            duration: const Duration(minutes: 6),
+            endedAt: now.subtract(const Duration(days: 3)),
+            selfReportControl: SelfReportControlV1.high,
+            selfReportTension: SelfReportTensionV1.none,
+            selfReportTempoReadiness: SelfReportTempoReadinessV1.increase,
+          )
+          ..addManualSession(
+            itemId: _triadItemId('RLR'),
+            practiceMode: PracticeModeV1.singleSurface,
+            bpm: 84,
+            duration: const Duration(minutes: 5),
+            endedAt: now.subtract(const Duration(days: 20)),
+            selfReportControl: SelfReportControlV1.medium,
+            selfReportTension: SelfReportTensionV1.some,
+            selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+          )
+          ..addManualSession(
+            itemId: _triadItemId('RLR'),
+            practiceMode: PracticeModeV1.singleSurface,
+            bpm: 90,
+            duration: const Duration(minutes: 6),
+            endedAt: now.subtract(const Duration(days: 9)),
+            selfReportControl: SelfReportControlV1.medium,
+            selfReportTension: SelfReportTensionV1.none,
+            selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+          )
+          ..setCompetency(_triadItemId('RLL'), CompetencyLevelV1.comfortable)
+          ..setCompetency(_triadItemId('LRR'), CompetencyLevelV1.comfortable)
           ..setCompetency(_triadItemId('RLR'), CompetencyLevelV1.comfortable);
     return builder.build();
   }
 
   _ControllerRuntimeSnapshot _mockFlowReady() {
+    final DateTime now = DateTime.now();
     final _MockScenarioBuilder builder = _MockScenarioBuilder(
       this,
       onboardingComplete: true,
@@ -2849,9 +3043,19 @@ class AppController extends ChangeNotifier {
       ..addManualSession(
         itemId: combo.id,
         practiceMode: PracticeModeV1.singleSurface,
+        bpm: 82,
+        duration: const Duration(minutes: 6),
+        endedAt: now.subtract(const Duration(days: 28)),
+        selfReportControl: SelfReportControlV1.medium,
+        selfReportTension: SelfReportTensionV1.some,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+      )
+      ..addManualSession(
+        itemId: combo.id,
+        practiceMode: PracticeModeV1.singleSurface,
         bpm: 90,
         duration: const Duration(minutes: 8),
-        endedAt: DateTime.now().subtract(const Duration(days: 2)),
+        endedAt: now.subtract(const Duration(days: 18)),
         selfReportControl: SelfReportControlV1.high,
         selfReportTension: SelfReportTensionV1.none,
         selfReportTempoReadiness: SelfReportTempoReadinessV1.increase,
@@ -2861,10 +3065,50 @@ class AppController extends ChangeNotifier {
         practiceMode: PracticeModeV1.singleSurface,
         bpm: 96,
         duration: const Duration(minutes: 7),
-        endedAt: DateTime.now().subtract(const Duration(hours: 20)),
+        endedAt: now.subtract(const Duration(days: 10)),
         selfReportControl: SelfReportControlV1.high,
         selfReportTension: SelfReportTensionV1.none,
         selfReportTempoReadiness: SelfReportTempoReadinessV1.increase,
+      )
+      ..addManualSession(
+        itemId: combo.id,
+        practiceMode: PracticeModeV1.flow,
+        bpm: 92,
+        duration: const Duration(minutes: 6),
+        endedAt: now.subtract(const Duration(days: 4)),
+        selfReportControl: SelfReportControlV1.medium,
+        selfReportTension: SelfReportTensionV1.some,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+      )
+      ..addManualSession(
+        itemId: combo.id,
+        practiceMode: PracticeModeV1.flow,
+        bpm: 98,
+        duration: const Duration(minutes: 7),
+        endedAt: now.subtract(const Duration(days: 1)),
+        selfReportControl: SelfReportControlV1.high,
+        selfReportTension: SelfReportTensionV1.none,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.increase,
+      )
+      ..addManualSession(
+        itemId: _triadItemId('KRL'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 74,
+        duration: const Duration(minutes: 4),
+        endedAt: now.subtract(const Duration(days: 16)),
+        selfReportControl: SelfReportControlV1.medium,
+        selfReportTension: SelfReportTensionV1.some,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+      )
+      ..addManualSession(
+        itemId: _triadItemId('KRL'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 80,
+        duration: const Duration(minutes: 5),
+        endedAt: now.subtract(const Duration(days: 7)),
+        selfReportControl: SelfReportControlV1.medium,
+        selfReportTension: SelfReportTensionV1.none,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
       )
       ..setCompetency(combo.id, CompetencyLevelV1.reliable)
       ..setCompetency(_triadItemId('KRL'), CompetencyLevelV1.comfortable);
