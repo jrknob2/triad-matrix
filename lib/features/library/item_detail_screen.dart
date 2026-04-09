@@ -63,20 +63,24 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      SegmentedButton<PracticeModeV1>(
-                        segments: PracticeModeV1.values
-                            .map(
-                              (PracticeModeV1 mode) =>
-                                  ButtonSegment<PracticeModeV1>(
-                                    value: mode,
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: PracticeModeV1.values
+                              .map(
+                                (PracticeModeV1 mode) => Padding(
+                                  padding: const EdgeInsets.only(right: 8),
+                                  child: DrumSelectablePill(
                                     label: Text(mode.label),
+                                    selected: _viewMode == mode,
+                                    onPressed: () {
+                                      setState(() => _viewMode = mode);
+                                    },
                                   ),
-                            )
-                            .toList(growable: false),
-                        selected: <PracticeModeV1>{_viewMode},
-                        onSelectionChanged: (Set<PracticeModeV1> selection) {
-                          setState(() => _viewMode = selection.first);
-                        },
+                                ),
+                              )
+                              .toList(growable: false),
+                        ),
                       ),
                       const SizedBox(height: 16),
                       if (_viewMode == PracticeModeV1.flow)
@@ -150,25 +154,36 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                               style: Theme.of(context).textTheme.titleMedium,
                             ),
                           ),
-                          DropdownButton<CompetencyLevelV1>(
-                            value: competency,
-                            onChanged: (CompetencyLevelV1? next) {
-                              if (next != null) {
-                                widget.controller.updateCompetency(
-                                  item.id,
-                                  next,
-                                );
-                              }
+                          PopupMenuButton<CompetencyLevelV1>(
+                            onSelected: (CompetencyLevelV1 next) {
+                              widget.controller.updateCompetency(item.id, next);
                             },
-                            items: CompetencyLevelV1.values
-                                .map(
-                                  (CompetencyLevelV1 level) =>
-                                      DropdownMenuItem<CompetencyLevelV1>(
-                                        value: level,
-                                        child: Text(level.label),
-                                      ),
-                                )
-                                .toList(growable: false),
+                            itemBuilder: (BuildContext context) =>
+                                CompetencyLevelV1.values
+                                    .map(
+                                      (CompetencyLevelV1 level) =>
+                                          PopupMenuItem<CompetencyLevelV1>(
+                                            value: level,
+                                            child: Text(level.label),
+                                          ),
+                                    )
+                                    .toList(growable: false),
+                            child: DrumTag(
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: <Widget>[
+                                  Text(
+                                    competency.label,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .labelLarge
+                                        ?.copyWith(fontWeight: FontWeight.w900),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  const Icon(Icons.expand_more, size: 18),
+                                ],
+                              ),
+                            ),
                           ),
                         ],
                       ),

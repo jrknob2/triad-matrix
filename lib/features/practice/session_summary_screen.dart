@@ -389,16 +389,10 @@ class _AssessmentChoiceGroup<T> extends StatelessWidget {
           runSpacing: 8,
           children: values
               .map(
-                (T option) => ChoiceChip(
-                  label: Text(
-                    labelFor(option),
-                    style: TextStyle(
-                      color: value == option ? Colors.white : null,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
+                (T option) => DrumSelectablePill(
+                  label: Text(labelFor(option)),
                   selected: value == option,
-                  onSelected: (_) => onSelected(option),
+                  onPressed: () => onSelected(option),
                 ),
               )
               .toList(growable: false),
