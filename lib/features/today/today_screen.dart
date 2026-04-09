@@ -211,11 +211,13 @@ class _CoachBlockCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            DrumEyebrow(
-              text: block.subtitle ?? block.type.name,
-              color: prominent ? const Color(0xFFF0C35B) : null,
-            ),
-            const SizedBox(height: 10),
+            if (block.subtitle != null) ...<Widget>[
+              DrumEyebrow(
+                text: block.subtitle!,
+                color: prominent ? const Color(0xFFF0C35B) : null,
+              ),
+              const SizedBox(height: 10),
+            ],
             Text(
               block.title,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(

@@ -301,8 +301,8 @@ class AppController extends ChangeNotifier {
       return CoachBlockV1(
         id: 'focus_first_session',
         type: CoachBlockTypeV1.focus,
-        title: 'Start with ${target.name}',
-        subtitle: 'Work Now',
+        title: 'Try ${target.name} first',
+        subtitle: null,
         body:
             'Play it on one surface first. Keep the sound even and the motion relaxed.',
         itemIds: <String>[target.id],
@@ -324,8 +324,8 @@ class AppController extends ChangeNotifier {
       return CoachBlockV1(
         id: 'focus_working_on',
         type: CoachBlockTypeV1.focus,
-        title: 'Work ${target.name}',
-        subtitle: 'Work Now',
+        title: 'Spend more time on ${target.name}',
+        subtitle: null,
         body: aggregate == null
             ? 'Stay on it until it comes back around smoothly with no gap.'
             : _focusBodyForAggregate(aggregate),
@@ -345,9 +345,10 @@ class AppController extends ChangeNotifier {
     return CoachBlockV1(
       id: 'focus_balanced_triads',
       type: CoachBlockTypeV1.focus,
-      title: 'Work ${target.name}',
-      subtitle: 'Work Now',
-      body: 'Give it clean repetitions before you move on to something wider.',
+      title: 'Try ${target.name}',
+      subtitle: null,
+      body:
+          'Put a few clean repetitions on it before you move on to something wider.',
       itemIds: <String>[target.id],
       ctaLabel: 'Practice',
       ctaAction: CoachActionV1.startPractice,
@@ -376,8 +377,8 @@ class AppController extends ChangeNotifier {
     return CoachBlockV1(
       id: 'needs_work_${target.id}',
       type: CoachBlockTypeV1.needsWork,
-      title: 'Straighten out ${target.name}',
-      subtitle: 'Clean Up',
+      title: 'Slow ${target.name} down',
+      subtitle: null,
       body: _needsWorkBodyForAggregate(assessmentAggregateFor(target.id)),
       itemIds: <String>[target.id],
       ctaLabel: 'Practice',
@@ -413,8 +414,10 @@ class AppController extends ChangeNotifier {
     return CoachBlockV1(
       id: 'momentum_${target.id}',
       type: CoachBlockTypeV1.momentum,
-      title: 'Keep ${target.name} moving',
-      subtitle: 'Keep Going',
+      title: target.isCombo
+          ? 'Keep ${target.name} moving'
+          : 'Try building from ${target.name}',
+      subtitle: null,
       body: _momentumBodyForAggregate(assessmentAggregateFor(target.id)),
       itemIds: <String>[target.id],
       ctaLabel: target.isCombo ? 'Move to Flow' : 'Build Phrase',
@@ -443,10 +446,10 @@ class AppController extends ChangeNotifier {
       return CoachBlockV1(
         id: 'unlock_flow_${target.id}',
         type: CoachBlockTypeV1.nextUnlock,
-        title: 'Move ${target.name} around the kit',
-        subtitle: 'Next Step',
+        title: 'You are ready for flow',
+        subtitle: null,
         body:
-            'The phrase holds on one surface. Keep the sticking the same and change the voices.',
+            '${target.name} holds on one surface. Keep the sticking the same and move the voices around the kit.',
         itemIds: <String>[target.id],
         ctaLabel: 'Move to Flow',
         ctaAction: CoachActionV1.moveToFlow,
@@ -476,10 +479,10 @@ class AppController extends ChangeNotifier {
     return CoachBlockV1(
       id: 'unlock_combo_${itemIds.join('_')}',
       type: CoachBlockTypeV1.nextUnlock,
-      title: 'Join these into one phrase',
-      subtitle: 'Next Step',
+      title: 'You are ready for a longer phrase',
+      subtitle: null,
       body:
-          'They are ready to be connected. Repeat the handoff until the phrase comes back around with no gap.',
+          'Join these and repeat the handoff until the whole phrase comes back around with no gap.',
       itemIds: itemIds,
       ctaLabel: 'Build Phrase',
       ctaAction: CoachActionV1.buildCombo,
@@ -491,9 +494,9 @@ class AppController extends ChangeNotifier {
   String _focusBodyForAggregate(PracticeAssessmentAggregateV1 aggregate) {
     return switch (aggregate.status) {
       MatrixProgressStateV1.notTrained =>
-        'Get the cycle going first. Repeat it evenly with no gap back to the beginning.',
+        'Start slower than you think. Get the cycle going evenly with no gap back to the beginning.',
       MatrixProgressStateV1.active =>
-        'Stay on it. Keep the sound even and the motion relaxed until it repeats cleanly.',
+        'Stay on it. Keep the sound even and let the motion relax until it repeats cleanly.',
       MatrixProgressStateV1.needsWork =>
         'Slow it down. Get the sticking even again before you add speed.',
       MatrixProgressStateV1.strong =>
@@ -515,7 +518,7 @@ class AppController extends ChangeNotifier {
     final String reasonText = reasons.isEmpty
         ? 'the cycle'
         : reasons.join(', ');
-    return 'The weak spot is $reasonText. Slow it down and make it clean again.';
+    return 'It starts to lose $reasonText. Slow it down and make it clean again.';
   }
 
   String _momentumBodyForAggregate(PracticeAssessmentAggregateV1? aggregate) {
@@ -526,7 +529,7 @@ class AppController extends ChangeNotifier {
     final String stableBpm = aggregate.bestStableBpm == null
         ? 'the current tempo'
         : '${aggregate.bestStableBpm!.round()} BPM';
-    return 'This one is holding at $stableBpm. Review it briefly, then build from it while it is still clean.';
+    return 'This one is holding at $stableBpm. Keep it in the hands, then build from it while it is still clean.';
   }
 
   List<PracticeItemV1> itemsByFamily(MaterialFamilyV1 family) {
