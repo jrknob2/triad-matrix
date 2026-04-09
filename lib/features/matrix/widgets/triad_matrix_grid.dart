@@ -224,7 +224,8 @@ class _TriadCellButton extends StatelessWidget {
       );
     }
 
-    if (filters.filters.contains(TriadMatrixFilterV1.competency)) {
+    if (filters.palette == TriadMatrixFilterPaletteV1.coaching ||
+        filters.filters.contains(TriadMatrixFilterV1.competency)) {
       backgroundColor = switch (visualState.progress) {
         MatrixProgressStateV1.notTrained => const Color(0xFFE6E1D7),
         MatrixProgressStateV1.active => const Color(0xFFD9E9F7),
@@ -300,6 +301,30 @@ class _TriadCellButton extends StatelessWidget {
 
     if (filters.filters.contains(TriadMatrixFilterV1.unseen) && unseen) {
       borderColor = const Color(0xFF6B6B6B);
+      borderWidth = borderWidth < 3 ? 3 : borderWidth;
+    }
+
+    if (filters.filters.contains(TriadMatrixFilterV1.notTrained) &&
+        visualState.progress == MatrixProgressStateV1.notTrained) {
+      borderColor = const Color(0xFF6B6B6B);
+      borderWidth = borderWidth < 3 ? 3 : borderWidth;
+    }
+
+    if (filters.filters.contains(TriadMatrixFilterV1.activeStatus) &&
+        visualState.progress == MatrixProgressStateV1.active) {
+      borderColor = const Color(0xFF3A6F96);
+      borderWidth = borderWidth < 3 ? 3 : borderWidth;
+    }
+
+    if (filters.filters.contains(TriadMatrixFilterV1.needsWorkStatus) &&
+        visualState.progress == MatrixProgressStateV1.needsWork) {
+      borderColor = const Color(0xFF9C3D2C);
+      borderWidth = borderWidth < 3 ? 3 : borderWidth;
+    }
+
+    if (filters.filters.contains(TriadMatrixFilterV1.strongStatus) &&
+        visualState.progress == MatrixProgressStateV1.strong) {
+      borderColor = const Color(0xFF41644A);
       borderWidth = borderWidth < 3 ? 3 : borderWidth;
     }
 

@@ -1075,6 +1075,22 @@ class AppController extends ChangeNotifier {
         !isUnseen(itemId)) {
       return false;
     }
+    if (activeFilters.contains(TriadMatrixFilterV1.notTrained) &&
+        matrixProgressStateFor(itemId) != MatrixProgressStateV1.notTrained) {
+      return false;
+    }
+    if (activeFilters.contains(TriadMatrixFilterV1.activeStatus) &&
+        matrixProgressStateFor(itemId) != MatrixProgressStateV1.active) {
+      return false;
+    }
+    if (activeFilters.contains(TriadMatrixFilterV1.needsWorkStatus) &&
+        matrixProgressStateFor(itemId) != MatrixProgressStateV1.needsWork) {
+      return false;
+    }
+    if (activeFilters.contains(TriadMatrixFilterV1.strongStatus) &&
+        matrixProgressStateFor(itemId) != MatrixProgressStateV1.strong) {
+      return false;
+    }
     if (activeFilters.contains(TriadMatrixFilterV1.doubles) &&
         !hasDoubles(itemId)) {
       return false;
