@@ -25,6 +25,8 @@ class _AppShellState extends State<AppShell> {
   int _currentIndex = 0;
   int _matrixRequestVersion = 0;
   MatrixScreenRequest? _matrixRequest;
+  final GlobalKey<NavigatorState> _shellNavigatorKey =
+      GlobalKey<NavigatorState>();
 
   @override
   Widget build(BuildContext context) {
@@ -75,63 +77,91 @@ class _AppShellState extends State<AppShell> {
           ),
         ];
 
-        final List<String> titles = <String>[
-          'Coach',
-          'Matrix',
-          'Practice',
-          'Working On',
-          'Progress',
-        ];
-
         return Scaffold(
-          appBar: AppBar(
-            title: Text(titles[_currentIndex]),
-            actions: <Widget>[
-              IconButton(
-                onPressed: _openSettings,
-                icon: const Icon(Icons.settings),
-                tooltip: 'Settings',
+          body: Navigator(
+            key: _shellNavigatorKey,
+            pages: <Page<void>>[
+              MaterialPage<void>(
+                key: ValueKey<int>(_currentIndex),
+                child: Scaffold(
+                  appBar: AppBar(
+                    title: Text(_titles[_currentIndex]),
+                    actions: <Widget>[
+                      IconButton(
+                        onPressed: _openSettings,
+                        icon: const Icon(Icons.settings),
+                        tooltip: 'Settings',
+                      ),
+                    ],
+                  ),
+                  body: IndexedStack(index: _currentIndex, children: tabs),
+                ),
               ),
             ],
+            onDidRemovePage: (_) {},
           ),
-          body: IndexedStack(index: _currentIndex, children: tabs),
-          bottomNavigationBar: NavigationBar(
-            selectedIndex: _currentIndex,
-            onDestinationSelected: (int index) {
-              setState(() => _currentIndex = index);
-            },
-            destinations: const <NavigationDestination>[
-              NavigationDestination(
-                icon: Icon(Icons.wb_sunny_outlined),
-                selectedIcon: Icon(Icons.wb_sunny),
-                label: 'Coach',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.grid_view_outlined),
-                selectedIcon: Icon(Icons.grid_view_rounded),
-                label: 'Matrix',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.play_circle_outline_rounded),
-                selectedIcon: Icon(Icons.play_circle_rounded),
-                label: 'Practice',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.backpack_outlined),
-                selectedIcon: Icon(Icons.backpack),
-                label: 'Focus',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.bar_chart_outlined),
-                selectedIcon: Icon(Icons.bar_chart),
-                label: 'Progress',
-              ),
-            ],
+          bottomNavigationBar: DecoratedBox(
+            decoration: const BoxDecoration(
+              color: Color(0xFFE8DDD0),
+              border: Border(top: BorderSide(color: Color(0x22000000))),
+              boxShadow: <BoxShadow>[
+                BoxShadow(
+                  color: Color(0x12000000),
+                  blurRadius: 18,
+                  offset: Offset(0, -4),
+                ),
+              ],
+            ),
+            child: NavigationBar(
+              backgroundColor: const Color(0xFFE8DDD0),
+              selectedIndex: _currentIndex,
+              onDestinationSelected: (int index) {
+                _shellNavigatorKey.currentState?.popUntil(
+                  (route) => route.isFirst,
+                );
+                setState(() => _currentIndex = index);
+              },
+              destinations: const <NavigationDestination>[
+                NavigationDestination(
+                  icon: Icon(Icons.wb_sunny_outlined),
+                  selectedIcon: Icon(Icons.wb_sunny),
+                  label: 'Coach',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.grid_view_outlined),
+                  selectedIcon: Icon(Icons.grid_view_rounded),
+                  label: 'Matrix',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.play_circle_outline_rounded),
+                  selectedIcon: Icon(Icons.play_circle_rounded),
+                  label: 'Practice',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.backpack_outlined),
+                  selectedIcon: Icon(Icons.backpack),
+                  label: 'Focus',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.bar_chart_outlined),
+                  selectedIcon: Icon(Icons.bar_chart),
+                  label: 'Progress',
+                ),
+              ],
+            ),
           ),
         );
       },
     );
   }
+
+  List<String> get _titles => const <String>[
+    'Coach',
+    'Triad Matrix',
+    'Practice',
+    'Working On',
+    'Progress',
+  ];
 
   void _openMatrix({
     LearningLaneV1? lane,
@@ -155,7 +185,7 @@ class _AppShellState extends State<AppShell> {
   }
 
   void _openPracticeItemInMode(String itemId, PracticeModeV1 mode) {
-    Navigator.of(context).push(
+    _shellNavigatorKey.currentState?.push(
       MaterialPageRoute<void>(
         builder: (_) => PracticeSessionScreen(
           controller: widget.controller,
@@ -172,7 +202,7 @@ class _AppShellState extends State<AppShell> {
     final PracticeSessionSetupV1 setup = widget.controller
         .buildSessionForWorkingOn(practiceMode: mode);
     if (setup.practiceItemIds.isEmpty) return;
-    Navigator.of(context).push(
+    _shellNavigatorKey.currentState?.push(
       MaterialPageRoute<void>(
         builder: (_) =>
             PracticeSessionScreen(controller: widget.controller, setup: setup),
@@ -181,7 +211,7 @@ class _AppShellState extends State<AppShell> {
   }
 
   void _openWarmupPractice() {
-    Navigator.of(context).push(
+    _shellNavigatorKey.currentState?.push(
       MaterialPageRoute<void>(
         builder: (_) => PracticeSessionScreen(
           controller: widget.controller,
@@ -195,7 +225,7 @@ class _AppShellState extends State<AppShell> {
     final PracticeSessionSetupV1? setup = widget.controller
         .buildSessionFromLastSessionOrNull();
     if (setup == null) return;
-    Navigator.of(context).push(
+    _shellNavigatorKey.currentState?.push(
       MaterialPageRoute<void>(
         builder: (_) =>
             PracticeSessionScreen(controller: widget.controller, setup: setup),
@@ -204,7 +234,7 @@ class _AppShellState extends State<AppShell> {
   }
 
   void _openItemDetail(String itemId) {
-    Navigator.of(context).push(
+    _shellNavigatorKey.currentState?.push(
       MaterialPageRoute<void>(
         builder: (_) => ItemDetailScreen(
           controller: widget.controller,
@@ -222,7 +252,7 @@ class _AppShellState extends State<AppShell> {
   }
 
   void _openCombinationBuilderFromItems(List<String> itemIds) {
-    Navigator.of(context).push(
+    _shellNavigatorKey.currentState?.push(
       MaterialPageRoute<void>(
         builder: (_) => CombinationBuilderScreen(
           controller: widget.controller,
@@ -233,7 +263,7 @@ class _AppShellState extends State<AppShell> {
   }
 
   void _openSettings() {
-    Navigator.of(context).push(
+    _shellNavigatorKey.currentState?.push(
       MaterialPageRoute<void>(
         builder: (_) => AppSettingsScreen(controller: widget.controller),
       ),

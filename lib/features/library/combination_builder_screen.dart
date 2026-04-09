@@ -106,7 +106,6 @@ class _CombinationBuilderScreenState extends State<CombinationBuilderScreen> {
                 lane: null,
                 palette: null,
                 filters: <TriadMatrixFilterV1>{},
-                selectedComboIds: <String>{},
                 selectedRows: <String>{},
                 selectedColumns: <String>{},
               ),
@@ -143,6 +142,12 @@ class _CombinationBuilderScreenState extends State<CombinationBuilderScreen> {
   }
 
   void _toggleItemSelection(String itemId) {
+    if (!widget.controller.canAppendToPhrase(
+      currentItemIds: _selectedItemIds,
+      nextItemId: itemId,
+    )) {
+      return;
+    }
     setState(() {
       _selectedItemIds.add(itemId);
     });
@@ -156,7 +161,16 @@ class _CombinationBuilderScreenState extends State<CombinationBuilderScreen> {
               widget.controller.triadItemForCell(cell.id)!.id,
         )
         .toList(growable: false);
-    setState(() => _selectedItemIds.addAll(itemIds));
+    setState(() {
+      for (final String itemId in itemIds) {
+        if (widget.controller.canAppendToPhrase(
+          currentItemIds: _selectedItemIds,
+          nextItemId: itemId,
+        )) {
+          _selectedItemIds.add(itemId);
+        }
+      }
+    });
   }
 
   void _appendColumn(String columnLabel) {
@@ -167,7 +181,16 @@ class _CombinationBuilderScreenState extends State<CombinationBuilderScreen> {
               widget.controller.triadItemForCell(cell.id)!.id,
         )
         .toList(growable: false);
-    setState(() => _selectedItemIds.addAll(itemIds));
+    setState(() {
+      for (final String itemId in itemIds) {
+        if (widget.controller.canAppendToPhrase(
+          currentItemIds: _selectedItemIds,
+          nextItemId: itemId,
+        )) {
+          _selectedItemIds.add(itemId);
+        }
+      }
+    });
   }
 
   void _saveCombo() {

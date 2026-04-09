@@ -110,7 +110,7 @@ extension PracticeModeLabel on PracticeModeV1 {
 
 extension MatrixProgressStateLabel on MatrixProgressStateV1 {
   String get label => switch (this) {
-    MatrixProgressStateV1.notTrained => 'Not Trained',
+    MatrixProgressStateV1.notTrained => 'Not Practiced',
     MatrixProgressStateV1.active => 'Active',
     MatrixProgressStateV1.needsWork => 'Needs Work',
     MatrixProgressStateV1.strong => 'Strong',
@@ -180,12 +180,13 @@ extension TriadMatrixFilterLabel on TriadMatrixFilterV1 {
   String get label => switch (this) {
     TriadMatrixFilterV1.competency => 'Competency',
     TriadMatrixFilterV1.inRoutine => 'Working On',
+    TriadMatrixFilterV1.inPhrases => 'In Phrases',
     TriadMatrixFilterV1.needsAttention => 'Needs Attention',
     TriadMatrixFilterV1.underPracticed => 'Light Time',
     TriadMatrixFilterV1.closeToToolkit => 'Close To Toolbox',
     TriadMatrixFilterV1.recent => 'Recent',
     TriadMatrixFilterV1.unseen => 'Unseen',
-    TriadMatrixFilterV1.notTrained => 'Not Trained',
+    TriadMatrixFilterV1.notTrained => 'Not Practiced',
     TriadMatrixFilterV1.activeStatus => 'Active',
     TriadMatrixFilterV1.needsWorkStatus => 'Needs Work',
     TriadMatrixFilterV1.strongStatus => 'Strong',

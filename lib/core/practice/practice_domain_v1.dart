@@ -35,6 +35,7 @@ enum TriadMatrixFilterPaletteV1 { coaching, technique, combos }
 enum TriadMatrixFilterV1 {
   competency,
   inRoutine,
+  inPhrases,
   needsAttention,
   underPracticed,
   closeToToolkit,
@@ -323,7 +324,6 @@ class MatrixFiltersV1 {
   final LearningLaneV1? lane;
   final TriadMatrixFilterPaletteV1? palette;
   final Set<TriadMatrixFilterV1> filters;
-  final Set<String> selectedComboIds;
   final Set<String> selectedRows;
   final Set<String> selectedColumns;
 
@@ -331,7 +331,6 @@ class MatrixFiltersV1 {
     required this.lane,
     required this.palette,
     required this.filters,
-    required this.selectedComboIds,
     required this.selectedRows,
     required this.selectedColumns,
   });

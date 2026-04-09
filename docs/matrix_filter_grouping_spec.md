@@ -23,7 +23,6 @@ Exactly one view can be active at a time:
 
 - `Traits`
 - `Progress`
-- `Phrases`
 
 If no explicit view is selected, Matrix defaults to `Traits`.
 
@@ -39,7 +38,6 @@ Filter families:
 
 - `Right`
 - `Left`
-- `Kick`
 
 Rules:
 
@@ -101,26 +99,10 @@ Rules:
 Progress view may later add optional secondary scope filters like:
 
 - `In Working On`
+- `In Phrases`
 - `Recent`
 
 but those are not required in the base contract.
-
-## Phrases View
-
-Purpose:
-
-- help the user inspect saved phrases and build new ones
-
-Controls:
-
-- phrase selector / saved phrase selector
-- current phrase builder
-
-Rules:
-
-- trait filters are hidden
-- progress filters are hidden
-- the grid still reflects phrase membership
 
 ## Structural Slicers
 
@@ -159,7 +141,18 @@ Final in-scope set:
 - selecting `Starts w/ Kick` clears `Hands Only`
 - selecting `Ends w/ Kick` clears `Hands Only`
 - `Progress` view hides `Traits` filters
-- `Phrases` view hides `Traits` and `Progress` filters
+
+## Phrase Eligibility Rule
+
+Matrix may be used to start phrase building, but phrase growth is gated.
+
+Rules:
+
+- a single triad may always be selected for direct practice
+- adding a second or later triad to a phrase requires phrase-ready material
+- a triad is phrase-ready when it has reached at least `Comfortable`
+- only phrase-ready triads may be appended to a phrase sequence
+- this same rule applies anywhere else the app builds phrases from triads
 
 ## Deep-Link Rules
 
@@ -178,12 +171,20 @@ Once the user changes Matrix controls manually, the Coach lane/preset is no long
 2. progress state (color)
 3. selection state (border/order)
 
+Progress colors:
+
+- `Not Practiced` = white
+- `Active` = blue
+- `Needs Work` = red
+- `Strong` = green
+
 ## Selection
 - multi-select allowed
 - ordered sequence stored
 - grid cells show membership only
 - exact occurrence removal happens in the ordered phrase header, not inside cells
 - matrix cells must not show per-cell remove buttons or `x` badges
+- out-of-scope cells remain visible but are not tappable
 
 ## Rules
 - do not collapse grid into simple heatmap

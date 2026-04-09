@@ -14,6 +14,9 @@ This is the missing contract between product structure and UI structure.
 
 If a control or block cannot be justified by a defined flow in this document, it should not exist.
 
+The bottom app navigation must remain visible across primary and detail flows.
+Detail screens and session flows should live inside the shell, not cover it.
+
 ---
 
 ## Core Rule
@@ -413,7 +416,6 @@ Rules:
 - Matrix has one exclusive `View` chooser:
   - `Traits`
   - `Progress`
-  - `Phrases`
 - each view exposes only the filters that belong to that view
 - row and column selectors are structural slicers, not part of the main filter bar
 - Coach may deep-link Matrix into a preset state, but Coach lane labels do not remain as a persistent Matrix control
@@ -423,20 +425,20 @@ Examples:
 - `Traits` view:
   - `Right`
   - `Left`
-  - `Kick`
   - `Hands Only`
   - `Has Kick`
   - `Starts w/ Kick`
   - `Ends w/ Kick`
   - `Doubles`
 - `Progress` view:
-  - `Not Trained`
+  - `Not Practiced`
   - `Active`
   - `Needs Work`
   - `Strong`
-- `Phrases` view:
-  - saved phrase selector
-  - current phrase builder context
+  - optional secondary:
+    - `Working On`
+    - `In Phrases`
+    - `Recent`
 
 #### Phrase Editor
 
@@ -449,6 +451,7 @@ Rules:
 - shows exact ordered sequence
 - owns exact occurrence removal
 - grid reflects membership only
+- a second or later triad may only be added if all involved triads are phrase-ready
 
 #### Action Row
 

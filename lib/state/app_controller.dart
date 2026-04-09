@@ -1013,13 +1013,6 @@ class AppController extends ChangeNotifier {
       if (!filters.selectedColumns.contains(columnLabel)) return false;
     }
 
-    if (filters.selectedComboIds.isNotEmpty) {
-      final bool comboMatch = filters.selectedComboIds.any(
-        (comboId) => combinationContainsItem(comboId: comboId, itemId: itemId),
-      );
-      if (!comboMatch) return false;
-    }
-
     final Set<TriadMatrixFilterV1> activeFilters = filters.filters;
 
     if (activeFilters.contains(TriadMatrixFilterV1.handsOnly) &&
@@ -1053,6 +1046,10 @@ class AppController extends ChangeNotifier {
     }
     if (activeFilters.contains(TriadMatrixFilterV1.inRoutine) &&
         !isInRoutine(itemId)) {
+      return false;
+    }
+    if (activeFilters.contains(TriadMatrixFilterV1.inPhrases) &&
+        !isInAnyPhrase(itemId)) {
       return false;
     }
     if (activeFilters.contains(TriadMatrixFilterV1.needsAttention) &&
@@ -1199,6 +1196,24 @@ class AppController extends ChangeNotifier {
     required String itemId,
   }) {
     return combinationById(comboId).itemIds.contains(itemId);
+  }
+
+  bool isInAnyPhrase(String itemId) {
+    return triadCombinations.any((combo) => combo.itemIds.contains(itemId));
+  }
+
+  bool isPhraseEligible(String itemId) {
+    if (!itemById(itemId).isTriad) return false;
+    return competencyFor(itemId).index >= CompetencyLevelV1.comfortable.index;
+  }
+
+  bool canAppendToPhrase({
+    required List<String> currentItemIds,
+    required String nextItemId,
+  }) {
+    if (currentItemIds.isEmpty) return true;
+    if (!isPhraseEligible(nextItemId)) return false;
+    return currentItemIds.every(isPhraseEligible);
   }
 
   bool _sessionContainsItem(PracticeSessionLogV1 session, String itemId) {

@@ -223,6 +223,11 @@ Matrix filters follow this structure:
 
 Coach `lane` is translated into a Matrix preset, not shown as a persistent Matrix control.
 
+Phrase rule:
+
+- one triad may always be selected for direct practice
+- adding a second or later triad requires phrase-ready material
+
 ### Acceptance Criteria
 
 - grid remains the dominant surface

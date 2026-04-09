@@ -7,7 +7,7 @@ import '../../state/app_controller.dart';
 import '../practice/widgets/pattern_sequence_editor.dart';
 import 'widgets/triad_matrix_grid.dart';
 
-enum _MatrixPrimaryView { traits, progress, phrases }
+enum _MatrixPrimaryView { traits, progress }
 
 class MatrixScreenRequest {
   final int version;
@@ -48,7 +48,6 @@ class MatrixScreen extends StatefulWidget {
 class _MatrixScreenState extends State<MatrixScreen> {
   _MatrixPrimaryView _view = _MatrixPrimaryView.traits;
   final Set<TriadMatrixFilterV1> _filters = <TriadMatrixFilterV1>{};
-  final Set<String> _selectedComboIds = <String>{};
   final Set<String> _selectedRows = <String>{};
   final Set<String> _selectedColumns = <String>{};
   final List<String> _selectedItemIds = <String>[];
@@ -69,7 +68,6 @@ class _MatrixScreenState extends State<MatrixScreen> {
       lane: null,
       palette: _paletteForView(_view),
       filters: _effectiveFilters,
-      selectedComboIds: _selectedComboIds,
       selectedRows: _selectedRows,
       selectedColumns: _selectedColumns,
     );
@@ -101,13 +99,11 @@ class _MatrixScreenState extends State<MatrixScreen> {
                   .toList(growable: false),
             ),
           ),
-          if (_showFilterRow) ...<Widget>[
-            const SizedBox(height: 10),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(children: _buildFilterPills()),
-            ),
-          ],
+          const SizedBox(height: 10),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(children: _buildFilterPills()),
+          ),
           if (_view == _MatrixPrimaryView.progress) ...<Widget>[
             const SizedBox(height: 10),
             const _ProgressLegendCard(),
@@ -148,14 +144,6 @@ class _MatrixScreenState extends State<MatrixScreen> {
     );
   }
 
-  bool get _showFilterRow {
-    return switch (_view) {
-      _MatrixPrimaryView.phrases =>
-        widget.controller.triadCombinations.isNotEmpty,
-      _ => true,
-    };
-  }
-
   Set<TriadMatrixFilterV1> get _effectiveFilters {
     return _normalizedFiltersForView(_view, _filters);
   }
@@ -172,24 +160,6 @@ class _MatrixScreenState extends State<MatrixScreen> {
   }
 
   List<Widget> _buildFilterPills() {
-    if (_view == _MatrixPrimaryView.phrases) {
-      return widget.controller.triadCombinations
-          .map(
-            (PracticeCombinationV1 combo) => Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: DrumSelectablePill(
-                label: _chipText(
-                  widget.controller.matrixLabelForCombination(combo.id),
-                  _selectedComboIds.contains(combo.id),
-                ),
-                selected: _selectedComboIds.contains(combo.id),
-                onPressed: () => _toggleComboFilter(combo.id),
-              ),
-            ),
-          )
-          .toList(growable: false);
-    }
-
     return _viewFilters(_view)
         .map(
           (TriadMatrixFilterV1 filter) => Padding(
@@ -298,17 +268,6 @@ class _MatrixScreenState extends State<MatrixScreen> {
       _filters
         ..clear()
         ..addAll(_normalizedFiltersForView(view, previousFilters));
-      _selectedComboIds.clear();
-    });
-  }
-
-  void _toggleComboFilter(String comboId) {
-    setState(() {
-      if (_selectedComboIds.contains(comboId)) {
-        _selectedComboIds.remove(comboId);
-      } else {
-        _selectedComboIds.add(comboId);
-      }
     });
   }
 
@@ -369,6 +328,12 @@ class _MatrixScreenState extends State<MatrixScreen> {
   }
 
   void _toggleItemSelection(String itemId) {
+    if (!widget.controller.canAppendToPhrase(
+      currentItemIds: _selectedItemIds,
+      nextItemId: itemId,
+    )) {
+      return;
+    }
     setState(() {
       _selectedItemIds.add(itemId);
     });
@@ -422,7 +387,6 @@ class _MatrixScreenState extends State<MatrixScreen> {
       _filters
         ..clear()
         ..addAll(_normalizedIncomingFilters(request));
-      _selectedComboIds.clear();
       _selectedRows.clear();
       _selectedColumns.clear();
       _selectedItemIds.clear();
@@ -463,7 +427,6 @@ class _MatrixScreenState extends State<MatrixScreen> {
     final Set<TriadMatrixFilterV1> allowed = switch (view) {
       _MatrixPrimaryView.traits => _traitFilters,
       _MatrixPrimaryView.progress => _progressFilters,
-      _MatrixPrimaryView.phrases => const <TriadMatrixFilterV1>{},
     };
 
     final Set<TriadMatrixFilterV1> normalized = filters
@@ -496,12 +459,6 @@ class _MatrixScreenState extends State<MatrixScreen> {
   }
 
   _MatrixPrimaryView _viewForRequest(MatrixScreenRequest request) {
-    if (request.lane == LearningLaneV1.phrasing ||
-        request.lane == LearningLaneV1.flow ||
-        request.palette == TriadMatrixFilterPaletteV1.combos) {
-      return _MatrixPrimaryView.phrases;
-    }
-
     if (request.lane == LearningLaneV1.dynamics ||
         request.palette == TriadMatrixFilterPaletteV1.coaching ||
         request.filters.any(_progressFilters.contains)) {
@@ -528,10 +485,10 @@ class _MatrixScreenState extends State<MatrixScreen> {
         TriadMatrixFilterV1.needsWorkStatus,
         TriadMatrixFilterV1.strongStatus,
         TriadMatrixFilterV1.inRoutine,
+        TriadMatrixFilterV1.inPhrases,
         TriadMatrixFilterV1.underPracticed,
         TriadMatrixFilterV1.recent,
       ],
-      _MatrixPrimaryView.phrases => const <TriadMatrixFilterV1>[],
     };
   }
 
@@ -553,7 +510,6 @@ class _MatrixScreenState extends State<MatrixScreen> {
     return switch (view) {
       _MatrixPrimaryView.traits => 'Traits',
       _MatrixPrimaryView.progress => 'Progress',
-      _MatrixPrimaryView.phrases => 'Phrases',
     };
   }
 
@@ -561,7 +517,6 @@ class _MatrixScreenState extends State<MatrixScreen> {
     return switch (view) {
       _MatrixPrimaryView.traits => TriadMatrixFilterPaletteV1.technique,
       _MatrixPrimaryView.progress => TriadMatrixFilterPaletteV1.coaching,
-      _MatrixPrimaryView.phrases => TriadMatrixFilterPaletteV1.combos,
     };
   }
 
@@ -596,6 +551,7 @@ const Set<TriadMatrixFilterV1> _progressFilters = <TriadMatrixFilterV1>{
   TriadMatrixFilterV1.needsWorkStatus,
   TriadMatrixFilterV1.strongStatus,
   TriadMatrixFilterV1.inRoutine,
+  TriadMatrixFilterV1.inPhrases,
   TriadMatrixFilterV1.underPracticed,
   TriadMatrixFilterV1.recent,
 };
@@ -619,7 +575,7 @@ class _ProgressLegendCard extends StatelessWidget {
   Widget build(BuildContext context) {
     const List<({String label, Color color})> items =
         <({String label, Color color})>[
-          (label: 'Not trained', color: Color(0xFFE6E1D7)),
+          (label: 'Not practiced', color: Color(0xFFFFFFFF)),
           (label: 'Active', color: Color(0xFFD9E9F7)),
           (label: 'Needs work', color: Color(0xFFF0B2AA)),
           (label: 'Strong', color: Color(0xFFDDEDDD)),
@@ -628,17 +584,36 @@ class _ProgressLegendCard extends StatelessWidget {
     return DrumPanel(
       tone: DrumPanelTone.warm,
       padding: const EdgeInsets.all(12),
-      child: Padding(
-        padding: EdgeInsets.zero,
-        child: Wrap(
-          spacing: 10,
-          runSpacing: 8,
-          children: items
-              .map(
-                (item) => DrumStatusPill(label: item.label, color: item.color),
-              )
-              .toList(growable: false),
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: items
+            .map(
+              (item) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Container(
+                      width: 16,
+                      height: 16,
+                      decoration: BoxDecoration(
+                        color: item.color,
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: const Color(0x22000000)),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      item.label,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+            .toList(growable: false),
       ),
     );
   }

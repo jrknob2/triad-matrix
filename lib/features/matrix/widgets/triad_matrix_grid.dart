@@ -158,7 +158,7 @@ class _TriadCellButton extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
-        onTap: () => onTapItem(itemId),
+        onTap: visualState.inScope ? () => onTapItem(itemId) : null,
         child: Ink(
           height: 56,
           decoration: BoxDecoration(
@@ -188,7 +188,7 @@ class _TriadCellButton extends StatelessWidget {
     String itemId,
     MatrixCellVisualStateV1 visualState,
   ) {
-    Color backgroundColor = const Color(0xFFF6F1E7);
+    Color backgroundColor = const Color(0xFFF8F6F1);
     Color borderColor = const Color(0x22000000);
     double borderWidth = 1;
     Color textColor = Colors.black;
@@ -206,15 +206,6 @@ class _TriadCellButton extends StatelessWidget {
     final bool closeToToolkit = controller.isCloseToToolbox(itemId);
     final bool recent = controller.isRecent(itemId);
     final bool unseen = controller.isUnseen(itemId);
-    final bool comboMatch =
-        filters.selectedComboIds.isEmpty ||
-        filters.selectedComboIds.any(
-          (comboId) => controller.combinationContainsItem(
-            comboId: comboId,
-            itemId: itemId,
-          ),
-        );
-
     if (visualState.muted) {
       return const _CellDecorationStyle(
         backgroundColor: Color(0xFFE0DDD8),
@@ -227,7 +218,7 @@ class _TriadCellButton extends StatelessWidget {
     if (filters.palette == TriadMatrixFilterPaletteV1.coaching ||
         filters.filters.contains(TriadMatrixFilterV1.competency)) {
       backgroundColor = switch (visualState.progress) {
-        MatrixProgressStateV1.notTrained => const Color(0xFFE6E1D7),
+        MatrixProgressStateV1.notTrained => const Color(0xFFFFFFFF),
         MatrixProgressStateV1.active => const Color(0xFFD9E9F7),
         MatrixProgressStateV1.needsWork => const Color(0xFFF0B2AA),
         MatrixProgressStateV1.strong => const Color(0xFFDDEDDD),
@@ -273,6 +264,12 @@ class _TriadCellButton extends StatelessWidget {
 
     if (filters.filters.contains(TriadMatrixFilterV1.inRoutine) && inRoutine) {
       borderColor = const Color(0xFF41644A);
+      borderWidth = borderWidth < 3 ? 3 : borderWidth;
+    }
+
+    if (filters.filters.contains(TriadMatrixFilterV1.inPhrases) &&
+        controller.isInAnyPhrase(itemId)) {
+      borderColor = const Color(0xFF7A5D9E);
       borderWidth = borderWidth < 3 ? 3 : borderWidth;
     }
 
@@ -328,17 +325,6 @@ class _TriadCellButton extends StatelessWidget {
       borderWidth = borderWidth < 3 ? 3 : borderWidth;
     }
 
-    if (filters.selectedComboIds.isNotEmpty && comboMatch) {
-      final String comboId = filters.selectedComboIds.firstWhere(
-        (candidate) => controller.combinationContainsItem(
-          comboId: candidate,
-          itemId: itemId,
-        ),
-      );
-      borderColor = _comboColor(comboId);
-      borderWidth = borderWidth < 3 ? 3 : borderWidth;
-    }
-
     if (visualState.selected) {
       borderColor = const Color(0xFF101010);
       borderWidth = borderWidth < 3 ? 3 : borderWidth;
@@ -350,16 +336,6 @@ class _TriadCellButton extends StatelessWidget {
       borderWidth: borderWidth,
       textColor: textColor,
     );
-  }
-
-  Color _comboColor(String comboId) {
-    const List<Color> colors = <Color>[
-      Color(0xFF2E5E4E),
-      Color(0xFF7D5A50),
-      Color(0xFF3D6C8C),
-      Color(0xFF876C2B),
-    ];
-    return colors[comboId.hashCode.abs() % colors.length];
   }
 }
 
