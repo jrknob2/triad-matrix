@@ -470,6 +470,7 @@ Rules:
 - owns exact occurrence removal
 - grid reflects membership only
 - a second or later triad may only be added if all involved triads are phrase-ready
+- adding material from Matrix must not inject accents, ghosts, or flow voices automatically
 
 #### Action Row
 
@@ -821,6 +822,9 @@ Practice Item lets the user inspect and edit one item cleanly.
 - editing controls appear under the pattern
 - mode control changes editing context
 - practice CTA launches the chosen mode
+- accents, ghosts, and flow voice assignments are user-authored edit layers
+- base material enters the app plain unless the user has explicitly edited it
+- Matrix selection and phrase building must not inject authored markings automatically
 
 ---
 

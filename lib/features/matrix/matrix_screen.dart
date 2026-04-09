@@ -160,18 +160,21 @@ class _MatrixScreenState extends State<MatrixScreen> {
   }
 
   List<Widget> _buildFilterPills() {
-    return _viewFilters(_view)
-        .map(
-          (TriadMatrixFilterV1 filter) => Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: DrumSelectablePill(
-              label: _chipText(filter.label, _filters.contains(filter)),
-              selected: _filters.contains(filter),
-              onPressed: () => _toggleFilter(filter),
-            ),
+    final List<Widget> children = <Widget>[];
+    final List<TriadMatrixFilterV1> filters = _viewFilters(_view);
+    for (final TriadMatrixFilterV1 filter in filters) {
+      children.add(
+        Padding(
+          padding: EdgeInsets.only(right: _gapAfterFilter(filter)),
+          child: DrumSelectablePill(
+            label: _chipText(filter.label, _filters.contains(filter)),
+            selected: _filters.contains(filter),
+            onPressed: () => _toggleFilter(filter),
           ),
-        )
-        .toList(growable: false);
+        ),
+      );
+    }
+    return children;
   }
 
   List<Widget> _buildActionPills() {
@@ -517,6 +520,19 @@ class _MatrixScreenState extends State<MatrixScreen> {
   bool _isStatusFilter(TriadMatrixFilterV1 filter) {
     return _statusFilters.contains(filter);
   }
+
+  double _gapAfterFilter(TriadMatrixFilterV1 filter) {
+    return switch (_view) {
+      _MatrixPrimaryView.traits
+          when filter == TriadMatrixFilterV1.leftLead ||
+              filter == TriadMatrixFilterV1.endsWithKick =>
+        16,
+      _MatrixPrimaryView.progress
+          when filter == TriadMatrixFilterV1.strongStatus =>
+        16,
+      _ => 8,
+    };
+  }
 }
 
 const Set<TriadMatrixFilterV1> _traitFilters = <TriadMatrixFilterV1>{
@@ -568,33 +584,31 @@ class _ProgressLegendCard extends StatelessWidget {
     return DrumPanel(
       tone: DrumPanelTone.warm,
       padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Wrap(
+        spacing: 12,
+        runSpacing: 8,
         children: items
             .map(
-              (item) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    Container(
-                      width: 16,
-                      height: 16,
-                      decoration: BoxDecoration(
-                        color: item.color,
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: const Color(0x22000000)),
-                      ),
+              (item) => Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Container(
+                    width: 16,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: item.color,
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: const Color(0x22000000)),
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      item.label,
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    item.label,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             )
             .toList(growable: false),

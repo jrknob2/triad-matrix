@@ -105,6 +105,7 @@ class AppController extends ChangeNotifier {
           (PracticeItemV1 item) =>
               !(item.source == PracticeItemSourceV1.builtIn && item.isWarmup),
         )
+        .map(_migrateLegacyBuiltInAuthoring)
         .toList(growable: false);
 
     final Set<String> existingIds = filteredItems
@@ -115,6 +116,72 @@ class AppController extends ChangeNotifier {
         .toList(growable: false);
     if (missingBuiltIns.isEmpty) return filteredItems;
     return <PracticeItemV1>[...filteredItems, ...missingBuiltIns];
+  }
+
+  PracticeItemV1 _migrateLegacyBuiltInAuthoring(PracticeItemV1 item) {
+    if (item.source != PracticeItemSourceV1.builtIn) {
+      return _sanitizedItem(item);
+    }
+
+    final bool accentsMatchLegacy = listEquals(
+      item.accentedNoteIndices,
+      _legacyAccentIndicesFor(item),
+    );
+    final bool ghostsMatchLegacy = item.ghostNoteIndices.isEmpty;
+    final bool voicesMatchLegacy = listEquals(
+      item.voiceAssignments,
+      _legacyVoiceAssignmentsFor(item),
+    );
+
+    final PracticeItemV1 migrated = item.copyWith(
+      accentedNoteIndices: accentsMatchLegacy
+          ? const <int>[]
+          : item.accentedNoteIndices,
+      ghostNoteIndices: ghostsMatchLegacy
+          ? const <int>[]
+          : item.ghostNoteIndices,
+      voiceAssignments: voicesMatchLegacy
+          ? const <DrumVoiceV1>[]
+          : item.voiceAssignments,
+    );
+
+    return _sanitizedItem(migrated);
+  }
+
+  List<int> _legacyAccentIndicesFor(PracticeItemV1 item) {
+    if (item.isTriad) {
+      for (final TriadMatrixCell cell in triadMatrixAll()) {
+        if (cell.id == item.name) return _accentIndicesForTriadCell(cell);
+      }
+    }
+
+    return switch (item.id) {
+      'five_rlrlk' => const <int>[0],
+      'five_rllrl' => const <int>[0, 3],
+      _ => const <int>[],
+    };
+  }
+
+  List<DrumVoiceV1> _legacyVoiceAssignmentsFor(PracticeItemV1 item) {
+    return switch (item.id) {
+      'five_rlrlk' => const <DrumVoiceV1>[
+        DrumVoiceV1.snare,
+        DrumVoiceV1.snare,
+        DrumVoiceV1.snare,
+        DrumVoiceV1.snare,
+        DrumVoiceV1.kick,
+      ],
+      'five_rllrl' => const <DrumVoiceV1>[
+        DrumVoiceV1.snare,
+        DrumVoiceV1.snare,
+        DrumVoiceV1.snare,
+        DrumVoiceV1.snare,
+        DrumVoiceV1.snare,
+      ],
+      _ => _defaultVoiceAssignmentsForSticking(
+        _patternSignature(item.sticking),
+      ),
+    };
   }
 
   Future<void> _persistState() async {
@@ -994,9 +1061,6 @@ class AppController extends ChangeNotifier {
 
   bool hasDoubles(String itemId) {
     final String normalized = _normalizedSticking(itemById(itemId));
-    if (normalized.length >= 3 && normalized.split('').toSet().length == 1) {
-      return false;
-    }
     for (int index = 0; index < normalized.length - 1; index++) {
       if (normalized[index] == normalized[index + 1]) return true;
     }
@@ -1798,9 +1862,9 @@ class AppController extends ChangeNotifier {
       name: canonicalName,
       sticking: canonicalName,
       noteCount: _estimateNoteCount(trimmedSticking),
-      accentedNoteIndices: _defaultAccentIndicesForSticking(trimmedSticking),
+      accentedNoteIndices: const <int>[],
       ghostNoteIndices: const <int>[],
-      voiceAssignments: _defaultVoiceAssignmentsForSticking(trimmedSticking),
+      voiceAssignments: const <DrumVoiceV1>[],
       source: PracticeItemSourceV1.userDefined,
       tags: tags.where((tag) => tag.trim().isNotEmpty).toList(growable: false),
       saved: true,
@@ -3124,9 +3188,9 @@ class AppController extends ChangeNotifier {
             name: cell.id,
             sticking: cell.id,
             noteCount: 3,
-            accentedNoteIndices: _accentIndicesForTriadCell(cell),
+            accentedNoteIndices: const <int>[],
             ghostNoteIndices: const <int>[],
-            voiceAssignments: _defaultVoiceAssignmentsForSticking(cell.id),
+            voiceAssignments: const <DrumVoiceV1>[],
             source: PracticeItemSourceV1.builtIn,
             tags: _tagsForTriadCell(cell),
             saved: true,
@@ -3143,15 +3207,9 @@ class AppController extends ChangeNotifier {
         name: 'RLRLK',
         sticking: 'RLRLK',
         noteCount: 5,
-        accentedNoteIndices: <int>[0],
+        accentedNoteIndices: <int>[],
         ghostNoteIndices: <int>[],
-        voiceAssignments: <DrumVoiceV1>[
-          DrumVoiceV1.snare,
-          DrumVoiceV1.snare,
-          DrumVoiceV1.snare,
-          DrumVoiceV1.snare,
-          DrumVoiceV1.kick,
-        ],
+        voiceAssignments: <DrumVoiceV1>[],
         source: PracticeItemSourceV1.builtIn,
         tags: <String>['5s'],
         saved: true,
@@ -3162,15 +3220,9 @@ class AppController extends ChangeNotifier {
         name: 'RLLRL',
         sticking: 'RLLRL',
         noteCount: 5,
-        accentedNoteIndices: <int>[0, 3],
-        ghostNoteIndices: <int>[1],
-        voiceAssignments: <DrumVoiceV1>[
-          DrumVoiceV1.snare,
-          DrumVoiceV1.snare,
-          DrumVoiceV1.snare,
-          DrumVoiceV1.snare,
-          DrumVoiceV1.snare,
-        ],
+        accentedNoteIndices: <int>[],
+        ghostNoteIndices: <int>[],
+        voiceAssignments: <DrumVoiceV1>[],
         source: PracticeItemSourceV1.builtIn,
         tags: <String>['5s'],
         saved: true,
@@ -3256,7 +3308,7 @@ class AppController extends ChangeNotifier {
       noteCount: _normalizedTokensFromSticking(sticking).length,
       accentedNoteIndices: const <int>[],
       ghostNoteIndices: const <int>[],
-      voiceAssignments: _defaultVoiceAssignmentsForSticking(sticking),
+      voiceAssignments: const <DrumVoiceV1>[],
       source: PracticeItemSourceV1.builtIn,
       tags: tags,
       saved: true,

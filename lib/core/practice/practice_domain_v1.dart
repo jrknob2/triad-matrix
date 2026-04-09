@@ -176,13 +176,13 @@ class PracticeItemV1 {
   /// Number of notes in the base grouping or phrase.
   final int noteCount;
 
-  /// Zero-based note indices that should be accented in the default guided view.
+  /// Zero-based note indices the user has explicitly marked as accents.
   final List<int> accentedNoteIndices;
 
-  /// Zero-based note indices that should be ghosted in the guided view.
+  /// Zero-based note indices the user has explicitly marked as ghosts.
   final List<int> ghostNoteIndices;
 
-  /// Default voice assignment used when the phrase is practiced in flow mode.
+  /// User-authored voice assignment overrides for flow mode.
   final List<DrumVoiceV1> voiceAssignments;
 
   final PracticeItemSourceV1 source;

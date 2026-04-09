@@ -184,6 +184,12 @@ Progress colors:
 - `Needs Work` = red
 - `Strong` = green
 
+Persistent decoration rule:
+
+- progress-state background color remains visible in every Matrix view
+- filters and scope controls may add borders, muting, or emphasis, but should not remove the base progress decoration
+- muted out-of-scope cells should still retain a readable trace of their progress state
+
 ## Selection
 - multi-select allowed
 - ordered sequence stored
@@ -197,3 +203,11 @@ Progress colors:
 - preserve structural layout always
 - grid is the primary surface; filters support it, not the other way around
 - prefer compact horizontal control groups before adding more stacked vertical filter rows
+
+## Progress View Interaction Rules
+
+- status filters are exclusive
+- secondary progress filters such as `Working On`, `In Phrases`, `Light Time`, and `Recent` are independent narrowing filters
+- selecting a new status replaces the previous status
+- secondary filters may be combined with status filters using `AND`
+- progress filter behavior should feel as explicit and predictable as Traits filter behavior

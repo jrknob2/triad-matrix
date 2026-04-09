@@ -451,6 +451,7 @@ Practice Item is the detail/edit screen for one piece of material.
 
 - the pattern display is the primary signal
 - controls under it are clearly for editing the item, not playing it
+- accents, ghosts, and flow voice assignments only appear when they were authored by the user
 
 ---
 
