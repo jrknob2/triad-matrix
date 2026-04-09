@@ -167,7 +167,8 @@ Matrix is the structural map of the triad system and the main phrase-building su
 ### Must Do
 
 - show the grid as the primary surface
-- support grouped filters
+- support one exclusive view plus contextual filters
+- support structural row/column slicing
 - support assessment/progress overlays
 - support selection and phrase building
 - start practice directly
@@ -194,7 +195,7 @@ Matrix is the structural map of the triad system and the main phrase-building su
 
 #### State C: Deep-Linked From Coach
 
-- specific filter or palette already active
+- specific view/filter preset already active
 - context visible but lightweight
 
 ### Primary Actions
@@ -214,12 +215,21 @@ The phrase editor shows order.
 If an item appears anywhere in the phrase, its matrix cell is selected.  
 Exact removal happens in the phrase editor, not inside the cell.
 
+Matrix filters follow this structure:
+
+- one exclusive `View`
+- one contextual filter row for that view
+- row and column slicers built into the grid
+
+Coach `lane` is translated into a Matrix preset, not shown as a persistent Matrix control.
+
 ### Acceptance Criteria
 
 - grid remains the dominant surface
 - selected state is clear without being noisy
 - progress state and filter scope are visually distinct
 - deep links from Coach land in a meaningful matrix view
+- invalid filter combinations are prevented by design, not explained after the fact
 
 ---
 

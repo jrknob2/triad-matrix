@@ -408,11 +408,35 @@ Serve:
 - Flow D
 - Coach deep-link flow
 
+Rules:
+
+- Matrix has one exclusive `View` chooser:
+  - `Traits`
+  - `Progress`
+  - `Phrases`
+- each view exposes only the filters that belong to that view
+- row and column selectors are structural slicers, not part of the main filter bar
+- Coach may deep-link Matrix into a preset state, but Coach lane labels do not remain as a persistent Matrix control
+
 Examples:
 
-- lane controls
-- palette controls
-- grouped technique/combination controls
+- `Traits` view:
+  - `Right`
+  - `Left`
+  - `Kick`
+  - `Hands Only`
+  - `Has Kick`
+  - `Starts w/ Kick`
+  - `Ends w/ Kick`
+  - `Doubles`
+- `Progress` view:
+  - `Not Trained`
+  - `Active`
+  - `Needs Work`
+  - `Strong`
+- `Phrases` view:
+  - saved phrase selector
+  - current phrase builder context
 
 #### Phrase Editor
 
@@ -469,9 +493,11 @@ Show:
 
 ### Matrix Wording Rules
 
+- top-level Matrix controls must use concrete drummer-facing language
 - context text must explain the current slice
 - context text must not sound like Coach
 - action labels must stay imperative and short
+- Matrix must not expose abstract pedagogy labels as primary controls
 
 ---
 

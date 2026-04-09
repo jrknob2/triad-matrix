@@ -65,8 +65,7 @@ class _MatrixScreenState extends State<MatrixScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    final bool showBuildHeader = _showBuildHeader;
+    final bool showBuildHeader = _selectedItemIds.isNotEmpty;
     final MatrixFiltersV1 matrixFilters = MatrixFiltersV1(
       lane: _laneFocus,
       palette: _palette,
@@ -84,13 +83,8 @@ class _MatrixScreenState extends State<MatrixScreen> {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
         children: <Widget>[
-          Text(
-            'Triad Matrix',
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 10),
+          const DrumEyebrow(text: 'Lane'),
+          const SizedBox(height: 8),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
@@ -117,62 +111,61 @@ class _MatrixScreenState extends State<MatrixScreen> {
             const SizedBox(height: 10),
           ] else
             const SizedBox(height: 10),
-          if (showBuildHeader) ...<Widget>[
-            if (_laneFocus != null) ...<Widget>[
-              Align(
-                alignment: Alignment.centerLeft,
-                child: DrumTag(
-                  child: Text(
-                    _laneFocus!.label,
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      fontWeight: FontWeight.w900,
+          const DrumEyebrow(text: 'Filter'),
+          const SizedBox(height: 8),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: TriadMatrixFilterPaletteV1.values
+                  .map(
+                    (palette) => Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: DrumSelectablePill(
+                        label: _chipText(palette.label, _palette == palette),
+                        selected: _palette == palette,
+                        onPressed: () => _togglePalette(palette),
+                      ),
                     ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
-            ],
-            PatternSequenceEditor(
-              controller: widget.controller,
-              itemIds: _selectedItemIds,
-              onRemoveAt: _removeSelectedAt,
+                  )
+                  .toList(growable: false),
             ),
+          ),
+          if (_palette != null) ...<Widget>[
             const SizedBox(height: 10),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              child: Row(children: _buildActionPills()),
+              child: Row(children: _buildPaletteFilters()),
             ),
-          ] else ...<Widget>[
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: TriadMatrixFilterPaletteV1.values
-                    .map(
-                      (palette) => Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: DrumSelectablePill(
-                          label: _chipText(palette.label, _palette == palette),
-                          selected: _palette == palette,
-                          onPressed: () => _togglePalette(palette),
-                        ),
-                      ),
-                    )
-                    .toList(growable: false),
-              ),
-            ),
-            if (_palette != null) ...<Widget>[
-              const SizedBox(height: 10),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(children: _buildPaletteFilters()),
-              ),
-            ],
           ],
           if (_effectiveFilters.contains(
             TriadMatrixFilterV1.competency,
           )) ...<Widget>[
             const SizedBox(height: 10),
             const _ProgressLegendCard(),
+          ],
+          if (showBuildHeader) ...<Widget>[
+            const SizedBox(height: 10),
+            DrumPanel(
+              tone: DrumPanelTone.warm,
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  const DrumEyebrow(text: 'Phrase'),
+                  const SizedBox(height: 8),
+                  PatternSequenceEditor(
+                    controller: widget.controller,
+                    itemIds: _selectedItemIds,
+                    onRemoveAt: _removeSelectedAt,
+                  ),
+                  const SizedBox(height: 10),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(children: _buildActionPills()),
+                  ),
+                ],
+              ),
+            ),
           ],
           const SizedBox(height: 12),
           TriadMatrixGrid(
@@ -402,21 +395,6 @@ class _MatrixScreenState extends State<MatrixScreen> {
       _selectedComboIds.clear();
     });
   }
-
-  bool get _hasBlockingFilters {
-    return _selectedComboIds.isNotEmpty ||
-        _selectedRows.isNotEmpty ||
-        _selectedColumns.isNotEmpty ||
-        _manualFiltersAreActive;
-  }
-
-  bool get _manualFiltersAreActive {
-    final Set<TriadMatrixFilterV1> laneFilters = _lanePresetFilters();
-    return _filters.difference(laneFilters).isNotEmpty;
-  }
-
-  bool get _showBuildHeader =>
-      _selectedItemIds.isNotEmpty && !_hasBlockingFilters;
 
   Set<TriadMatrixFilterV1> get _effectiveFilters {
     return <TriadMatrixFilterV1>{..._filters, ..._lanePresetFilters()};
