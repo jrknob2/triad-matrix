@@ -2,721 +2,431 @@
 
 ## Purpose
 
-This document turns the app spec into a concrete screen map for v1.
+This document turns the app spec into explicit screen contracts.
 
 It answers:
 
-- what screens exist
-- how they connect
-- what each screen must show
-- what each screen must not do
+- what each main screen is for
+- what state each screen must support
+- what content belongs there
+- what content does not belong there
+- what mock scenarios are needed to test it properly
 
-This is a wire spec, not a visual design spec.
+This is the screen-contract spec the UI should now be built against.
 
 ---
 
 ## Navigation Model
 
-V1 uses a persistent app shell with four primary tabs:
+V1 uses a persistent shell with five primary tabs:
 
-1. `Home`
-2. `Library`
-3. `Routine`
-4. `Progress`
+1. `Coach`
+2. `Matrix`
+3. `Practice`
+4. `Focus`
+5. `Progress`
 
-Full-screen routes launched from the shell:
+Secondary routes:
 
-- `Practice Setup`
-- `Practice Session`
+- `Practice Item`
 - `Session Summary`
 - `Settings`
-- `Combination Builder`
-- `Custom Pattern Editor`
-- `Item Detail`
 
-Suggested route map:
-
-- `/` -> `AppShell`
-- `/practice/setup`
-- `/practice/session`
-- `/practice/summary`
-- `/settings`
-- `/builder/combination`
-- `/editor/custom-pattern`
-- `/item/:id`
+No `Practice Setup` screen exists in this model.
 
 ---
 
-## Screen List
+## 1. Coach
 
-### 1) App Shell
+### Purpose
 
-Purpose:
-- provide stable top-level navigation
+Coach tells the player what to do next and why.
 
-Persistent UI:
-- top app bar
-- current tab title
-- settings entry point
-- bottom navigation with 4 tabs
+### Must Do
 
-Tabs:
-- `Home`
-- `Library`
-- `Routine`
-- `Progress`
+- give a clear first action on first light
+- respond to whether the user has selected work but not practiced yet
+- point the player back to current work when momentum matters
+- surface cleanup needs
+- surface next-step opportunities
 
-Rules:
-- switching tabs must preserve tab state where practical
-- `Practice Session` should not live as a tab
+### Must Not Do
 
----
+- act like a dashboard
+- list all possible recommendations
+- explain internal ranking logic
+- duplicate Progress
 
-### 2) Home
+### Primary States
 
-Route:
-- `/`
+#### State A: First Light
 
-Purpose:
-- start quickly
-- show what matters now
+Condition:
 
-Top-to-bottom wire:
+- no meaningful practice history
+- no working-set items selected
 
-1. App bar
-   - title: `Drumcabulary`
-   - settings icon
+Must show:
 
-2. Quick start section
-   - primary button: `Start Practice`
-   - secondary button: `Generate For Me`
-   - tertiary button: `Continue Routine`
+- one getting-started card
+- recommended starter triads
+- `Add to Working On`
+- `Open the Matrix`
 
-3. Current focus section
-   - heading: `Currently Working On`
-   - up to 3 routine items
-   - action: `View Routine`
+#### State B: Working Set Selected, No Sessions Yet
 
-4. Recent sessions section
-   - last 3 to 5 sessions
-   - each row shows:
-     - item name
-     - duration
-     - context
-     - date
+Condition:
 
-5. Quick stats section
-   - total time this week
-   - single-surface time
-   - kit time
-   - triad time
-   - 5-note time
+- Focus contains items
+- no logged practice sessions yet
 
-Primary actions:
-- `Start Practice`
-- `Generate For Me`
-- `Continue Routine`
+Must show:
 
-Secondary actions:
-- tap recent session -> open `Item Detail`
-- tap focus item -> open `Item Detail`
+- one start-here card
+- clear instruction to begin first session
+- direct CTA to practice current work
 
-Empty states:
-- no routine -> show `Build your first routine`
-- no sessions -> show `Start your first session`
+Must not say things like:
 
-Must not include:
-- full generator controls
-- full competency editing UI
-- large analytics
+- `set the reference point`
+- `baseline`
+- `signal`
 
----
+#### State C: Early Work, Still Unstable
 
-### 3) Library
+Condition:
 
-Route:
-- shell tab
+- some sessions logged
+- little stable material
 
-Purpose:
-- browse all practice material
+Must show:
 
-Top-to-bottom wire:
+- one or two cards max
+- clear next action
+- evidence that feels concrete, not theoretical
 
-1. App bar
-   - title: `Library`
-   - search icon optional in v1
+#### State D: Active Development
 
-2. Family filter segmented control
-   - `Triads`
-   - `5s`
-   - `Custom`
-   - `Combos`
+Condition:
 
-3. Optional secondary filters
-   - `All`
-   - `In Routine`
-   - `Needs Practice`
+- active items with recent practice
 
-4. Item list
-   - card or list row per item
-   - row fields:
-     - item name or sticking
-     - family badge
-     - competency badge
-     - total time
-     - context split indicator
-     - routine indicator
+Must show blocks from:
 
-5. Floating or inline create actions
-   - `Build Combo`
-   - `New Custom Pattern`
+- `Focus`
+- `Needs Work`
+- `Momentum`
+- `Next Unlock`
 
-Primary actions on item:
-- tap row -> `Item Detail`
-- overflow:
-  - `Practice Now`
-  - `Add to Routine`
-  - `Rate Competency`
-  - `Build Combo`
-  - `Edit` for custom
+#### State E: Phrasing / Flow Readiness
 
-Must not include:
-- session transport
-- long-form analytics
+Condition:
+
+- strong enough material exists for phrase or flow expansion
+
+Must show:
+
+- next unlock toward phrase-building or flow
+- direct CTA to practice or open Matrix
+
+### Primary Actions
+
+- `Practice`
+- `See in Matrix`
+- `Add to Working On`
+- `Open the Matrix`
+
+### Mock Scenarios Required
+
+- `first_light`
+- `starter_items_selected`
+- `early_struggle`
+- `steady_progress`
+- `phrase_ready`
+- `flow_ready`
+
+### Acceptance Criteria
+
+- user should always know the next best action
+- no internal/framework wording may appear
+- no static filler cards may appear once real data exists
+- the screen should feel sparse, not busy
 
 ---
 
-### 4) Item Detail
+## 2. Matrix
 
-Route:
-- `/item/:id`
+### Purpose
 
-Purpose:
-- show one item as a first-class practice target
+Matrix is the structural map of the triad system and the main phrase-building surface.
 
-Applies to:
-- triad
-- 5-note grouping
-- custom pattern
-- saved combo
+### Must Do
 
-Top-to-bottom wire:
+- show the grid as the primary surface
+- support grouped filters
+- support assessment/progress overlays
+- support selection and phrase building
+- start practice directly
+- send material to Focus
 
-1. App bar
-   - back
-   - item name
+### Must Not Do
 
-2. Identity block
-   - sticking or combination
-   - family
-   - source
-   - tags
+- become a coaching feed
+- hide the grid behind too much supporting UI
+- use per-cell editing controls for exact sequence editing
 
-3. Competency block
-   - current level
-   - `Edit Competency`
+### Primary States
 
-4. Practice history block
-   - total time
-   - single-surface time
-   - kit time
-   - recent sessions count
+#### State A: Browsing
 
-5. Actions block
-   - `Practice Now`
-   - `Add to Routine` or `Remove from Routine`
-   - `Build Combo`
-   - `Edit` if custom
+- filters active or inactive
+- no phrase being built
 
-6. Optional notes block for later
+#### State B: Selection / Phrase Building
 
-Must not include:
-- full routine editor
-- multi-item builder UI
+- one or more items selected
+- phrase editor visible above grid
+- action row visible
 
----
+#### State C: Deep-Linked From Coach
 
-### 5) Routine
+- specific filter or palette already active
+- context visible but lightweight
 
-Route:
-- shell tab
+### Primary Actions
 
-Purpose:
-- manage active work
+- `Single Surface`
+- `Flow`
+- `Add to Working On`
+- `Save Phrase`
+- `See Item`
+- `Clear`
 
-Top-to-bottom wire:
+### Interaction Rule
 
-1. App bar
-   - title: `Routine`
+The grid shows membership.  
+The phrase editor shows order.
 
-2. Routine header
-   - current routine name
-   - total items
-   - quick duration summary from recent practice
+If an item appears anywhere in the phrase, its matrix cell is selected.  
+Exact removal happens in the phrase editor, not inside the cell.
 
-3. Primary actions row
-   - `Start Routine`
-   - `Start Random Item`
-   - `Edit Order`
+### Acceptance Criteria
 
-4. Routine item list
-   - drag handles for reorder
-   - each row shows:
-     - name
-     - family
-     - competency
-     - last practiced
-     - context badges if useful
-
-5. Archived or inactive section optional later
-
-Item actions:
-- tap row -> `Item Detail`
-- swipe or overflow:
-  - `Practice`
-  - `Remove`
-  - `Archive`
-
-Empty state:
-- message explaining routine purpose
-- button: `Add Items from Library`
-
-Must not include:
-- library browsing for all items
+- grid remains the dominant surface
+- selected state is clear without being noisy
+- progress state and filter scope are visually distinct
+- deep links from Coach land in a meaningful matrix view
 
 ---
 
-### 6) Progress
+## 3. Practice
 
-Route:
-- shell tab
+### Purpose
 
-Purpose:
-- show tracked development
+Practice gives the user a direct way to start playing and then executes the session cleanly.
 
-Top-to-bottom wire:
+### Must Do
 
-1. App bar
-   - title: `Progress`
+- exist as a primary tab
+- support direct-entry practice choices
+- support repeat-last-session
+- support practice-from-Focus
+- support warmup
+- run the session player with minimal friction
 
-2. Section switcher
-   - `Competency`
-   - `Time`
-   - `Coverage`
-   - `Contexts`
+### Must Not Do
 
-3. Content area depends on active section
+- act like another Coach screen
+- hide behind other surfaces
+- overload the player with setup UI
 
-#### Competency view
+### Primary States
 
-Shows:
-- overall self-ranked level
-- per-item competency list
-- filter by family
+#### State A: Direct Entry
 
-#### Time view
+Must show:
 
-Shows:
-- total time this week
-- total time by family
-- total time by item
-- recent trends if simple
+- `Repeat Last Session`
+- `Practice Working On`
+- `Warm Up`
+- `Choose From Working On`
 
-#### Coverage view
+Optional later:
 
-Shows:
-- under-practiced routine items
-- items never practiced on kit
-- items not practiced recently
+- `Recent Sessions`
 
-#### Contexts view
+#### State B: Normal Session
 
-Shows:
-- single-surface time vs kit time
-- core-skills time vs flow time
-- family split inside each context
+Must show:
 
-Actions:
-- tap item row -> `Item Detail`
-- edit competency from competency view
+- player panel
+- notation
+- pulse / click / BPM / timer
+- prev/next when source contains multiple items
+- `End Session`
 
-Must not include:
-- session transport
+#### State C: Warmup Session
 
----
+Must show:
 
-### 7) Settings
+- warmup title
+- current rudiment name
+- notation
+- pulse / click / BPM / timer
+- prev/next
+- `End Warmup`
 
-Route:
-- `/settings`
+Warmup rules:
 
-Purpose:
-- global preferences
+- 1 minute per exercise
+- continuous deck timer
+- auto-advance
+- untracked
 
-Top-to-bottom wire:
+### Acceptance Criteria
 
-1. App bar
-   - back
-   - title: `Settings`
-
-2. Player section
-   - handedness
-   - overall self-ranked level
-
-3. Practice defaults section
-   - default BPM
-   - default timer target
-   - click default
-
-4. Flow defaults section
-   - default fill length
-   - landing behavior summary
-
-5. Future section if needed
-   - export/import later
-
-Must not include:
-- per-item competency editing
-- practice session content
+- user can reach practice directly from nav
+- session player feels like an execution surface, not a config form
+- warmup behaves like temporary prep, not core curriculum
 
 ---
 
-### 8) Practice Setup
+## 4. Focus
 
-Route:
-- `/practice/setup`
+### Purpose
 
-Purpose:
-- configure one practice session
+Focus is the current working set.
 
-Entry points:
-- `Start Practice`
-- `Generate For Me`
-- `Practice Now`
-- `Start Routine`
+### Must Do
 
-Top-to-bottom wire:
+- show the active items cleanly
+- support play
+- support edit/open
+- support remove
+- support add from Coach/Matrix
 
-1. App bar
-   - back
-   - title: `Practice Setup`
+### Must Not Do
 
-2. Material source section
-   - selected item summary if prefilled
-   - or source selector:
-     - `Library Item`
-     - `Routine Item`
-     - `Generated`
+- behave like Coach
+- behave like Progress
+- contain internal teaching philosophy copy
 
-3. Material family section
-   - `Triad`
-   - `5-Note`
-   - `Custom`
+### Primary States
 
-4. Intent section
-   - `Core Skills`
-   - `Flow`
+#### State A: Empty
 
-5. Context section
-   - `Single Surface`
-   - `Kit`
+Must show:
 
-6. Session controls
-   - BPM
-   - timer target
-   - click toggle
+- what Focus is for
+- how to add items
 
-7. Generator options
-   - visible only if source is `Generated`
-   - fields:
-     - `Weak Items`
-     - `Under-Practiced`
-     - `Routine-Based`
-     - combo length
+#### State B: Active Working Set
 
-8. Flow options
-   - visible only if intent is `Flow`
-   - fields:
-     - fill length
-     - landing behavior summary
-     - groove frame summary
+Must show:
 
-9. Primary CTA
-   - `Start Session`
+- current items
+- simple item controls
 
-Rules:
-- this is the only place where setup knobs belong
-- if entering from a known item, prefill as much as possible
+Optional:
+
+- section toggle between single-surface and flow-friendly items
+
+### Per-Item Controls
+
+- play
+- edit
+- remove
+
+### Acceptance Criteria
+
+- Focus should read as CRUD for current work
+- the user should never wonder whether an item is “saved”, “mastered”, or “current”
+- there should be no fake summary cards trying to turn this into a dashboard
 
 ---
 
-### 9) Practice Session
+## 5. Progress
 
-Route:
-- `/practice/session`
+### Purpose
 
-Purpose:
-- run the active practice session with minimal friction
+Progress measures development.
 
-Top-to-bottom wire:
+### Must Do
 
-1. App bar or minimal header
-   - back only if safe
-   - title may collapse to item name
+- show overall trends
+- show item-level progress
+- show group/category progress
+- show coverage
+- show useful summaries over time
 
-2. Item identity block
-   - item name
-   - family
-   - intent
-   - context
+### Must Not Do
 
-3. Main notation block
-   - sticking or sequence
-   - for flow:
-     - show landing marker
-     - show return-to-groove marker if supported
+- sound like Coach
+- repeat Focus
+- explain internal status systems to the user
 
-4. Transport row
-   - play / pause
-   - BPM controls
-   - click toggle
-   - timer
+### Recommended Views
 
-5. Sequence controls if needed
-   - previous
-   - next
-   - only for combos or routines
+#### Overview
 
-6. Session utility row
-   - `Add to Routine`
-   - `End Session`
+- total time
+- recent activity trend
+- coverage summary
 
-Rules:
-- no deep configuration panels
-- no large analytics
-- notation must remain dominant
+#### By Item
 
----
+- item list with progress state
+- logged time
+- recent work
 
-### 10) Session Summary
+#### By Group
 
-Route:
-- `/practice/summary`
+- hands-only vs kick-containing
+- right-lead vs left-lead
+- later, phrase families
 
-Purpose:
-- close the session and save useful information
+#### Trend
 
-Top-to-bottom wire:
+- practice over time
+- maybe time by week
 
-1. App bar
-   - close
-   - title: `Session Summary`
+### Acceptance Criteria
 
-2. Session stats block
-   - practiced item(s)
-   - duration
-   - BPM
-   - intent
-   - context
-
-3. Reflection block
-   - segmented:
-     - `Easy`
-     - `Okay`
-     - `Hard`
-
-4. Competency prompt
-   - optional:
-     - `Update Competency`
-
-5. Routine prompt
-   - `Keep in Routine`
-   - `Add to Routine`
-
-6. Primary actions
-   - `Done`
-   - `Practice Again`
-
-Rules:
-- summary must be fast
-- reflection must stay optional
+- Progress should feel like measurement, not recommendation
+- counts and labels must match the visible scope
+- no copy like “this is the same status language used by Coach and Matrix”
 
 ---
 
-### 11) Combination Builder
+## 6. Practice Item
 
-Route:
-- `/builder/combination`
+### Purpose
 
-Purpose:
-- assemble saved material into a named sequence
+Practice Item is the detail/edit screen for one piece of material.
 
-Top-to-bottom wire:
+### Must Do
 
-1. App bar
-   - back
-   - title: `Build Combo`
+- show the pattern clearly
+- show competency/assessment summary
+- allow accent/ghost editing
+- allow flow voice assignment
+- allow launch into `Single Surface` or `Flow`
+- allow opening that item in Matrix
 
-2. Combo metadata
-   - name field
-   - intent tag:
-     - `Core Skills`
-     - `Flow`
-     - `Both`
+### Must Not Do
 
-3. Source picker area
-   - choose from:
-     - triads
-     - 5-note groupings
-     - custom patterns
+- duplicate session execution UI
+- contain unnecessary supporting chips that repeat the visible pattern
 
-4. Selected sequence area
-   - ordered chips or list
-   - remove
-   - reorder
-   - duplicate
+### Acceptance Criteria
 
-5. Preview area
-   - resulting sticking display
-
-6. Primary action
-   - `Save Combo`
-
-Rules:
-- builder must be explicit and ordered
-- no hidden auto-generation inside a user-built combo
+- the pattern display is the primary signal
+- controls under it are clearly for editing the item, not playing it
 
 ---
 
-### 12) Custom Pattern Editor
+## Mock-State QA Requirement
 
-Route:
-- `/editor/custom-pattern`
+Before major UI work is considered done, each main screen must be checked against its required states using explicit mock scenarios.
 
-Purpose:
-- let the user define non-triad material
-
-Top-to-bottom wire:
-
-1. App bar
-   - back
-   - title: `Custom Pattern`
-
-2. Name field
-
-3. Pattern input field
-   - sticking text
-
-4. Metadata fields
-   - tags
-   - notes optional
-
-5. Validation block
-   - show if syntax is invalid
-
-6. Primary action
-   - `Save Pattern`
-
-Rules:
-- custom material must become a first-class library item
-
----
-
-## Screen-to-Screen Flow Summary
-
-### Home
-
-- `Start Practice` -> `Practice Setup`
-- `Generate For Me` -> `Practice Setup` with source=`generated`
-- `Continue Routine` -> `Routine` or direct `Practice Setup`
-- recent/focus item -> `Item Detail`
-
-### Library
-
-- item row -> `Item Detail`
-- `Build Combo` -> `Combination Builder`
-- `New Custom Pattern` -> `Custom Pattern Editor`
-
-### Item Detail
-
-- `Practice Now` -> `Practice Setup`
-- `Build Combo` -> `Combination Builder`
-- `Edit` -> `Custom Pattern Editor`
-
-### Routine
-
-- `Start Routine` -> `Practice Setup`
-- item row -> `Item Detail`
-
-### Practice Setup
-
-- `Start Session` -> `Practice Session`
-
-### Practice Session
-
-- `End Session` -> `Session Summary`
-
-### Session Summary
-
-- `Done` -> previous shell tab or `Home`
-- `Practice Again` -> `Practice Setup`
-
----
-
-## V1 Guardrails
-
-### Guardrail 1
-
-`Practice Setup` owns configuration.
-`Practice Session` owns execution.
-
-Do not blur them.
-
-### Guardrail 2
-
-`Routine` is not `Favorites`.
-
-Routine means:
-- currently working on
-- intentionally tracked
-
-### Guardrail 3
-
-`Progress` must keep competency separate from time logged.
-
-Time is history.
-Competency is self-assessment.
-
-### Guardrail 4
-
-`Flow` requires visible phrase closure.
-
-If a flow session cannot show where the phrase lands, the feature is incomplete.
-
-### Guardrail 5
-
-Custom patterns must behave like first-class items, not hidden notes.
-
----
-
-## First Wireframe Slice To Build
-
-The recommended first end-to-end slice is:
-
-1. `App Shell`
-2. `Home`
-3. `Library`
-4. `Routine`
-5. `Progress`
-6. `Settings`
-7. `Practice Setup`
-8. `Practice Session`
-9. `Session Summary`
-
-The recommended second slice is:
-
-1. `Item Detail`
-2. `Combination Builder`
-3. `Custom Pattern Editor`
-
-This keeps the rebuild on a usable practice loop before adding editors and advanced builders.
+No screen should be judged “done” only by looking at a happy-path live state.

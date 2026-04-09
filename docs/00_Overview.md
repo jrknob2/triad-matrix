@@ -99,6 +99,22 @@ If the answer is unclear, we simplify.
 
 ---
 
+## Current Product Shape
+
+The current v1 product model is organized around five surfaces:
+
+- `Coach`
+- `Matrix`
+- `Practice`
+- `Focus`
+- `Progress`
+
+Each one has a different job.
+
+If two screens start doing the same kind of work, the product is drifting.
+
+---
+
 ## Long-Term Vision (Context Only)
 
 While v1 is intentionally small, the long-term vision includes:

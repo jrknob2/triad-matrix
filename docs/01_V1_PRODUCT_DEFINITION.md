@@ -2,203 +2,162 @@
 
 ## V1 Goal (Locked)
 
-> Ship a **simple, focused triad practice tool** that a drummer can open, press play, and immediately practice something that makes musical and physical sense.
+> Ship a focused drumming practice app that helps a player turn short patterns into usable musical vocabulary.
 
-If a feature does not directly support this goal, it does not belong in v1.
+V1 is not trying to be a full drum curriculum. It is trying to make a specific kind of work clear, repeatable, and worth coming back to.
 
 ---
 
-## The Job To Be Done
+## Core Promise
 
-“When I sit down to practice, I want:
-- a clear sticking pattern,
-- a tempo I control,
-- a click,
-- and a reason to keep playing it for a while.”
+Drumcabulary helps a drummer move from:
 
-V1 exists to serve that exact moment — not exploration, curation, or configuration.
+- isolated sticking
+- to grouped patterns
+- to repeatable phrases
+- to musical application
+
+The app should make that progression feel deliberate, not accidental.
 
 ---
 
 ## What V1 Must Do
 
-### Core capabilities (non-negotiable)
+V1 must support:
 
-V1 **must** provide:
-
-1. **Triad pattern generation**
-   - Hands-only and hands+kick
-   - Musically valid constraints (no physical nonsense)
-   - Clear phrase structure (not endless randomness)
-
-2. **Clear visual communication**
-   - Stickings are always the primary signal
-   - Accents clearly marked with `^`
-   - No ambiguity about what limb is playing what
-
-3. **Play control**
-   - Play / Stop
-   - BPM – / +
-   - Simple metronome (click)
-
-4. **Practice timer**
-   - Optional
-   - Starts when Play starts
-   - Stop / Reset
-   - Presets: none, 5, 10, 30 minutes
-
-5. **Modes with intent**
-   - Modes define *why* you are practicing
-   - Modes set defaults instead of exposing knobs
+1. practicing triads as the core material system
+2. building longer phrases from triads
+3. practicing any phrase in either:
+   - `Single Surface`
+   - `Flow`
+4. assigning kit voices in `Flow`
+5. keeping a simple active working set
+6. guiding the player from `Coach`
+7. exposing the full triad system in `Matrix`
+8. allowing direct entry into `Practice`
+9. measuring development in `Progress`
+10. supporting optional warmups without polluting coaching or progress
 
 ---
 
-## V1 Modes (Locked)
+## Top-Level Product Model
 
-V1 supports **two modes only**.
+V1 is organized around five main surfaces:
 
-### Training Mode
-Purpose: deliberate development and control.
+1. `Coach`
+   - decides what matters now
+   - gives the player a clear next step
 
-Defaults:
-- Shorter phrases
-- More repetition
-- Stable orchestration
-- Supports infinite looping (∞)
+2. `Matrix`
+   - shows the triad system
+   - supports filtering, analysis, and phrase building
 
-Use case:
-> “I want to drill this until it’s automatic.”
+3. `Practice`
+   - gives the player a direct way to start playing
+   - supports repeating the last session, practicing `Working On`, or warming up
 
----
+4. `Focus`
+   - holds the current working set
+   - acts primarily as CRUD for active practice items
 
-### Flow Mode
-Purpose: musical continuity and movement.
-
-Defaults:
-- Longer phrases
-- Fewer hard resets
-- Encourages motion and phrasing
-
-Use case:
-> “I want this to feel like something I could actually play in music.”
+5. `Progress`
+   - shows measurement, trends, and coverage
+   - does not coach
 
 ---
 
-## Instrument Context (Not a Mode)
+## Practice Modes
 
-Instrument setup describes **what you are practicing on**, not your goal.
+V1 supports two practice modes:
 
-V1 supports three contexts:
+### Single Surface
 
-1. **Pad**
-   - Hands only
-   - Single surface
-   - Visually treated as snare (`S`)
+Purpose:
 
-2. **Pad + Kick**
-   - Hands + kick
-   - Still a single hand surface
-   - No orchestration complexity
+- control
+- timing
+- balance
+- phrase retention
 
-3. **Kit**
-   - Hands + kick
-   - Voice assignment enabled
-   - Designed for movement and flow
+Characteristics:
 
-Instrument context affects rendering and generator rules — **not mode**.
+- one surface for the hands
+- no kit orchestration requirement
+- direct repetition
 
----
+### Flow
 
-## Visual Language (V1)
+Purpose:
 
-### Stickings
-- Always primary
-- Always fully opaque
-- No fading in v1
+- voice assignment
+- movement around the kit
+- musical contour
+- phrase application
 
-### Accents
-- Marked with `^`
-- Can apply to **any limb**, including kick
+Characteristics:
 
-### Ghost notes (conceptual)
-Unaccented notes are *conceptually* ghosted, but **not visually faded** in v1.
+- note-level voice assignment
+- same phrase as single-surface work
+- kit application matters
 
-Footer copy (exact text):
+Important rule:
 
-> **Accents are marked with `^` ○ Unaccented notes are ghost notes**
-
-(The separator is a mid-dot / divider — not the letter “O”.)
+The phrase is the material.  
+The mode is how it is practiced.
 
 ---
 
-## Voice Assignment Rules (V1)
+## Warmup
 
-These rules are mandatory for drummer trust:
+Warmup is part of the practice experience, but it is not part of the coaching model.
 
-1. **Every note has a voice internally**
-   - Even if not every label is rendered
+Warmup in v1 should be:
 
-2. **No voice hopping on doubles**
-   - RR or LL must stay on the same surface
+- optional
+- easy to start
+- fixed and familiar
+- untracked
 
-3. **Consistent mapping within a phrase**
-   - The UI must never imply impossible movement
+Warmup should not:
 
-4. **Pad modes use snare (`S`)**
-   - No “P” voice in v1
-
----
-
-## Generator Guardrails (V1)
-
-The generator must favor **musical validity over permutation coverage**.
-
-Rules:
-- Patterns should feel intentional
-- Accents should imply phrasing, not decoration
-- Randomness is acceptable only within physical and musical constraints
-
-V1 may include:
-- A **small set of canonical / well-known triad sequences**
-- Safe variations derived from them
-
-V1 should *not* attempt exhaustive permutation coverage.
+- affect Coach
+- affect Matrix progress coloring
+- affect Progress metrics
+- affect toolbox readiness
 
 ---
 
-## What Is Explicitly Out of Scope for V1
+## What V1 Is Not
 
-V1 does **not** include:
+V1 is not:
 
-- Genre selection
-- Favorites or pattern saving
-- Pattern naming or tagging UI
-- Advanced rule editors
-- Animated drum kits
-- DraftX rendering
-- Coverage analytics beyond basic use
-
-These are documented separately to avoid scope creep.
+- a general drum practice logger
+- a favorites manager
+- a notation editor
+- a full rudiment system
+- an exhaustive permutation explorer
+- a lesson course with long text instruction
 
 ---
 
-## Success Criteria for V1
+## Guardrails
+
+1. `Coach` must never read like internal framework text.
+2. `Progress` must never read like coaching copy.
+3. `Focus` must not become a dashboard.
+4. `Practice` must be reachable directly from the bottom navigation.
+5. `Warmup` must remain optional and untracked.
+6. `Matrix` must stay structural and interactive, not collapse into a passive heatmap.
+
+---
+
+## Success Criteria
 
 V1 is successful if:
 
-- A drummer can open the app and start practicing in under **5 seconds**
-- Patterns feel intentional, not random
-- Nothing on screen feels like “settings for the sake of settings”
-- The app encourages *playing*, not tweaking
-
-If a drummer forgets they are using an app and just practices, v1 succeeded.
-
----
-
-## Guardrail
-
-If a future idea requires explanation longer than:
-
-> “This helps you practice triads better”
-
-…it does not belong in v1.
+- a new user can open the app and know where to start
+- a returning user can get into practice without hunting for the right entry point
+- the active working set feels clean and manageable
+- Coach feels useful, not generic
+- Progress feels like measurement, not recycled guidance
+- the app helps the player practice more, not configure more

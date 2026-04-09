@@ -1,734 +1,242 @@
-# Alignment Execution Plan
+# 09 — Alignment Execution Plan
 
 ## Purpose
 
-This document converts the teaching reset into a concrete product direction and execution plan.
+This document resets implementation around the current product direction.
 
-It captures product-owner decisions made after the reset and turns them into:
+It exists because the app improved locally but drifted globally. The product now needs explicit screen contracts, mock states, and acceptance criteria before more feature work.
 
-- product framing
-- screen responsibilities
-- MVP boundaries
-- data/model implications
-- post-MVP expansion points
+This plan is the bridge from the current app to a tighter v1.
 
-This is the working plan to align the app with a clearer teaching philosophy before more feature work.
+---
 
-## Locked Product Decisions
+## What Went Wrong
 
-These decisions are now assumed unless explicitly changed later.
+The team made progress, but several things happened at once:
 
-### 1. Core promise
+- old specs stayed in the repo
+- new behaviors were layered onto outdated screen assumptions
+- local fixes landed before screen purposes were frozen
+- UI consistency improved in pieces, not as a locked system
 
-The app's core promise is:
+Result:
 
-**turn pattern material into musical vocabulary**
+- screens started overlapping in purpose
+- wording drifted
+- counts and labels lost trust
+- the app began to feel assembled rather than designed
 
-That includes:
+---
 
-- single triads
-- triad combinations
-- longer phrases built from several triads
-- later, 5-note groupings as an expansion family
+## Locked Reset Decisions
 
-The app is not primarily about:
+These are now the baseline assumptions.
 
-- collecting patterns
-- catalog completion
-- storing favorite ideas
-- generalized drummer level
+### 1. App navigation
 
-### 2. 5-note groupings
+Primary tabs:
 
-5-note grouping is a **post-triad expansion**.
-
-It is important, but it should not compete with establishing the triad system first.
-
-### 3. Custom patterns
-
-Users should be able to add any pattern they like as custom phrasing.
-
-But custom patterns should not distort the app's teaching priorities.
-
-Therefore custom patterns should:
-
-- live in a separate bucket
-- be easy to practice on demand
-- be easy to hear and review
-- not be included in core coaching analysis
-- not affect matrix coverage or triad progression logic
-- not dilute the app's recommendations about what matters most
-
-### 4. Focus / Working On repositioning
-
-The current `Toolkit` concept should be repositioned.
-
-Two distinct ideas exist and should not be conflated:
-
-- material the student is **working on now**
-- material the student has **earned and can call on musically**
-
-Those are different product surfaces.
-
-### 5. Today recommendations
-
-`Today` should recommend work across the teaching spine rather than only surface a generic ranked list.
-
-That means Today should help maintain momentum in the meaningful lanes of development.
-
-### 6. Combo practice distinction
-
-The app must clearly distinguish between:
-
-- a phrase as material
-- the mode in which that phrase is practiced
-
-Any triad combination should be practiceable in either:
-
-- `single surface`
-- `flow`
-
-The distinction is not the phrase itself. The distinction is the presence or absence of voice assignment and kit application.
-
-### 7. Flow matters in the core vision
-
-The app must support **flow**:
-
-- applying patterns to the kit
-- assigning voices
-- hearing how the phrase works musically
-
-This does not need to be fully realized in MVP, but the design must make room for it from the start.
-
-## Product Framing
-
-### Recommended product sentence
-
-Drumcabulary helps drummers turn triads and related linear phrases into usable musical vocabulary through guided work in control, balance, dynamics, phrasing, and kit application.
-
-### What the app teaches
-
-The app teaches a progression:
-
-1. own the cell
-2. own both leads
-3. shape the cell dynamically
-4. combine cells into phrases
-5. move phrases onto the kit
-6. turn phrases into usable vocabulary
-
-### What the app does not try to be
-
-At MVP, it should not try to be:
-
-- a universal drum curriculum
-- a full rudiment trainer
-- a notation editor
-- a general drum practice logger
-
-## Naming Model
-
-### Current problem
-
-`Toolkit` is currently overloaded.
-
-It is trying to mean:
-
-- current work
-- saved material
-- combos
-- customs
-- mastered material
-
-That creates conceptual blur.
-
-### Recommended naming
-
-#### 1. `Today`
-
-Daily direction and assignments.
-
-#### 2. `Matrix`
-
-Vocabulary map, analysis surface, and combo-builder entry point.
-
-#### 3. `Focus`
-
-The main-tab label should be `Focus`.
-
-The screen title can read `Working On`.
-
-This replaces the current broad meaning of `Toolkit`.
-
-`Focus / Working On` is the active working set:
-
-- current assignments
-- active combos
-- phrases under development
-
-#### 4. `Library`
-
-Optional later surface for saved customs, references, and user-kept materials.
-
-This does not need to be a main MVP tab.
-
-#### 5. `Progress`
-
-Retention, balance, coverage, milestones.
-
-#### 6. `Toolbox`
-
-This is a valid and useful name, but it should mean something specific:
-
-**material that is reliable enough to call on musically**
-
-So yes, `Toolbox` is a good name for mastered / available-on-demand vocabulary.
-
-It should not be the same thing as:
-
-- routine
-- work in progress
-- saved favorites
-
-### Recommendation
-
-Use:
-
-- `Focus` for the tab label
-- `Working On` for the active development screen title
-- `Toolbox` for earned, ready-to-use material
-- `Custom` as a bucket inside `Library` or a sub-area of `Focus`, but excluded from coaching analysis
-
-## Teaching Spine
-
-The app should explicitly organize around these lanes.
-
-### 1. Control
-
-Goal:
-
-- even sound
-- relaxed motion
-- stable pulse
-
-Typical material:
-
-- hands-only triads
-- repeated single cells
-
-### 2. Balance
-
-Goal:
-
-- right-lead / left-lead symmetry
-- non-dominant-side development
-
-Typical material:
-
-- mirrored lead work
-- opposite-lead pairs
-
-### 3. Dynamics
-
-Goal:
-
-- accent/tap contrast
-- ghost-note control
-- touch and shape
-
-Typical material:
-
-- accented triads
-- ghosted inner notes
-
-### 4. Integration
-
-Goal:
-
-- clean kick inclusion
-- stable linear coordination
-
-Typical material:
-
-- kick-containing triads
-- starts/ends-with-kick studies
-
-### 5. Phrasing
-
-Goal:
-
-- longer phrase retention
-- transitions between cells
-- fill language and grouping awareness
-
-Typical material:
-
-- 2-cell combos
-- 3- to 5-triad phrases
-- later, 5-note grouping studies
-
-### 6. Flow
-
-Goal:
-
-- orchestrated kit movement
-- voice assignment
-- musical continuity
-- usable fill/groove vocabulary
-
-Typical material:
-
-- orchestrated combos
-- voice-mapped phrases
-- later, playback and animated kit guidance
-
-## Single-Surface Practice vs Flow Practice
-
-This distinction needs to be explicit in the product.
-
-### Phrase-first model
-
-A combo is a phrase.
-
-The same phrase can be used to:
-
-- develop core control on one surface
-- develop flow through voice assignment and kit application
-
-That means the app should not permanently classify a combo as either "core skill" or "flow."
-
-Instead:
-
-- `phrase` is the material
-- `practice mode` is how the player works on it
-
-### Single-Surface Practice
-
-Purpose:
-
-- build control
-- reinforce transitions
-- develop stamina
-- expose weak links
-
-Characteristics:
-
-- often practiced on one surface
-- limited orchestration
-- clear repeated phrase loops
-- often symmetrical or intentionally corrective
-
-Typical examples:
-
-- mirrored lead pairings
-- repeated two-cell transitions
-- weak-side-biased phrases
-
-### Flow Practice
-
-Purpose:
-
-- build musical movement
-- develop phrasing across surfaces
-- teach voice assignment and contour
-- create usable fill and vocabulary language
-
-Characteristics:
-
-- assigned voices
-- surface movement matters
-- dynamic shape matters
-- phrasing is more important than raw repetition
-
-Typical examples:
-
-- a 4-triad phrase voiced across snare, toms, and kick
-- an accent-led phrase with clear contour
-- a linear fill phrase intended to be heard, not just drilled
-
-### Product implication
-
-Any phrase should be able to open in either:
-
-- `singleSurface`
-- `flow`
-
-`Flow` should mean:
-
-- note-level voice assignment
-- eventual kit visualization
-- eventual flow playback
-
-## Today: Recommended Analysis and Output Model
-
-### Today should recommend by lane
-
-Rather than one undifferentiated feed, Today should surface one recommendation per teaching lane, or per a selected subset of lanes.
-
-Recommended structure:
-
-- `Control`
-- `Balance`
-- `Dynamics`
-- `Integration`
-- `Phrasing`
-- `Flow`
-
-Each lane should answer:
-
-- what is recommended
-- why
-- what action is available now
-
-### Lane-specific recommendation angles
-
-#### Control
-
-Look at:
-
-- under-practiced hands-only triads
-- triads with high reflection difficulty
-- items with time logged but low competency
-
-#### Balance
-
-Look at:
-
-- lead-side imbalance
-- missing opposite-lead coverage
-- right-heavy or left-heavy routine patterns
-
-#### Dynamics
-
-Look at:
-
-- items practiced plain but not dynamically
-- items with accents but no ghost-note work
-- dynamic studies neglected recently
-
-#### Integration
-
-Look at:
-
-- kick-containing cells with low time
-- starts/ends-with-kick blind spots
-- kick material avoided relative to hands-only work
-
-#### Phrasing
-
-Look at:
-
-- overreliance on single-cell work
-- combos with low revisit frequency
-- transitions that have time but low confidence
-
-#### Flow
-
-Look at:
-
-- phrases flagged for kit application but not yet voiced
-- phrases worked on pad only
-- orchestrated phrases not revisited
-
-### Recommended Today layout
-
-#### Hero
-
-Should identify today's primary lane:
-
-- "Today centers on Balance."
-- "Today centers on Phrasing."
-
-Not hard-coded inspiration. A true lane decision.
-
-#### Lane cards
-
-Each lane card should include:
-
-- lane name
-- short teacher-style reason
-- one featured item or phrase
-- action button
-
-Potential actions:
-
-- `Practice`
-- `Open in Matrix`
-- `Add to Focus`
-- `Voice for Flow`
-
-#### Momentum strip
-
-Below lane cards:
-
-- one `Close to Toolbox` item
-- one `Neglected` item
-- one `Recent Win` or `Needs Review` item
-
-This gives continuity without overpowering the lane structure.
-
-## MVP Scope
-
-### Main screens
-
-Recommended main navigation for MVP:
-
-1. `Today`
+1. `Coach`
 2. `Matrix`
-3. `Focus`
-4. `Progress`
+3. `Practice`
+4. `Focus`
+5. `Progress`
 
-Settings remains secondary.
+### 2. Screen purposes
 
-### Today
+- `Coach` = what to do next
+- `Matrix` = the triad map and phrase builder
+- `Practice` = direct entry plus execution
+- `Focus` = current-work CRUD
+- `Progress` = measurement
 
-Must do:
+### 3. Warmup
 
-- generate lane-based recommendations from actual data
-- use teacher voice
-- start practice directly
-- move items into active work
+Warmup is:
 
-Should not do:
+- optional
+- untracked
+- disposable
 
-- act like a static dashboard
-- use hard-coded headline logic
+Warmup is not part of the coached curriculum state.
 
-### Matrix
+### 4. Progress
 
-Must do:
+Progress must move away from recommendation cards and toward actual measurement:
 
-- remain the central vocabulary surface
-- support analysis filters
-- support phrase building
-- support sending selected material to Work
-- support starting practice
+- trends
+- per-item progress
+- per-group progress
+- coverage
 
-Should later do:
+### 5. Coach
 
-- support flow voice previews
-- support more explicit teaching-stage overlays
+Coach must be designed against explicit states, not only live organic data.
 
-### Focus
+### 6. Mock data
 
-Must do:
+Named mock scenarios are required product infrastructure, not debugging scaffolding.
 
-- hold active assignments
-- separate active combos from custom bucket
-- surface why an item is here
-- support direct practice
+---
 
-Should not do:
+## Required Mock Scenarios
 
-- become a junk drawer
+These scenarios must be supported so the main screens can be designed and tested properly.
 
-### Progress
+1. `first_light`
+2. `starter_items_selected`
+3. `early_struggle`
+4. `steady_progress`
+5. `phrase_ready`
+6. `flow_ready`
 
-Must do:
+Each scenario should produce meaningful states for:
 
-- show retention
-- show balance
-- show coverage
-- show near-toolbox candidates
+- Coach
+- Practice
+- Focus
+- Progress
 
-Should not do:
+---
 
-- overvalue custom patterns
-- flatten all families into one undifferentiated leaderboard
+## Phase Plan
 
-### Practice Session
+### Phase 1. Freeze product contracts
 
-Must do:
+Goal:
 
-- make phrase visually dominant
-- support session-only dynamic edits
-- show lane / purpose
-- support direct logging
+- stop coding against stale or overlapping assumptions
 
-Should later do:
+Tasks:
 
-- support auditory reference playback
-- support flow voice playback
-- support animated kit guidance
+- update `01`, `06`, and `07` to the new product model
+- remove reliance on the old `Home / Library / Routine / Practice Setup` architecture
+- lock screen purposes
+- lock screen-level acceptance criteria
 
-## Data Model Implications
+Status:
 
-### Practice items
+- current phase
 
-Built-in triads and structured combos should stay central to tracked analysis.
+### Phase 2. Add mock-state infrastructure
 
-Custom patterns should be explicitly flagged:
+Goal:
 
-- `includeInCoaching = false`
-- `includeInCoverage = false`
-- `includeInToolboxEligibility = false`
+- make screen design testable
 
-This preserves freedom without diluting the teaching system.
+Tasks:
 
-### Combos
+- create named app-state fixtures
+- make them selectable in dev/debug builds
+- ensure they fully exercise Coach, Practice, Focus, and Progress
 
-Combos need clearer structure than the current model.
+Outcome:
 
-Add or redefine:
+- the team can design and QA stateful UI without corrupting live data
 
-- `isBuiltFromTriads`: bool
-- `voiceAssignments`: editable when practicing in flow
-- `toolboxEligible`: bool
+### Phase 3. Rebuild navigation around Practice as a tab
 
-Sessions should carry:
+Goal:
 
-- `practiceMode`: `singleSurface | flow`
+- make practice entry explicit
 
-### Sessions
+Tasks:
 
-Sessions should log:
+- add `Practice` to bottom nav
+- move direct-entry options there
+- remove any hidden dependence on reaching practice only through other screens
 
-- item ids
-- family
-- bpm
-- click
-- reflection
-- lane
-- optional `flowApplied`
+### Phase 4. Simplify Focus
 
-### Progress / recommendation data
+Goal:
 
-Add support for:
+- make Focus clearly about current work
 
-- last practiced by lane
-- dynamic-variation exposure
-- lead-balance aggregates
-- phrase-length exposure
-- flow/orchestration exposure
-- toolbox eligibility and readiness
+Tasks:
 
-## First-Light / Onboarding Plan
+- strip summary/dashboard behavior
+- keep add/remove/edit/practice
+- make item actions obvious
 
-### Principle
+### Phase 5. Rebuild Progress
 
-First-light should sound like a teacher introducing a disciplined practice method.
+Goal:
 
-It should not sound like app-tour copy.
+- turn Progress into a measurement surface
 
-### Recommended first-light structure
+Tasks:
 
-#### Step 1. Purpose
+- replace internal/explanatory cards
+- add:
+  - overall progress
+  - per-item progress
+  - per-group progress
+  - trend views
+- ensure labels match scope
 
-Explain:
+### Phase 6. Rebuild Coach against explicit states
 
-- short patterns become usable vocabulary
-- this app teaches that step by step
+Goal:
 
-#### Step 2. Method
+- make Coach useful after first light, not just plausible
 
-Explain the teaching spine briefly:
+Tasks:
 
-- control
-- balance
-- dynamics
-- phrasing
-- flow
+- design each Coach state against mock data
+- rewrite block structure and copy
+- ensure each state has a clear primary action
 
-#### Step 3. Setup
+### Phase 7. Visual polish pass
 
-Collect:
+Goal:
 
-- handedness
-- default BPM
-- timer
-- click
+- make the app feel designed, not assembled
 
-#### Step 4. First Assignment
+Tasks:
 
-Send the user into one simple first practice action, not into a generic home screen with no direction.
+- tighten shared controls
+- remove repeated or redundant signals
+- review spacing, contrast, hierarchy, and empty states
+- verify every surface against its acceptance criteria
 
-## Post-MVP Features to Design For Now
+### Phase 8. Audio assessment
 
-These features are not required for MVP, but the design should not block them.
+Goal:
 
-### 1. Hear the pattern at different BPMs
+- add onset/timing evidence later
 
-Future capability:
+Note:
 
-- tap an item or phrase
-- hear an example at chosen BPMs
-- optionally hear plain vs accented/dynamic versions
+- explicitly deferred until after the structural/product reset is stable
 
-Design implication now:
+---
 
-- phrases need a clean internal note/token representation
-- dynamic markings need to be machine-readable
-- combos need ordered playback-ready structure
+## Recommended Execution Order
 
-### 2. Flow mode with animated kit graphic
+Do not resume feature churn immediately.
 
-Future capability:
+Recommended order:
 
-- choose a kit graphic from several layouts
-- show voice assignment
-- animate the pattern on the kit
-- hear how the phrase sounds while the animation plays
+1. finish and accept the rewritten specs
+2. implement mock-state infrastructure
+3. add `Practice` tab and direct-entry screen
+4. simplify `Focus`
+5. redesign `Progress`
+6. redesign `Coach` with mock states
+7. do one full visual polish pass
+8. then resume forward feature work
 
-Design implication now:
+---
 
-- flow phrases need voice assignments as structured data
-- do not bake display-only orchestration into text strings
-- keep a future `kitLayout` / `surfaceMap` concept possible
+## Definition Of Done For This Reset
 
-## Execution Sequence
+The reset is complete when:
 
-### Phase 1. Product alignment
-
-1. rewrite Today around lane-based recommendations
-2. rewrite first-light in teacher voice
-3. rename/reposition Toolkit as Focus / Working On
-4. separate Focus vs Toolbox vs Custom bucket in the product model
-5. introduce phrase practice mode: `singleSurface | flow`
-6. add note-level voice assignment editing for flow
-
-### Phase 2. Coaching clarity
-
-1. update Progress to reflect lane logic
-2. show why items are recommended
-3. add clearer balance/dynamics/phrase coverage analysis
-4. remove or downgrade passive list-like views
-
-### Phase 3. Flow foundation
-
-1. add flow-ready phrase structure
-2. add optional voice assignment model
-3. add flow-specific practice sessions
-4. prepare for playback and kit animation
-
-### Phase 4. Expansion
-
-1. 5-note grouping curriculum
-2. optional rudiment mapping
-3. later embellishment families such as flams
-
-## Immediate Build Plan
-
-This is the recommended next implementation sequence.
-
-1. update docs and naming in the app shell:
-   `Toolkit` -> `Focus`
-2. redesign `Today` around teaching lanes and evidence-based recommendations
-3. rewrite onboarding / first-light in teacher voice
-4. separate custom patterns from coached/tracked core material
-5. add phrase practice mode:
-   `singleSurface` vs `flow`
-6. add note-level voice assignment editing for flow
-6. adjust Work and Progress to reflect that distinction
-
-## Open Decisions
-
-These are the remaining decisions likely needed before implementation starts.
-
-1. Should `Toolbox` be visible in MVP, or should it remain an internal milestone concept until the mastery logic is stronger?
-   Recommendation: keep it visible lightly in Progress first, not as a full main screen.
-
-2. Should `Flow` appear as a visible lane in MVP even before full kit animation/playback exists?
-   Recommendation: yes, but scoped to voice-ready phrases and planning, not full audiovisual playback.
-
-3. Should custom patterns be practiceable directly from Work, or live only in a separate Library bucket?
-   Recommendation: practiceable directly, but excluded from coaching and core progress logic.
+- no active core spec still describes the old app architecture
+- each main screen has a clear purpose and anti-purpose
+- each main screen has defined states
+- each main screen is testable through mock scenarios
+- Progress no longer feels like Coach
+- Focus no longer feels like a dashboard
+- Practice is no longer hidden
+- Coach no longer relies on improvised copy to bridge missing state design
