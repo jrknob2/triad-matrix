@@ -152,3 +152,134 @@ class DrumStatusPill extends StatelessWidget {
     );
   }
 }
+
+class DrumSelectablePill extends StatelessWidget {
+  final Widget label;
+  final bool selected;
+  final VoidCallback? onPressed;
+
+  const DrumSelectablePill({
+    super.key,
+    required this.label,
+    required this.selected,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ChoiceChip(
+      label: DefaultTextStyle.merge(
+        style: TextStyle(
+          color: selected ? Colors.white : DrumcabularyTheme.ink,
+          fontWeight: FontWeight.w900,
+        ),
+        child: label,
+      ),
+      selected: selected,
+      onSelected: onPressed == null ? null : (_) => onPressed!(),
+      visualDensity: VisualDensity.compact,
+      showCheckmark: false,
+      side: BorderSide(
+        color: selected ? DrumcabularyTheme.ink : DrumcabularyTheme.line,
+      ),
+      selectedColor: DrumcabularyTheme.ink,
+      backgroundColor: DrumcabularyTheme.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      labelPadding: const EdgeInsets.symmetric(horizontal: 4),
+    );
+  }
+}
+
+class DrumActionPill extends StatelessWidget {
+  final Widget label;
+  final VoidCallback? onPressed;
+
+  const DrumActionPill({
+    super.key,
+    required this.label,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ActionChip(
+      label: DefaultTextStyle.merge(
+        style: const TextStyle(fontWeight: FontWeight.w900),
+        child: label,
+      ),
+      onPressed: onPressed,
+      visualDensity: VisualDensity.compact,
+      side: const BorderSide(color: DrumcabularyTheme.line),
+      backgroundColor: DrumcabularyTheme.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      labelPadding: const EdgeInsets.symmetric(horizontal: 4),
+    );
+  }
+}
+
+class DrumIndexedPill extends StatelessWidget {
+  final String indexLabel;
+  final Widget label;
+  final VoidCallback? onPressed;
+  final Color backgroundColor;
+  final Color borderColor;
+
+  const DrumIndexedPill({
+    super.key,
+    required this.indexLabel,
+    required this.label,
+    required this.onPressed,
+    required this.backgroundColor,
+    required this.borderColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ActionChip(
+      avatar: Text(
+        indexLabel,
+        style: Theme.of(
+          context,
+        ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w900),
+      ),
+      label: DefaultTextStyle.merge(
+        style: const TextStyle(fontWeight: FontWeight.w900),
+        child: label,
+      ),
+      onPressed: onPressed,
+      visualDensity: VisualDensity.compact,
+      backgroundColor: backgroundColor,
+      side: BorderSide(color: borderColor),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      labelPadding: const EdgeInsets.symmetric(horizontal: 2),
+    );
+  }
+}
+
+class DrumTag extends StatelessWidget {
+  final Widget child;
+  final Color backgroundColor;
+  final Color? borderColor;
+
+  const DrumTag({
+    super.key,
+    required this.child,
+    this.backgroundColor = DrumcabularyTheme.surface,
+    this.borderColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: borderColor ?? DrumcabularyTheme.line),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: child,
+      ),
+    );
+  }
+}

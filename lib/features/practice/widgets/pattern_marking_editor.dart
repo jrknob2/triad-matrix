@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/practice/practice_domain_v1.dart';
+import '../../../features/app/drumcabulary_ui.dart';
 import '../../../state/app_controller.dart';
 
 class PatternMarkingEditor extends StatelessWidget {
@@ -41,19 +42,16 @@ class PatternMarkingEditor extends StatelessWidget {
           children: List<Widget>.generate(resolvedTokens.length, (index) {
             final String token = resolvedTokens[index];
             final PatternNoteMarkingV1 marking = resolvedMarkings[index];
-            return ActionChip(
+            return DrumIndexedPill(
+              indexLabel: '${index + 1}',
               label: Text(_labelFor(token, marking)),
-              avatar: Text('${index + 1}'),
               onPressed: editable
                   ? () {
                       _handleTap(index, token, marking);
                     }
                   : null,
               backgroundColor: _backgroundFor(marking),
-              side: BorderSide(color: _borderFor(marking)),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+              borderColor: _borderFor(marking),
             );
           }),
         ),

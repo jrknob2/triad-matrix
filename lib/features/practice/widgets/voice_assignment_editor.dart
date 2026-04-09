@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/practice/practice_domain_v1.dart';
 import '../../../features/app/app_formatters.dart';
+import '../../../features/app/drumcabulary_ui.dart';
 import '../../../state/app_controller.dart';
 
 class VoiceAssignmentEditor extends StatelessWidget {
@@ -42,19 +43,16 @@ class VoiceAssignmentEditor extends StatelessWidget {
           children: List<Widget>.generate(resolvedTokens.length, (index) {
             final String token = resolvedTokens[index];
             final DrumVoiceV1 voice = resolvedVoices[index];
-            return ActionChip(
+            return DrumIndexedPill(
+              indexLabel: '${index + 1}',
               label: Text('$token:${voice.shortLabel}'),
-              avatar: Text('${index + 1}'),
               onPressed: editable
                   ? () {
                       _handleTap(index, token, voice);
                     }
                   : null,
               backgroundColor: _backgroundFor(voice),
-              side: BorderSide(color: _borderFor(voice)),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+              borderColor: _borderFor(voice),
             );
           }),
         ),

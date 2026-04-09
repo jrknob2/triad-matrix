@@ -65,13 +65,13 @@ class _FocusScreenState extends State<FocusScreen> {
                             .map(
                               (_FocusSection section) => Padding(
                                 padding: const EdgeInsets.only(right: 8),
-                                child: ChoiceChip(
+                                child: DrumSelectablePill(
                                   label: _chipText(
                                     _labelForSection(section),
                                     _section == section,
                                   ),
                                   selected: _section == section,
-                                  onSelected: (_) {
+                                  onPressed: () {
                                     setState(() => _section = section);
                                   },
                                 ),
@@ -89,13 +89,13 @@ class _FocusScreenState extends State<FocusScreen> {
                               .map(
                                 (PracticeModeV1 mode) => Padding(
                                   padding: const EdgeInsets.only(right: 8),
-                                  child: ChoiceChip(
+                                  child: DrumSelectablePill(
                                     label: _chipText(
                                       mode.label,
                                       _viewMode == mode,
                                     ),
                                     selected: _viewMode == mode,
-                                    onSelected: (_) {
+                                    onPressed: () {
                                       setState(() => _viewMode = mode);
                                     },
                                   ),

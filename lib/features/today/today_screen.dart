@@ -151,7 +151,7 @@ class _EmptyCoachCard extends StatelessWidget {
             const DrumSectionTitle(text: 'Coach'),
             const SizedBox(height: 8),
             const Text(
-              'Choose something from the Matrix and log a short session. Coach gets sharper once there is real practice history.',
+              'Pick something from the Matrix and put in a short, honest session. Once there is real work to look at, Coach can point more clearly.',
             ),
             const SizedBox(height: 14),
             FilledButton(
@@ -417,20 +417,15 @@ class _StartingTriadChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5F0E6),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Text(
-          controller.itemById(itemId).name,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: const Color(0xFF1F2528),
-            fontWeight: FontWeight.w900,
-            letterSpacing: -0.5,
-          ),
+    return DrumTag(
+      backgroundColor: const Color(0xFFF5F0E6),
+      borderColor: const Color(0xFFD8C8B0),
+      child: Text(
+        controller.itemById(itemId).name,
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+          color: const Color(0xFF1F2528),
+          fontWeight: FontWeight.w900,
+          letterSpacing: -0.5,
         ),
       ),
     );

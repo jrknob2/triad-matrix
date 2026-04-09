@@ -228,10 +228,10 @@ class AppController extends ChangeNotifier {
       return CoachBlockV1(
         id: 'focus_first_session',
         type: CoachBlockTypeV1.focus,
-        title: 'Start the first rep',
+        title: 'Start here',
         subtitle: 'Focus',
         body:
-            'You picked material for Working On. Start with one clean pass and let the first session create the baseline.',
+            'You already chose what to work on. Start with one relaxed, even pass and let the first session set the reference point.',
         itemIds: <String>[target.id],
         ctaLabel: 'Start Practice',
         ctaAction: CoachActionV1.startPractice,
@@ -255,7 +255,7 @@ class AppController extends ChangeNotifier {
         title: 'Stay with ${target.name}',
         subtitle: 'Focus',
         body: aggregate == null
-            ? 'Keep the active material moving. Repetition across days is what turns a pattern into vocabulary.'
+            ? 'Do not jump too quickly. Repeated work on the same phrase is what makes it start coming out naturally.'
             : _focusBodyForAggregate(aggregate),
         itemIds: <String>[target.id],
         ctaLabel: 'Start Practice',
@@ -274,10 +274,9 @@ class AppController extends ChangeNotifier {
     return CoachBlockV1(
       id: 'focus_balanced_triads',
       type: CoachBlockTypeV1.focus,
-      title: 'Put ${target.name} in rotation',
+      title: 'Bring ${target.name} into the day',
       subtitle: 'Focus',
-      body:
-          'This is the best current triad target based on coverage, time, and confidence.',
+      body: 'This is the clearest next triad to spend time on right now.',
       itemIds: <String>[target.id],
       ctaLabel: 'Start Practice',
       ctaAction: CoachActionV1.startPractice,
@@ -307,7 +306,7 @@ class AppController extends ChangeNotifier {
     return CoachBlockV1(
       id: 'needs_work_${target.id}',
       type: CoachBlockTypeV1.needsWork,
-      title: '${target.name} needs a cleanup pass',
+      title: 'Clean up ${target.name}',
       subtitle: 'Needs Work',
       body: _needsWorkBodyForAggregate(assessmentAggregateFor(target.id)),
       itemIds: <String>[target.id],
@@ -345,7 +344,7 @@ class AppController extends ChangeNotifier {
     return CoachBlockV1(
       id: 'momentum_${target.id}',
       type: CoachBlockTypeV1.momentum,
-      title: '${target.name} is moving',
+      title: '${target.name} is starting to settle in',
       subtitle: 'Momentum',
       body: _momentumBodyForAggregate(assessmentAggregateFor(target.id)),
       itemIds: <String>[target.id],
@@ -376,10 +375,10 @@ class AppController extends ChangeNotifier {
       return CoachBlockV1(
         id: 'unlock_flow_${target.id}',
         type: CoachBlockTypeV1.nextUnlock,
-        title: 'Move ${target.name} to Flow',
+        title: 'Take ${target.name} around the kit',
         subtitle: 'Next Unlock',
         body:
-            'This is ready to leave one surface. Assign voices and make the phrase read clearly around the kit.',
+            'This phrase is ready to leave one surface. Assign voices and make it speak clearly around the kit.',
         itemIds: <String>[target.id],
         ctaLabel: 'Move to Flow',
         ctaAction: CoachActionV1.moveToFlow,
@@ -413,7 +412,7 @@ class AppController extends ChangeNotifier {
       title: 'Build a phrase',
       subtitle: 'Next Unlock',
       body:
-          'Two stable cells are ready to be connected. Work the transition until it feels like one idea.',
+          'These cells are ready to be joined. Work the handoff until the whole phrase feels like one thought.',
       itemIds: itemIds,
       ctaLabel: 'Build Combo',
       ctaAction: CoachActionV1.buildCombo,
@@ -426,19 +425,19 @@ class AppController extends ChangeNotifier {
   String _focusBodyForAggregate(PracticeAssessmentAggregateV1 aggregate) {
     return switch (aggregate.status) {
       MatrixProgressStateV1.notTrained =>
-        'This has not produced enough signal yet. Start with a clean baseline session.',
+        'You have not spent enough real time with this yet. Give it a clean first pass.',
       MatrixProgressStateV1.active =>
-        'This is active work. Keep it in rotation until the control and continuity start to hold.',
+        'This is still taking shape. Stay with it until the motion and sound start to feel dependable.',
       MatrixProgressStateV1.needsWork =>
-        'This is slipping. Slow it down and clean up the motion before adding more speed.',
+        'This is getting away from you a little. Slow it down and straighten it out before pushing.',
       MatrixProgressStateV1.strong =>
-        'This is holding together. Give it a short review or use it to build a longer phrase.',
+        'This is holding together. Give it a short review or use it to build something longer.',
     };
   }
 
   String _needsWorkBodyForAggregate(PracticeAssessmentAggregateV1? aggregate) {
     if (aggregate == null) {
-      return 'This has practice history, but the signal is not strong yet. Keep the tempo controlled and clean it up before pushing.';
+      return 'There is some history here, but it is not settled yet. Keep the tempo controlled and clean it up before pushing.';
     }
 
     final List<String> reasons = <String>[];
@@ -448,20 +447,20 @@ class AppController extends ChangeNotifier {
     if (aggregate.continuityScore < 0.55) reasons.add('continuity');
 
     final String reasonText = reasons.isEmpty
-        ? 'the assessment signal'
+        ? 'the way it is feeling'
         : reasons.join(', ');
-    return 'The weak spot is $reasonText. Keep the tempo controlled and clean it up before pushing.';
+    return 'The weak spot right now is $reasonText. Slow it down enough to get it even again.';
   }
 
   String _momentumBodyForAggregate(PracticeAssessmentAggregateV1? aggregate) {
     if (aggregate == null) {
-      return 'This is recent and getting stable. Give it a short review or use it as source material for a longer phrase.';
+      return 'This is recent and starting to hold. Review it briefly, then use it to grow a longer phrase.';
     }
 
     final String stableBpm = aggregate.bestStableBpm == null
         ? 'the current tempo'
         : '${aggregate.bestStableBpm!.round()} BPM';
-    return 'This is holding at $stableBpm. Review it briefly, then use it as source material for a longer phrase.';
+    return 'This is holding at $stableBpm. Review it briefly, then build from it while it still feels fresh.';
   }
 
   TodayBriefingV1 buildTodayBriefing() {

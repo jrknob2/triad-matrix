@@ -98,10 +98,10 @@ class _MatrixScreenState extends State<MatrixScreen> {
                   .map(
                     (LearningLaneV1 lane) => Padding(
                       padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
+                      child: DrumSelectablePill(
                         label: _chipText(lane.label, _laneFocus == lane),
                         selected: _laneFocus == lane,
-                        onSelected: (_) => _toggleLaneFocus(lane),
+                        onPressed: () => _toggleLaneFocus(lane),
                       ),
                     ),
                   )
@@ -121,9 +121,13 @@ class _MatrixScreenState extends State<MatrixScreen> {
             if (_laneFocus != null) ...<Widget>[
               Align(
                 alignment: Alignment.centerLeft,
-                child: Chip(
-                  label: Text(_laneFocus!.label),
-                  visualDensity: VisualDensity.compact,
+                child: DrumTag(
+                  child: Text(
+                    _laneFocus!.label,
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: 10),
@@ -146,10 +150,10 @@ class _MatrixScreenState extends State<MatrixScreen> {
                     .map(
                       (palette) => Padding(
                         padding: const EdgeInsets.only(right: 8),
-                        child: ChoiceChip(
+                        child: DrumSelectablePill(
                           label: _chipText(palette.label, _palette == palette),
                           selected: _palette == palette,
-                          onSelected: (_) => _togglePalette(palette),
+                          onPressed: () => _togglePalette(palette),
                         ),
                       ),
                     )
@@ -211,18 +215,18 @@ class _MatrixScreenState extends State<MatrixScreen> {
             final String comboId = combo.id;
             return Padding(
               padding: const EdgeInsets.only(right: 8),
-              child: FilterChip(
+              child: DrumSelectablePill(
                 label: _comboFilterLabel(
                   comboId,
                   selected: _selectedComboIds.contains(comboId),
                 ),
                 selected: _selectedComboIds.contains(comboId),
-                onSelected: (bool selected) {
+                onPressed: () {
                   setState(() {
-                    if (selected) {
-                      _selectedComboIds.add(comboId);
-                    } else {
+                    if (_selectedComboIds.contains(comboId)) {
                       _selectedComboIds.remove(comboId);
+                    } else {
+                      _selectedComboIds.add(comboId);
                     }
                   });
                 },
@@ -238,15 +242,15 @@ class _MatrixScreenState extends State<MatrixScreen> {
         .map(
           (filter) => Padding(
             padding: const EdgeInsets.only(right: 8),
-            child: FilterChip(
+            child: DrumSelectablePill(
               label: _chipText(filter.label, _filters.contains(filter)),
               selected: _filters.contains(filter),
-              onSelected: (bool selected) {
+              onPressed: () {
                 setState(() {
-                  if (selected) {
-                    _filters.add(filter);
-                  } else {
+                  if (_filters.contains(filter)) {
                     _filters.remove(filter);
+                  } else {
+                    _filters.add(filter);
                   }
                 });
               },
@@ -262,14 +266,14 @@ class _MatrixScreenState extends State<MatrixScreen> {
       if (flowFirst)
         Padding(
           padding: const EdgeInsets.only(right: 8),
-          child: ActionChip(
+          child: DrumActionPill(
             label: const Text('Flow'),
             onPressed: _practiceSelectionInFlow,
           ),
         ),
       Padding(
         padding: const EdgeInsets.only(right: 8),
-        child: ActionChip(
+        child: DrumActionPill(
           label: const Text('Single Surface'),
           onPressed: _practiceSelection,
         ),
@@ -277,14 +281,14 @@ class _MatrixScreenState extends State<MatrixScreen> {
       if (!flowFirst)
         Padding(
           padding: const EdgeInsets.only(right: 8),
-          child: ActionChip(
+          child: DrumActionPill(
             label: const Text('Flow'),
             onPressed: _practiceSelectionInFlow,
           ),
         ),
       Padding(
         padding: const EdgeInsets.only(right: 8),
-        child: ActionChip(
+        child: DrumActionPill(
           label: Text(
             _selectionIsInRoutine
                 ? 'Remove from Working On'
@@ -296,7 +300,7 @@ class _MatrixScreenState extends State<MatrixScreen> {
       if (_selectedItemIds.length > 1)
         Padding(
           padding: const EdgeInsets.only(right: 8),
-          child: ActionChip(
+          child: DrumActionPill(
             label: const Text('Save Phrase'),
             onPressed: _saveSelection,
           ),
@@ -307,7 +311,7 @@ class _MatrixScreenState extends State<MatrixScreen> {
       pills.add(
         Padding(
           padding: const EdgeInsets.only(right: 8),
-          child: ActionChip(
+          child: DrumActionPill(
             label: const Text('View Details'),
             onPressed: () => widget.onOpenItem(_selectedItemIds.first),
           ),
@@ -318,7 +322,7 @@ class _MatrixScreenState extends State<MatrixScreen> {
     pills.add(
       Padding(
         padding: const EdgeInsets.only(right: 8),
-        child: ActionChip(
+        child: DrumActionPill(
           label: const Text('Clear'),
           onPressed: () {
             setState(() => _selectedItemIds.clear());

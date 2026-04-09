@@ -163,7 +163,7 @@ class _RetentionView extends StatelessWidget {
         _ItemListCard(
           title: 'Needs Review',
           description:
-              'Reliable material that still needs revisits so it stays available on demand.',
+              'Strong material still needs revisits so it stays available on demand.',
           items: review,
           controller: controller,
           onOpenItem: onOpenItem,
@@ -400,7 +400,7 @@ class _ToolboxView extends StatelessWidget {
         _ItemListCard(
           title: 'Close To Toolbox',
           description:
-              'These phrases have enough time and competency behind them that they are close to dependable use.',
+              'These phrases have enough stable reps and revisits behind them that they are close to dependable use.',
           items: toolboxReady,
           controller: controller,
           onOpenItem: onOpenItem,
@@ -659,7 +659,12 @@ class _ProgressItemTile extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${item.family.label} • ${controller.matrixProgressStateFor(item.id).label} • ${formatDuration(controller.totalTime(itemId: item.id))}',
+                    '${controller.matrixProgressStateFor(item.id).label} • ${controller.recentSummaryForItem(item.id)}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${formatDuration(controller.totalTime(itemId: item.id))} logged',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
