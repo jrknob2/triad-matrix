@@ -173,6 +173,7 @@ Matrix is the structural map of the triad system and the main phrase-building su
 - support selection and phrase building
 - start practice directly
 - send material to Focus
+- resolve conflicting filters by replacement, not disablement
 
 ### Must Not Do
 
@@ -235,6 +236,7 @@ Phrase rule:
 - progress state and filter scope are visually distinct
 - deep links from Coach land in a meaningful matrix view
 - invalid filter combinations are prevented by design, not explained after the fact
+- compact horizontal controls are preferred before adding more stacked filter rows
 
 ---
 
@@ -392,6 +394,7 @@ Progress measures development.
 - recent activity trend
 - coverage summary
 - rolled-up assessment graph
+- visible graph scope
 
 #### By Item
 
@@ -401,6 +404,7 @@ Progress measures development.
 - selected-item assessment graph
 - selected-item BPM graph
 - selected-item time graph
+- status labels in improvement order
 
 #### By Group
 
@@ -418,6 +422,8 @@ Progress measures development.
 - Progress should feel like measurement, not recommendation
 - counts and labels must match the visible scope
 - no copy like “this is the same status language used by Coach and Matrix”
+- graph titles must say what is being measured
+- status differences must be visually obvious in graphs
 
 ---
 

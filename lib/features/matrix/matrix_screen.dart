@@ -167,9 +167,7 @@ class _MatrixScreenState extends State<MatrixScreen> {
             child: DrumSelectablePill(
               label: _chipText(filter.label, _filters.contains(filter)),
               selected: _filters.contains(filter),
-              onPressed: _isFilterDisabled(filter)
-                  ? null
-                  : () => _toggleFilter(filter),
+              onPressed: () => _toggleFilter(filter),
             ),
           ),
         )
@@ -490,20 +488,6 @@ class _MatrixScreenState extends State<MatrixScreen> {
         TriadMatrixFilterV1.recent,
       ],
     };
-  }
-
-  bool _isFilterDisabled(TriadMatrixFilterV1 filter) {
-    if (_view != _MatrixPrimaryView.traits) return false;
-    if (filter == TriadMatrixFilterV1.handsOnly) {
-      return _filters.contains(TriadMatrixFilterV1.hasKick) ||
-          _filters.contains(TriadMatrixFilterV1.startsWithKick) ||
-          _filters.contains(TriadMatrixFilterV1.endsWithKick);
-    }
-    if (filter == TriadMatrixFilterV1.hasKick ||
-        _isKickPlacementFilter(filter)) {
-      return _filters.contains(TriadMatrixFilterV1.handsOnly);
-    }
-    return false;
   }
 
   String _viewLabel(_MatrixPrimaryView view) {

@@ -35,6 +35,18 @@ No screen should contain:
 - controls that belong to another screen
 - duplicate information with no new value
 
+## Layout Rule
+
+Use horizontal space before adding more vertical stacking.
+
+Interpretation:
+
+- vertical space is for sequence, reading flow, and truly primary sections
+- horizontal space is for comparison, compact controls, metrics, legends, and summaries
+- avoid turning short values or short explanations into full-height stacked cards when they can sit side by side
+- when a screen feels tall before it feels clear, the layout is probably wrong
+- charts and summaries should prefer row-based composition when the viewport allows it
+
 ---
 
 ## Primary App Flows
@@ -140,7 +152,7 @@ Screens involved:
 
 Required controls:
 
-- lane/filter controls
+- view/filter controls
 - phrase editor
 - action pills
 
@@ -421,6 +433,10 @@ Rules:
 - each view exposes only the filters that belong to that view
 - row and column selectors are structural slicers, not part of the main filter bar
 - Coach may deep-link Matrix into a preset state, but Coach lane labels do not remain as a persistent Matrix control
+- conflicting filters resolve by replacement, not disablement
+- selecting a conflicting filter clears the incompatible one and applies the new one
+- Matrix should almost never show disabled filters inside an active view
+- if a filter becomes irrelevant because the view changes, it should be cleared rather than shown as disabled
 
 Examples:
 
@@ -503,6 +519,7 @@ Show:
 - context text must not sound like Coach
 - action labels must stay imperative and short
 - Matrix must not expose abstract pedagogy labels as primary controls
+- Matrix should prefer compact horizontal control groupings before adding more stacked rows
 
 ---
 
@@ -720,6 +737,7 @@ Progress measures development.
 - recent trend
 - overall coverage
 - rolled-up assessment graph
+- graph scope must be explicit
 
 #### By Item
 
@@ -729,6 +747,7 @@ Progress measures development.
 - selected-item assessment graph
 - selected-item BPM graph
 - selected-item session-time graph
+- graph labels must read in the correct improvement order
 
 #### By Group
 
@@ -745,12 +764,14 @@ Progress measures development.
 - every metric label must match the scope it counts
 - visible counts must never surprise the user because of hidden scope
 - if the count includes more than Focus items, the label must make that clear
+- use clear measurement phrasing over slash shorthand when slash notation creates ambiguity
 
 ### Progress Wording Rules
 
 - use measurement language
 - avoid recommendation language
 - avoid system explanation language
+- chart titles must say what is being measured and over what time window
 
 Bad example:
 
@@ -762,6 +783,14 @@ Good example:
 - `12 active this month`
 
 Only if those counts are actually correct for the visible scope.
+
+### Progress Graph Rules
+
+- rolled-up graphs must visibly communicate status differences, not just technically encode them
+- if a status-mix graph is shown, the status colors must be visually distinct at a glance
+- chart geometry should support comparison before decoration
+- prefer flatter bar bases over capsule shapes when the chart is about magnitude comparison
+- graph legends must read as legends, not as extra filters
 
 ---
 

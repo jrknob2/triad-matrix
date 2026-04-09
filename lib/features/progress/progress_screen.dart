@@ -225,7 +225,21 @@ class _OverviewView extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              const DrumSectionTitle(text: 'Assessment Status'),
+              Row(
+                children: <Widget>[
+                  const Expanded(
+                    child: DrumSectionTitle(text: 'Assessment Status'),
+                  ),
+                  DrumTag(
+                    child: Text(
+                      'Catalog',
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 10),
               Wrap(
                 spacing: 10,
@@ -268,13 +282,38 @@ class _OverviewView extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              const DrumSectionTitle(text: 'Assessment Trend'),
+              Row(
+                children: <Widget>[
+                  const Expanded(
+                    child: DrumSectionTitle(
+                      text: 'Assessment Mix, Last 6 Weeks',
+                    ),
+                  ),
+                  DrumTag(
+                    child: Text(
+                      'Catalog',
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 8),
               Text(
-                'Weekly mix of assessment results across tracked items.',
+                'Weekly assessment status across the catalog.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: const Color(0xFF5E584D),
                 ),
+              ),
+              const SizedBox(height: 10),
+              const _ChartLegend(
+                entries: <_LegendEntry>[
+                  _LegendEntry('Not Practiced', Color(0xFFFFFFFF)),
+                  _LegendEntry('Active', Color(0xFF86B4E1)),
+                  _LegendEntry('Needs Work', Color(0xFFE38E80)),
+                  _LegendEntry('Strong', Color(0xFF84B884)),
+                ],
               ),
               const SizedBox(height: 12),
               if (controller.assessmentResults.length < 3)
@@ -291,7 +330,21 @@ class _OverviewView extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              const DrumSectionTitle(text: 'Coverage Snapshot'),
+              Row(
+                children: <Widget>[
+                  const Expanded(
+                    child: DrumSectionTitle(text: 'Coverage Snapshot'),
+                  ),
+                  DrumTag(
+                    child: Text(
+                      'Catalog',
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 10),
               _CoverageSnapshotRow(
                 label: 'Triads Seen',
@@ -781,6 +834,13 @@ class _StatusCount {
   });
 }
 
+class _LegendEntry {
+  final String label;
+  final Color color;
+
+  const _LegendEntry(this.label, this.color);
+}
+
 class _MetricStrip extends StatelessWidget {
   final List<_MetricData> metrics;
 
@@ -925,6 +985,46 @@ class _CoverageRow extends StatelessWidget {
           ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
         ),
       ],
+    );
+  }
+}
+
+class _ChartLegend extends StatelessWidget {
+  final List<_LegendEntry> entries;
+
+  const _ChartLegend({required this.entries});
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 10,
+      runSpacing: 8,
+      children: entries
+          .map(
+            (_LegendEntry entry) => Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: entry.color,
+                    borderRadius: BorderRadius.circular(3),
+                    border: Border.all(color: const Color(0x22000000)),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  entry.label,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: const Color(0xFF5E584D),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          )
+          .toList(growable: false),
     );
   }
 }

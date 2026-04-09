@@ -134,13 +134,19 @@ Final in-scope set:
 
 ## Invalid Combination Rules
 
-- `Hands Only` disables `Has Kick`
-- `Hands Only` disables `Starts w/ Kick`
-- `Hands Only` disables `Ends w/ Kick`
+- `Hands Only` conflicts with `Has Kick`
+- `Hands Only` conflicts with `Starts w/ Kick`
+- `Hands Only` conflicts with `Ends w/ Kick`
 - selecting `Has Kick` clears `Hands Only`
 - selecting `Starts w/ Kick` clears `Hands Only`
 - selecting `Ends w/ Kick` clears `Hands Only`
 - `Progress` view hides `Traits` filters
+
+Interaction rule:
+
+- conflicting filters should resolve by replacement, not disablement
+- if the user selects a conflicting filter, the previous incompatible filter is turned off automatically
+- disabled controls should be avoided inside the active view unless a state is truly impossible
 
 ## Phrase Eligibility Rule
 
@@ -190,3 +196,4 @@ Progress colors:
 - do not collapse grid into simple heatmap
 - preserve structural layout always
 - grid is the primary surface; filters support it, not the other way around
+- prefer compact horizontal control groups before adding more stacked vertical filter rows
