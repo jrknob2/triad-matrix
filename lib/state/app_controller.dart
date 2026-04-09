@@ -223,15 +223,46 @@ class AppController extends ChangeNotifier {
   }
 
   CoachBriefingV1 buildCoachBriefing() {
-    final List<CoachBlockV1> blocks = <CoachBlockV1>[
-      ?selectCoachResume(),
-      ?selectCoachNeedsWork(),
-      ?selectCoachFocus(),
-      ?selectCoachMomentum(),
-      ?selectCoachNextUnlock(),
-    ];
+    if (!hasLoggedPractice) {
+      return CoachBriefingV1(
+        blocks: activeWorkItems.isEmpty
+            ? const <CoachBlockV1>[]
+            : <CoachBlockV1>[selectCoachFocus()!],
+      );
+    }
 
-    return CoachBriefingV1(blocks: blocks);
+    final CoachBlockV1? focus = selectCoachFocus();
+    final CoachBlockV1? needsWork = selectCoachNeedsWork();
+    final CoachBlockV1? momentum = selectCoachMomentum();
+    final CoachBlockV1? nextUnlock = selectCoachNextUnlock();
+
+    if (nextUnlock?.ctaAction == CoachActionV1.moveToFlow && momentum != null) {
+      return CoachBriefingV1(blocks: <CoachBlockV1>[momentum, nextUnlock!]);
+    }
+
+    if (nextUnlock?.ctaAction == CoachActionV1.buildCombo && momentum != null) {
+      return CoachBriefingV1(
+        blocks: <CoachBlockV1>[if (focus != null) focus, momentum, nextUnlock!],
+      );
+    }
+
+    final bool anyStrong = trackedItems.any(
+      (PracticeItemV1 item) =>
+          matrixProgressStateFor(item.id) == MatrixProgressStateV1.strong,
+    );
+    if (!anyStrong && needsWork != null) {
+      return CoachBriefingV1(
+        blocks: <CoachBlockV1>[if (focus != null) focus, needsWork],
+      );
+    }
+
+    return CoachBriefingV1(
+      blocks: <CoachBlockV1>[
+        if (focus != null) focus,
+        if (needsWork != null) needsWork,
+        if (momentum != null) momentum,
+      ].take(3).toList(growable: false),
+    );
   }
 
   CoachBlockV1? selectCoachFocus() {
@@ -243,7 +274,7 @@ class AppController extends ChangeNotifier {
         title: 'Start here',
         subtitle: 'Focus',
         body:
-            'You already chose what to work on. Start with one relaxed, even pass and let the first session set the reference point.',
+            'You already picked the first material. Start with one clean, relaxed pass and let the sound settle in.',
         itemIds: <String>[target.id],
         ctaLabel: 'Start Practice',
         ctaAction: CoachActionV1.startPractice,
@@ -267,7 +298,7 @@ class AppController extends ChangeNotifier {
         title: 'Stay with ${target.name}',
         subtitle: 'Focus',
         body: aggregate == null
-            ? 'Do not jump too quickly. Repeated work on the same phrase is what makes it start coming out naturally.'
+            ? 'Stay with the same phrase long enough for it to feel familiar instead of forced.'
             : _focusBodyForAggregate(aggregate),
         itemIds: <String>[target.id],
         ctaLabel: 'Start Practice',
@@ -288,7 +319,7 @@ class AppController extends ChangeNotifier {
       type: CoachBlockTypeV1.focus,
       title: 'Bring ${target.name} into the day',
       subtitle: 'Focus',
-      body: 'This is the clearest next triad to spend time on right now.',
+      body: 'This is the clearest next triad to put under your hands today.',
       itemIds: <String>[target.id],
       ctaLabel: 'Start Practice',
       ctaAction: CoachActionV1.startPractice,

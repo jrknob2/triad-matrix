@@ -151,12 +151,16 @@ class _EmptyCoachCard extends StatelessWidget {
             const DrumSectionTitle(text: 'Coach'),
             const SizedBox(height: 8),
             const Text(
-              'Pick something from the Matrix and put in a short, honest session. Once there is real work to look at, Coach can point more clearly.',
+              'Put in a few honest sessions and Coach will start pointing more clearly. Until then, start from the Matrix or Practice.',
             ),
             const SizedBox(height: 14),
-            FilledButton(
-              onPressed: () => onOpenMatrix(),
-              child: const Text('Open Matrix'),
+            DrumActionRow(
+              children: <Widget>[
+                FilledButton(
+                  onPressed: () => onOpenMatrix(),
+                  child: const Text('Open Matrix'),
+                ),
+              ],
             ),
           ],
         ),
@@ -347,7 +351,7 @@ class _GettingStartedCoachCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Text(
-              'Today',
+              'Coach',
               style: Theme.of(context).textTheme.labelLarge?.copyWith(
                 color: const Color(0xFFD8E8E4),
                 letterSpacing: 1.2,
@@ -364,7 +368,7 @@ class _GettingStartedCoachCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'Your Triad Matrix work is just starting. We recommend that you start working on these triads. Click the button below to add them to Working On, or open the Matrix and choose your own.',
+              'Your Triad Matrix work is just starting. We recommend that you start working on these triads. Add them to Working On, or open the Matrix and choose your own.',
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 color: const Color(0xFFE8F2EF),
                 height: 1.35,
@@ -392,7 +396,7 @@ class _GettingStartedCoachCard extends StatelessWidget {
                   onPressed: onAddToWorkingOn,
                   style: coachButtonStyle,
                   child: Text(
-                    allAdded ? 'View Working On' : 'Add to Working On',
+                    allAdded ? 'Open Working On' : 'Add to Working On',
                   ),
                 ),
                 OutlinedButton(
