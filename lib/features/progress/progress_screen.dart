@@ -293,22 +293,22 @@ class _OverviewView extends StatelessWidget {
             children: <Widget>[
               const DrumSectionTitle(text: 'Coverage Snapshot'),
               const SizedBox(height: 10),
-              _CoverageRow(
+              _CoverageSnapshotRow(
                 label: 'Triads Seen',
-                value:
-                    '${controller.practicedTriadCount}/${controller.triadMatrixItems.length}',
+                count: controller.practicedTriadCount,
+                total: controller.triadMatrixItems.length,
               ),
               const SizedBox(height: 8),
-              _CoverageRow(
+              _CoverageSnapshotRow(
                 label: 'Hands Only',
-                value:
-                    '${controller.practicedHandsOnlyTriadCount}/${controller.totalHandsOnlyTriadCount}',
+                count: controller.practicedHandsOnlyTriadCount,
+                total: controller.totalHandsOnlyTriadCount,
               ),
               const SizedBox(height: 8),
-              _CoverageRow(
+              _CoverageSnapshotRow(
                 label: 'Has Kick',
-                value:
-                    '${controller.practicedKickTriadCount}/${controller.totalKickTriadCount}',
+                count: controller.practicedKickTriadCount,
+                total: controller.totalKickTriadCount,
               ),
             ],
           ),
@@ -377,7 +377,7 @@ class _ByItemView extends StatelessWidget {
                       label: Text(
                         switch (nextScope) {
                           _ItemScope.workingOn => 'Working On',
-                          _ItemScope.catalog => 'Tracked Catalog',
+                          _ItemScope.catalog => 'Catalog',
                         },
                         style: TextStyle(
                           color: scope == nextScope ? Colors.white : null,
@@ -400,7 +400,7 @@ class _ByItemView extends StatelessWidget {
               DrumSectionTitle(
                 text: scope == _ItemScope.workingOn
                     ? 'Working On Items'
-                    : 'Tracked Catalog',
+                    : 'Catalog',
               ),
               const SizedBox(height: 8),
               Text(
@@ -929,6 +929,53 @@ class _CoverageRow extends StatelessWidget {
   }
 }
 
+class _CoverageSnapshotRow extends StatelessWidget {
+  final String label;
+  final int count;
+  final int total;
+
+  const _CoverageSnapshotRow({
+    required this.label,
+    required this.count,
+    required this.total,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Expanded(
+          child: Text(
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: const Color(0xFF5E584D)),
+          ),
+        ),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: <Widget>[
+            Text(
+              '$count seen',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'of $total total',
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: const Color(0xFF6A5E4C)),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
 class _BalanceBar extends StatelessWidget {
   final String leftLabel;
   final String rightLabel;
@@ -1067,6 +1114,12 @@ class _WeeklyStatusMixChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final int maxTotal = buckets.fold<int>(
+      0,
+      (int maxValue, _WeeklyAssessmentBucket bucket) =>
+          bucket.total > maxValue ? bucket.total : maxValue,
+    );
+
     return SizedBox(
       height: 190,
       child: Row(
@@ -1087,7 +1140,10 @@ class _WeeklyStatusMixChart extends StatelessWidget {
                       Expanded(
                         child: Align(
                           alignment: Alignment.bottomCenter,
-                          child: _StackedStatusBar(bucket: bucket),
+                          child: _StackedStatusBar(
+                            bucket: bucket,
+                            maxTotal: maxTotal == 0 ? 1 : maxTotal,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -1112,22 +1168,25 @@ class _WeeklyStatusMixChart extends StatelessWidget {
 
 class _StackedStatusBar extends StatelessWidget {
   final _WeeklyAssessmentBucket bucket;
+  final int maxTotal;
 
-  const _StackedStatusBar({required this.bucket});
+  const _StackedStatusBar({required this.bucket, required this.maxTotal});
 
   @override
   Widget build(BuildContext context) {
     final List<({int count, Color color})> segments =
         <({int count, Color color})>[
           (count: bucket.notPracticed, color: const Color(0xFFFFFFFF)),
-          (count: bucket.active, color: const Color(0xFFBCD5EC)),
-          (count: bucket.needsWork, color: const Color(0xFFE2A196)),
-          (count: bucket.strong, color: const Color(0xFFB7D2B7)),
+          (count: bucket.active, color: const Color(0xFF86B4E1)),
+          (count: bucket.needsWork, color: const Color(0xFFE38E80)),
+          (count: bucket.strong, color: const Color(0xFF84B884)),
         ];
+    final double heightFactor = bucket.total == 0 ? 0 : bucket.total / maxTotal;
+    final double barHeight = 16 + (108 * heightFactor);
 
     return Container(
       width: 34,
-      height: 124,
+      height: barHeight,
       decoration: const BoxDecoration(
         color: Color(0xFFF1ECE2),
         borderRadius: BorderRadius.vertical(
@@ -1148,7 +1207,14 @@ class _StackedStatusBar extends StatelessWidget {
                     ? const SizedBox.shrink()
                     : Expanded(
                         flex: segment.count,
-                        child: ColoredBox(color: segment.color),
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: segment.color,
+                            border: const Border(
+                              top: BorderSide(color: Color(0x14000000)),
+                            ),
+                          ),
+                        ),
                       ),
               )
               .toList(growable: false),
