@@ -68,7 +68,6 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   Widget build(BuildContext context) {
     final bool isWarmup = _setup.family == MaterialFamilyV1.warmup;
     final currentItemId = _setup.practiceItemIds[_currentItemIndex];
-    final currentItem = widget.controller.itemById(currentItemId);
     final List<String> tokens = widget.controller.noteTokensFor(currentItemId);
     final List<PatternNoteMarkingV1> markings = widget.controller
         .noteMarkingsFor(currentItemId);
@@ -113,7 +112,6 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                       _SessionStepper(
                         currentIndex: _currentItemIndex,
                         itemCount: _setup.practiceItemIds.length,
-                        label: currentItem.name,
                         onPrevious: _currentItemIndex == 0
                             ? null
                             : () => _changeItem(_currentItemIndex - 1),
@@ -646,7 +644,6 @@ class _PlayerNotation extends StatelessWidget {
 class _SessionStepper extends StatelessWidget {
   final int currentIndex;
   final int itemCount;
-  final String label;
   final VoidCallback? onPrevious;
   final VoidCallback? onNext;
   final bool dark;
@@ -654,7 +651,6 @@ class _SessionStepper extends StatelessWidget {
   const _SessionStepper({
     required this.currentIndex,
     required this.itemCount,
-    required this.label,
     required this.onPrevious,
     required this.onNext,
     required this.dark,
@@ -678,25 +674,14 @@ class _SessionStepper extends StatelessWidget {
           icon: const Icon(Icons.chevron_left),
         ),
         Expanded(
-          child: Column(
-            children: <Widget>[
-              Text(
-                '${currentIndex + 1} / $itemCount',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: textColor,
-                  fontWeight: FontWeight.w900,
-                ),
+          child: Center(
+            child: Text(
+              '${currentIndex + 1} / $itemCount',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: textColor,
+                fontWeight: FontWeight.w900,
               ),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: mutedColor,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
+            ),
           ),
         ),
         IconButton(
