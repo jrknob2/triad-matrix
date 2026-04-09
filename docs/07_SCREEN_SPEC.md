@@ -14,6 +14,10 @@ It answers:
 
 This is the screen-contract spec the UI should now be built against.
 
+Detailed content inventory, control ownership, and end-to-end flow mapping now live in:
+
+- [12_SCREEN_CONTENT_CONTRACTS_AND_APP_FLOWS.md](/Users/terryknoblock/Development/flutter-projects/traid_trainer/docs/12_SCREEN_CONTENT_CONTRACTS_AND_APP_FLOWS.md)
+
 ---
 
 ## Navigation Model

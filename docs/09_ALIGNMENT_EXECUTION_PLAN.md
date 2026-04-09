@@ -110,6 +110,7 @@ Goal:
 Tasks:
 
 - update `01`, `06`, and `07` to the new product model
+- add detailed screen content and app-flow contracts
 - remove reliance on the old `Home / Library / Routine / Practice Setup` architecture
 - lock screen purposes
 - lock screen-level acceptance criteria
