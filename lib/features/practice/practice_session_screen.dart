@@ -26,6 +26,46 @@ class PracticeSessionScreen extends StatefulWidget {
   State<PracticeSessionScreen> createState() => _PracticeSessionScreenState();
 }
 
+class _SessionRuntimeSnapshot {
+  final PracticeSessionSetupV1 setup;
+  final int bpm;
+  final bool clickEnabled;
+  final bool pulseEnabled;
+  final int currentItemIndex;
+  final Duration elapsed;
+  final bool running;
+  final bool targetReached;
+  final bool warmupComplete;
+  final bool completionChimed;
+
+  const _SessionRuntimeSnapshot({
+    required this.setup,
+    required this.bpm,
+    required this.clickEnabled,
+    required this.pulseEnabled,
+    required this.currentItemIndex,
+    required this.elapsed,
+    required this.running,
+    required this.targetReached,
+    required this.warmupComplete,
+    required this.completionChimed,
+  });
+}
+
+class _SessionTransportState {
+  final Duration elapsed;
+  final Duration? target;
+  final String timerText;
+  final String? statusText;
+
+  const _SessionTransportState({
+    required this.elapsed,
+    required this.target,
+    required this.timerText,
+    required this.statusText,
+  });
+}
+
 class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   final Stopwatch _stopwatch = Stopwatch();
   final AudioPlayer _clickPlayer = AudioPlayer();
@@ -42,13 +82,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   late int _bpm;
   late bool _clickEnabled;
   late PracticeSessionSetupV1 _setup;
-  PracticeSessionSetupV1? _returnSetup;
-  int _returnItemIndex = 0;
-  bool? _returnPulseEnabled;
-  bool _returnRunning = false;
-  Duration _returnElapsed = Duration.zero;
-  bool _returnTargetReached = false;
-  bool _returnCompletionChimed = false;
+  _SessionRuntimeSnapshot? _warmupReturnState;
   int _currentItemIndex = 0;
 
   @override
@@ -74,32 +108,28 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bool isWarmup = _setup.family == MaterialFamilyV1.warmup;
-    final currentItemId = _setup.practiceItemIds[_currentItemIndex];
+    final bool isWarmup = _isWarmup;
+    final String currentItemId = _currentItemId;
     final List<String> tokens = widget.controller.noteTokensFor(currentItemId);
     final List<PatternNoteMarkingV1> markings = widget.controller
         .noteMarkingsFor(currentItemId);
     final List<DrumVoiceV1> voices = widget.controller.noteVoicesFor(
       currentItemId,
     );
-    final Duration? target = _targetDuration();
-    final Duration elapsed = _elapsed;
-    final String timerText = target == null
-        ? formatDuration(elapsed)
-        : '${formatDuration(elapsed)} / ${formatDuration(target)}';
+    final _SessionTransportState transport = _transportState;
 
     return PopScope(
-      canPop: !isWarmup || _returnSetup == null,
+      canPop: !isWarmup || _warmupReturnState == null,
       onPopInvokedWithResult: (bool didPop, Object? _) {
-        if (!didPop && isWarmup && _returnSetup != null) {
-          _restoreFromWarmup();
+        if (!didPop && isWarmup && _warmupReturnState != null) {
+          _exitWarmup();
         }
       },
       child: Scaffold(
         appBar: AppBar(
-          leading: isWarmup && _returnSetup != null
+          leading: isWarmup && _warmupReturnState != null
               ? IconButton(
-                  onPressed: _restoreFromWarmup,
+                  onPressed: _exitWarmup,
                   icon: const Icon(Icons.arrow_back),
                 )
               : null,
@@ -149,7 +179,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                     ),
                     const SizedBox(height: 18),
                     Text(
-                      timerText,
+                      transport.timerText,
                       style: Theme.of(context).textTheme.headlineMedium
                           ?.copyWith(
                             color: _warmupComplete || _targetReached
@@ -158,10 +188,10 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                             fontWeight: FontWeight.w900,
                           ),
                     ),
-                    if (_warmupComplete || _targetReached) ...<Widget>[
+                    if (transport.statusText != null) ...<Widget>[
                       const SizedBox(height: 8),
                       Text(
-                        _warmupComplete ? 'Warmup complete' : 'Target reached',
+                        transport.statusText!,
                         style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(
                               color: const Color(0xFFFFC08D),
@@ -187,7 +217,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                         ),
                         if (!isWarmup)
                           OutlinedButton.icon(
-                            onPressed: _openWarmup,
+                            onPressed: _enterWarmup,
                             style: OutlinedButton.styleFrom(
                               foregroundColor: const Color(0xFFFFF4DE),
                               side: const BorderSide(color: Color(0xFFFFF4DE)),
@@ -315,8 +345,8 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   }
 
   void _endSession() {
-    if (_setup.family == MaterialFamilyV1.warmup) {
-      _restoreFromWarmup();
+    if (_isWarmup) {
+      _exitWarmup();
       return;
     }
 
@@ -337,14 +367,8 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     );
   }
 
-  void _openWarmup() {
-    _returnSetup = _setup.copyWith(bpm: _bpm, clickEnabled: _clickEnabled);
-    _returnItemIndex = _currentItemIndex;
-    _returnPulseEnabled = _pulseEnabled;
-    _returnRunning = _running;
-    _returnElapsed = _elapsed;
-    _returnTargetReached = _targetReached;
-    _returnCompletionChimed = _completionChimed;
+  void _enterWarmup() {
+    _warmupReturnState = _captureRuntimeSnapshot();
     _resetRunState(clearFlags: true);
 
     setState(() {
@@ -359,42 +383,14 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     });
   }
 
-  void _restoreFromWarmup() {
-    final PracticeSessionSetupV1? returnSetup = _returnSetup;
-    if (returnSetup == null) {
+  void _exitWarmup() {
+    final _SessionRuntimeSnapshot? returnState = _warmupReturnState;
+    if (returnState == null) {
       Navigator.of(context).pop();
       return;
     }
-    final bool resumeRunning = _returnRunning;
     _resetRunState(clearFlags: true);
-    setState(() {
-      _setup = returnSetup;
-      _elapsedOffset = _returnElapsed;
-      _bpm = returnSetup.bpm;
-      _clickEnabled = returnSetup.clickEnabled;
-      _pulseEnabled = _returnPulseEnabled ?? true;
-      _currentItemIndex = _returnItemIndex.clamp(
-        0,
-        returnSetup.practiceItemIds.length - 1,
-      );
-      _targetReached = _returnTargetReached;
-      _completionChimed = _returnCompletionChimed;
-      _returnSetup = null;
-      _returnItemIndex = 0;
-      _returnPulseEnabled = null;
-      _returnRunning = false;
-      _returnElapsed = Duration.zero;
-      _returnTargetReached = false;
-      _returnCompletionChimed = false;
-    });
-    if (resumeRunning) {
-      setState(() {
-        _running = true;
-        _stopwatch.start();
-        _startElapsedTicker();
-      });
-      _restartBeatTicker();
-    }
+    _restoreRuntimeSnapshot(returnState);
   }
 
   void _changeItem(int nextIndex) {
@@ -459,13 +455,74 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   }
 
   Duration? _targetDuration() {
-    if (_setup.family == MaterialFamilyV1.warmup) {
+    if (_isWarmup) {
       return Duration(minutes: _setup.practiceItemIds.length);
     }
     return timerPresetToDuration(_setup.timerPreset);
   }
 
+  bool get _isWarmup => _setup.family == MaterialFamilyV1.warmup;
+
+  String get _currentItemId => _setup.practiceItemIds[_currentItemIndex];
+
   Duration get _elapsed => _elapsedOffset + _stopwatch.elapsed;
+
+  _SessionTransportState get _transportState {
+    final Duration? target = _targetDuration();
+    final String timerText = target == null
+        ? formatDuration(_elapsed)
+        : '${formatDuration(_elapsed)} / ${formatDuration(target)}';
+    final String? statusText = _warmupComplete
+        ? 'Warmup complete'
+        : (_targetReached ? 'Target reached' : null);
+    return _SessionTransportState(
+      elapsed: _elapsed,
+      target: target,
+      timerText: timerText,
+      statusText: statusText,
+    );
+  }
+
+  _SessionRuntimeSnapshot _captureRuntimeSnapshot() {
+    return _SessionRuntimeSnapshot(
+      setup: _setup.copyWith(bpm: _bpm, clickEnabled: _clickEnabled),
+      bpm: _bpm,
+      clickEnabled: _clickEnabled,
+      pulseEnabled: _pulseEnabled,
+      currentItemIndex: _currentItemIndex,
+      elapsed: _elapsed,
+      running: _running,
+      targetReached: _targetReached,
+      warmupComplete: _warmupComplete,
+      completionChimed: _completionChimed,
+    );
+  }
+
+  void _restoreRuntimeSnapshot(_SessionRuntimeSnapshot snapshot) {
+    setState(() {
+      _setup = snapshot.setup;
+      _elapsedOffset = snapshot.elapsed;
+      _bpm = snapshot.bpm;
+      _clickEnabled = snapshot.clickEnabled;
+      _pulseEnabled = snapshot.pulseEnabled;
+      _currentItemIndex = snapshot.currentItemIndex.clamp(
+        0,
+        snapshot.setup.practiceItemIds.length - 1,
+      );
+      _targetReached = snapshot.targetReached;
+      _warmupComplete = snapshot.warmupComplete;
+      _completionChimed = snapshot.completionChimed;
+      _warmupReturnState = null;
+    });
+    if (snapshot.running) {
+      setState(() {
+        _running = true;
+        _stopwatch.start();
+        _startElapsedTicker();
+      });
+      _restartBeatTicker();
+    }
+  }
 
   void _startElapsedTicker() {
     _elapsedTicker?.cancel();
