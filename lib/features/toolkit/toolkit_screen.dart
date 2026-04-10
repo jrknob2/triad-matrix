@@ -31,6 +31,7 @@ class _FocusScreenState extends State<FocusScreen> {
   _FocusViewFilter _viewFilter = _FocusViewFilter.all;
   late final TextEditingController _searchController;
   String _searchQuery = '';
+  int _visibleItemCount = 5;
 
   @override
   void initState() {
@@ -97,7 +98,10 @@ class _FocusScreenState extends State<FocusScreen> {
               const SizedBox(height: 14),
               TextField(
                 controller: _searchController,
-                onChanged: (String value) => setState(() => _searchQuery = value),
+                onChanged: (String value) => setState(() {
+                  _searchQuery = value;
+                  _visibleItemCount = 5;
+                }),
                 decoration: const InputDecoration(
                   hintText: 'Search all practice items',
                   prefixIcon: Icon(Icons.search_rounded),
@@ -123,8 +127,10 @@ class _FocusScreenState extends State<FocusScreen> {
                               ),
                             ),
                             selected: _viewFilter == filter,
-                            onPressed: () =>
-                                setState(() => _viewFilter = filter),
+                            onPressed: () => setState(() {
+                              _viewFilter = filter;
+                              _visibleItemCount = 5;
+                            }),
                           ),
                         ),
                       )
@@ -140,7 +146,7 @@ class _FocusScreenState extends State<FocusScreen> {
                   filterLabel: _labelForViewFilter(_viewFilter),
                 )
               else
-                ...visibleItems.map(
+                ...visibleItems.take(_visibleItemCount).map(
                   (PracticeItemV1 item) => Padding(
                     padding: const EdgeInsets.only(bottom: 10),
                     child: widget.controller.isDirectRoutineEntry(item.id)
@@ -161,6 +167,16 @@ class _FocusScreenState extends State<FocusScreen> {
                             onAddItem: () =>
                                 widget.controller.toggleRoutineItem(item.id),
                           ),
+                  ),
+                ),
+              if (visibleItems.length > _visibleItemCount)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: OutlinedButton(
+                    onPressed: () => setState(() {
+                      _visibleItemCount += 5;
+                    }),
+                    child: const Text('Show More'),
                   ),
                 ),
             ],

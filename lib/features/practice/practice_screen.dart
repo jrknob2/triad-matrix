@@ -31,7 +31,8 @@ class PracticeScreen extends StatefulWidget {
 class _PracticeScreenState extends State<PracticeScreen> {
   bool _showWorkingOnSetup = false;
   bool _showPreviousSessionBrowser = false;
-  int _visiblePreviousSessionCount = 3;
+  int _visiblePreviousSessionCount = 5;
+  int _visibleWorkingOnItemCount = 5;
   String _previousSessionQuery = '';
   late final TextEditingController _previousSessionSearchController;
   Set<String> _selectedItemIds = <String>{};
@@ -136,15 +137,12 @@ class _PracticeScreenState extends State<PracticeScreen> {
                           searchController: _previousSessionSearchController,
                           onQueryChanged: (String value) => setState(() {
                             _previousSessionQuery = value;
-                            _visiblePreviousSessionCount = 3;
+                            _visiblePreviousSessionCount = 5;
                           }),
                           totalCount: filteredRecentSessions.length,
                           sessions: filteredRecentSessions
                               .take(_visiblePreviousSessionCount)
                               .toList(growable: false),
-                          hasMore:
-                              filteredRecentSessions.length >
-                              _visiblePreviousSessionCount,
                           onLoadMore: () => setState(() {
                             _visiblePreviousSessionCount += 5;
                           }),
@@ -167,6 +165,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
                               _showWorkingOnSetup = !_showWorkingOnSetup;
                               if (_showWorkingOnSetup) {
                                 _showPreviousSessionBrowser = false;
+                                _visibleWorkingOnItemCount = 5;
                               }
                             }),
                       trailing: Icon(
@@ -185,11 +184,12 @@ class _PracticeScreenState extends State<PracticeScreen> {
                         practiceMode: effectivePracticeMode,
                         canFlowSelection: canFlowSelection,
                         broadRotation: broadRotation,
-                        onToggleFilter: (WorkingOnSessionFilterV1 filter) {
-                          setState(() {
-                            _filters = _toggleFilter(_filters, filter);
-                          });
-                        },
+                          onToggleFilter: (WorkingOnSessionFilterV1 filter) {
+                            setState(() {
+                              _filters = _toggleFilter(_filters, filter);
+                              _visibleWorkingOnItemCount = 5;
+                            });
+                          },
                         onToggleItem: (String itemId) {
                           setState(() {
                             if (_selectedItemIds.contains(itemId)) {
@@ -212,6 +212,12 @@ class _PracticeScreenState extends State<PracticeScreen> {
                                   ...visibleIds,
                                 };
                               }),
+                        visibleItemCount: _visibleWorkingOnItemCount,
+                        onShowMore: visibleItems.length > _visibleWorkingOnItemCount
+                            ? () => setState(() {
+                                _visibleWorkingOnItemCount += 5;
+                              })
+                            : null,
                         onClearSelection: _selectedItemIds.isEmpty
                             ? null
                             : () => setState(() {
@@ -373,7 +379,6 @@ class _PreviousSessionBrowser extends StatelessWidget {
   final ValueChanged<String> onQueryChanged;
   final int totalCount;
   final List<PracticeSessionLogV1> sessions;
-  final bool hasMore;
   final VoidCallback onLoadMore;
   final ValueChanged<PracticeSessionLogV1> onRepeatSession;
 
@@ -383,7 +388,6 @@ class _PreviousSessionBrowser extends StatelessWidget {
     required this.onQueryChanged,
     required this.totalCount,
     required this.sessions,
-    required this.hasMore,
     required this.onLoadMore,
     required this.onRepeatSession,
   });
@@ -446,12 +450,12 @@ class _PreviousSessionBrowser extends StatelessWidget {
                 ),
               ),
             ),
-            if (hasMore)
+            if (sessions.length < totalCount)
               Align(
                 alignment: Alignment.centerLeft,
                 child: OutlinedButton(
                   onPressed: onLoadMore,
-                  child: const Text('Load More'),
+                  child: const Text('Show More'),
                 ),
               ),
           ],
@@ -535,6 +539,7 @@ class _PreviousSessionRow extends StatelessWidget {
 class _WorkingOnSessionSetup extends StatelessWidget {
   final AppController controller;
   final List<PracticeItemV1> visibleItems;
+  final int visibleItemCount;
   final List<String> selectedItemIds;
   final Set<WorkingOnSessionFilterV1> filters;
   final PracticeModeV1 practiceMode;
@@ -543,6 +548,7 @@ class _WorkingOnSessionSetup extends StatelessWidget {
   final ValueChanged<WorkingOnSessionFilterV1> onToggleFilter;
   final ValueChanged<String> onToggleItem;
   final VoidCallback? onSelectVisible;
+  final VoidCallback? onShowMore;
   final VoidCallback? onClearSelection;
   final ValueChanged<PracticeModeV1> onSetPracticeMode;
   final VoidCallback? onStart;
@@ -550,6 +556,7 @@ class _WorkingOnSessionSetup extends StatelessWidget {
   const _WorkingOnSessionSetup({
     required this.controller,
     required this.visibleItems,
+    required this.visibleItemCount,
     required this.selectedItemIds,
     required this.filters,
     required this.practiceMode,
@@ -558,6 +565,7 @@ class _WorkingOnSessionSetup extends StatelessWidget {
     required this.onToggleFilter,
     required this.onToggleItem,
     required this.onSelectVisible,
+    required this.onShowMore,
     required this.onClearSelection,
     required this.onSetPracticeMode,
     required this.onStart,
@@ -690,7 +698,7 @@ class _WorkingOnSessionSetup extends StatelessWidget {
                 ),
               )
             else
-              ...visibleItems.map(
+              ...visibleItems.take(visibleItemCount).map(
                 (PracticeItemV1 item) => Padding(
                   padding: const EdgeInsets.only(bottom: 10),
                   child: _SelectableWorkingOnRow(
@@ -699,6 +707,14 @@ class _WorkingOnSessionSetup extends StatelessWidget {
                     selected: selectedItemIds.contains(item.id),
                     onTap: () => onToggleItem(item.id),
                   ),
+                ),
+              ),
+            if (onShowMore != null)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton(
+                  onPressed: onShowMore,
+                  child: const Text('Show More'),
                 ),
               ),
             const SizedBox(height: 6),

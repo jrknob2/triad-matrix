@@ -662,6 +662,7 @@ Rules:
 - the setup surface may also advise when the actively trained rotation has grown too wide
 - active-rotation guidance should treat roughly `4-8` actively pushed items as the normal zone
 - when recent active rotation grows beyond that, the app may advise shrinking the core rotation, but must not hard-block it
+- long visible item lists should default to 5 rows and use `Show More` for the rest
 
 ### Category And Filter Derivation For `From Working On`
 
@@ -865,6 +866,7 @@ Must not show:
 - search results that are not in `Working On` should support add/open behavior
 - search results that are already in `Working On` should use the normal current-work controls
 - filter state must always have an explicit `All` path or equivalent clear state
+- long visible item lists should default to 5 rows and use `Show More` for the rest
 
 ---
 
