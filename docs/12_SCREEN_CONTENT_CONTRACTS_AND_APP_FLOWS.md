@@ -819,6 +819,7 @@ Focus is the current working set.
 ### Allowed Content
 
 - current items list
+- search field
 - mode filter if it serves item selection
 - add entry point
 - play/edit/remove controls
@@ -840,6 +841,7 @@ Focus is the current working set.
 
 - reorder
 - mode filter
+- search results
 
 ### Empty State
 
@@ -859,6 +861,10 @@ Must not show:
 - Focus must not imply that every item in the list should be practiced in one sitting
 - Focus is where current material is maintained
 - Practice session setup is where the player chooses today's slice
+- search on this screen should look across all practice items, not only items already in `Working On`
+- search results that are not in `Working On` should support add/open behavior
+- search results that are already in `Working On` should use the normal current-work controls
+- filter state must always have an explicit `All` path or equivalent clear state
 
 ---
 

@@ -355,6 +355,7 @@ Focus is the current working set.
 - support remove
 - support add from Coach/Matrix
 - allow the list to be broader than a single day's session
+- support searching across all practice items when the player wants to add or find something quickly
 
 ### Must Not Do
 
@@ -378,6 +379,15 @@ Must show:
 - current items
 - simple item controls
 
+#### State C: Search / Add
+
+Must show:
+
+- a search field
+- results from all practice items, not just current `Working On`
+- clear add/open behavior for results that are not already in `Working On`
+- normal current-work controls for results already in `Working On`
+
 Optional:
 
 - section toggle between single-surface and flow-friendly items
@@ -392,6 +402,8 @@ Optional:
 
 - Focus should read as CRUD for current work
 - Focus should feel like the broad active pool, not today's forced checklist
+- search must help the player find and add practice items quickly without turning Focus into a second Matrix
+- filter state must always have a clear way back to `All`
 - the user should never wonder whether an item is “saved”, “mastered”, or “current”
 - there should be no fake summary cards trying to turn this into a dashboard
 
