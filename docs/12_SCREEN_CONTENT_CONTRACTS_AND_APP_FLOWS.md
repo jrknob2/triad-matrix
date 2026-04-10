@@ -504,21 +504,39 @@ Serve:
 
 Rules:
 
+- a single selected triad is direct item selection
+- selecting a second triad turns the editor into phrase-building mode
 - shows exact ordered sequence
 - owns exact occurrence removal
 - grid reflects membership only
 - a second or later triad may only be added if all involved triads are phrase-ready
 - adding material from Matrix must not inject accents, ghosts, or flow voices automatically
+- phrase-building mode defaults to flow-oriented practice actions
 
 #### Action Row
 
 Serve:
 
-- practice now
-- flow practice
-- add to Focus
-- save phrase
+- direct practice
+- add to Working On
+- open selected item when one triad is selected
+- save phrase when multiple triads are selected
 - clear selection
+
+Rules:
+
+- with one selected triad:
+  - show `Practice`
+  - show `Add to Working On`
+  - show `Open Item`
+  - do not show `Remove from Working On`
+- with more than one selected triad:
+  - show `Practice`
+  - route that action to flow practice
+  - show `Add to Working On`
+  - show `Save`
+  - do not show `Open Item`
+  - do not show `Remove from Working On`
 
 ### Matrix States
 

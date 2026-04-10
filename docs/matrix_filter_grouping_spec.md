@@ -164,6 +164,9 @@ Rules:
 - a triad is phrase-ready when it has reached at least `Comfortable`
 - only phrase-ready triads may be appended to a phrase sequence
 - this same rule applies anywhere else the app builds phrases from triads
+- one selected triad behaves like direct item selection
+- once more than one triad is selected, the Matrix is in phrase-building mode
+- phrase-building mode defaults the `Practice` action to Flow
 
 ## Deep-Link Rules
 
@@ -202,6 +205,7 @@ Persistent decoration rule:
 - exact occurrence removal happens in the ordered phrase header, not inside cells
 - matrix cells must not show per-cell remove buttons or `x` badges
 - out-of-scope cells remain visible but are not tappable
+- the action row must not show `Remove from Working On`
 
 ## Rules
 - do not collapse grid into simple heatmap

@@ -147,6 +147,8 @@ class _MatrixScreenState extends State<MatrixScreen> {
     return _normalizedFiltersForView(_view, _filters);
   }
 
+  bool get _isPhraseBuilding => _selectedItemIds.length > 1;
+
   bool get _selectionIsInRoutine {
     final String? itemId = _selectionRoutineItemId;
     return itemId != null && widget.controller.isDirectRoutineEntry(itemId);
@@ -181,26 +183,19 @@ class _MatrixScreenState extends State<MatrixScreen> {
       Padding(
         padding: const EdgeInsets.only(right: 8),
         child: DrumActionPill(
-          label: const Text('Practice Here'),
-          onPressed: _practiceSelection,
-        ),
-      ),
-      Padding(
-        padding: const EdgeInsets.only(right: 8),
-        child: DrumActionPill(
-          label: const Text('Practice in Flow'),
-          onPressed: _practiceSelectionInFlow,
+          label: const Text('Practice'),
+          onPressed: _isPhraseBuilding
+              ? _practiceSelectionInFlow
+              : _practiceSelection,
         ),
       ),
       Padding(
         padding: const EdgeInsets.only(right: 8),
         child: DrumActionPill(
           label: Text(
-            _selectionIsInRoutine
-                ? 'Remove from Working On'
-                : 'Add to Working On',
+            _selectionIsInRoutine ? 'In Working On' : 'Add to Working On',
           ),
-          onPressed: _toggleRoutineSelection,
+          onPressed: _selectionIsInRoutine ? null : _addSelectionToRoutine,
         ),
       ),
       if (_selectedItemIds.length > 1)
@@ -358,10 +353,11 @@ class _MatrixScreenState extends State<MatrixScreen> {
     widget.onPracticeItemInMode(itemId, PracticeModeV1.flow);
   }
 
-  void _toggleRoutineSelection() {
+  void _addSelectionToRoutine() {
     final String? itemId = _selectionActionItemId(createIfMissing: true);
     if (itemId == null) return;
-    widget.controller.toggleRoutineItem(itemId);
+    if (widget.controller.isDirectRoutineEntry(itemId)) return;
+    widget.controller.addRoutineItems(<String>[itemId]);
     setState(() {});
   }
 

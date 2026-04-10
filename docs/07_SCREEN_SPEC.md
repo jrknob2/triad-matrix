@@ -239,6 +239,7 @@ Phrase rule:
 
 - one triad may always be selected for direct practice
 - adding a second or later triad requires phrase-ready material
+- once more than one triad is selected, Matrix should behave like phrase-building mode and default practice from that selection to Flow
 
 ### Acceptance Criteria
 
@@ -249,6 +250,7 @@ Phrase rule:
 - invalid filter combinations are prevented by design, not explained after the fact
 - compact horizontal controls are preferred before adding more stacked filter rows
 - row and column slicers must look touchable, not like passive labels
+- Matrix action controls should change meaningfully between single-triad selection and phrase-building selection
 
 ---
 
