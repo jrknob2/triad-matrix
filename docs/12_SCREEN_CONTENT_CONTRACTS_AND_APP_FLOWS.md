@@ -698,6 +698,7 @@ Guidance:
 Must allow:
 
 - browsing a short recent list first
+- searching previous sessions by practiced pattern
 - seeing date, duration, mode, and practiced patterns on each row
 - loading more rows
 - quickly repeating a chosen previous session
@@ -706,7 +707,7 @@ Rules:
 
 - this is a recognition flow, not a memory test
 - rows must show enough pattern detail that the player can tell sessions apart
-- search may be added to this browser and should work alongside the recent list
+- search should work alongside the recent list, not replace it
 
 ### Practice Wording Rules
 

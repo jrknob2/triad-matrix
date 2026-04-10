@@ -292,6 +292,7 @@ Must support:
 - exact item selection for a session
 - derived session-scope filters based on actual item properties and progress state
 - a short recent-session list with enough pattern detail to recognize the session
+- search within that recent-session list by practiced pattern
 - `Load More` for older sessions
 
 Optional later:

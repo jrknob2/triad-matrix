@@ -32,9 +32,23 @@ class _PracticeScreenState extends State<PracticeScreen> {
   bool _showWorkingOnSetup = false;
   bool _showPreviousSessionBrowser = false;
   int _visiblePreviousSessionCount = 5;
+  String _previousSessionQuery = '';
+  late final TextEditingController _previousSessionSearchController;
   Set<String> _selectedItemIds = <String>{};
   Set<WorkingOnSessionFilterV1> _filters = <WorkingOnSessionFilterV1>{};
   PracticeModeV1 _practiceMode = PracticeModeV1.singleSurface;
+
+  @override
+  void initState() {
+    super.initState();
+    _previousSessionSearchController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _previousSessionSearchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,6 +57,14 @@ class _PracticeScreenState extends State<PracticeScreen> {
       builder: (BuildContext context, _) {
         final List<PracticeSessionLogV1> recentSessions =
             widget.controller.trackedRecentSessions;
+        final List<PracticeSessionLogV1> filteredRecentSessions =
+            _previousSessionQuery.trim().isEmpty
+            ? recentSessions
+            : recentSessions.where((PracticeSessionLogV1 session) {
+                return widget.controller
+                    .sessionSearchText(session)
+                    .contains(_previousSessionQuery.trim().toLowerCase());
+              }).toList(growable: false);
         final List<PracticeItemV1> workingOn = widget.controller.activeWorkItems;
         final List<String> workingOnIds = workingOn
             .map((PracticeItemV1 item) => item.id)
@@ -111,11 +133,17 @@ class _PracticeScreenState extends State<PracticeScreen> {
                         const SizedBox(height: 14),
                         _PreviousSessionBrowser(
                           controller: widget.controller,
-                          sessions: recentSessions
+                          searchController: _previousSessionSearchController,
+                          onQueryChanged: (String value) => setState(() {
+                            _previousSessionQuery = value;
+                            _visiblePreviousSessionCount = 5;
+                          }),
+                          sessions: filteredRecentSessions
                               .take(_visiblePreviousSessionCount)
                               .toList(growable: false),
                           hasMore:
-                              recentSessions.length > _visiblePreviousSessionCount,
+                              filteredRecentSessions.length >
+                              _visiblePreviousSessionCount,
                           onLoadMore: () => setState(() {
                             _visiblePreviousSessionCount += 5;
                           }),
@@ -340,6 +368,8 @@ class _PracticeLaunchTile extends StatelessWidget {
 
 class _PreviousSessionBrowser extends StatelessWidget {
   final AppController controller;
+  final TextEditingController searchController;
+  final ValueChanged<String> onQueryChanged;
   final List<PracticeSessionLogV1> sessions;
   final bool hasMore;
   final VoidCallback onLoadMore;
@@ -347,6 +377,8 @@ class _PreviousSessionBrowser extends StatelessWidget {
 
   const _PreviousSessionBrowser({
     required this.controller,
+    required this.searchController,
+    required this.onQueryChanged,
     required this.sessions,
     required this.hasMore,
     required this.onLoadMore,
@@ -376,6 +408,23 @@ class _PreviousSessionBrowser extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 14),
+            TextField(
+              controller: searchController,
+              onChanged: onQueryChanged,
+              decoration: const InputDecoration(
+                hintText: 'Search by pattern',
+                prefixIcon: Icon(Icons.search_rounded),
+                isDense: true,
+              ),
+            ),
+            const SizedBox(height: 14),
+            if (sessions.isEmpty)
+              Text(
+                'No recent sessions match that search.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: const Color(0xFF6A5E4C),
+                ),
+              ),
             ...sessions.map(
               (PracticeSessionLogV1 session) => Padding(
                 padding: const EdgeInsets.only(bottom: 10),

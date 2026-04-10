@@ -1922,6 +1922,19 @@ class AppController extends ChangeNotifier {
     return '${visible.join(' • ')} +${labels.length - maxItems} more';
   }
 
+  String sessionSearchText(PracticeSessionLogV1 session) {
+    final List<String> labels = session.practiceItemIds
+        .map(itemByIdOrNull)
+        .whereType<PracticeItemV1>()
+        .map((PracticeItemV1 item) => item.name)
+        .toList(growable: false);
+    return <String>[
+      formatShortDate(session.endedAt),
+      session.practiceMode.label,
+      ...labels,
+    ].join(' ').toLowerCase();
+  }
+
   int _compareByNeed(PracticeItemV1 a, PracticeItemV1 b) {
     final int competencyCompare = _competencyScore(
       competencyFor(a.id),
