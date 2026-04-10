@@ -2287,11 +2287,21 @@ class AppController extends ChangeNotifier {
         _triadItemId('LRR'),
         _triadItemId('RLR'),
         _triadItemId('KRL'),
+        _triadItemId('LLL'),
+        _triadItemId('RRR'),
+        _triadItemId('RRK'),
+        _triadItemId('LRK'),
+        _triadItemId('KKR'),
       ])
       ..setCompetency(_triadItemId('RLL'), CompetencyLevelV1.comfortable)
       ..setCompetency(_triadItemId('LRR'), CompetencyLevelV1.learning)
       ..setCompetency(_triadItemId('RLR'), CompetencyLevelV1.comfortable)
       ..setCompetency(_triadItemId('KRL'), CompetencyLevelV1.learning)
+      ..setCompetency(_triadItemId('LLL'), CompetencyLevelV1.learning)
+      ..setCompetency(_triadItemId('RRR'), CompetencyLevelV1.learning)
+      ..setCompetency(_triadItemId('RRK'), CompetencyLevelV1.learning)
+      ..setCompetency(_triadItemId('LRK'), CompetencyLevelV1.learning)
+      ..setCompetency(_triadItemId('KKR'), CompetencyLevelV1.notStarted)
       ..addManualSession(
         itemId: _triadItemId('RLL'),
         practiceMode: PracticeModeV1.singleSurface,
@@ -2431,6 +2441,46 @@ class AppController extends ChangeNotifier {
         selfReportControl: SelfReportControlV1.medium,
         selfReportTension: SelfReportTensionV1.none,
         selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+      )
+      ..addManualSession(
+        itemId: _triadItemId('LLL'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 70,
+        duration: const Duration(minutes: 4),
+        endedAt: now.subtract(const Duration(days: 12)),
+        selfReportControl: SelfReportControlV1.low,
+        selfReportTension: SelfReportTensionV1.some,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.decrease,
+      )
+      ..addManualSession(
+        itemId: _triadItemId('RRR'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 74,
+        duration: const Duration(minutes: 4),
+        endedAt: now.subtract(const Duration(days: 11)),
+        selfReportControl: SelfReportControlV1.medium,
+        selfReportTension: SelfReportTensionV1.some,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+      )
+      ..addManualSession(
+        itemId: _triadItemId('RRK'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 68,
+        duration: const Duration(minutes: 4),
+        endedAt: now.subtract(const Duration(days: 7)),
+        selfReportControl: SelfReportControlV1.low,
+        selfReportTension: SelfReportTensionV1.some,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.decrease,
+      )
+      ..addManualSession(
+        itemId: _triadItemId('LRK'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 72,
+        duration: const Duration(minutes: 5),
+        endedAt: now.subtract(const Duration(days: 5)),
+        selfReportControl: SelfReportControlV1.medium,
+        selfReportTension: SelfReportTensionV1.some,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
       );
     return builder.build();
   }
@@ -2442,6 +2492,8 @@ class AppController extends ChangeNotifier {
         _triadItemId('RLL'),
         _triadItemId('LRR'),
         _triadItemId('RLR'),
+        _triadItemId('LLR'),
+        _triadItemId('RRL'),
       ])
       ..addManualSession(
         itemId: _triadItemId('RLL'),
@@ -2543,9 +2595,31 @@ class AppController extends ChangeNotifier {
         selfReportTension: SelfReportTensionV1.none,
         selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
       )
+      ..addManualSession(
+        itemId: _triadItemId('LLR'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 82,
+        duration: const Duration(minutes: 5),
+        endedAt: now.subtract(const Duration(days: 15)),
+        selfReportControl: SelfReportControlV1.medium,
+        selfReportTension: SelfReportTensionV1.some,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+      )
+      ..addManualSession(
+        itemId: _triadItemId('RRL'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 84,
+        duration: const Duration(minutes: 5),
+        endedAt: now.subtract(const Duration(days: 6)),
+        selfReportControl: SelfReportControlV1.medium,
+        selfReportTension: SelfReportTensionV1.none,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+      )
       ..setCompetency(_triadItemId('RLL'), CompetencyLevelV1.comfortable)
       ..setCompetency(_triadItemId('LRR'), CompetencyLevelV1.comfortable)
-      ..setCompetency(_triadItemId('RLR'), CompetencyLevelV1.comfortable);
+      ..setCompetency(_triadItemId('RLR'), CompetencyLevelV1.comfortable)
+      ..setCompetency(_triadItemId('LLR'), CompetencyLevelV1.learning)
+      ..setCompetency(_triadItemId('RRL'), CompetencyLevelV1.learning);
     return builder.build();
   }
 
@@ -2562,7 +2636,28 @@ class AppController extends ChangeNotifier {
       ],
     );
     builder
-      ..addRoutineItems(<String>[combo.id, _triadItemId('KRL')])
+      ..addRoutineItems(<String>[
+        combo.id,
+        _triadItemId('KRL'),
+        _triadItemId('RLR'),
+        _triadItemId('LRR'),
+      ])
+      ..setVoices(
+        _triadItemId('RLR'),
+        <DrumVoiceV1>[
+          DrumVoiceV1.hihat,
+          DrumVoiceV1.snare,
+          DrumVoiceV1.hihat,
+        ],
+      )
+      ..setVoices(
+        _triadItemId('LRR'),
+        <DrumVoiceV1>[
+          DrumVoiceV1.floorTom,
+          DrumVoiceV1.snare,
+          DrumVoiceV1.snare,
+        ],
+      )
       ..addManualSession(
         itemId: combo.id,
         practiceMode: PracticeModeV1.singleSurface,
@@ -2633,8 +2728,30 @@ class AppController extends ChangeNotifier {
         selfReportTension: SelfReportTensionV1.none,
         selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
       )
+      ..addManualSession(
+        itemId: _triadItemId('RLR'),
+        practiceMode: PracticeModeV1.flow,
+        bpm: 88,
+        duration: const Duration(minutes: 5),
+        endedAt: now.subtract(const Duration(days: 6)),
+        selfReportControl: SelfReportControlV1.medium,
+        selfReportTension: SelfReportTensionV1.some,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+      )
+      ..addManualSession(
+        itemId: _triadItemId('LRR'),
+        practiceMode: PracticeModeV1.flow,
+        bpm: 92,
+        duration: const Duration(minutes: 5),
+        endedAt: now.subtract(const Duration(days: 2)),
+        selfReportControl: SelfReportControlV1.high,
+        selfReportTension: SelfReportTensionV1.none,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.increase,
+      )
       ..setCompetency(combo.id, CompetencyLevelV1.reliable)
-      ..setCompetency(_triadItemId('KRL'), CompetencyLevelV1.comfortable);
+      ..setCompetency(_triadItemId('KRL'), CompetencyLevelV1.comfortable)
+      ..setCompetency(_triadItemId('RLR'), CompetencyLevelV1.reliable)
+      ..setCompetency(_triadItemId('LRR'), CompetencyLevelV1.comfortable);
     return builder.build();
   }
 
@@ -2845,6 +2962,15 @@ class _MockScenarioBuilder {
       level: level,
       updatedAt: DateTime.now(),
     );
+  }
+
+  void setVoices(String itemId, List<DrumVoiceV1> voices) {
+    items = items
+        .map((PracticeItemV1 item) {
+          if (item.id != itemId) return item;
+          return controller._sanitizedItem(item.copyWith(voiceAssignments: voices));
+        })
+        .toList(growable: false);
   }
 
   PracticeCombinationV1 addSavedPhrase({

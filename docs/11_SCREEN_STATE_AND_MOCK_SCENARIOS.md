@@ -8,6 +8,8 @@ These scenarios are not optional test data. They are required to keep Coach, Pra
 
 They must also contain enough longitudinal data to exercise Progress graphs in a believable way.
 
+They must also contain enough breadth in `Working On` and recent session history to exercise search meaningfully in `Practice` and `Focus`.
+
 ---
 
 ## Scenario 1: `first_light`
@@ -153,10 +155,12 @@ State:
 
 - repeat-last-session meaningful
 - start-practice session slicing meaningful
+- recent sessions varied enough to make previous-session search useful
 
 #### Focus
 
 - stable current-work list
+- enough item variety to make `Working On` search useful
 
 #### Progress
 
@@ -216,6 +220,14 @@ State:
 #### Practice Item
 
 - voice assignment setup feels justified
+
+#### Practice
+
+- recent sessions should include enough varied pattern names to exercise search
+
+#### Focus
+
+- `Flow` and search should both return meaningful results
 
 #### Progress
 
