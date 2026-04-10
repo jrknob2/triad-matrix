@@ -103,8 +103,8 @@ Goal:
 Path:
 
 1. `Practice`
-2. `Start Practice`
-3. choose source or session scope
+2. `Choose Patterns to Practice` or `Repeat a Previous Session`
+3. choose source, previous session, or session scope
 4. `Practice Session`
 5. `Session Summary`
 
@@ -117,16 +117,19 @@ Screens involved:
 
 Required controls:
 
-- `Repeat Last Session`
-- `Start Practice`
+- `Repeat a Previous Session`
+- `Choose Patterns to Practice`
 - `Warm Up`
 - `From Working On`
 
 Rules:
 
-- `From Working On` belongs inside `Start Practice`, not as a separate top-level reason to use Practice
+- `From Working On` belongs inside `Choose Patterns to Practice`, not as a separate top-level reason to use Practice
 - `Working On` may be broader than one day's session
 - session setup is where the player narrows that broader pool into today's slice
+- `Repeat a Previous Session` should browse recent sessions, not only repeat the single most recent one
+- previous-session rows must show enough session content to be recognizable, including the patterns practiced
+- previous-session browsing may start short and offer `Load More`
 
 ### Flow C: Coach-Driven Practice
 
@@ -619,8 +622,8 @@ Practice answers:
 
 ### Required Entry Options
 
-- `Repeat Last Session`
-- `Start Practice`
+- `Repeat a Previous Session`
+- `Choose Patterns to Practice`
 - `Warm Up`
 
 Optional later:
@@ -633,9 +636,10 @@ Optional later:
 - this screen must exist as a primary tab
 - each entry option must clearly indicate what session source it uses
 - this screen should reduce choice friction, not add setup friction
-- `Start Practice` is the entry into normal tracked practice
-- `From Working On` belongs inside `Start Practice`, not as a separate peer card
+- `Choose Patterns to Practice` is the entry into normal tracked practice
+- `From Working On` belongs inside `Choose Patterns to Practice`, not as a separate peer card
 - `Warm Up` remains separate because it is a distinct prep mode, not a slice of current work
+- `Repeat a Previous Session` should open a recent-session browser, not silently assume the last session is the right one
 
 ### Session Setup From `Working On`
 
@@ -688,6 +692,21 @@ Guidance:
   - kick day
   - flow day
   - cleanup day
+
+### Previous Session Browser
+
+Must allow:
+
+- browsing a short recent list first
+- seeing date, duration, mode, and practiced patterns on each row
+- loading more rows
+- quickly repeating a chosen previous session
+
+Rules:
+
+- this is a recognition flow, not a memory test
+- rows must show enough pattern detail that the player can tell sessions apart
+- search may be added to this browser and should work alongside the recent list
 
 ### Practice Wording Rules
 

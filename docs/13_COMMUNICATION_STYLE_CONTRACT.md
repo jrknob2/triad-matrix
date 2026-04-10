@@ -52,7 +52,8 @@ UI voice should be:
 Examples:
 
 - `Open Matrix`
-- `Start Practice`
+- `Choose Patterns to Practice`
+- `Repeat a Previous Session`
 - `Needs Work`
 - `End Session`
 - `Right Lead`

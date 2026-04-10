@@ -264,7 +264,7 @@ Practice gives the user a direct way to start playing and then executes the sess
 
 - exist as a primary tab
 - support direct-entry practice choices
-- support repeat-last-session
+- support previous-session repeat from a browsable recent list
 - support practice from `Working On`
 - support warmup
 - support session setup that narrows `Working On` into today's slice
@@ -282,15 +282,17 @@ Practice gives the user a direct way to start playing and then executes the sess
 
 Must show:
 
-- `Repeat Last Session`
-- `Start Practice`
+- `Repeat a Previous Session`
+- `Choose Patterns to Practice`
 - `Warm Up`
 
 Must support:
 
-- `From Working On` inside `Start Practice`
+- `From Working On` inside `Choose Patterns to Practice`
 - exact item selection for a session
 - derived session-scope filters based on actual item properties and progress state
+- a short recent-session list with enough pattern detail to recognize the session
+- `Load More` for older sessions
 
 Optional later:
 
@@ -330,6 +332,7 @@ Warmup rules:
 - user can reach practice directly from nav
 - the app should distinguish between a broad `Working On` pool and a smaller session slice
 - `From Working On` should not exist as a separate top-level card
+- `Repeat a Previous Session` should not assume the most recent session is always the intended one
 - session size guidance should be advisory, not blocking
 - session player feels like an execution surface, not a config form
 - warmup behaves like temporary prep, not core curriculum

@@ -35,9 +35,9 @@ State:
 #### Practice
 
 - direct-entry view
-- no `Repeat Last Session`
+- no `Repeat a Previous Session`
 - `Warm Up` available
-- `Start Practice` disabled or absent
+- `Choose Patterns to Practice` disabled or absent
 
 #### Focus
 
@@ -75,7 +75,7 @@ State:
 #### Practice
 
 - direct-entry view
-- `Start Practice` active
+- `Choose Patterns to Practice` active
 - `Warm Up` active
 
 #### Focus
@@ -112,8 +112,8 @@ State:
 
 #### Practice
 
-- `Repeat Last Session` available
-- `Start Practice` available
+- `Repeat a Previous Session` available
+- `Choose Patterns to Practice` available
 
 #### Focus
 

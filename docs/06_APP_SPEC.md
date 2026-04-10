@@ -275,11 +275,12 @@ Progress should be measurement-first:
 1. User opens `Practice`
 2. Sees direct-entry options
 3. Chooses one:
-   - `Repeat Last Session`
-   - `Start Practice`
+   - `Repeat a Previous Session`
+   - `Choose Patterns to Practice`
    - `Warm Up`
-4. If using normal practice, narrows `Working On` into today's session slice
-5. Enters session player
+4. If choosing patterns, narrows `Working On` into today's session slice
+5. If repeating, chooses from a recent-session list
+6. Enters session player
 
 ### Flow C: Matrix-Driven Practice
 

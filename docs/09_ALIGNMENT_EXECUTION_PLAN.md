@@ -170,7 +170,8 @@ Goal:
 
 Tasks:
 
-- make `Start Practice` the entry into normal tracked practice
+- make `Choose Patterns to Practice` the entry into normal tracked practice
+- make `Repeat a Previous Session` a recent-session browser rather than a one-tap repeat-only shortcut
 - move `From Working On` inside that setup flow
 - add derived filters for session slicing:
   - `Hands Only`
