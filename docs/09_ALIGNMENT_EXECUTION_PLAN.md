@@ -134,6 +134,7 @@ Tasks:
 Outcome:
 
 - the team can design and QA stateful UI without corrupting live data
+- mock scenarios can be exposed on-device through a dev-tools build flag without becoming normal release UI
 
 ### Phase 3. Rebuild navigation around Practice as a tab
 

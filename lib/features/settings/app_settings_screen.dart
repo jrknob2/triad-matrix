@@ -1,8 +1,8 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/practice/practice_domain_v1.dart';
 import '../../features/app/app_formatters.dart';
+import '../../features/app/app_runtime_flags.dart';
 import '../../state/app_controller.dart';
 
 class AppSettingsScreen extends StatefulWidget {
@@ -159,7 +159,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
             onPressed: () => _confirmClearAppData(context),
             child: const Text('Clear App Data'),
           ),
-          if (kDebugMode) ...<Widget>[
+          if (mockScenariosEnabled) ...<Widget>[
             const SizedBox(height: 24),
             Card(
               child: Padding(

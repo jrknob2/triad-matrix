@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../core/pattern/triad_matrix.dart';
 import '../core/practice/practice_domain_v1.dart';
 import '../features/app/app_formatters.dart';
+import '../features/app/app_runtime_flags.dart';
 import 'persistence/app_state_store.dart';
 
 class AppController extends ChangeNotifier {
@@ -1147,7 +1148,7 @@ class AppController extends ChangeNotifier {
   }
 
   void setMockScenario(AppMockScenarioV1? scenario) {
-    if (!kDebugMode) return;
+    if (!mockScenariosEnabled) return;
     if (scenario == null) {
       if (_liveStateBeforeMock != null) {
         _applyRuntimeSnapshot(_liveStateBeforeMock!);

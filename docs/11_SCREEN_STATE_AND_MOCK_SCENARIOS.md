@@ -228,7 +228,7 @@ State:
 
 1. Each scenario must be deterministic.
 2. Each scenario must fully populate all required screens.
-3. Scenarios must be easy to switch in debug builds.
+3. Scenarios must be easy to switch in debug builds and in dev-tools-enabled device builds.
 4. The mock state layer must not require destructive data resets to use.
 5. Designers and QA should be able to test a screen state without recreating it manually.
 
@@ -240,6 +240,7 @@ Graph-support rule:
 Current implementation rule:
 
 - debug builds expose a runtime-only scenario switch
+- non-debug builds may also expose the switch when launched with `--dart-define=ENABLE_DEV_TOOLS=true`
 - activating a scenario must not overwrite persisted user data
 - leaving mock mode restores the live app state from before the scenario was activated
 
