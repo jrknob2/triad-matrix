@@ -52,7 +52,7 @@ UI voice should be:
 Examples:
 
 - `Open Matrix`
-- `Practice Working On`
+- `Start Practice`
 - `Needs Work`
 - `End Session`
 - `Right Lead`

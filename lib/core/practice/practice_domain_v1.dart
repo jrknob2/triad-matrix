@@ -46,6 +46,19 @@ enum TriadMatrixFilterV1 {
   doubles,
 }
 
+enum WorkingOnSessionFilterV1 {
+  handsOnly,
+  hasKick,
+  flow,
+  flowReady,
+  needsWork,
+  active,
+  strongReview,
+  rightLead,
+  leftLead,
+  doubles,
+}
+
 enum PatternNoteMarkingV1 { normal, accent, ghost }
 
 enum MatrixProgressStateV1 { notTrained, active, needsWork, strong }

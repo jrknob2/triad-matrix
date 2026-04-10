@@ -178,3 +178,18 @@ extension TriadMatrixFilterLabel on TriadMatrixFilterV1 {
     TriadMatrixFilterV1.doubles => 'Doubles',
   };
 }
+
+extension WorkingOnSessionFilterLabel on WorkingOnSessionFilterV1 {
+  String get label => switch (this) {
+    WorkingOnSessionFilterV1.handsOnly => 'Hands Only',
+    WorkingOnSessionFilterV1.hasKick => 'Has Kick',
+    WorkingOnSessionFilterV1.flow => 'Flow',
+    WorkingOnSessionFilterV1.flowReady => 'Flow Ready',
+    WorkingOnSessionFilterV1.needsWork => 'Needs Work',
+    WorkingOnSessionFilterV1.active => 'Active',
+    WorkingOnSessionFilterV1.strongReview => 'Strong Review',
+    WorkingOnSessionFilterV1.rightLead => 'Right Lead',
+    WorkingOnSessionFilterV1.leftLead => 'Left Lead',
+    WorkingOnSessionFilterV1.doubles => 'Doubles',
+  };
+}

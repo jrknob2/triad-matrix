@@ -180,9 +180,9 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                           setup:
                               (isWorkingOnSource
                                       ? widget.controller
-                                            .buildSessionForWorkingOn(
-                                              practiceMode:
-                                                  session.practiceMode,
+                                            .buildSessionForWorkingOnSelection(
+                                              session.practiceItemIds,
+                                              practiceMode: session.practiceMode,
                                             )
                                       : widget.controller.buildSessionForItem(
                                           firstItem.id,

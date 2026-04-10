@@ -6,12 +6,11 @@ import '../app/app_formatters.dart';
 import '../app/drumcabulary_ui.dart';
 import 'widgets/pattern_display_text.dart';
 
-class PracticeScreen extends StatelessWidget {
+class PracticeScreen extends StatefulWidget {
   final AppController controller;
   final VoidCallback onRepeatLastSession;
-  final ValueChanged<PracticeModeV1> onPracticeWorkingOn;
   final VoidCallback onPracticeWarmup;
-  final void Function(String, PracticeModeV1) onPracticeItemInMode;
+  final void Function(List<String>, PracticeModeV1) onStartWorkingOnSession;
   final VoidCallback onOpenMatrix;
   final VoidCallback onOpenFocus;
 
@@ -19,23 +18,50 @@ class PracticeScreen extends StatelessWidget {
     super.key,
     required this.controller,
     required this.onRepeatLastSession,
-    required this.onPracticeWorkingOn,
     required this.onPracticeWarmup,
-    required this.onPracticeItemInMode,
+    required this.onStartWorkingOnSession,
     required this.onOpenMatrix,
     required this.onOpenFocus,
   });
 
   @override
+  State<PracticeScreen> createState() => _PracticeScreenState();
+}
+
+class _PracticeScreenState extends State<PracticeScreen> {
+  bool _showWorkingOnSetup = false;
+  Set<String> _selectedItemIds = <String>{};
+  Set<WorkingOnSessionFilterV1> _filters = <WorkingOnSessionFilterV1>{};
+  PracticeModeV1 _practiceMode = PracticeModeV1.singleSurface;
+
+  @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: controller,
+      animation: widget.controller,
       builder: (BuildContext context, _) {
-        final PracticeSessionLogV1? lastSession = controller.lastTrackedSession;
-        final List<PracticeItemV1> workingOn = controller.activeWorkItems;
-        final bool hasFlowWorkingOn = workingOn.any(
-          (PracticeItemV1 item) => controller.hasNonSnareVoice(item.id),
-        );
+        final PracticeSessionLogV1? lastSession =
+            widget.controller.lastTrackedSession;
+        final List<PracticeItemV1> workingOn = widget.controller.activeWorkItems;
+        final List<String> workingOnIds = workingOn
+            .map((PracticeItemV1 item) => item.id)
+            .toList(growable: false);
+        final List<String> selectedItemIds = workingOnIds
+            .where(_selectedItemIds.contains)
+            .toList(growable: false);
+        final List<PracticeItemV1> visibleItems = widget.controller
+            .activeWorkItemsForSessionFilters(_filters);
+        final Set<String> visibleIds = visibleItems
+            .map((PracticeItemV1 item) => item.id)
+            .toSet();
+        final bool canFlowSelection =
+            selectedItemIds.isNotEmpty &&
+            selectedItemIds.every(widget.controller.hasNonSnareVoice);
+        final PracticeModeV1 effectivePracticeMode =
+            _practiceMode == PracticeModeV1.flow && !canFlowSelection
+            ? PracticeModeV1.singleSurface
+            : _practiceMode;
+        final bool canStart = selectedItemIds.isNotEmpty;
+        final bool broadRotation = workingOn.length > 8;
 
         return DrumScreen(
           child: ListView(
@@ -49,7 +75,7 @@ class PracticeScreen extends StatelessWidget {
                     const DrumSectionTitle(text: 'Start Practice'),
                     const SizedBox(height: 8),
                     Text(
-                      'Choose what you want to play, then start.',
+                      'Choose today\'s slice, then start.',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: const Color(0xFF5B5345),
                         height: 1.35,
@@ -63,31 +89,86 @@ class PracticeScreen extends StatelessWidget {
                           : '${lastSession.practiceMode.label} • ${formatShortDate(lastSession.endedAt)} • ${formatDuration(lastSession.duration)}',
                       icon: Icons.replay_rounded,
                       enabled: lastSession != null,
-                      onTap: lastSession == null ? null : onRepeatLastSession,
+                      onTap: lastSession == null
+                          ? null
+                          : widget.onRepeatLastSession,
                     ),
                     const SizedBox(height: 10),
                     _PracticeLaunchTile(
-                      title: 'Practice Working On',
+                      title: 'Start Practice',
                       subtitle: workingOn.isEmpty
                           ? 'Put a few items in Working On first.'
-                          : '${workingOn.length} item${workingOn.length == 1 ? '' : 's'} ready.',
+                          : _showWorkingOnSetup
+                          ? 'Pick today\'s slice from Working On.'
+                          : 'Choose what you want to work on from Working On.',
                       icon: Icons.play_circle_outline_rounded,
                       enabled: workingOn.isNotEmpty,
                       onTap: workingOn.isEmpty
                           ? null
-                          : () => onPracticeWorkingOn(
-                              PracticeModeV1.singleSurface,
-                            ),
+                          : () => setState(() {
+                              _showWorkingOnSetup = !_showWorkingOnSetup;
+                            }),
+                      trailing: Icon(
+                        _showWorkingOnSetup
+                            ? Icons.expand_less_rounded
+                            : Icons.expand_more_rounded,
+                      ),
                     ),
-                    if (hasFlowWorkingOn) ...<Widget>[
-                      const SizedBox(height: 10),
-                      _PracticeLaunchTile(
-                        title: 'Practice Working On in Flow',
-                        subtitle:
-                            'Take the flow-ready items in Working On around the kit.',
-                        icon: Icons.alt_route_rounded,
-                        enabled: true,
-                        onTap: () => onPracticeWorkingOn(PracticeModeV1.flow),
+                    if (_showWorkingOnSetup && workingOn.isNotEmpty) ...<Widget>[
+                      const SizedBox(height: 14),
+                      _WorkingOnSessionSetup(
+                        controller: widget.controller,
+                        visibleItems: visibleItems,
+                        selectedItemIds: selectedItemIds,
+                        filters: _filters,
+                        practiceMode: effectivePracticeMode,
+                        canFlowSelection: canFlowSelection,
+                        broadRotation: broadRotation,
+                        onToggleFilter: (WorkingOnSessionFilterV1 filter) {
+                          setState(() {
+                            _filters = _toggleFilter(_filters, filter);
+                          });
+                        },
+                        onToggleItem: (String itemId) {
+                          setState(() {
+                            if (_selectedItemIds.contains(itemId)) {
+                              _selectedItemIds = <String>{
+                                ..._selectedItemIds,
+                              }..remove(itemId);
+                            } else {
+                              _selectedItemIds = <String>{
+                                ..._selectedItemIds,
+                                itemId,
+                              };
+                            }
+                          });
+                        },
+                        onSelectVisible: visibleItems.isEmpty
+                            ? null
+                            : () => setState(() {
+                                _selectedItemIds = <String>{
+                                  ..._selectedItemIds,
+                                  ...visibleIds,
+                                };
+                              }),
+                        onClearSelection: _selectedItemIds.isEmpty
+                            ? null
+                            : () => setState(() {
+                                _selectedItemIds = <String>{};
+                              }),
+                        onSetPracticeMode: (PracticeModeV1 mode) {
+                          if (mode == PracticeModeV1.flow &&
+                              !canFlowSelection) {
+                            return;
+                          }
+                          setState(() => _practiceMode = mode);
+                        },
+                        onStart: canStart
+                            ? () => widget.onStartWorkingOnSession(
+                                selectedItemIds,
+                                effectivePracticeMode,
+                              )
+                            : null,
                       ),
                     ],
                     const SizedBox(height: 10),
@@ -97,53 +178,21 @@ class PracticeScreen extends StatelessWidget {
                           'Singles, doubles, paradiddles, and paradiddle-diddles. Not logged.',
                       icon: Icons.local_fire_department_outlined,
                       enabled: true,
-                      onTap: onPracticeWarmup,
+                      onTap: widget.onPracticeWarmup,
                     ),
                     if (workingOn.isEmpty) ...<Widget>[
                       const SizedBox(height: 14),
                       DrumActionRow(
                         children: <Widget>[
                           OutlinedButton(
-                            onPressed: onOpenMatrix,
+                            onPressed: widget.onOpenMatrix,
                             child: const Text('Open Matrix'),
                           ),
                           OutlinedButton(
-                            onPressed: onOpenFocus,
-                            child: const Text('Open Focus'),
+                            onPressed: widget.onOpenFocus,
+                            child: const Text('Open Working On'),
                           ),
                         ],
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              DrumPanel(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    const DrumSectionTitle(text: 'Choose From Working On'),
-                    const SizedBox(height: 8),
-                    Text(
-                      workingOn.isEmpty
-                          ? 'Working On is empty. Add a few items from Coach or Matrix.'
-                          : 'Pick one item when you want to stay on a single pattern.',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: const Color(0xFF5E584D),
-                        height: 1.35,
-                      ),
-                    ),
-                    if (workingOn.isNotEmpty) ...<Widget>[
-                      const SizedBox(height: 14),
-                      ...workingOn.map(
-                        (PracticeItemV1 item) => Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: _WorkingOnPracticeRow(
-                            controller: controller,
-                            item: item,
-                            onPracticeItemInMode: onPracticeItemInMode,
-                          ),
-                        ),
                       ),
                     ],
                   ],
@@ -155,6 +204,36 @@ class PracticeScreen extends StatelessWidget {
       },
     );
   }
+
+  Set<WorkingOnSessionFilterV1> _toggleFilter(
+    Set<WorkingOnSessionFilterV1> current,
+    WorkingOnSessionFilterV1 filter,
+  ) {
+    final Set<WorkingOnSessionFilterV1> next = <WorkingOnSessionFilterV1>{
+      ...current,
+    };
+    if (next.contains(filter)) {
+      next.remove(filter);
+      return next;
+    }
+
+    if (filter == WorkingOnSessionFilterV1.handsOnly) {
+      next.remove(WorkingOnSessionFilterV1.hasKick);
+    }
+    if (filter == WorkingOnSessionFilterV1.hasKick) {
+      next.remove(WorkingOnSessionFilterV1.handsOnly);
+    }
+    if (filter == WorkingOnSessionFilterV1.needsWork ||
+        filter == WorkingOnSessionFilterV1.active ||
+        filter == WorkingOnSessionFilterV1.strongReview) {
+      next.remove(WorkingOnSessionFilterV1.needsWork);
+      next.remove(WorkingOnSessionFilterV1.active);
+      next.remove(WorkingOnSessionFilterV1.strongReview);
+    }
+
+    next.add(filter);
+    return next;
+  }
 }
 
 class _PracticeLaunchTile extends StatelessWidget {
@@ -163,6 +242,7 @@ class _PracticeLaunchTile extends StatelessWidget {
   final IconData icon;
   final bool enabled;
   final VoidCallback? onTap;
+  final Widget? trailing;
 
   const _PracticeLaunchTile({
     required this.title,
@@ -170,6 +250,7 @@ class _PracticeLaunchTile extends StatelessWidget {
     required this.icon,
     required this.enabled,
     required this.onTap,
+    this.trailing,
   });
 
   @override
@@ -212,7 +293,11 @@ class _PracticeLaunchTile extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              Icon(Icons.arrow_forward_rounded, color: enabled ? null : muted),
+              trailing ??
+                  Icon(
+                    Icons.arrow_forward_rounded,
+                    color: enabled ? null : muted,
+                  ),
             ],
           ),
         ),
@@ -221,69 +306,287 @@ class _PracticeLaunchTile extends StatelessWidget {
   }
 }
 
-class _WorkingOnPracticeRow extends StatelessWidget {
+class _WorkingOnSessionSetup extends StatelessWidget {
   final AppController controller;
-  final PracticeItemV1 item;
-  final void Function(String, PracticeModeV1) onPracticeItemInMode;
+  final List<PracticeItemV1> visibleItems;
+  final List<String> selectedItemIds;
+  final Set<WorkingOnSessionFilterV1> filters;
+  final PracticeModeV1 practiceMode;
+  final bool canFlowSelection;
+  final bool broadRotation;
+  final ValueChanged<WorkingOnSessionFilterV1> onToggleFilter;
+  final ValueChanged<String> onToggleItem;
+  final VoidCallback? onSelectVisible;
+  final VoidCallback? onClearSelection;
+  final ValueChanged<PracticeModeV1> onSetPracticeMode;
+  final VoidCallback? onStart;
 
-  const _WorkingOnPracticeRow({
+  const _WorkingOnSessionSetup({
     required this.controller,
-    required this.item,
-    required this.onPracticeItemInMode,
+    required this.visibleItems,
+    required this.selectedItemIds,
+    required this.filters,
+    required this.practiceMode,
+    required this.canFlowSelection,
+    required this.broadRotation,
+    required this.onToggleFilter,
+    required this.onToggleItem,
+    required this.onSelectVisible,
+    required this.onClearSelection,
+    required this.onSetPracticeMode,
+    required this.onStart,
   });
 
   @override
   Widget build(BuildContext context) {
-    final bool flowReady = controller.hasNonSnareVoice(item.id);
+    final int selectedCount = selectedItemIds.length;
+    final bool sessionIsLarge = selectedCount > 4;
+
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFCF7),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE2D8C6)),
+        color: const Color(0xFFFFFCF8),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE3D9C8)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  PatternDisplayText(
-                    tokens: controller.noteTokensFor(item.id),
-                    markings: controller.noteMarkingsFor(item.id),
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w900,
-                    ),
-                    grouping: controller.displayGroupingFor(item.id),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    controller.matrixProgressStateFor(item.id).label,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: const Color(0xFF6A5E4C),
-                    ),
-                  ),
-                ],
+            const DrumSectionTitle(text: 'From Working On'),
+            const SizedBox(height: 8),
+            Text(
+              'Pick today\'s slice. Keep it tight and get clean reps.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: const Color(0xFF5E584D),
+                height: 1.35,
               ),
             ),
-            const SizedBox(width: 12),
-            IconButton.filledTonal(
-              onPressed: () =>
-                  onPracticeItemInMode(item.id, PracticeModeV1.singleSurface),
-              icon: const Icon(Icons.play_arrow_rounded),
-              tooltip: 'Practice ${item.name}',
+            const SizedBox(height: 14),
+            const DrumEyebrow(text: 'Filter'),
+            const SizedBox(height: 8),
+            DrumActionRow(
+              children: WorkingOnSessionFilterV1.values
+                  .map(
+                    (WorkingOnSessionFilterV1 filter) => DrumSelectablePill(
+                      label: Text(filter.label),
+                      selected: filters.contains(filter),
+                      onPressed: () => onToggleFilter(filter),
+                    ),
+                  )
+                  .toList(growable: false),
             ),
-            if (flowReady) ...<Widget>[
-              const SizedBox(width: 6),
-              IconButton(
-                onPressed: () =>
-                    onPracticeItemInMode(item.id, PracticeModeV1.flow),
-                icon: const Icon(Icons.alt_route_rounded),
-                tooltip: 'Practice ${item.name} in Flow',
+            const SizedBox(height: 14),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: <Widget>[
+                      DrumTag(child: Text('$selectedCount selected')),
+                      DrumTag(child: Text('${visibleItems.length} visible')),
+                    ],
+                  ),
+                ),
+                DrumActionRow(
+                  spacing: 8,
+                  children: <Widget>[
+                    DrumActionPill(
+                      label: const Text('Select Visible'),
+                      onPressed: onSelectVisible,
+                    ),
+                    DrumActionPill(
+                      label: const Text('Clear'),
+                      onPressed: onClearSelection,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            if (sessionIsLarge) ...<Widget>[
+              const SizedBox(height: 10),
+              Text(
+                'This is a big session. Pick 3 or 4 if you want cleaner reps.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: const Color(0xFF855E18),
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ],
+            if (broadRotation) ...<Widget>[
+              const SizedBox(height: 6),
+              Text(
+                'Working On is broad right now. Keep today\'s slice small.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: const Color(0xFF6B6150),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+            const SizedBox(height: 14),
+            const DrumEyebrow(text: 'Mode'),
+            const SizedBox(height: 8),
+            DrumActionRow(
+              children: <Widget>[
+                DrumSelectablePill(
+                  label: const Text('One Surface'),
+                  selected: practiceMode == PracticeModeV1.singleSurface,
+                  onPressed: () =>
+                      onSetPracticeMode(PracticeModeV1.singleSurface),
+                ),
+                DrumSelectablePill(
+                  label: const Text('Flow'),
+                  selected: practiceMode == PracticeModeV1.flow,
+                  onPressed: canFlowSelection
+                      ? () => onSetPracticeMode(PracticeModeV1.flow)
+                      : null,
+                ),
+              ],
+            ),
+            if (!canFlowSelection) ...<Widget>[
+              const SizedBox(height: 8),
+              Text(
+                'Flow needs voice-assigned items.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: const Color(0xFF6A5E4C),
+                ),
+              ),
+            ],
+            const SizedBox(height: 14),
+            const DrumEyebrow(text: 'Items'),
+            const SizedBox(height: 8),
+            if (visibleItems.isEmpty)
+              Text(
+                'Nothing in Working On matches this slice.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: const Color(0xFF6A5E4C),
+                ),
+              )
+            else
+              ...visibleItems.map(
+                (PracticeItemV1 item) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _SelectableWorkingOnRow(
+                    controller: controller,
+                    item: item,
+                    selected: selectedItemIds.contains(item.id),
+                    onTap: () => onToggleItem(item.id),
+                  ),
+                ),
+              ),
+            const SizedBox(height: 6),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: onStart,
+                child: Text(
+                  selectedCount == 1
+                      ? 'Practice 1 Item'
+                      : 'Practice $selectedCount Items',
+                ),
+              ),
+            ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SelectableWorkingOnRow extends StatelessWidget {
+  final AppController controller;
+  final PracticeItemV1 item;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _SelectableWorkingOnRow({
+    required this.controller,
+    required this.item,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final MatrixProgressStateV1 status = controller.matrixProgressStateFor(
+      item.id,
+    );
+    return Material(
+      color: selected ? const Color(0xFFF4E8D0) : const Color(0xFFFFFCF7),
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: selected
+                  ? const Color(0xFF2E2921)
+                  : const Color(0xFFE2D8C6),
+              width: selected ? 1.4 : 1,
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: <Widget>[
+                Icon(
+                  selected
+                      ? Icons.check_circle_rounded
+                      : Icons.circle_outlined,
+                  color: selected ? const Color(0xFF2E2921) : null,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      PatternDisplayText(
+                        tokens: controller.noteTokensFor(item.id),
+                        markings: controller.noteMarkingsFor(item.id),
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w900,
+                        ),
+                        grouping: controller.displayGroupingFor(item.id),
+                      ),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: <Widget>[
+                          DrumTag(
+                            backgroundColor: const Color(0xFFF6F2EA),
+                            child: Text(
+                              status.label,
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                          if (controller.hasKick(item.id))
+                            const DrumTag(
+                              backgroundColor: Color(0xFFF6F2EA),
+                              child: Text('Kick'),
+                            ),
+                          if (controller.hasNonSnareVoice(item.id))
+                            const DrumTag(
+                              backgroundColor: Color(0xFFF6F2EA),
+                              child: Text('Flow'),
+                            ),
+                          if (controller.hasDoubles(item.id))
+                            const DrumTag(
+                              backgroundColor: Color(0xFFF6F2EA),
+                              child: Text('Doubles'),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

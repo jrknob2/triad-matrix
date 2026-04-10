@@ -37,7 +37,7 @@ State:
 - direct-entry view
 - no `Repeat Last Session`
 - `Warm Up` available
-- `Practice Working On` disabled or absent
+- `Start Practice` disabled or absent
 
 #### Focus
 
@@ -75,7 +75,7 @@ State:
 #### Practice
 
 - direct-entry view
-- `Practice Working On` active
+- `Start Practice` active
 - `Warm Up` active
 
 #### Focus
@@ -113,7 +113,7 @@ State:
 #### Practice
 
 - `Repeat Last Session` available
-- `Practice Working On` available
+- `Start Practice` available
 
 #### Focus
 
@@ -152,7 +152,7 @@ State:
 #### Practice
 
 - repeat-last-session meaningful
-- choose-from-working-on meaningful
+- start-practice session slicing meaningful
 
 #### Focus
 

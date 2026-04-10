@@ -1115,6 +1115,72 @@ class AppController extends ChangeNotifier {
     return deduped;
   }
 
+  bool isFlowReadyItem(String itemId) {
+    final PracticeItemV1 item = itemById(itemId);
+    if (item.isCombo) return true;
+    return competencyFor(itemId).index >= CompetencyLevelV1.comfortable.index;
+  }
+
+  List<PracticeItemV1> activeWorkItemsForSessionFilters(
+    Set<WorkingOnSessionFilterV1> filters,
+  ) {
+    return activeWorkItems.where((PracticeItemV1 item) {
+      final String itemId = item.id;
+
+      if (filters.contains(WorkingOnSessionFilterV1.handsOnly) &&
+          !handsOnly(itemId)) {
+        return false;
+      }
+      if (filters.contains(WorkingOnSessionFilterV1.hasKick) &&
+          !hasKick(itemId)) {
+        return false;
+      }
+      if (filters.contains(WorkingOnSessionFilterV1.flow) &&
+          !hasNonSnareVoice(itemId)) {
+        return false;
+      }
+      if (filters.contains(WorkingOnSessionFilterV1.flowReady) &&
+          !isFlowReadyItem(itemId)) {
+        return false;
+      }
+
+      final bool hasLeadFilter =
+          filters.contains(WorkingOnSessionFilterV1.rightLead) ||
+          filters.contains(WorkingOnSessionFilterV1.leftLead);
+      if (hasLeadFilter) {
+        final bool leadMatch =
+            (filters.contains(WorkingOnSessionFilterV1.rightLead) &&
+                startsWithRight(itemId)) ||
+            (filters.contains(WorkingOnSessionFilterV1.leftLead) &&
+                startsWithLeft(itemId));
+        if (!leadMatch) return false;
+      }
+
+      final bool hasStatusFilter =
+          filters.contains(WorkingOnSessionFilterV1.needsWork) ||
+          filters.contains(WorkingOnSessionFilterV1.active) ||
+          filters.contains(WorkingOnSessionFilterV1.strongReview);
+      if (hasStatusFilter) {
+        final MatrixProgressStateV1 status = matrixProgressStateFor(itemId);
+        final bool statusMatch =
+            (filters.contains(WorkingOnSessionFilterV1.needsWork) &&
+                status == MatrixProgressStateV1.needsWork) ||
+            (filters.contains(WorkingOnSessionFilterV1.active) &&
+                status == MatrixProgressStateV1.active) ||
+            (filters.contains(WorkingOnSessionFilterV1.strongReview) &&
+                status == MatrixProgressStateV1.strong);
+        if (!statusMatch) return false;
+      }
+
+      if (filters.contains(WorkingOnSessionFilterV1.doubles) &&
+          !hasDoubles(itemId)) {
+        return false;
+      }
+
+      return true;
+    }).toList(growable: false);
+  }
+
   int _flowSessionCount(String itemId) {
     int total = 0;
     for (final PracticeSessionLogV1 session in _sessions) {
@@ -1418,17 +1484,11 @@ class AppController extends ChangeNotifier {
     );
   }
 
-  PracticeSessionSetupV1 buildSessionForWorkingOn({
+  PracticeSessionSetupV1 buildSessionForWorkingOnSelection(
+    List<String> itemIds, {
     PracticeModeV1 practiceMode = PracticeModeV1.singleSurface,
+    String sourceName = 'Working On',
   }) {
-    final List<String> itemIds = activeWorkItems
-        .where(
-          (PracticeItemV1 item) =>
-              practiceMode == PracticeModeV1.singleSurface ||
-              hasNonSnareVoice(item.id),
-        )
-        .map((PracticeItemV1 item) => item.id)
-        .toList(growable: false);
     return PracticeSessionSetupV1(
       practiceItemIds: itemIds,
       family: itemIds.length == 1
@@ -1439,7 +1499,7 @@ class AppController extends ChangeNotifier {
       timerPreset: _profile.defaultTimerPreset,
       clickEnabled: _profile.clickEnabledByDefault,
       routineId: _routine.id,
-      sourceName: 'Working On',
+      sourceName: sourceName,
     );
   }
 

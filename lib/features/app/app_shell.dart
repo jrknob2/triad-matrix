@@ -57,9 +57,8 @@ class _AppShellState extends State<AppShell> {
             key: ValueKey<String>('practice_${widget.controller.resetVersion}'),
             controller: widget.controller,
             onRepeatLastSession: _repeatLastSession,
-            onPracticeWorkingOn: _openWorkingOnPractice,
             onPracticeWarmup: _openWarmupPractice,
-            onPracticeItemInMode: _openPracticeItemInMode,
+            onStartWorkingOnSession: _openWorkingOnSelectionPractice,
             onOpenMatrix: () => setState(() => _currentIndex = 1),
             onOpenFocus: () => setState(() => _currentIndex = 3),
           ),
@@ -193,10 +192,13 @@ class _AppShellState extends State<AppShell> {
     );
   }
 
-  void _openWorkingOnPractice(PracticeModeV1 mode) {
+  void _openWorkingOnSelectionPractice(
+    List<String> itemIds,
+    PracticeModeV1 mode,
+  ) {
+    if (itemIds.isEmpty) return;
     final PracticeSessionSetupV1 setup = widget.controller
-        .buildSessionForWorkingOn(practiceMode: mode);
-    if (setup.practiceItemIds.isEmpty) return;
+        .buildSessionForWorkingOnSelection(itemIds, practiceMode: mode);
     _shellNavigatorKey.currentState?.push(
       MaterialPageRoute<void>(
         builder: (_) =>
