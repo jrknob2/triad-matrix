@@ -66,24 +66,21 @@ class AppStateStore {
     final AppStateRecord? record = await _isar.appStateRecords.get(0);
     if (record == null) return null;
 
-    final Map<String, dynamic> profileMap =
-        jsonDecode(record.profileJson) as Map<String, dynamic>;
-    final List<dynamic> itemsList =
-        jsonDecode(record.itemsJson) as List<dynamic>;
-    final List<dynamic> combinationsList =
-        jsonDecode(record.combinationsJson) as List<dynamic>;
-    final Map<String, dynamic> routineMap =
-        jsonDecode(record.routineJson) as Map<String, dynamic>;
-    final List<dynamic> sessionsList =
-        jsonDecode(record.sessionsJson) as List<dynamic>;
-    final List<dynamic> launchPreferencesList =
-        jsonDecode(record.launchPreferencesJson) as List<dynamic>;
-    final List<dynamic> competencyList =
-        jsonDecode(record.competencyJson) as List<dynamic>;
-    final List<dynamic> assessmentResultsList =
-        jsonDecode(record.assessmentResultsJson) as List<dynamic>;
-    final List<dynamic> assessmentAggregatesList =
-        jsonDecode(record.assessmentAggregatesJson) as List<dynamic>;
+    final Map<String, dynamic> profileMap = _decodeMap(record.profileJson);
+    final List<dynamic> itemsList = _decodeList(record.itemsJson);
+    final List<dynamic> combinationsList = _decodeList(record.combinationsJson);
+    final Map<String, dynamic> routineMap = _decodeMap(record.routineJson);
+    final List<dynamic> sessionsList = _decodeList(record.sessionsJson);
+    final List<dynamic> launchPreferencesList = _decodeList(
+      record.launchPreferencesJson,
+    );
+    final List<dynamic> competencyList = _decodeList(record.competencyJson);
+    final List<dynamic> assessmentResultsList = _decodeList(
+      record.assessmentResultsJson,
+    );
+    final List<dynamic> assessmentAggregatesList = _decodeList(
+      record.assessmentAggregatesJson,
+    );
 
     return AppStateSnapshotData(
       profile: _userProfileFromMap(profileMap),
@@ -173,6 +170,16 @@ class AppStateStore {
     await _isar.writeTxn(() async {
       await _isar.appStateRecords.put(record);
     });
+  }
+
+  Map<String, dynamic> _decodeMap(String raw) {
+    if (raw.trim().isEmpty) return <String, dynamic>{};
+    return jsonDecode(raw) as Map<String, dynamic>;
+  }
+
+  List<dynamic> _decodeList(String raw) {
+    if (raw.trim().isEmpty) return <dynamic>[];
+    return jsonDecode(raw) as List<dynamic>;
   }
 
   Map<String, dynamic> _userProfileToMap(UserProfileV1 profile) {
