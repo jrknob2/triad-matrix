@@ -484,6 +484,8 @@ Practice Item is the detail/edit screen for one piece of material.
 - allow flow voice assignment
 - allow launch into `Single Surface` or `Flow`
 - allow opening that item in Matrix
+- use explicit save for edits
+- warn before leaving with unsaved changes
 
 ### Must Not Do
 
@@ -495,6 +497,7 @@ Practice Item is the detail/edit screen for one piece of material.
 - the pattern display is the primary signal
 - controls under it are clearly for editing the item, not playing it
 - accents, ghosts, and flow voice assignments only appear when they were authored by the user
+- edits should not write through immediately while the user is still working on the screen
 
 ---
 

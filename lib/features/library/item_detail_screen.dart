@@ -1,8 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/practice/practice_domain_v1.dart';
 import '../../features/app/app_formatters.dart';
 import '../../features/app/drumcabulary_ui.dart';
+import '../../features/app/unsaved_changes_dialog.dart';
 import '../../state/app_controller.dart';
 import '../practice/widgets/pattern_display_text.dart';
 import '../practice/widgets/pattern_marking_editor.dart';
@@ -31,6 +33,16 @@ class ItemDetailScreen extends StatefulWidget {
 
 class _ItemDetailScreenState extends State<ItemDetailScreen> {
   PracticeModeV1 _viewMode = PracticeModeV1.singleSurface;
+  late List<int> _accentedNoteIndices;
+  late List<int> _ghostNoteIndices;
+  late List<DrumVoiceV1> _voiceAssignments;
+  late CompetencyLevelV1 _competency;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDraftFromController();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,221 +50,379 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       animation: widget.controller,
       builder: (BuildContext context, _) {
         final PracticeItemV1 item = widget.controller.itemById(widget.itemId);
-        final CompetencyLevelV1 competency = widget.controller.competencyFor(
-          item.id,
-        );
         final Duration totalTime = widget.controller.totalTime(itemId: item.id);
         final int sessionCount = widget.controller.sessionCount(
           itemId: item.id,
         );
         final List<String> tokens = widget.controller.noteTokensFor(item.id);
-        final List<PatternNoteMarkingV1> markings = widget.controller
-            .noteMarkingsFor(item.id);
-        final List<DrumVoiceV1> voices = widget.controller.noteVoicesFor(
-          item.id,
+        final List<PatternNoteMarkingV1> draftMarkings = _draftMarkingsFor(
+          item.noteCount,
         );
+        final bool hasUnsavedChanges = _hasUnsavedChanges(item);
 
-        return Scaffold(
-          appBar: AppBar(title: const Text('Practice Item')),
-          body: ListView(
-            padding: const EdgeInsets.all(16),
-            children: <Widget>[
-              DrumPanel(
-                child: Padding(
-                  padding: EdgeInsets.zero,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: PracticeModeV1.values
-                              .map(
-                                (PracticeModeV1 mode) => Padding(
-                                  padding: const EdgeInsets.only(right: 8),
-                                  child: DrumSelectablePill(
-                                    label: Text(mode.label),
-                                    selected: _viewMode == mode,
-                                    onPressed: () {
-                                      setState(() => _viewMode = mode);
-                                    },
+        return PopScope(
+          canPop: !hasUnsavedChanges,
+          onPopInvokedWithResult: (bool didPop, Object? result) async {
+            if (didPop || !hasUnsavedChanges || !mounted) return;
+            final bool shouldPop = await _handleUnsavedExit();
+            if (shouldPop && mounted) {
+              Navigator.of(this.context).pop();
+            }
+          },
+          child: Scaffold(
+            appBar: AppBar(title: const Text('Practice Item')),
+            body: ListView(
+              padding: const EdgeInsets.all(16),
+              children: <Widget>[
+                DrumPanel(
+                  child: Padding(
+                    padding: EdgeInsets.zero,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: PracticeModeV1.values
+                                .map(
+                                  (PracticeModeV1 mode) => Padding(
+                                    padding: const EdgeInsets.only(right: 8),
+                                    child: DrumSelectablePill(
+                                      label: Text(mode.label),
+                                      selected: _viewMode == mode,
+                                      onPressed: () {
+                                        setState(() => _viewMode = mode);
+                                      },
+                                    ),
                                   ),
-                                ),
-                              )
-                              .toList(growable: false),
+                                )
+                                .toList(growable: false),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      if (_viewMode == PracticeModeV1.flow)
-                        PatternVoiceDisplay(
-                          tokens: tokens,
-                          markings: markings,
-                          voices: voices,
-                          patternStyle: Theme.of(context)
-                              .textTheme
-                              .headlineMedium
-                              ?.copyWith(
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: -0.8,
-                              ),
-                          voiceStyle: Theme.of(context).textTheme.titleMedium,
-                        )
-                      else
-                        PatternDisplayText(
-                          tokens: tokens,
-                          markings: markings,
-                          style: Theme.of(context).textTheme.headlineMedium
-                              ?.copyWith(
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: -0.8,
-                              ),
-                        ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Accents & Ghosts',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 8),
-                      PatternMarkingEditor(
-                        controller: widget.controller,
-                        itemId: item.id,
-                        showHelpText: false,
-                      ),
-                      if (_viewMode == PracticeModeV1.flow) ...<Widget>[
                         const SizedBox(height: 16),
+                        if (_viewMode == PracticeModeV1.flow)
+                          PatternVoiceDisplay(
+                            tokens: tokens,
+                            markings: draftMarkings,
+                            voices: _voiceAssignments,
+                            patternStyle: Theme.of(context)
+                                .textTheme
+                                .headlineMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -0.8,
+                                ),
+                            voiceStyle: Theme.of(context).textTheme.titleMedium,
+                          )
+                        else
+                          PatternDisplayText(
+                            tokens: tokens,
+                            markings: draftMarkings,
+                            style: Theme.of(context).textTheme.headlineMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -0.8,
+                                ),
+                          ),
+                        const SizedBox(height: 12),
                         Text(
-                          'Flow Voices',
+                          'Accents & Ghosts',
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                         const SizedBox(height: 8),
-                        VoiceAssignmentEditor(
-                          controller: widget.controller,
-                          itemId: item.id,
+                        PatternMarkingEditor(
+                          tokens: tokens,
+                          markings: draftMarkings,
+                          onTapNote: _cycleMarking,
                           showHelpText: false,
                         ),
-                        const SizedBox(height: 12),
-                        _FlowReadinessNote(
-                          ready: widget.controller.hasNonSnareVoice(item.id),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              DrumPanel(
-                child: Padding(
-                  padding: EdgeInsets.zero,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Row(
-                        children: <Widget>[
-                          Expanded(
-                            child: Text(
-                              'Competency',
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
+                        if (_viewMode == PracticeModeV1.flow) ...<Widget>[
+                          const SizedBox(height: 16),
+                          Text(
+                            'Flow Voices',
+                            style: Theme.of(context).textTheme.titleMedium,
                           ),
-                          PopupMenuButton<CompetencyLevelV1>(
-                            onSelected: (CompetencyLevelV1 next) {
-                              widget.controller.updateCompetency(item.id, next);
-                            },
-                            itemBuilder: (BuildContext context) =>
-                                CompetencyLevelV1.values
-                                    .map(
-                                      (CompetencyLevelV1 level) =>
-                                          PopupMenuItem<CompetencyLevelV1>(
-                                            value: level,
-                                            child: Text(level.label),
-                                          ),
-                                    )
-                                    .toList(growable: false),
-                            child: DrumTag(
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: <Widget>[
-                                  Text(
-                                    competency.label,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .labelLarge
-                                        ?.copyWith(fontWeight: FontWeight.w900),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  const Icon(Icons.expand_more, size: 18),
-                                ],
-                              ),
+                          const SizedBox(height: 8),
+                          VoiceAssignmentEditor(
+                            tokens: tokens,
+                            voices: _voiceAssignments,
+                            onTapNote: _cycleVoice,
+                            showHelpText: false,
+                          ),
+                          const SizedBox(height: 12),
+                          _FlowReadinessNote(
+                            ready: _voiceAssignments.any(
+                              (DrumVoiceV1 voice) => voice != DrumVoiceV1.snare,
                             ),
                           ),
                         ],
-                      ),
-                      const SizedBox(height: 4),
-                      const SizedBox(height: 10),
-                      Text(
-                        widget.controller.competencyGuidanceFor(
-                          item.id,
-                          competency,
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                DrumPanel(
+                  child: Padding(
+                    padding: EdgeInsets.zero,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Row(
+                          children: <Widget>[
+                            Expanded(
+                              child: Text(
+                                'Competency',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                            ),
+                            PopupMenuButton<CompetencyLevelV1>(
+                              onSelected: (CompetencyLevelV1 next) {
+                                setState(() => _competency = next);
+                              },
+                              itemBuilder: (BuildContext context) =>
+                                  CompetencyLevelV1.values
+                                      .map(
+                                        (CompetencyLevelV1 level) =>
+                                            PopupMenuItem<CompetencyLevelV1>(
+                                              value: level,
+                                              child: Text(level.label),
+                                            ),
+                                      )
+                                      .toList(growable: false),
+                              child: DrumTag(
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: <Widget>[
+                                    Text(
+                                      _competency.label,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelLarge
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w900,
+                                          ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    const Icon(Icons.expand_more, size: 18),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: const Color(0xFF5B5345),
-                          height: 1.35,
+                        const SizedBox(height: 14),
+                        Text(
+                          widget.controller.competencyGuidanceFor(
+                            item.id,
+                            _competency,
+                          ),
+                          style: Theme.of(context).textTheme.bodyLarge
+                              ?.copyWith(
+                                color: const Color(0xFF5B5345),
+                                height: 1.35,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                DrumPanel(
+                  child: Column(
+                    children: <Widget>[
+                      ListTile(
+                        title: const Text('Logged Time'),
+                        trailing: Text(formatDuration(totalTime)),
+                      ),
+                      ListTile(
+                        title: const Text('Sessions'),
+                        trailing: Text('$sessionCount'),
+                      ),
+                      ListTile(
+                        title: const Text('Last Worked'),
+                        trailing: Text(
+                          widget.controller.recentSummaryForItem(item.id),
                         ),
                       ),
                     ],
                   ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              DrumPanel(
-                child: Column(
-                  children: <Widget>[
-                    ListTile(
-                      title: const Text('Logged Time'),
-                      trailing: Text(formatDuration(totalTime)),
-                    ),
-                    ListTile(
-                      title: const Text('Sessions'),
-                      trailing: Text('$sessionCount'),
-                    ),
-                    ListTile(
-                      title: const Text('Last Worked'),
-                      trailing: Text(
-                        widget.controller.recentSummaryForItem(item.id),
-                      ),
-                    ),
-                  ],
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: hasUnsavedChanges ? _saveDraft : null,
+                  child: const Text('Save Changes'),
                 ),
-              ),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: () =>
-                    widget.onPracticeItemInMode(item.id, _viewMode),
-                child: Text(
-                  _viewMode == PracticeModeV1.flow
-                      ? 'Practice in Flow'
-                      : 'Practice on One Surface',
+                const SizedBox(height: 8),
+                FilledButton.tonal(
+                  onPressed: () async {
+                    if (hasUnsavedChanges) _saveDraft();
+                    widget.onPracticeItemInMode(item.id, _viewMode);
+                  },
+                  child: Text(
+                    _viewMode == PracticeModeV1.flow
+                        ? 'Practice in Flow'
+                        : 'Practice on One Surface',
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              OutlinedButton(
-                onPressed: () => widget.onBuildComboFromItem(item.id),
-                child: const Text('Open in Matrix'),
-              ),
-              const SizedBox(height: 8),
-              OutlinedButton(
-                onPressed: () => widget.controller.toggleRoutineItem(item.id),
-                child: Text(
-                  widget.controller.isDirectRoutineEntry(item.id)
-                      ? 'Remove from Working On'
-                      : 'Add to Working On',
+                const SizedBox(height: 8),
+                OutlinedButton(
+                  onPressed: () => widget.onBuildComboFromItem(item.id),
+                  child: const Text('Open in Matrix'),
                 ),
-              ),
-            ],
+                const SizedBox(height: 8),
+                OutlinedButton(
+                  onPressed: () => widget.controller.toggleRoutineItem(item.id),
+                  child: Text(
+                    widget.controller.isDirectRoutineEntry(item.id)
+                        ? 'Remove from Working On'
+                        : 'Add to Working On',
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
     );
+  }
+
+  void _loadDraftFromController() {
+    final PracticeItemV1 item = widget.controller.itemById(widget.itemId);
+    _accentedNoteIndices = List<int>.from(item.accentedNoteIndices)..sort();
+    _ghostNoteIndices = List<int>.from(item.ghostNoteIndices)..sort();
+    _voiceAssignments = List<DrumVoiceV1>.from(
+      widget.controller.noteVoicesFor(item.id),
+    );
+    _competency = widget.controller.competencyFor(item.id);
+  }
+
+  List<PatternNoteMarkingV1> _draftMarkingsFor(int noteCount) {
+    final Set<int> accents = _accentedNoteIndices.toSet();
+    final Set<int> ghosts = _ghostNoteIndices.toSet();
+    return List<PatternNoteMarkingV1>.generate(noteCount, (int index) {
+      if (ghosts.contains(index)) return PatternNoteMarkingV1.ghost;
+      if (accents.contains(index)) return PatternNoteMarkingV1.accent;
+      return PatternNoteMarkingV1.normal;
+    });
+  }
+
+  void _cycleMarking(int noteIndex) {
+    final PracticeItemV1 item = widget.controller.itemById(widget.itemId);
+    final String token = widget.controller.noteTokensFor(item.id)[noteIndex];
+    final PatternNoteMarkingV1 current = _draftMarkingsFor(
+      item.noteCount,
+    )[noteIndex];
+    final PatternNoteMarkingV1 next = _nextMarking(token, current);
+
+    setState(() {
+      final Set<int> accents = _accentedNoteIndices.toSet();
+      final Set<int> ghosts = _ghostNoteIndices.toSet();
+      accents.remove(noteIndex);
+      ghosts.remove(noteIndex);
+      switch (next) {
+        case PatternNoteMarkingV1.normal:
+          break;
+        case PatternNoteMarkingV1.accent:
+          accents.add(noteIndex);
+          break;
+        case PatternNoteMarkingV1.ghost:
+          ghosts.add(noteIndex);
+          break;
+      }
+      _accentedNoteIndices = accents.toList()..sort();
+      _ghostNoteIndices = ghosts.toList()..sort();
+    });
+  }
+
+  void _cycleVoice(int noteIndex) {
+    final PracticeItemV1 item = widget.controller.itemById(widget.itemId);
+    final String token = widget.controller.noteTokensFor(item.id)[noteIndex];
+    final DrumVoiceV1 current = _voiceAssignments[noteIndex];
+    final DrumVoiceV1 next = _nextVoice(token, current);
+    setState(() {
+      _voiceAssignments = List<DrumVoiceV1>.from(_voiceAssignments)
+        ..[noteIndex] = next;
+    });
+  }
+
+  PatternNoteMarkingV1 _nextMarking(
+    String token,
+    PatternNoteMarkingV1 current,
+  ) {
+    if (token == 'K') {
+      return switch (current) {
+        PatternNoteMarkingV1.normal => PatternNoteMarkingV1.ghost,
+        PatternNoteMarkingV1.accent => PatternNoteMarkingV1.ghost,
+        PatternNoteMarkingV1.ghost => PatternNoteMarkingV1.normal,
+      };
+    }
+
+    return switch (current) {
+      PatternNoteMarkingV1.normal => PatternNoteMarkingV1.accent,
+      PatternNoteMarkingV1.accent => PatternNoteMarkingV1.ghost,
+      PatternNoteMarkingV1.ghost => PatternNoteMarkingV1.normal,
+    };
+  }
+
+  DrumVoiceV1 _nextVoice(String token, DrumVoiceV1 current) {
+    if (token == 'K') return DrumVoiceV1.kick;
+
+    const List<DrumVoiceV1> cycle = <DrumVoiceV1>[
+      DrumVoiceV1.snare,
+      DrumVoiceV1.rackTom,
+      DrumVoiceV1.tom2,
+      DrumVoiceV1.floorTom,
+      DrumVoiceV1.hihat,
+    ];
+
+    final int index = cycle.indexOf(current);
+    if (index < 0) return cycle.first;
+    return cycle[(index + 1) % cycle.length];
+  }
+
+  bool _hasUnsavedChanges(PracticeItemV1 item) {
+    final List<PatternNoteMarkingV1> currentMarkings = widget.controller
+        .noteMarkingsFor(item.id);
+    final List<PatternNoteMarkingV1> draftMarkings = _draftMarkingsFor(
+      item.noteCount,
+    );
+    return !listEquals(currentMarkings, draftMarkings) ||
+        !listEquals(
+          widget.controller.noteVoicesFor(item.id),
+          _voiceAssignments,
+        ) ||
+        widget.controller.competencyFor(item.id) != _competency;
+  }
+
+  void _saveDraft() {
+    widget.controller.savePracticeItemEdits(
+      itemId: widget.itemId,
+      accentedNoteIndices: _accentedNoteIndices,
+      ghostNoteIndices: _ghostNoteIndices,
+      voiceAssignments: _voiceAssignments,
+      competency: _competency,
+    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Changes saved.')));
+  }
+
+  Future<bool> _handleUnsavedExit() async {
+    final UnsavedChangesDecision? decision = await showUnsavedChangesDialog(
+      context,
+      title: 'Unsaved Changes',
+      message: 'Save your changes to this practice item before leaving?',
+      saveLabel: 'Save Changes',
+    );
+    if (!mounted) return false;
+    return switch (decision) {
+      UnsavedChangesDecision.save => () {
+        _saveDraft();
+        return true;
+      }(),
+      UnsavedChangesDecision.discard => true,
+      _ => false,
+    };
   }
 }
 

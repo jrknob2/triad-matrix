@@ -1246,6 +1246,35 @@ class AppController extends ChangeNotifier {
     _notifyChanged();
   }
 
+  void savePracticeItemEdits({
+    required String itemId,
+    required List<int> accentedNoteIndices,
+    required List<int> ghostNoteIndices,
+    required List<DrumVoiceV1> voiceAssignments,
+    required CompetencyLevelV1 competency,
+  }) {
+    _items = _items
+        .map((PracticeItemV1 entry) {
+          if (entry.id != itemId) return entry;
+          return _sanitizedItem(
+            entry.copyWith(
+              accentedNoteIndices: List<int>.from(accentedNoteIndices)..sort(),
+              ghostNoteIndices: List<int>.from(ghostNoteIndices)..sort(),
+              voiceAssignments: List<DrumVoiceV1>.from(voiceAssignments),
+            ),
+          );
+        })
+        .toList(growable: false);
+
+    _competencyByItemId[itemId] = CompetencyRecordV1(
+      practiceItemId: itemId,
+      level: competency,
+      updatedAt: DateTime.now(),
+    );
+
+    _notifyChanged();
+  }
+
   void setNoteMarking({
     required String itemId,
     required int noteIndex,

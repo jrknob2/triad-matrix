@@ -987,6 +987,30 @@ Practice Item lets the user inspect and edit one item cleanly.
 - accents, ghosts, and flow voice assignments are user-authored edit layers
 - base material enters the app plain unless the user has explicitly edited it
 - Matrix selection and phrase building must not inject authored markings automatically
+- item edits should live in a local draft until the user explicitly saves them
+- navigating away with unsaved item changes should prompt the user to save, discard, or keep editing
+
+---
+
+## 9. Editable Screen Save Rule
+
+Editable screens should not auto-save field-level changes while the user is still editing.
+
+This applies to screens like:
+
+- `Practice Item`
+- `Settings`
+- `Custom Pattern`
+
+Rules:
+
+- edits should stay local to the screen until the user explicitly saves
+- leaving a dirty screen should trigger an unsaved-changes prompt
+- the prompt should offer:
+  - save
+  - discard
+  - keep editing
+- screens that are already explicit-save screens must still guard against losing unsaved edits on back navigation
 
 ---
 
