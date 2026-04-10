@@ -71,6 +71,9 @@ class _MatrixScreenState extends State<MatrixScreen> {
     final MatrixSelectionStateV1 matrixSelection = MatrixSelectionStateV1(
       orderedItemIds: _selectedItemIds,
     );
+    final List<String> notReadyItemIds = _selectedItemIds
+        .where((String itemId) => !widget.controller.isPhraseReady(itemId))
+        .toList(growable: false);
 
     return DrumScreen(
       warm: false,
@@ -125,6 +128,14 @@ class _MatrixScreenState extends State<MatrixScreen> {
                     scrollDirection: Axis.horizontal,
                     child: Row(children: _buildActionPills()),
                   ),
+                  if (_selectedItemIds.length > 1 && notReadyItemIds.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: _MatrixPhraseWarning(
+                        message:
+                            'Some of these triads are not ready yet. You can save the phrase now, but it may be better to work on them more first.',
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -195,7 +206,7 @@ class _MatrixScreenState extends State<MatrixScreen> {
           label: Text(
             _selectionIsInRoutine ? 'In Working On' : 'Add to Working On',
           ),
-          onPressed: _selectionIsInRoutine ? null : _addSelectionToRoutine,
+          onPressed: _selectionIsInRoutine ? null : _addSelectionToWorkingOn,
         ),
       ),
       if (_selectedItemIds.length > 1)
@@ -353,18 +364,68 @@ class _MatrixScreenState extends State<MatrixScreen> {
     widget.onPracticeItemInMode(itemId, PracticeModeV1.flow);
   }
 
-  void _addSelectionToRoutine() {
-    final String? itemId = _selectionActionItemId(createIfMissing: true);
-    if (itemId == null) return;
-    if (widget.controller.isDirectRoutineEntry(itemId)) return;
-    widget.controller.addRoutineItems(<String>[itemId]);
-    setState(() {});
+  Future<void> _addSelectionToWorkingOn() async {
+    if (_selectedItemIds.isEmpty) return;
+
+    if (_selectedItemIds.length == 1) {
+      final String itemId = _selectedItemIds.first;
+      await _showExistingItemPrompt(
+        title: '${widget.controller.itemById(itemId).name} already exists',
+        message: 'Open it to add it to Working On.',
+        itemId: itemId,
+      );
+      return;
+    }
+
+    final PracticeCombinationV1? existing = widget.controller
+        .combinationForItemIdsOrNull(_selectedItemIds);
+    if (existing != null && widget.controller.itemById(existing.id).saved) {
+      await _showExistingItemPrompt(
+        title: 'This phrase is already saved',
+        message: 'Open it to add it to Working On.',
+        itemId: existing.id,
+      );
+      return;
+    }
+
+    final PracticeCombinationV1 draft = widget.controller
+        .createDraftCombinationForEditing(itemIds: _selectedItemIds);
+    widget.onOpenItem(draft.id);
   }
 
   void _saveSelection() {
     if (_selectedItemIds.length < 2) return;
     widget.controller.createCombination(itemIds: _selectedItemIds);
     setState(() {});
+  }
+
+  Future<void> _showExistingItemPrompt({
+    required String title,
+    required String message,
+    required String itemId,
+  }) async {
+    final bool? open = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(title),
+          content: Text(message),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Open Item'),
+            ),
+          ],
+        );
+      },
+    );
+    if (open == true && mounted) {
+      widget.onOpenItem(itemId);
+    }
   }
 
   String? _selectionActionItemId({bool createIfMissing = false}) {
@@ -599,6 +660,32 @@ class _ProgressLegendCard extends StatelessWidget {
               ),
             )
             .toList(growable: false),
+      ),
+    );
+  }
+}
+
+class _MatrixPhraseWarning extends StatelessWidget {
+  final String message;
+
+  const _MatrixPhraseWarning({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF4E7CF),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFB98739)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Text(
+          message,
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: const Color(0xFF5C4423)),
+        ),
       ),
     );
   }

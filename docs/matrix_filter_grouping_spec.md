@@ -162,6 +162,11 @@ Rules:
 - one selected triad behaves like direct item selection
 - once more than one triad is selected, the Matrix is in phrase-building mode
 - phrase-building mode defaults the `Practice` action to Flow
+- if a selected phrase includes triads that are not ready, Matrix should show inline guidance:
+  `Some of these triads are not ready yet. You can save the phrase now, but it may be better to work on them more first.`
+- `Add to Working On` should duplicate-check first
+- existing items or saved phrases should route to `Open Item`
+- only a new phrase should open a draft `Practice Item` handoff
 
 ## Deep-Link Rules
 

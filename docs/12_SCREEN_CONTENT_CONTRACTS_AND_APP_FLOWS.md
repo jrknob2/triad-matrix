@@ -527,6 +527,7 @@ Rules:
 - owns exact occurrence removal
 - grid reflects membership only
 - additional triads may be added freely while building a phrase
+- if a phrase includes triads that are not ready, Matrix should show inline guidance instead of blocking selection
 - adding material from Matrix must not inject accents, ghosts, or flow voices automatically
 - phrase-building mode defaults to flow-oriented practice actions
 
@@ -554,6 +555,9 @@ Rules:
   - show `Save`
   - do not show `Open Item`
   - do not show `Remove from Working On`
+- `Add to Working On` must not silently create or persist a new item
+- for an existing item or saved phrase, `Add to Working On` should prompt the user to open that item instead of creating a duplicate
+- for a new phrase, `Add to Working On` should open `Practice Item` as a draft authoring handoff
 
 ### Matrix States
 

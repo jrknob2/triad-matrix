@@ -35,9 +35,18 @@ class AppController extends ChangeNotifier {
   _ControllerRuntimeSnapshot? _liveStateBeforeMock;
 
   UserProfileV1 get profile => _profile;
-  List<PracticeItemV1> get items => List<PracticeItemV1>.unmodifiable(_items);
+  List<PracticeItemV1> get items => List<PracticeItemV1>.unmodifiable(
+    _items.where((PracticeItemV1 item) => item.saved).toList(growable: false),
+  );
   List<PracticeCombinationV1> get combinations =>
-      List<PracticeCombinationV1>.unmodifiable(_combinations);
+      List<PracticeCombinationV1>.unmodifiable(
+        _combinations
+            .where(
+              (PracticeCombinationV1 combo) =>
+                  itemByIdOrNull(combo.id)?.saved ?? false,
+            )
+            .toList(growable: false),
+      );
   PracticeRoutineV1 get routine => _routine;
   List<SessionAssessmentResultV1> get assessmentResults =>
       List<SessionAssessmentResultV1>.unmodifiable(_assessmentResults);
@@ -119,13 +128,18 @@ class AppController extends ChangeNotifier {
   Future<void> _persistState() async {
     if (isMockScenarioActive) return;
     final List<PracticeItemV1> persistedItems = _items
-        .where((PracticeItemV1 item) => !item.isWarmup)
+        .where((PracticeItemV1 item) => !item.isWarmup && item.saved)
         .toList(growable: false);
     await _store.save(
       AppStateSnapshotData(
         profile: _profile,
         items: persistedItems,
-        combinations: _combinations,
+        combinations: _combinations
+            .where(
+              (PracticeCombinationV1 combo) =>
+                  itemByIdOrNull(combo.id)?.saved ?? false,
+            )
+            .toList(growable: false),
         routine: _routine,
         sessions: _sessions,
         competencyRecords: _competencyByItemId.values.toList(growable: false),
@@ -217,7 +231,7 @@ class AppController extends ChangeNotifier {
 
   List<PracticeItemV1> get trackedItems {
     return _items
-        .where((item) => !item.isCustom && !item.isWarmup)
+        .where((item) => item.saved && !item.isCustom && !item.isWarmup)
         .toList(growable: false);
   }
 
@@ -541,7 +555,7 @@ class AppController extends ChangeNotifier {
 
   List<PracticeItemV1> itemsByFamily(MaterialFamilyV1 family) {
     final List<PracticeItemV1> filtered = _items
-        .where((item) => item.family == family)
+        .where((item) => item.saved && item.family == family)
         .toList(growable: false);
     filtered.sort((a, b) => a.name.compareTo(b.name));
     return filtered;
@@ -551,6 +565,7 @@ class AppController extends ChangeNotifier {
     final List<PracticeItemV1> filtered = _items
         .where(
           (item) =>
+              item.saved &&
               item.family != MaterialFamilyV1.combo &&
               item.family != MaterialFamilyV1.warmup,
         )
@@ -976,6 +991,7 @@ class AppController extends ChangeNotifier {
   List<PracticeCombinationV1> get triadCombinations {
     final List<PracticeCombinationV1> combos = _combinations
         .where((combo) {
+          if (!(itemByIdOrNull(combo.id)?.saved ?? false)) return false;
           return combo.itemIds.isNotEmpty &&
               combo.itemIds.every((itemId) => itemById(itemId).isTriad);
         })
@@ -1013,6 +1029,11 @@ class AppController extends ChangeNotifier {
 
   bool isInAnyPhrase(String itemId) {
     return triadCombinations.any((combo) => combo.itemIds.contains(itemId));
+  }
+
+  bool isPhraseReady(String itemId) {
+    if (!itemById(itemId).isTriad) return false;
+    return competencyFor(itemId).index >= CompetencyLevelV1.comfortable.index;
   }
 
   bool canAppendToPhrase({
@@ -1248,6 +1269,7 @@ class AppController extends ChangeNotifier {
     required List<int> ghostNoteIndices,
     required List<DrumVoiceV1> voiceAssignments,
     required CompetencyLevelV1 competency,
+    bool saveToWorkingOn = false,
   }) {
     _items = _items
         .map((PracticeItemV1 entry) {
@@ -1257,6 +1279,7 @@ class AppController extends ChangeNotifier {
               accentedNoteIndices: List<int>.from(accentedNoteIndices)..sort(),
               ghostNoteIndices: List<int>.from(ghostNoteIndices)..sort(),
               voiceAssignments: List<DrumVoiceV1>.from(voiceAssignments),
+              saved: saveToWorkingOn ? true : entry.saved,
             ),
           );
         })
@@ -1267,6 +1290,15 @@ class AppController extends ChangeNotifier {
       level: competency,
       updatedAt: DateTime.now(),
     );
+
+    if (saveToWorkingOn && !isDirectRoutineEntry(itemId)) {
+      _routine = _routine.copyWith(
+        entries: <RoutineEntryV1>[
+          ..._routine.entries,
+          RoutineEntryV1(practiceItemId: itemId, addedAt: DateTime.now()),
+        ],
+      );
+    }
 
     _notifyChanged();
   }
@@ -1423,6 +1455,75 @@ class AppController extends ChangeNotifier {
     _items = <PracticeItemV1>[..._items, comboItem];
     _notifyChanged();
     return combo;
+  }
+
+  PracticeCombinationV1 createDraftCombinationForEditing({
+    required List<String> itemIds,
+  }) {
+    final PracticeCombinationV1? existing = combinationForItemIdsOrNull(
+      itemIds,
+    );
+    if (existing != null) return existing;
+
+    final String id = 'combo_${itemIds.join('_')}';
+    final String comboName = comboDisplayName(itemIds);
+    final PracticeCombinationV1 combo = PracticeCombinationV1(
+      id: id,
+      name: comboName,
+      itemIds: List<String>.from(itemIds),
+    );
+
+    final int noteCount = itemIds.fold<int>(
+      0,
+      (sum, itemId) => sum + itemById(itemId).noteCount,
+    );
+
+    final List<int> accented = <int>[];
+    final List<int> ghosted = <int>[];
+    final List<DrumVoiceV1> voices = <DrumVoiceV1>[];
+    int offset = 0;
+    for (final String entryId in itemIds) {
+      final PracticeItemV1 item = itemById(entryId);
+      accented.addAll(item.accentedNoteIndices.map((index) => index + offset));
+      ghosted.addAll(item.ghostNoteIndices.map((index) => index + offset));
+      voices.addAll(_sanitizedItem(item).voiceAssignments);
+      offset += item.noteCount;
+    }
+
+    final PracticeItemV1 comboItem = _sanitizedItem(
+      PracticeItemV1(
+        id: id,
+        family: MaterialFamilyV1.combo,
+        name: comboName,
+        sticking: comboName,
+        noteCount: noteCount,
+        accentedNoteIndices: accented,
+        ghostNoteIndices: ghosted,
+        voiceAssignments: voices,
+        source: PracticeItemSourceV1.userDefined,
+        tags: <String>['combo'],
+        saved: false,
+      ),
+    );
+
+    _combinations = <PracticeCombinationV1>[combo, ..._combinations];
+    _items = <PracticeItemV1>[..._items, comboItem];
+    _notifyChanged();
+    return combo;
+  }
+
+  void discardUnsavedPracticeItem(String itemId) {
+    final PracticeItemV1? item = itemByIdOrNull(itemId);
+    if (item == null || item.saved) return;
+    _items = _items
+        .where((PracticeItemV1 entry) => entry.id != itemId)
+        .toList(growable: false);
+    _combinations = _combinations
+        .where((PracticeCombinationV1 combo) => combo.id != itemId)
+        .toList(growable: false);
+    _competencyByItemId.remove(itemId);
+    _assessmentAggregateByItemId.remove(itemId);
+    _notifyChanged();
   }
 
   void toggleRoutineItem(String itemId) {

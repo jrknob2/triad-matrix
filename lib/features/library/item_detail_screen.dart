@@ -50,6 +50,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       animation: widget.controller,
       builder: (BuildContext context, _) {
         final PracticeItemV1 item = widget.controller.itemById(widget.itemId);
+        final bool isDraftItem = !item.saved;
         final Duration totalTime = widget.controller.totalTime(itemId: item.id);
         final int sessionCount = widget.controller.sessionCount(
           itemId: item.id,
@@ -230,34 +231,48 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                 DrumPanel(
                   child: Column(
                     children: <Widget>[
-                      ListTile(
-                        title: const Text('Logged Time'),
-                        trailing: Text(formatDuration(totalTime)),
-                      ),
-                      ListTile(
-                        title: const Text('Sessions'),
-                        trailing: Text('$sessionCount'),
-                      ),
-                      ListTile(
-                        title: const Text('Last Worked'),
-                        trailing: Text(
-                          widget.controller.recentSummaryForItem(item.id),
+                      if (!isDraftItem) ...<Widget>[
+                        ListTile(
+                          title: const Text('Logged Time'),
+                          trailing: Text(formatDuration(totalTime)),
                         ),
-                      ),
+                        ListTile(
+                          title: const Text('Sessions'),
+                          trailing: Text('$sessionCount'),
+                        ),
+                        ListTile(
+                          title: const Text('Last Worked'),
+                          trailing: Text(
+                            widget.controller.recentSummaryForItem(item.id),
+                          ),
+                        ),
+                      ] else
+                        const ListTile(
+                          title: Text('New Phrase'),
+                          subtitle: Text(
+                            'Save this phrase to Working On when you are ready.',
+                          ),
+                        ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 16),
                 FilledButton(
-                  onPressed: hasUnsavedChanges ? _saveDraft : null,
-                  child: const Text('Save Changes'),
+                  onPressed: hasUnsavedChanges || isDraftItem
+                      ? () => _saveDraft(saveToWorkingOn: isDraftItem)
+                      : null,
+                  child: Text(
+                    isDraftItem ? 'Save to Working On' : 'Save Changes',
+                  ),
                 ),
                 const SizedBox(height: 8),
                 FilledButton.tonal(
-                  onPressed: () async {
-                    if (hasUnsavedChanges) _saveDraft();
-                    widget.onPracticeItemInMode(item.id, _viewMode);
-                  },
+                  onPressed: isDraftItem
+                      ? null
+                      : () async {
+                          if (hasUnsavedChanges) _saveDraft();
+                          widget.onPracticeItemInMode(item.id, _viewMode);
+                        },
                   child: Text(
                     _viewMode == PracticeModeV1.flow
                         ? 'Practice in Flow'
@@ -269,15 +284,18 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                   onPressed: () => widget.onBuildComboFromItem(item.id),
                   child: const Text('Open in Matrix'),
                 ),
-                const SizedBox(height: 8),
-                OutlinedButton(
-                  onPressed: () => widget.controller.toggleRoutineItem(item.id),
-                  child: Text(
-                    widget.controller.isDirectRoutineEntry(item.id)
-                        ? 'Remove from Working On'
-                        : 'Add to Working On',
+                if (!isDraftItem) ...<Widget>[
+                  const SizedBox(height: 8),
+                  OutlinedButton(
+                    onPressed: () =>
+                        widget.controller.toggleRoutineItem(item.id),
+                    child: Text(
+                      widget.controller.isDirectRoutineEntry(item.id)
+                          ? 'Remove from Working On'
+                          : 'Add to Working On',
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),
@@ -386,7 +404,8 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     final List<PatternNoteMarkingV1> draftMarkings = _draftMarkingsFor(
       item.noteCount,
     );
-    return !listEquals(currentMarkings, draftMarkings) ||
+    return !item.saved ||
+        !listEquals(currentMarkings, draftMarkings) ||
         !listEquals(
           widget.controller.noteVoicesFor(item.id),
           _voiceAssignments,
@@ -394,33 +413,46 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         widget.controller.competencyFor(item.id) != _competency;
   }
 
-  void _saveDraft() {
+  void _saveDraft({bool saveToWorkingOn = false}) {
     widget.controller.savePracticeItemEdits(
       itemId: widget.itemId,
       accentedNoteIndices: _accentedNoteIndices,
       ghostNoteIndices: _ghostNoteIndices,
       voiceAssignments: _voiceAssignments,
       competency: _competency,
+      saveToWorkingOn: saveToWorkingOn,
     );
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Changes saved.')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          saveToWorkingOn ? 'Saved to Working On.' : 'Changes saved.',
+        ),
+      ),
+    );
   }
 
   Future<bool> _handleUnsavedExit() async {
+    final bool isDraftItem = !widget.controller.itemById(widget.itemId).saved;
     final UnsavedChangesDecision? decision = await showUnsavedChangesDialog(
       context,
       title: 'Unsaved Changes',
-      message: 'Save your changes to this practice item before leaving?',
-      saveLabel: 'Save Changes',
+      message: isDraftItem
+          ? 'Save this phrase to Working On before leaving?'
+          : 'Save your changes to this practice item before leaving?',
+      saveLabel: isDraftItem ? 'Save to Working On' : 'Save Changes',
     );
     if (!mounted) return false;
     return switch (decision) {
       UnsavedChangesDecision.save => () {
-        _saveDraft();
+        _saveDraft(saveToWorkingOn: isDraftItem);
         return true;
       }(),
-      UnsavedChangesDecision.discard => true,
+      UnsavedChangesDecision.discard => () {
+        if (isDraftItem) {
+          widget.controller.discardUnsavedPracticeItem(widget.itemId);
+        }
+        return true;
+      }(),
       _ => false,
     };
   }

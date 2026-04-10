@@ -240,6 +240,8 @@ Phrase rule:
 - one triad may always be selected for direct practice
 - additional triads may be appended freely while building a phrase
 - once more than one triad is selected, Matrix should behave like phrase-building mode and default practice from that selection to Flow
+- if selected phrase material includes triads that are not ready, Matrix should show guidance instead of blocking phrase building
+- `Add to Working On` should open authoring/edit flow, not silently create duplicates or save immediately
 
 ### Acceptance Criteria
 
