@@ -1015,18 +1015,12 @@ class AppController extends ChangeNotifier {
     return triadCombinations.any((combo) => combo.itemIds.contains(itemId));
   }
 
-  bool isPhraseEligible(String itemId) {
-    if (!itemById(itemId).isTriad) return false;
-    return competencyFor(itemId).index >= CompetencyLevelV1.comfortable.index;
-  }
-
   bool canAppendToPhrase({
     required List<String> currentItemIds,
     required String nextItemId,
   }) {
-    if (currentItemIds.isEmpty) return true;
-    if (!isPhraseEligible(nextItemId)) return false;
-    return currentItemIds.every(isPhraseEligible);
+    if (!itemById(nextItemId).isTriad) return false;
+    return true;
   }
 
   bool _sessionContainsItem(PracticeSessionLogV1 session, String itemId) {
@@ -1130,61 +1124,63 @@ class AppController extends ChangeNotifier {
   List<PracticeItemV1> activeWorkItemsForSessionFilters(
     Set<WorkingOnSessionFilterV1> filters,
   ) {
-    return activeWorkItems.where((PracticeItemV1 item) {
-      final String itemId = item.id;
+    return activeWorkItems
+        .where((PracticeItemV1 item) {
+          final String itemId = item.id;
 
-      if (filters.contains(WorkingOnSessionFilterV1.handsOnly) &&
-          !handsOnly(itemId)) {
-        return false;
-      }
-      if (filters.contains(WorkingOnSessionFilterV1.hasKick) &&
-          !hasKick(itemId)) {
-        return false;
-      }
-      if (filters.contains(WorkingOnSessionFilterV1.flow) &&
-          !hasNonSnareVoice(itemId)) {
-        return false;
-      }
-      if (filters.contains(WorkingOnSessionFilterV1.flowReady) &&
-          !isFlowReadyItem(itemId)) {
-        return false;
-      }
+          if (filters.contains(WorkingOnSessionFilterV1.handsOnly) &&
+              !handsOnly(itemId)) {
+            return false;
+          }
+          if (filters.contains(WorkingOnSessionFilterV1.hasKick) &&
+              !hasKick(itemId)) {
+            return false;
+          }
+          if (filters.contains(WorkingOnSessionFilterV1.flow) &&
+              !hasNonSnareVoice(itemId)) {
+            return false;
+          }
+          if (filters.contains(WorkingOnSessionFilterV1.flowReady) &&
+              !isFlowReadyItem(itemId)) {
+            return false;
+          }
 
-      final bool hasLeadFilter =
-          filters.contains(WorkingOnSessionFilterV1.rightLead) ||
-          filters.contains(WorkingOnSessionFilterV1.leftLead);
-      if (hasLeadFilter) {
-        final bool leadMatch =
-            (filters.contains(WorkingOnSessionFilterV1.rightLead) &&
-                startsWithRight(itemId)) ||
-            (filters.contains(WorkingOnSessionFilterV1.leftLead) &&
-                startsWithLeft(itemId));
-        if (!leadMatch) return false;
-      }
+          final bool hasLeadFilter =
+              filters.contains(WorkingOnSessionFilterV1.rightLead) ||
+              filters.contains(WorkingOnSessionFilterV1.leftLead);
+          if (hasLeadFilter) {
+            final bool leadMatch =
+                (filters.contains(WorkingOnSessionFilterV1.rightLead) &&
+                    startsWithRight(itemId)) ||
+                (filters.contains(WorkingOnSessionFilterV1.leftLead) &&
+                    startsWithLeft(itemId));
+            if (!leadMatch) return false;
+          }
 
-      final bool hasStatusFilter =
-          filters.contains(WorkingOnSessionFilterV1.needsWork) ||
-          filters.contains(WorkingOnSessionFilterV1.active) ||
-          filters.contains(WorkingOnSessionFilterV1.strongReview);
-      if (hasStatusFilter) {
-        final MatrixProgressStateV1 status = matrixProgressStateFor(itemId);
-        final bool statusMatch =
-            (filters.contains(WorkingOnSessionFilterV1.needsWork) &&
-                status == MatrixProgressStateV1.needsWork) ||
-            (filters.contains(WorkingOnSessionFilterV1.active) &&
-                status == MatrixProgressStateV1.active) ||
-            (filters.contains(WorkingOnSessionFilterV1.strongReview) &&
-                status == MatrixProgressStateV1.strong);
-        if (!statusMatch) return false;
-      }
+          final bool hasStatusFilter =
+              filters.contains(WorkingOnSessionFilterV1.needsWork) ||
+              filters.contains(WorkingOnSessionFilterV1.active) ||
+              filters.contains(WorkingOnSessionFilterV1.strongReview);
+          if (hasStatusFilter) {
+            final MatrixProgressStateV1 status = matrixProgressStateFor(itemId);
+            final bool statusMatch =
+                (filters.contains(WorkingOnSessionFilterV1.needsWork) &&
+                    status == MatrixProgressStateV1.needsWork) ||
+                (filters.contains(WorkingOnSessionFilterV1.active) &&
+                    status == MatrixProgressStateV1.active) ||
+                (filters.contains(WorkingOnSessionFilterV1.strongReview) &&
+                    status == MatrixProgressStateV1.strong);
+            if (!statusMatch) return false;
+          }
 
-      if (filters.contains(WorkingOnSessionFilterV1.doubles) &&
-          !hasDoubles(itemId)) {
-        return false;
-      }
+          if (filters.contains(WorkingOnSessionFilterV1.doubles) &&
+              !hasDoubles(itemId)) {
+            return false;
+          }
 
-      return true;
-    }).toList(growable: false);
+          return true;
+        })
+        .toList(growable: false);
   }
 
   int _flowSessionCount(String itemId) {
@@ -2671,22 +2667,16 @@ class AppController extends ChangeNotifier {
         _triadItemId('RLR'),
         _triadItemId('LRR'),
       ])
-      ..setVoices(
-        _triadItemId('RLR'),
-        <DrumVoiceV1>[
-          DrumVoiceV1.hihat,
-          DrumVoiceV1.snare,
-          DrumVoiceV1.hihat,
-        ],
-      )
-      ..setVoices(
-        _triadItemId('LRR'),
-        <DrumVoiceV1>[
-          DrumVoiceV1.floorTom,
-          DrumVoiceV1.snare,
-          DrumVoiceV1.snare,
-        ],
-      )
+      ..setVoices(_triadItemId('RLR'), <DrumVoiceV1>[
+        DrumVoiceV1.hihat,
+        DrumVoiceV1.snare,
+        DrumVoiceV1.hihat,
+      ])
+      ..setVoices(_triadItemId('LRR'), <DrumVoiceV1>[
+        DrumVoiceV1.floorTom,
+        DrumVoiceV1.snare,
+        DrumVoiceV1.snare,
+      ])
       ..addManualSession(
         itemId: combo.id,
         practiceMode: PracticeModeV1.singleSurface,
@@ -2997,7 +2987,9 @@ class _MockScenarioBuilder {
     items = items
         .map((PracticeItemV1 item) {
           if (item.id != itemId) return item;
-          return controller._sanitizedItem(item.copyWith(voiceAssignments: voices));
+          return controller._sanitizedItem(
+            item.copyWith(voiceAssignments: voices),
+          );
         })
         .toList(growable: false);
   }

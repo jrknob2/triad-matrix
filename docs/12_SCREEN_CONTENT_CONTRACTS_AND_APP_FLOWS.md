@@ -526,7 +526,7 @@ Rules:
 - shows exact ordered sequence
 - owns exact occurrence removal
 - grid reflects membership only
-- a second or later triad may only be added if all involved triads are phrase-ready
+- additional triads may be added freely while building a phrase
 - adding material from Matrix must not inject accents, ghosts, or flow voices automatically
 - phrase-building mode defaults to flow-oriented practice actions
 

@@ -238,7 +238,7 @@ Coach `lane` is translated into a Matrix preset, not shown as a persistent Matri
 Phrase rule:
 
 - one triad may always be selected for direct practice
-- adding a second or later triad requires phrase-ready material
+- additional triads may be appended freely while building a phrase
 - once more than one triad is selected, Matrix should behave like phrase-building mode and default practice from that selection to Flow
 
 ### Acceptance Criteria

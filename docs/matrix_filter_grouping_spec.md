@@ -153,17 +153,12 @@ Interaction rule:
 - if the user selects a conflicting filter, the previous incompatible filter is turned off automatically
 - disabled controls should be avoided inside the active view unless a state is truly impossible
 
-## Phrase Eligibility Rule
-
-Matrix may be used to start phrase building, but phrase growth is gated.
+## Phrase Building Rule
 
 Rules:
 
 - a single triad may always be selected for direct practice
-- adding a second or later triad to a phrase requires phrase-ready material
-- a triad is phrase-ready when it has reached at least `Comfortable`
-- only phrase-ready triads may be appended to a phrase sequence
-- this same rule applies anywhere else the app builds phrases from triads
+- additional triads may be appended freely to the phrase sequence
 - one selected triad behaves like direct item selection
 - once more than one triad is selected, the Matrix is in phrase-building mode
 - phrase-building mode defaults the `Practice` action to Flow
