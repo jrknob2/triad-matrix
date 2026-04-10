@@ -56,7 +56,7 @@ class _AppShellState extends State<AppShell> {
           PracticeScreen(
             key: ValueKey<String>('practice_${widget.controller.resetVersion}'),
             controller: widget.controller,
-            onRepeatLastSession: _repeatLastSession,
+            onRepeatPreviousSession: _repeatPreviousSession,
             onPracticeWarmup: _openWarmupPractice,
             onStartWorkingOnSession: _openWorkingOnSelectionPractice,
             onOpenMatrix: () => setState(() => _currentIndex = 1),
@@ -218,9 +218,9 @@ class _AppShellState extends State<AppShell> {
     );
   }
 
-  void _repeatLastSession() {
+  void _repeatPreviousSession(PracticeSessionLogV1 session) {
     final PracticeSessionSetupV1? setup = widget.controller
-        .buildSessionFromLastSessionOrNull();
+        .buildSessionFromSessionOrNull(session);
     if (setup == null) return;
     _shellNavigatorKey.currentState?.push(
       MaterialPageRoute<void>(

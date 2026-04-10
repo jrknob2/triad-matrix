@@ -151,11 +151,17 @@ class AppController extends ChangeNotifier {
     return List<PracticeSessionLogV1>.unmodifiable(copy);
   }
 
+  List<PracticeSessionLogV1> get trackedRecentSessions {
+    return List<PracticeSessionLogV1>.unmodifiable(
+      recentSessions.where((PracticeSessionLogV1 session) {
+        return !_isWarmupSession(session);
+      }),
+    );
+  }
+
   PracticeSessionLogV1? get lastTrackedSession {
-    for (final PracticeSessionLogV1 session in recentSessions) {
-      if (!_isWarmupSession(session)) return session;
-    }
-    return null;
+    final List<PracticeSessionLogV1> sessions = trackedRecentSessions;
+    return sessions.isEmpty ? null : sessions.first;
   }
 
   PracticeAssessmentAggregateV1? assessmentAggregateFor(String itemId) {
@@ -1521,6 +1527,12 @@ class AppController extends ChangeNotifier {
   PracticeSessionSetupV1? buildSessionFromLastSessionOrNull() {
     final PracticeSessionLogV1? session = lastTrackedSession;
     if (session == null) return null;
+    return buildSessionFromSessionOrNull(session);
+  }
+
+  PracticeSessionSetupV1? buildSessionFromSessionOrNull(
+    PracticeSessionLogV1 session,
+  ) {
     final List<String> itemIds = session.practiceItemIds
         .where((String itemId) => itemByIdOrNull(itemId) != null)
         .toList(growable: false);
@@ -1535,7 +1547,7 @@ class AppController extends ChangeNotifier {
       timerPreset: _profile.defaultTimerPreset,
       clickEnabled: session.clickEnabled,
       routineId: session.routineId,
-      sourceName: 'Repeat Last Session',
+      sourceName: 'Repeat a Previous Session',
     );
   }
 
@@ -1893,6 +1905,21 @@ class AppController extends ChangeNotifier {
     final PracticeSessionLogV1? session = lastSessionForItem(itemId);
     if (session == null) return 'No sessions yet';
     return '${formatShortDate(session.endedAt)} · ${formatDuration(session.duration)}';
+  }
+
+  String sessionPatternSummary(
+    PracticeSessionLogV1 session, {
+    int maxItems = 3,
+  }) {
+    final List<String> labels = session.practiceItemIds
+        .map(itemByIdOrNull)
+        .whereType<PracticeItemV1>()
+        .map((PracticeItemV1 item) => item.name)
+        .toList(growable: false);
+    if (labels.isEmpty) return 'Unknown material';
+    if (labels.length <= maxItems) return labels.join(' • ');
+    final List<String> visible = labels.take(maxItems).toList(growable: false);
+    return '${visible.join(' • ')} +${labels.length - maxItems} more';
   }
 
   int _compareByNeed(PracticeItemV1 a, PracticeItemV1 b) {
