@@ -9,6 +9,7 @@ import '../../state/app_controller.dart';
 import '../practice/widgets/pattern_display_text.dart';
 import '../practice/widgets/pattern_marking_editor.dart';
 import '../practice/widgets/pattern_voice_display.dart';
+import '../practice/widgets/session_setup_controls.dart';
 import '../practice/widgets/voice_assignment_editor.dart';
 
 class ItemDetailScreen extends StatefulWidget {
@@ -37,6 +38,8 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   late List<int> _ghostNoteIndices;
   late List<DrumVoiceV1> _voiceAssignments;
   late CompetencyLevelV1 _competency;
+  late int _sessionBpm;
+  late TimerPresetV1 _timerPreset;
 
   @override
   void initState() {
@@ -229,6 +232,19 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                 ),
                 const SizedBox(height: 12),
                 DrumPanel(
+                  child: SessionSetupControls(
+                    bpm: _sessionBpm,
+                    timerPreset: _timerPreset,
+                    onBpmChanged: (int next) {
+                      setState(() => _sessionBpm = next.clamp(30, 260));
+                    },
+                    onTimerPresetChanged: (TimerPresetV1 next) {
+                      setState(() => _timerPreset = next);
+                    },
+                  ),
+                ),
+                const SizedBox(height: 12),
+                DrumPanel(
                   child: Column(
                     children: <Widget>[
                       if (!isDraftItem) ...<Widget>[
@@ -271,6 +287,11 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                       ? null
                       : () async {
                           if (hasUnsavedChanges) _saveDraft();
+                          widget.controller.rememberLaunchPreferencesForItem(
+                            itemId: item.id,
+                            bpm: _sessionBpm,
+                            timerPreset: _timerPreset,
+                          );
                           widget.onPracticeItemInMode(item.id, _viewMode);
                         },
                   child: Text(
@@ -312,6 +333,8 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       widget.controller.noteVoicesFor(item.id),
     );
     _competency = widget.controller.competencyFor(item.id);
+    _sessionBpm = widget.controller.launchBpmForItem(item.id);
+    _timerPreset = widget.controller.launchTimerPresetForItem(item.id);
   }
 
   List<PatternNoteMarkingV1> _draftMarkingsFor(int noteCount) {

@@ -5,12 +5,14 @@ import '../../state/app_controller.dart';
 import '../app/app_formatters.dart';
 import '../app/drumcabulary_ui.dart';
 import 'widgets/pattern_display_text.dart';
+import 'widgets/session_setup_controls.dart';
 
 class PracticeScreen extends StatefulWidget {
   final AppController controller;
   final ValueChanged<PracticeSessionLogV1> onRepeatPreviousSession;
   final VoidCallback onPracticeWarmup;
-  final void Function(List<String>, PracticeModeV1) onStartWorkingOnSession;
+  final void Function(List<String>, PracticeModeV1, int, TimerPresetV1)
+  onStartWorkingOnSession;
   final VoidCallback onOpenMatrix;
   final VoidCallback onOpenFocus;
 
@@ -38,11 +40,15 @@ class _PracticeScreenState extends State<PracticeScreen> {
   Set<String> _selectedItemIds = <String>{};
   Set<WorkingOnSessionFilterV1> _filters = <WorkingOnSessionFilterV1>{};
   PracticeModeV1 _practiceMode = PracticeModeV1.singleSurface;
+  late int _workingOnBpm;
+  late TimerPresetV1 _workingOnTimerPreset;
 
   @override
   void initState() {
     super.initState();
     _previousSessionSearchController = TextEditingController();
+    _workingOnBpm = widget.controller.profile.defaultBpm;
+    _workingOnTimerPreset = widget.controller.profile.defaultTimerPreset;
   }
 
   @override
@@ -61,12 +67,15 @@ class _PracticeScreenState extends State<PracticeScreen> {
         final List<PracticeSessionLogV1> filteredRecentSessions =
             _previousSessionQuery.trim().isEmpty
             ? recentSessions
-            : recentSessions.where((PracticeSessionLogV1 session) {
-                return widget.controller
-                    .sessionSearchText(session)
-                    .contains(_previousSessionQuery.trim().toLowerCase());
-              }).toList(growable: false);
-        final List<PracticeItemV1> workingOn = widget.controller.activeWorkItems;
+            : recentSessions
+                  .where((PracticeSessionLogV1 session) {
+                    return widget.controller
+                        .sessionSearchText(session)
+                        .contains(_previousSessionQuery.trim().toLowerCase());
+                  })
+                  .toList(growable: false);
+        final List<PracticeItemV1> workingOn =
+            widget.controller.activeWorkItems;
         final List<String> workingOnIds = workingOn
             .map((PracticeItemV1 item) => item.id)
             .toList(growable: false);
@@ -129,26 +138,26 @@ class _PracticeScreenState extends State<PracticeScreen> {
                             : Icons.expand_more_rounded,
                       ),
                     ),
-                    if (_showPreviousSessionBrowser && recentSessions.isNotEmpty)
-                      ...<Widget>[
-                        const SizedBox(height: 14),
-                        _PreviousSessionBrowser(
-                          controller: widget.controller,
-                          searchController: _previousSessionSearchController,
-                          onQueryChanged: (String value) => setState(() {
-                            _previousSessionQuery = value;
-                            _visiblePreviousSessionCount = 5;
-                          }),
-                          totalCount: filteredRecentSessions.length,
-                          sessions: filteredRecentSessions
-                              .take(_visiblePreviousSessionCount)
-                              .toList(growable: false),
-                          onLoadMore: () => setState(() {
-                            _visiblePreviousSessionCount += 5;
-                          }),
-                          onRepeatSession: widget.onRepeatPreviousSession,
-                        ),
-                      ],
+                    if (_showPreviousSessionBrowser &&
+                        recentSessions.isNotEmpty) ...<Widget>[
+                      const SizedBox(height: 14),
+                      _PreviousSessionBrowser(
+                        controller: widget.controller,
+                        searchController: _previousSessionSearchController,
+                        onQueryChanged: (String value) => setState(() {
+                          _previousSessionQuery = value;
+                          _visiblePreviousSessionCount = 5;
+                        }),
+                        totalCount: filteredRecentSessions.length,
+                        sessions: filteredRecentSessions
+                            .take(_visiblePreviousSessionCount)
+                            .toList(growable: false),
+                        onLoadMore: () => setState(() {
+                          _visiblePreviousSessionCount += 5;
+                        }),
+                        onRepeatSession: widget.onRepeatPreviousSession,
+                      ),
+                    ],
                     const SizedBox(height: 10),
                     _PracticeLaunchTile(
                       title: 'Choose Patterns to Practice',
@@ -174,7 +183,8 @@ class _PracticeScreenState extends State<PracticeScreen> {
                             : Icons.expand_more_rounded,
                       ),
                     ),
-                    if (_showWorkingOnSetup && workingOn.isNotEmpty) ...<Widget>[
+                    if (_showWorkingOnSetup &&
+                        workingOn.isNotEmpty) ...<Widget>[
                       const SizedBox(height: 14),
                       _WorkingOnSessionSetup(
                         controller: widget.controller,
@@ -184,23 +194,29 @@ class _PracticeScreenState extends State<PracticeScreen> {
                         practiceMode: effectivePracticeMode,
                         canFlowSelection: canFlowSelection,
                         broadRotation: broadRotation,
-                          onToggleFilter: (WorkingOnSessionFilterV1 filter) {
-                            setState(() {
-                              _filters = _toggleFilter(_filters, filter);
-                              _visibleWorkingOnItemCount = 5;
-                            });
-                          },
+                        onToggleFilter: (WorkingOnSessionFilterV1 filter) {
+                          setState(() {
+                            _filters = _toggleFilter(_filters, filter);
+                            _visibleWorkingOnItemCount = 5;
+                          });
+                        },
                         onToggleItem: (String itemId) {
                           setState(() {
                             if (_selectedItemIds.contains(itemId)) {
-                              _selectedItemIds = <String>{
-                                ..._selectedItemIds,
-                              }..remove(itemId);
+                              _selectedItemIds = <String>{..._selectedItemIds}
+                                ..remove(itemId);
                             } else {
                               _selectedItemIds = <String>{
                                 ..._selectedItemIds,
                                 itemId,
                               };
+                            }
+                            if (_selectedItemIds.length == 1) {
+                              final String selectedId = _selectedItemIds.first;
+                              _workingOnBpm = widget.controller
+                                  .launchBpmForItem(selectedId);
+                              _workingOnTimerPreset = widget.controller
+                                  .launchTimerPresetForItem(selectedId);
                             }
                           });
                         },
@@ -213,7 +229,8 @@ class _PracticeScreenState extends State<PracticeScreen> {
                                 };
                               }),
                         visibleItemCount: _visibleWorkingOnItemCount,
-                        onShowMore: visibleItems.length > _visibleWorkingOnItemCount
+                        onShowMore:
+                            visibleItems.length > _visibleWorkingOnItemCount
                             ? () => setState(() {
                                 _visibleWorkingOnItemCount += 5;
                               })
@@ -230,10 +247,20 @@ class _PracticeScreenState extends State<PracticeScreen> {
                           }
                           setState(() => _practiceMode = mode);
                         },
+                        bpm: _workingOnBpm,
+                        timerPreset: _workingOnTimerPreset,
+                        onBpmChanged: (int next) {
+                          setState(() => _workingOnBpm = next.clamp(30, 260));
+                        },
+                        onTimerPresetChanged: (TimerPresetV1 next) {
+                          setState(() => _workingOnTimerPreset = next);
+                        },
                         onStart: canStart
                             ? () => widget.onStartWorkingOnSession(
                                 selectedItemIds,
                                 effectivePracticeMode,
+                                _workingOnBpm,
+                                _workingOnTimerPreset,
                               )
                             : null,
                       ),
@@ -545,12 +572,16 @@ class _WorkingOnSessionSetup extends StatelessWidget {
   final PracticeModeV1 practiceMode;
   final bool canFlowSelection;
   final bool broadRotation;
+  final int bpm;
+  final TimerPresetV1 timerPreset;
   final ValueChanged<WorkingOnSessionFilterV1> onToggleFilter;
   final ValueChanged<String> onToggleItem;
   final VoidCallback? onSelectVisible;
   final VoidCallback? onShowMore;
   final VoidCallback? onClearSelection;
   final ValueChanged<PracticeModeV1> onSetPracticeMode;
+  final ValueChanged<int> onBpmChanged;
+  final ValueChanged<TimerPresetV1> onTimerPresetChanged;
   final VoidCallback? onStart;
 
   const _WorkingOnSessionSetup({
@@ -562,12 +593,16 @@ class _WorkingOnSessionSetup extends StatelessWidget {
     required this.practiceMode,
     required this.canFlowSelection,
     required this.broadRotation,
+    required this.bpm,
+    required this.timerPreset,
     required this.onToggleFilter,
     required this.onToggleItem,
     required this.onSelectVisible,
     required this.onShowMore,
     required this.onClearSelection,
     required this.onSetPracticeMode,
+    required this.onBpmChanged,
+    required this.onTimerPresetChanged,
     required this.onStart,
   });
 
@@ -682,11 +717,18 @@ class _WorkingOnSessionSetup extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 'Flow needs voice-assigned items.',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: const Color(0xFF6A5E4C),
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: const Color(0xFF6A5E4C)),
               ),
             ],
+            const SizedBox(height: 14),
+            SessionSetupControls(
+              bpm: bpm,
+              timerPreset: timerPreset,
+              onBpmChanged: onBpmChanged,
+              onTimerPresetChanged: onTimerPresetChanged,
+            ),
             const SizedBox(height: 14),
             const DrumEyebrow(text: 'Items'),
             const SizedBox(height: 8),
@@ -698,17 +740,19 @@ class _WorkingOnSessionSetup extends StatelessWidget {
                 ),
               )
             else
-              ...visibleItems.take(visibleItemCount).map(
-                (PracticeItemV1 item) => Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: _SelectableWorkingOnRow(
-                    controller: controller,
-                    item: item,
-                    selected: selectedItemIds.contains(item.id),
-                    onTap: () => onToggleItem(item.id),
+              ...visibleItems
+                  .take(visibleItemCount)
+                  .map(
+                    (PracticeItemV1 item) => Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: _SelectableWorkingOnRow(
+                        controller: controller,
+                        item: item,
+                        selected: selectedItemIds.contains(item.id),
+                        onTap: () => onToggleItem(item.id),
+                      ),
+                    ),
                   ),
-                ),
-              ),
             if (onShowMore != null)
               Align(
                 alignment: Alignment.centerLeft,
@@ -775,9 +819,7 @@ class _SelectableWorkingOnRow extends StatelessWidget {
             child: Row(
               children: <Widget>[
                 Icon(
-                  selected
-                      ? Icons.check_circle_rounded
-                      : Icons.circle_outlined,
+                  selected ? Icons.check_circle_rounded : Icons.circle_outlined,
                   color: selected ? const Color(0xFF2E2921) : null,
                 ),
                 const SizedBox(width: 12),

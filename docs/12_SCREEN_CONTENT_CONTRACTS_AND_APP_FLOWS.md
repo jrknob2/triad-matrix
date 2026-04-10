@@ -642,6 +642,8 @@ Optional later:
 - this screen should reduce choice friction, not add setup friction
 - `Choose Patterns to Practice` is the entry into normal tracked practice
 - `From Working On` belongs inside `Choose Patterns to Practice`, not as a separate peer card
+- session setup owns BPM and duration before the player opens
+- single-item practice should remember the last BPM and duration used for that item without storing them as authored item data
 - `Warm Up` remains separate because it is a distinct prep mode, not a slice of current work
 - `Repeat a Previous Session` should open a recent-session browser, not silently assume the last session is the right one
 
@@ -653,6 +655,7 @@ Must allow:
 - narrowing `Working On` into a smaller session slice
 - selecting exact items for today's session
 - starting the session from that chosen slice
+- setting BPM and duration before starting
 
 Rules:
 
@@ -667,6 +670,7 @@ Rules:
 - active-rotation guidance should treat roughly `4-8` actively pushed items as the normal zone
 - when recent active rotation grows beyond that, the app may advise shrinking the core rotation, but must not hard-block it
 - long visible item lists should default to 5 rows and use `Show More` for the rest
+- if exactly one item is selected, session setup should start from that item's remembered BPM and duration
 
 ### Category And Filter Derivation For `From Working On`
 
@@ -974,6 +978,7 @@ Practice Item lets the user inspect and edit one item cleanly.
 - accent/ghost controls
 - flow voice controls
 - `Single Surface / Flow`
+- session setup controls for BPM and duration
 - practice CTA
 - open in matrix CTA
 
@@ -987,6 +992,8 @@ Practice Item lets the user inspect and edit one item cleanly.
 
 - editing controls appear under the pattern
 - mode control changes editing context
+- session setup controls belong here for single-item practice
+- last BPM and duration for a single item should be remembered outside the authored item data
 - practice CTA launches the chosen mode
 - accents, ghosts, and flow voice assignments are user-authored edit layers
 - base material enters the app plain unless the user has explicitly edited it

@@ -13,6 +13,7 @@ class AppStateSnapshotData {
   final List<PracticeCombinationV1> combinations;
   final PracticeRoutineV1 routine;
   final List<PracticeSessionLogV1> sessions;
+  final List<PracticeLaunchPreferenceV1> launchPreferences;
   final List<CompetencyRecordV1> competencyRecords;
   final List<SessionAssessmentResultV1> assessmentResults;
   final List<PracticeAssessmentAggregateV1> assessmentAggregates;
@@ -23,6 +24,7 @@ class AppStateSnapshotData {
     required this.combinations,
     required this.routine,
     required this.sessions,
+    required this.launchPreferences,
     required this.competencyRecords,
     required this.assessmentResults,
     required this.assessmentAggregates,
@@ -37,6 +39,7 @@ class AppStateRecord {
   String combinationsJson = '[]';
   String routineJson = '{}';
   String sessionsJson = '[]';
+  String launchPreferencesJson = '[]';
   String competencyJson = '[]';
   String assessmentResultsJson = '[]';
   String assessmentAggregatesJson = '[]';
@@ -73,6 +76,8 @@ class AppStateStore {
         jsonDecode(record.routineJson) as Map<String, dynamic>;
     final List<dynamic> sessionsList =
         jsonDecode(record.sessionsJson) as List<dynamic>;
+    final List<dynamic> launchPreferencesList =
+        jsonDecode(record.launchPreferencesJson) as List<dynamic>;
     final List<dynamic> competencyList =
         jsonDecode(record.competencyJson) as List<dynamic>;
     final List<dynamic> assessmentResultsList =
@@ -99,6 +104,12 @@ class AppStateStore {
           .map(
             (dynamic item) =>
                 _practiceSessionLogFromMap(item as Map<String, dynamic>),
+          )
+          .toList(growable: false),
+      launchPreferences: launchPreferencesList
+          .map(
+            (dynamic item) =>
+                _practiceLaunchPreferenceFromMap(item as Map<String, dynamic>),
           )
           .toList(growable: false),
       competencyRecords: competencyList
@@ -137,6 +148,11 @@ class AppStateStore {
       ..routineJson = jsonEncode(_practiceRoutineToMap(snapshot.routine))
       ..sessionsJson = jsonEncode(
         snapshot.sessions.map(_practiceSessionLogToMap).toList(growable: false),
+      )
+      ..launchPreferencesJson = jsonEncode(
+        snapshot.launchPreferences
+            .map(_practiceLaunchPreferenceToMap)
+            .toList(growable: false),
       )
       ..competencyJson = jsonEncode(
         snapshot.competencyRecords
@@ -302,6 +318,26 @@ class AppStateStore {
           ? null
           : ReflectionRatingV1.values.byName(map['reflection'] as String),
       sourceName: map['sourceName'] as String? ?? '',
+    );
+  }
+
+  Map<String, dynamic> _practiceLaunchPreferenceToMap(
+    PracticeLaunchPreferenceV1 preference,
+  ) {
+    return <String, dynamic>{
+      'practiceItemId': preference.practiceItemId,
+      'bpm': preference.bpm,
+      'timerPreset': preference.timerPreset.name,
+    };
+  }
+
+  PracticeLaunchPreferenceV1 _practiceLaunchPreferenceFromMap(
+    Map<String, dynamic> map,
+  ) {
+    return PracticeLaunchPreferenceV1(
+      practiceItemId: map['practiceItemId'] as String,
+      bpm: map['bpm'] as int,
+      timerPreset: TimerPresetV1.values.byName(map['timerPreset'] as String),
     );
   }
 

@@ -170,6 +170,31 @@ class PatternGroupingV1 {
 }
 
 @immutable
+class PracticeLaunchPreferenceV1 {
+  final String practiceItemId;
+  final int bpm;
+  final TimerPresetV1 timerPreset;
+
+  const PracticeLaunchPreferenceV1({
+    required this.practiceItemId,
+    required this.bpm,
+    required this.timerPreset,
+  });
+
+  PracticeLaunchPreferenceV1 copyWith({
+    String? practiceItemId,
+    int? bpm,
+    TimerPresetV1? timerPreset,
+  }) {
+    return PracticeLaunchPreferenceV1(
+      practiceItemId: practiceItemId ?? this.practiceItemId,
+      bpm: bpm ?? this.bpm,
+      timerPreset: timerPreset ?? this.timerPreset,
+    );
+  }
+}
+
+@immutable
 class PracticeItemV1 {
   final String id;
   final MaterialFamilyV1 family;

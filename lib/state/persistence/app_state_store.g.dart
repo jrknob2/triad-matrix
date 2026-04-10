@@ -42,18 +42,23 @@ const AppStateRecordSchema = CollectionSchema(
       name: r'itemsJson',
       type: IsarType.string,
     ),
-    r'profileJson': PropertySchema(
+    r'launchPreferencesJson': PropertySchema(
       id: 5,
+      name: r'launchPreferencesJson',
+      type: IsarType.string,
+    ),
+    r'profileJson': PropertySchema(
+      id: 6,
       name: r'profileJson',
       type: IsarType.string,
     ),
     r'routineJson': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'routineJson',
       type: IsarType.string,
     ),
     r'sessionsJson': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'sessionsJson',
       type: IsarType.string,
     )
@@ -83,6 +88,7 @@ int _appStateRecordEstimateSize(
   bytesCount += 3 + object.combinationsJson.length * 3;
   bytesCount += 3 + object.competencyJson.length * 3;
   bytesCount += 3 + object.itemsJson.length * 3;
+  bytesCount += 3 + object.launchPreferencesJson.length * 3;
   bytesCount += 3 + object.profileJson.length * 3;
   bytesCount += 3 + object.routineJson.length * 3;
   bytesCount += 3 + object.sessionsJson.length * 3;
@@ -100,9 +106,10 @@ void _appStateRecordSerialize(
   writer.writeString(offsets[2], object.combinationsJson);
   writer.writeString(offsets[3], object.competencyJson);
   writer.writeString(offsets[4], object.itemsJson);
-  writer.writeString(offsets[5], object.profileJson);
-  writer.writeString(offsets[6], object.routineJson);
-  writer.writeString(offsets[7], object.sessionsJson);
+  writer.writeString(offsets[5], object.launchPreferencesJson);
+  writer.writeString(offsets[6], object.profileJson);
+  writer.writeString(offsets[7], object.routineJson);
+  writer.writeString(offsets[8], object.sessionsJson);
 }
 
 AppStateRecord _appStateRecordDeserialize(
@@ -118,9 +125,10 @@ AppStateRecord _appStateRecordDeserialize(
   object.competencyJson = reader.readString(offsets[3]);
   object.id = id;
   object.itemsJson = reader.readString(offsets[4]);
-  object.profileJson = reader.readString(offsets[5]);
-  object.routineJson = reader.readString(offsets[6]);
-  object.sessionsJson = reader.readString(offsets[7]);
+  object.launchPreferencesJson = reader.readString(offsets[5]);
+  object.profileJson = reader.readString(offsets[6]);
+  object.routineJson = reader.readString(offsets[7]);
+  object.sessionsJson = reader.readString(offsets[8]);
   return object;
 }
 
@@ -146,6 +154,8 @@ P _appStateRecordDeserializeProp<P>(
     case 6:
       return (reader.readString(offset)) as P;
     case 7:
+      return (reader.readString(offset)) as P;
+    case 8:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -987,6 +997,143 @@ extension AppStateRecordQueryFilter
   }
 
   QueryBuilder<AppStateRecord, AppStateRecord, QAfterFilterCondition>
+      launchPreferencesJsonEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'launchPreferencesJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppStateRecord, AppStateRecord, QAfterFilterCondition>
+      launchPreferencesJsonGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'launchPreferencesJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppStateRecord, AppStateRecord, QAfterFilterCondition>
+      launchPreferencesJsonLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'launchPreferencesJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppStateRecord, AppStateRecord, QAfterFilterCondition>
+      launchPreferencesJsonBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'launchPreferencesJson',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppStateRecord, AppStateRecord, QAfterFilterCondition>
+      launchPreferencesJsonStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'launchPreferencesJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppStateRecord, AppStateRecord, QAfterFilterCondition>
+      launchPreferencesJsonEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'launchPreferencesJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppStateRecord, AppStateRecord, QAfterFilterCondition>
+      launchPreferencesJsonContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'launchPreferencesJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppStateRecord, AppStateRecord, QAfterFilterCondition>
+      launchPreferencesJsonMatches(String pattern,
+          {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'launchPreferencesJson',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppStateRecord, AppStateRecord, QAfterFilterCondition>
+      launchPreferencesJsonIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'launchPreferencesJson',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<AppStateRecord, AppStateRecord, QAfterFilterCondition>
+      launchPreferencesJsonIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'launchPreferencesJson',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<AppStateRecord, AppStateRecord, QAfterFilterCondition>
       profileJsonEqualTo(
     String value, {
     bool caseSensitive = true,
@@ -1473,6 +1620,20 @@ extension AppStateRecordQuerySortBy
   }
 
   QueryBuilder<AppStateRecord, AppStateRecord, QAfterSortBy>
+      sortByLaunchPreferencesJson() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'launchPreferencesJson', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppStateRecord, AppStateRecord, QAfterSortBy>
+      sortByLaunchPreferencesJsonDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'launchPreferencesJson', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppStateRecord, AppStateRecord, QAfterSortBy>
       sortByProfileJson() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'profileJson', Sort.asc);
@@ -1599,6 +1760,20 @@ extension AppStateRecordQuerySortThenBy
   }
 
   QueryBuilder<AppStateRecord, AppStateRecord, QAfterSortBy>
+      thenByLaunchPreferencesJson() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'launchPreferencesJson', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppStateRecord, AppStateRecord, QAfterSortBy>
+      thenByLaunchPreferencesJsonDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'launchPreferencesJson', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppStateRecord, AppStateRecord, QAfterSortBy>
       thenByProfileJson() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'profileJson', Sort.asc);
@@ -1682,6 +1857,14 @@ extension AppStateRecordQueryWhereDistinct
     });
   }
 
+  QueryBuilder<AppStateRecord, AppStateRecord, QDistinct>
+      distinctByLaunchPreferencesJson({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'launchPreferencesJson',
+          caseSensitive: caseSensitive);
+    });
+  }
+
   QueryBuilder<AppStateRecord, AppStateRecord, QDistinct> distinctByProfileJson(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -1743,6 +1926,13 @@ extension AppStateRecordQueryProperty
   QueryBuilder<AppStateRecord, String, QQueryOperations> itemsJsonProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'itemsJson');
+    });
+  }
+
+  QueryBuilder<AppStateRecord, String, QQueryOperations>
+      launchPreferencesJsonProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'launchPreferencesJson');
     });
   }
 

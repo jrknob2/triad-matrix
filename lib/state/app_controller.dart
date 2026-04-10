@@ -27,6 +27,7 @@ class AppController extends ChangeNotifier {
   late List<PracticeCombinationV1> _combinations;
   late PracticeRoutineV1 _routine;
   late List<PracticeSessionLogV1> _sessions;
+  late Map<String, PracticeLaunchPreferenceV1> _launchPreferencesByItemId;
   late List<SessionAssessmentResultV1> _assessmentResults;
   late Map<String, PracticeAssessmentAggregateV1> _assessmentAggregateByItemId;
   late Map<String, CompetencyRecordV1> _competencyByItemId;
@@ -76,6 +77,11 @@ class AppController extends ChangeNotifier {
     _combinations = snapshot.combinations;
     _routine = snapshot.routine;
     _sessions = snapshot.sessions;
+    _launchPreferencesByItemId = <String, PracticeLaunchPreferenceV1>{
+      for (final PracticeLaunchPreferenceV1 preference
+          in snapshot.launchPreferences)
+        preference.practiceItemId: preference,
+    };
     _assessmentResults = snapshot.assessmentResults;
     _assessmentAggregateByItemId = <String, PracticeAssessmentAggregateV1>{
       for (final PracticeAssessmentAggregateV1 aggregate
@@ -142,6 +148,9 @@ class AppController extends ChangeNotifier {
             .toList(growable: false),
         routine: _routine,
         sessions: _sessions,
+        launchPreferences: _launchPreferencesByItemId.values.toList(
+          growable: false,
+        ),
         competencyRecords: _competencyByItemId.values.toList(growable: false),
         assessmentResults: _assessmentResults,
         assessmentAggregates: _assessmentAggregateByItemId.values.toList(
@@ -587,6 +596,28 @@ class AppController extends ChangeNotifier {
 
   PracticeItemV1? triadItemForCell(String cellId) {
     return itemByIdOrNull(_triadItemId(cellId));
+  }
+
+  int launchBpmForItem(String itemId) {
+    return _launchPreferencesByItemId[itemId]?.bpm ?? _profile.defaultBpm;
+  }
+
+  TimerPresetV1 launchTimerPresetForItem(String itemId) {
+    return _launchPreferencesByItemId[itemId]?.timerPreset ??
+        _profile.defaultTimerPreset;
+  }
+
+  void rememberLaunchPreferencesForItem({
+    required String itemId,
+    required int bpm,
+    required TimerPresetV1 timerPreset,
+  }) {
+    _launchPreferencesByItemId[itemId] = PracticeLaunchPreferenceV1(
+      practiceItemId: itemId,
+      bpm: bpm,
+      timerPreset: timerPreset,
+    );
+    _notifyChanged();
   }
 
   PracticeSessionLogV1? sessionById(String id) {
@@ -1602,14 +1633,16 @@ class AppController extends ChangeNotifier {
     String itemId, {
     PracticeModeV1 practiceMode = PracticeModeV1.singleSurface,
     String? routineId,
+    int? bpm,
+    TimerPresetV1? timerPreset,
   }) {
     final PracticeItemV1 item = itemById(itemId);
     return PracticeSessionSetupV1(
       practiceItemIds: <String>[itemId],
       family: item.family,
       practiceMode: practiceMode,
-      bpm: _profile.defaultBpm,
-      timerPreset: _profile.defaultTimerPreset,
+      bpm: bpm ?? launchBpmForItem(itemId),
+      timerPreset: timerPreset ?? launchTimerPresetForItem(itemId),
       clickEnabled: _profile.clickEnabledByDefault,
       routineId: routineId,
       sourceName: '',
@@ -1620,15 +1653,26 @@ class AppController extends ChangeNotifier {
     List<String> itemIds, {
     PracticeModeV1 practiceMode = PracticeModeV1.singleSurface,
     String sourceName = 'Working On',
+    int? bpm,
+    TimerPresetV1? timerPreset,
   }) {
+    final String? singleItemId = itemIds.length == 1 ? itemIds.first : null;
     return PracticeSessionSetupV1(
       practiceItemIds: itemIds,
       family: itemIds.length == 1
           ? itemById(itemIds.first).family
           : MaterialFamilyV1.combo,
       practiceMode: practiceMode,
-      bpm: _profile.defaultBpm,
-      timerPreset: _profile.defaultTimerPreset,
+      bpm:
+          bpm ??
+          (singleItemId == null
+              ? _profile.defaultBpm
+              : launchBpmForItem(singleItemId)),
+      timerPreset:
+          timerPreset ??
+          (singleItemId == null
+              ? _profile.defaultTimerPreset
+              : launchTimerPresetForItem(singleItemId)),
       clickEnabled: _profile.clickEnabledByDefault,
       routineId: _routine.id,
       sourceName: sourceName,
@@ -1705,6 +1749,14 @@ class AppController extends ChangeNotifier {
       sourceName: setup.sourceName,
     );
 
+    if (setup.practiceItemIds.length == 1) {
+      _launchPreferencesByItemId[setup.practiceItemIds.first] =
+          PracticeLaunchPreferenceV1(
+            practiceItemId: setup.practiceItemIds.first,
+            bpm: setup.bpm,
+            timerPreset: setup.timerPreset,
+          );
+    }
     _sessions = <PracticeSessionLogV1>[session, ..._sessions];
     if (!_isWarmupSession(session)) {
       _recordManualAssessment(
@@ -2255,6 +2307,7 @@ class AppController extends ChangeNotifier {
       entries: <RoutineEntryV1>[],
     );
     _sessions = const <PracticeSessionLogV1>[];
+    _launchPreferencesByItemId = <String, PracticeLaunchPreferenceV1>{};
     _assessmentResults = const <SessionAssessmentResultV1>[];
     _assessmentAggregateByItemId = <String, PracticeAssessmentAggregateV1>{};
     _competencyByItemId = <String, CompetencyRecordV1>{};
@@ -2267,6 +2320,9 @@ class AppController extends ChangeNotifier {
       combinations: List<PracticeCombinationV1>.from(_combinations),
       routine: _routine,
       sessions: List<PracticeSessionLogV1>.from(_sessions),
+      launchPreferencesByItemId: Map<String, PracticeLaunchPreferenceV1>.from(
+        _launchPreferencesByItemId,
+      ),
       assessmentResults: List<SessionAssessmentResultV1>.from(
         _assessmentResults,
       ),
@@ -2291,6 +2347,7 @@ class AppController extends ChangeNotifier {
         entries: <RoutineEntryV1>[],
       ),
       sessions: const <PracticeSessionLogV1>[],
+      launchPreferencesByItemId: const <String, PracticeLaunchPreferenceV1>{},
       assessmentResults: const <SessionAssessmentResultV1>[],
       assessmentAggregateByItemId:
           const <String, PracticeAssessmentAggregateV1>{},
@@ -2304,6 +2361,9 @@ class AppController extends ChangeNotifier {
     _combinations = List<PracticeCombinationV1>.from(snapshot.combinations);
     _routine = snapshot.routine;
     _sessions = List<PracticeSessionLogV1>.from(snapshot.sessions);
+    _launchPreferencesByItemId = Map<String, PracticeLaunchPreferenceV1>.from(
+      snapshot.launchPreferencesByItemId,
+    );
     _assessmentResults = List<SessionAssessmentResultV1>.from(
       snapshot.assessmentResults,
     );
@@ -3018,6 +3078,7 @@ class _ControllerRuntimeSnapshot {
   final List<PracticeCombinationV1> combinations;
   final PracticeRoutineV1 routine;
   final List<PracticeSessionLogV1> sessions;
+  final Map<String, PracticeLaunchPreferenceV1> launchPreferencesByItemId;
   final List<SessionAssessmentResultV1> assessmentResults;
   final Map<String, PracticeAssessmentAggregateV1> assessmentAggregateByItemId;
   final Map<String, CompetencyRecordV1> competencyByItemId;
@@ -3028,6 +3089,7 @@ class _ControllerRuntimeSnapshot {
     required this.combinations,
     required this.routine,
     required this.sessions,
+    required this.launchPreferencesByItemId,
     required this.assessmentResults,
     required this.assessmentAggregateByItemId,
     required this.competencyByItemId,
@@ -3045,6 +3107,7 @@ class _MockScenarioBuilder {
         entries: <RoutineEntryV1>[],
       ),
       sessions = <PracticeSessionLogV1>[],
+      launchPreferencesByItemId = <String, PracticeLaunchPreferenceV1>{},
       assessmentResults = <SessionAssessmentResultV1>[],
       assessmentAggregateByItemId = <String, PracticeAssessmentAggregateV1>{},
       competencyByItemId = <String, CompetencyRecordV1>{};
@@ -3055,6 +3118,7 @@ class _MockScenarioBuilder {
   List<PracticeCombinationV1> combinations;
   PracticeRoutineV1 routine;
   final List<PracticeSessionLogV1> sessions;
+  final Map<String, PracticeLaunchPreferenceV1> launchPreferencesByItemId;
   final List<SessionAssessmentResultV1> assessmentResults;
   final Map<String, PracticeAssessmentAggregateV1> assessmentAggregateByItemId;
   final Map<String, CompetencyRecordV1> competencyByItemId;
@@ -3299,6 +3363,9 @@ class _MockScenarioBuilder {
           (PracticeSessionLogV1 a, PracticeSessionLogV1 b) =>
               b.endedAt.compareTo(a.endedAt),
         ),
+      launchPreferencesByItemId: Map<String, PracticeLaunchPreferenceV1>.from(
+        launchPreferencesByItemId,
+      ),
       assessmentResults: List<SessionAssessmentResultV1>.from(assessmentResults)
         ..sort(
           (SessionAssessmentResultV1 a, SessionAssessmentResultV1 b) =>

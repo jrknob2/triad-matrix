@@ -293,6 +293,8 @@ Must support:
 - `From Working On` inside `Choose Patterns to Practice`
 - exact item selection for a session
 - derived session-scope filters based on actual item properties and progress state
+- BPM and duration controls before starting the session
+- remembered last BPM and duration for single-item practice without storing them as authored item data
 - a short recent-session list with enough pattern detail to recognize the session
 - search within that recent-session list by practiced pattern
 - `Load More` for older sessions
@@ -484,6 +486,7 @@ Practice Item is the detail/edit screen for one piece of material.
 - show competency/assessment summary
 - allow accent/ghost editing
 - allow flow voice assignment
+- allow session BPM and duration setup before launch
 - allow launch into `Single Surface` or `Flow`
 - allow opening that item in Matrix
 - use explicit save for edits
@@ -498,6 +501,7 @@ Practice Item is the detail/edit screen for one piece of material.
 
 - the pattern display is the primary signal
 - controls under it are clearly for editing the item, not playing it
+- session setup values should feel like launch defaults, not authored pattern data
 - accents, ghosts, and flow voice assignments only appear when they were authored by the user
 - edits should not write through immediately while the user is still working on the screen
 
