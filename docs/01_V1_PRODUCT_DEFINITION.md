@@ -54,11 +54,16 @@ V1 is organized around five main surfaces:
 
 3. `Practice`
    - gives the player a direct way to start playing
-   - supports repeating the last session, practicing `Working On`, or warming up
+   - supports repeating the last session, starting a session from `Working On`, or warming up
 
 4. `Focus`
    - holds the current working set
    - acts primarily as CRUD for active practice items
+
+Working model:
+
+- `Working On` is the broad active pool
+- session setup narrows that pool into today's slice
 
 5. `Progress`
    - shows measurement, trends, and coverage

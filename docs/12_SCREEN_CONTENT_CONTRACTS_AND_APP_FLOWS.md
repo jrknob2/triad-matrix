@@ -103,22 +103,30 @@ Goal:
 Path:
 
 1. `Practice`
-2. choose source
-3. `Practice Session`
-4. `Session Summary`
+2. `Start Practice`
+3. choose source or session scope
+4. `Practice Session`
+5. `Session Summary`
 
 Screens involved:
 
 - Practice
+- session setup inside Practice
 - Practice Session
 - Session Summary
 
 Required controls:
 
 - `Repeat Last Session`
-- `Practice Working On`
+- `Start Practice`
 - `Warm Up`
-- `Choose From Working On`
+- `From Working On`
+
+Rules:
+
+- `From Working On` belongs inside `Start Practice`, not as a separate top-level reason to use Practice
+- `Working On` may be broader than one day's session
+- session setup is where the player narrows that broader pool into today's slice
 
 ### Flow C: Coach-Driven Practice
 
@@ -195,6 +203,12 @@ Required controls:
 - play
 - edit
 - remove
+
+Rules:
+
+- `Working On` is a broad active pool, not a forced tiny queue
+- the app must not hard-cap the length of `Working On`
+- overload guidance belongs in session setup and active-rotation guidance, not in the existence of the list itself
 
 ### Flow F: Progress Review
 
@@ -606,9 +620,8 @@ Practice answers:
 ### Required Entry Options
 
 - `Repeat Last Session`
-- `Practice Working On`
+- `Start Practice`
 - `Warm Up`
-- `Choose From Working On`
 
 Optional later:
 
@@ -620,6 +633,61 @@ Optional later:
 - this screen must exist as a primary tab
 - each entry option must clearly indicate what session source it uses
 - this screen should reduce choice friction, not add setup friction
+- `Start Practice` is the entry into normal tracked practice
+- `From Working On` belongs inside `Start Practice`, not as a separate peer card
+- `Warm Up` remains separate because it is a distinct prep mode, not a slice of current work
+
+### Session Setup From `Working On`
+
+Must allow:
+
+- practicing all of `Working On`
+- narrowing `Working On` into a smaller session slice
+- selecting exact items for today's session
+- starting the session from that chosen slice
+
+Rules:
+
+- `Working On` is the pool
+- session setup is the slice
+- ideal session scope is `1-4` items
+- `5-6` items is allowed but should trigger soft guidance
+- guidance should be advisory, not blocking
+- preferred soft guardrail copy:
+  - `This is a big session. Pick 3 or 4 if you want cleaner reps.`
+- the setup surface may also advise when the actively trained rotation has grown too wide
+- active-rotation guidance should treat roughly `4-8` actively pushed items as the normal zone
+- when recent active rotation grows beyond that, the app may advise shrinking the core rotation, but must not hard-block it
+
+### Category And Filter Derivation For `From Working On`
+
+Rules:
+
+- categories must be derived from actual item properties and recent progress state
+- categories must help the player define a practice day or session scope
+- categories must not be abstract pedagogy buckets
+
+Good derived filters:
+
+- `Hands Only`
+- `Has Kick`
+- `Flow`
+- `Flow Ready`
+- `Needs Work`
+- `Active`
+- `Strong Review`
+- `Right Lead`
+- `Left Lead`
+- `Doubles`
+
+Guidance:
+
+- these filters are for session slicing, not for redefining the meaning of `Working On`
+- a player may keep a broad `Working On` list while using tight session slices like:
+  - doubles day
+  - kick day
+  - flow day
+  - cleanup day
 
 ### Practice Wording Rules
 
@@ -764,6 +832,13 @@ Must not show:
 
 - fake stats
 - long philosophy copy
+
+### Focus Rules
+
+- `Working On` may be broader than today's session scope
+- Focus must not imply that every item in the list should be practiced in one sitting
+- Focus is where current material is maintained
+- Practice session setup is where the player chooses today's slice
 
 ---
 

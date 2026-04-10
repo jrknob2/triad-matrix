@@ -159,6 +159,31 @@ Tasks:
 - strip summary/dashboard behavior
 - keep add/remove/edit/practice
 - make item actions obvious
+- keep `Working On` broad enough to support different practice-day slices
+- move session-size guidance into Practice session setup rather than Focus
+
+### Phase 4A. Practice Session Setup
+
+Goal:
+
+- distinguish the broad `Working On` pool from today's smaller session slice
+
+Tasks:
+
+- make `Start Practice` the entry into normal tracked practice
+- move `From Working On` inside that setup flow
+- add derived filters for session slicing:
+  - `Hands Only`
+  - `Has Kick`
+  - `Flow`
+  - `Flow Ready`
+  - `Needs Work`
+  - `Active`
+  - `Strong Review`
+  - `Right Lead`
+  - `Left Lead`
+  - `Doubles`
+- add soft scope guidance for oversized sessions and overly broad active rotation
 
 ### Phase 5. Rebuild Progress
 

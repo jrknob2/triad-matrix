@@ -265,8 +265,9 @@ Practice gives the user a direct way to start playing and then executes the sess
 - exist as a primary tab
 - support direct-entry practice choices
 - support repeat-last-session
-- support practice-from-Focus
+- support practice from `Working On`
 - support warmup
+- support session setup that narrows `Working On` into today's slice
 - run the session player with minimal friction
 
 ### Must Not Do
@@ -282,9 +283,14 @@ Practice gives the user a direct way to start playing and then executes the sess
 Must show:
 
 - `Repeat Last Session`
-- `Practice Working On`
+- `Start Practice`
 - `Warm Up`
-- `Choose From Working On`
+
+Must support:
+
+- `From Working On` inside `Start Practice`
+- exact item selection for a session
+- derived session-scope filters based on actual item properties and progress state
 
 Optional later:
 
@@ -322,6 +328,9 @@ Warmup rules:
 ### Acceptance Criteria
 
 - user can reach practice directly from nav
+- the app should distinguish between a broad `Working On` pool and a smaller session slice
+- `From Working On` should not exist as a separate top-level card
+- session size guidance should be advisory, not blocking
 - session player feels like an execution surface, not a config form
 - warmup behaves like temporary prep, not core curriculum
 - the player must not contain an in-session `Warm Up` entry point
@@ -341,6 +350,7 @@ Focus is the current working set.
 - support edit/open
 - support remove
 - support add from Coach/Matrix
+- allow the list to be broader than a single day's session
 
 ### Must Not Do
 
@@ -377,6 +387,7 @@ Optional:
 ### Acceptance Criteria
 
 - Focus should read as CRUD for current work
+- Focus should feel like the broad active pool, not today's forced checklist
 - the user should never wonder whether an item is “saved”, “mastered”, or “current”
 - there should be no fake summary cards trying to turn this into a dashboard
 

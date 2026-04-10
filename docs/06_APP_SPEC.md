@@ -105,6 +105,7 @@ Purpose:
 Practice is responsible for:
 
 - direct-entry choices
+- session setup from `Working On`
 - warmup entry
 - repeat-last-session entry
 - working-set entry
@@ -202,14 +203,22 @@ The working set is the current list of items the player intends to develop now.
 It should be:
 
 - explicit
-- small
 - editable
+- broad enough to support different practice-day slices
 
 It should not be treated as:
 
 - favorites
 - long-term storage
 - earned vocabulary
+
+Important rule:
+
+- the app should not hard-cap the size of `Working On`
+- session scope should usually stay smaller than the full pool
+- ideal session scope is usually `1-4` items
+- active rotation is usually healthiest around `4-8` actively pushed items
+- larger scopes may be allowed, but should trigger soft guidance rather than hard limits
 
 ### 5. Assessment
 
@@ -267,10 +276,10 @@ Progress should be measurement-first:
 2. Sees direct-entry options
 3. Chooses one:
    - `Repeat Last Session`
-   - `Practice Working On`
+   - `Start Practice`
    - `Warm Up`
-   - `Choose From Working On`
-4. Enters session player
+4. If using normal practice, narrows `Working On` into today's session slice
+5. Enters session player
 
 ### Flow C: Matrix-Driven Practice
 
