@@ -31,7 +31,7 @@ class PracticeScreen extends StatefulWidget {
 class _PracticeScreenState extends State<PracticeScreen> {
   bool _showWorkingOnSetup = false;
   bool _showPreviousSessionBrowser = false;
-  int _visiblePreviousSessionCount = 5;
+  int _visiblePreviousSessionCount = 3;
   String _previousSessionQuery = '';
   late final TextEditingController _previousSessionSearchController;
   Set<String> _selectedItemIds = <String>{};
@@ -136,8 +136,9 @@ class _PracticeScreenState extends State<PracticeScreen> {
                           searchController: _previousSessionSearchController,
                           onQueryChanged: (String value) => setState(() {
                             _previousSessionQuery = value;
-                            _visiblePreviousSessionCount = 5;
+                            _visiblePreviousSessionCount = 3;
                           }),
+                          totalCount: filteredRecentSessions.length,
                           sessions: filteredRecentSessions
                               .take(_visiblePreviousSessionCount)
                               .toList(growable: false),
@@ -370,6 +371,7 @@ class _PreviousSessionBrowser extends StatelessWidget {
   final AppController controller;
   final TextEditingController searchController;
   final ValueChanged<String> onQueryChanged;
+  final int totalCount;
   final List<PracticeSessionLogV1> sessions;
   final bool hasMore;
   final VoidCallback onLoadMore;
@@ -379,6 +381,7 @@ class _PreviousSessionBrowser extends StatelessWidget {
     required this.controller,
     required this.searchController,
     required this.onQueryChanged,
+    required this.totalCount,
     required this.sessions,
     required this.hasMore,
     required this.onLoadMore,
@@ -418,6 +421,14 @@ class _PreviousSessionBrowser extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 14),
+            Text(
+              'Showing ${sessions.length} of $totalCount',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: const Color(0xFF6A5E4C),
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 10),
             if (sessions.isEmpty)
               Text(
                 'No recent sessions match that search.',
