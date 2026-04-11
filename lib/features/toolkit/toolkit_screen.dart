@@ -7,7 +7,7 @@ import '../../state/app_controller.dart';
 import '../practice/widgets/pattern_display_text.dart';
 import '../practice/widgets/pattern_voice_display.dart';
 
-enum _FocusViewFilter { all, flow }
+enum _FocusViewFilter { all, singleSurface, flow }
 
 class FocusScreen extends StatefulWidget {
   final AppController controller;
@@ -187,6 +187,8 @@ class _FocusScreenState extends State<FocusScreen> {
   bool _matchesViewFilter(PracticeItemV1 item) {
     return switch (_viewFilter) {
       _FocusViewFilter.all => true,
+      _FocusViewFilter.singleSurface =>
+        !widget.controller.hasNonSnareVoice(item.id),
       _FocusViewFilter.flow => widget.controller.hasNonSnareVoice(item.id),
     };
   }
@@ -204,6 +206,7 @@ class _FocusScreenState extends State<FocusScreen> {
   String _labelForViewFilter(_FocusViewFilter filter) {
     return switch (filter) {
       _FocusViewFilter.all => 'All',
+      _FocusViewFilter.singleSurface => 'Single Surface',
       _FocusViewFilter.flow => 'Flow',
     };
   }

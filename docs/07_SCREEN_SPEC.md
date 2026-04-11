@@ -508,6 +508,7 @@ Practice Item is the detail/edit screen for one piece of material.
 - `Flow` should read as derived capability from voice assignments, not a user-declared item mode
 - no voice assignments and all-default voices should be treated as the same single-surface state
 - default kick placement on `K` should not make an item read as Flow
+- list filters may still expose `Single Surface` and `Flow` as derived item states
 - accents, ghosts, and flow voice assignments only appear when they were authored by the user
 - edits should not write through immediately while the user is still working on the screen
 

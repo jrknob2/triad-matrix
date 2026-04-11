@@ -886,7 +886,8 @@ Must not show:
 - the add entry point may sit inline with search as a compact `New` / `+` control
 - flow voice assignments remain user-authored item data and must not add extra list-level per-item launch buttons
 - any `Flow` filter on this screen must be derived from authored off-snare voices on non-kick notes
-- do not present `Single Surface` as an item property filter; all items can be practiced on one surface
+- `Single Surface` may appear as a derived list filter and must mean the item has no authored off-snare voices on non-kick notes
+- do not present `Single Surface / Flow` as an authored item mode toggle; they are derived list states
 
 ---
 
