@@ -212,7 +212,11 @@ class PracticeItemV1 {
   /// Zero-based note indices the user has explicitly marked as ghosts.
   final List<int> ghostNoteIndices;
 
-  /// User-authored voice assignment overrides for flow mode.
+  /// User-authored voice assignment overrides.
+  ///
+  /// Empty means default single-surface voices:
+  /// snare for hand notes and kick for K notes.
+  /// Flow is derived from authored off-snare movement on non-kick notes.
   final List<DrumVoiceV1> voiceAssignments;
 
   final PracticeItemSourceV1 source;

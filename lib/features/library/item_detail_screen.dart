@@ -56,9 +56,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
           itemId: item.id,
         );
         final List<String> tokens = widget.controller.noteTokensFor(item.id);
-        final bool flowCapable = _voiceAssignments.any(
-          (DrumVoiceV1 voice) => voice != DrumVoiceV1.snare,
-        );
+        final bool flowCapable = _hasDraftFlowVoices(tokens, _voiceAssignments);
         final List<PatternNoteMarkingV1> draftMarkings = _draftMarkingsFor(
           item.noteCount,
         );
@@ -111,24 +109,38 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                         const SizedBox(height: 8),
-                        PatternVoiceDisplay(
-                          tokens: tokens,
-                          markings: draftMarkings,
-                          voices: _voiceAssignments,
-                          patternStyle: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: -0.5,
-                              ),
-                          voiceStyle: Theme.of(context).textTheme.labelLarge,
-                        ),
-                        const SizedBox(height: 8),
+                        if (flowCapable) ...<Widget>[
+                          PatternVoiceDisplay(
+                            tokens: tokens,
+                            markings: draftMarkings,
+                            voices: _voiceAssignments,
+                            patternStyle: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -0.5,
+                                ),
+                            voiceStyle: Theme.of(context).textTheme.labelLarge,
+                          ),
+                          const SizedBox(height: 8),
+                        ],
                         VoiceAssignmentEditor(
                           tokens: tokens,
                           voices: _voiceAssignments,
                           onTapNote: _cycleVoice,
                           showHelpText: false,
                         ),
+                        if (flowCapable) ...<Widget>[
+                          const SizedBox(height: 8),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: OutlinedButton(
+                              onPressed: _clearVoices,
+                              child: const Text('Clear Voices'),
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 12),
                         _FlowReadinessNote(ready: flowCapable),
                       ],
@@ -407,6 +419,25 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     final int index = cycle.indexOf(current);
     if (index < 0) return cycle.first;
     return cycle[(index + 1) % cycle.length];
+  }
+
+  bool _hasDraftFlowVoices(List<String> tokens, List<DrumVoiceV1> voices) {
+    for (int index = 0; index < tokens.length; index++) {
+      if (tokens[index] == 'K') continue;
+      if (voices[index] != DrumVoiceV1.snare) return true;
+    }
+    return false;
+  }
+
+  void _clearVoices() {
+    final List<String> tokens = widget.controller.noteTokensFor(widget.itemId);
+    setState(() {
+      _voiceAssignments = List<DrumVoiceV1>.generate(tokens.length, (
+        int index,
+      ) {
+        return tokens[index] == 'K' ? DrumVoiceV1.kick : DrumVoiceV1.snare;
+      });
+    });
   }
 
   bool _hasUnsavedChanges(PracticeItemV1 item) {

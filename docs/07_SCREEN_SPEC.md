@@ -490,7 +490,7 @@ Practice Item is the detail/edit screen for one piece of material.
 - allow flow voice assignment
 - allow session BPM and duration setup before launch
 - allow launch into `Single Surface`
-- allow launch into `Flow` only when the item has authored non-snare voices
+- allow launch into `Flow` only when the item has authored off-snare voices on non-kick notes
 - allow opening that item in Matrix
 - use explicit save for edits
 - warn before leaving with unsaved changes
@@ -506,6 +506,8 @@ Practice Item is the detail/edit screen for one piece of material.
 - controls under it are clearly for editing the item, not playing it
 - session setup values should feel like launch defaults, not authored pattern data
 - `Flow` should read as derived capability from voice assignments, not a user-declared item mode
+- no voice assignments and all-default voices should be treated as the same single-surface state
+- default kick placement on `K` should not make an item read as Flow
 - accents, ghosts, and flow voice assignments only appear when they were authored by the user
 - edits should not write through immediately while the user is still working on the screen
 

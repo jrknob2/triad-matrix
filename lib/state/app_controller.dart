@@ -848,11 +848,11 @@ class AppController extends ChangeNotifier {
 
   List<DrumVoiceV1> noteVoicesFor(String itemId) {
     final PracticeItemV1 item = _sanitizedItem(itemById(itemId));
-    return List<DrumVoiceV1>.unmodifiable(item.voiceAssignments);
+    return List<DrumVoiceV1>.unmodifiable(_effectiveVoicesForItem(item));
   }
 
   bool hasNonSnareVoice(String itemId) {
-    return noteVoicesFor(itemId).any((voice) => voice != DrumVoiceV1.snare);
+    return _hasAuthoredFlowVoices(_sanitizedItem(itemById(itemId)));
   }
 
   bool hasKick(String itemId) => usesKick(itemId);
@@ -1384,7 +1384,7 @@ class AppController extends ChangeNotifier {
     if (noteIndex < 0 || noteIndex >= item.noteCount) return;
 
     final List<DrumVoiceV1> voices = List<DrumVoiceV1>.from(
-      _sanitizedItem(item).voiceAssignments,
+      _effectiveVoicesForItem(_sanitizedItem(item)),
     );
     if (_tokenAt(item, noteIndex) == 'K') {
       voices[noteIndex] = DrumVoiceV1.kick;
@@ -1462,7 +1462,7 @@ class AppController extends ChangeNotifier {
       final PracticeItemV1 item = itemById(itemId);
       accented.addAll(item.accentedNoteIndices.map((index) => index + offset));
       ghosted.addAll(item.ghostNoteIndices.map((index) => index + offset));
-      voices.addAll(_sanitizedItem(item).voiceAssignments);
+      voices.addAll(_effectiveVoicesForItem(_sanitizedItem(item)));
       offset += item.noteCount;
     }
 
@@ -1517,7 +1517,7 @@ class AppController extends ChangeNotifier {
       final PracticeItemV1 item = itemById(entryId);
       accented.addAll(item.accentedNoteIndices.map((index) => index + offset));
       ghosted.addAll(item.ghostNoteIndices.map((index) => index + offset));
-      voices.addAll(_sanitizedItem(item).voiceAssignments);
+      voices.addAll(_effectiveVoicesForItem(_sanitizedItem(item)));
       offset += item.noteCount;
     }
 
@@ -2235,15 +2235,7 @@ class AppController extends ChangeNotifier {
             .toSet()
             .toList()
           ..sort();
-    final List<DrumVoiceV1> voices = List<DrumVoiceV1>.generate(tokens.length, (
-      index,
-    ) {
-      final DrumVoiceV1 fallback = _defaultVoiceForToken(tokens[index]);
-      if (index >= item.voiceAssignments.length) return fallback;
-      final DrumVoiceV1 voice = item.voiceAssignments[index];
-      if (tokens[index] == 'K') return DrumVoiceV1.kick;
-      return voice == DrumVoiceV1.kick ? fallback : voice;
-    });
+    final List<DrumVoiceV1> voices = _storedVoicesForItem(item);
 
     if (listEquals(accented, item.accentedNoteIndices) &&
         listEquals(ghosted, item.ghostNoteIndices) &&
@@ -2278,6 +2270,46 @@ class AppController extends ChangeNotifier {
 
   DrumVoiceV1 _defaultVoiceForToken(String token) {
     return token == 'K' ? DrumVoiceV1.kick : DrumVoiceV1.snare;
+  }
+
+  List<DrumVoiceV1> _effectiveVoicesForItem(PracticeItemV1 item) {
+    final List<String> tokens = _normalizedTokensForItem(item);
+    if (item.voiceAssignments.isEmpty) {
+      return List<DrumVoiceV1>.generate(
+        tokens.length,
+        (int index) => _defaultVoiceForToken(tokens[index]),
+      );
+    }
+    return List<DrumVoiceV1>.generate(tokens.length, (int index) {
+      final DrumVoiceV1 fallback = _defaultVoiceForToken(tokens[index]);
+      if (index >= item.voiceAssignments.length) return fallback;
+      final DrumVoiceV1 voice = item.voiceAssignments[index];
+      if (tokens[index] == 'K') return DrumVoiceV1.kick;
+      return voice == DrumVoiceV1.kick ? DrumVoiceV1.snare : voice;
+    });
+  }
+
+  List<DrumVoiceV1> _storedVoicesForItem(PracticeItemV1 item) {
+    final List<String> tokens = _normalizedTokensForItem(item);
+    final List<DrumVoiceV1> effective = _effectiveVoicesForItem(item);
+    final List<DrumVoiceV1> defaults = List<DrumVoiceV1>.generate(
+      tokens.length,
+      (int index) => _defaultVoiceForToken(tokens[index]),
+    );
+    if (listEquals(effective, defaults)) {
+      return const <DrumVoiceV1>[];
+    }
+    return effective;
+  }
+
+  bool _hasAuthoredFlowVoices(PracticeItemV1 item) {
+    final List<String> tokens = _normalizedTokensForItem(item);
+    final List<DrumVoiceV1> effective = _effectiveVoicesForItem(item);
+    for (int index = 0; index < tokens.length; index++) {
+      if (tokens[index] == 'K') continue;
+      if (effective[index] != DrumVoiceV1.snare) return true;
+    }
+    return false;
   }
 
   String _triadItemId(String cellId) => 'triad_${cellId.toLowerCase()}';
@@ -3249,7 +3281,7 @@ class _MockScenarioBuilder {
         item.accentedNoteIndices.map((int index) => index + offset),
       );
       ghosts.addAll(item.ghostNoteIndices.map((int index) => index + offset));
-      voices.addAll(item.voiceAssignments);
+      voices.addAll(controller._effectiveVoicesForItem(item));
       offset += item.noteCount;
     }
     return controller._sanitizedItem(

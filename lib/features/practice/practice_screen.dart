@@ -5,6 +5,7 @@ import '../../state/app_controller.dart';
 import '../app/app_formatters.dart';
 import '../app/drumcabulary_ui.dart';
 import 'widgets/pattern_display_text.dart';
+import 'widgets/pattern_voice_display.dart';
 
 class PracticeScreen extends StatefulWidget {
   final AppController controller;
@@ -797,6 +798,19 @@ class _SelectableWorkingOnRow extends StatelessWidget {
                         ),
                         grouping: controller.displayGroupingFor(item.id),
                       ),
+                      if (controller.hasNonSnareVoice(item.id)) ...<Widget>[
+                        const SizedBox(height: 6),
+                        PatternVoiceDisplay(
+                          tokens: controller.noteTokensFor(item.id),
+                          markings: controller.noteMarkingsFor(item.id),
+                          voices: controller.noteVoicesFor(item.id),
+                          patternStyle: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(fontWeight: FontWeight.w900),
+                          voiceStyle: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                          grouping: controller.displayGroupingFor(item.id),
+                        ),
+                      ],
                       const SizedBox(height: 6),
                       Wrap(
                         spacing: 8,

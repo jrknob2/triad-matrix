@@ -249,7 +249,7 @@ Path:
 
 1. `Practice Item` or `Matrix`
 2. adjust voice assignments if needed
-3. `Practice in Flow` when the item has authored non-snare voices
+3. `Practice in Flow` when the item has authored off-snare voices on non-kick notes
 4. `Practice Session`
 
 Screens involved:
@@ -266,7 +266,9 @@ Required controls:
 Rules:
 
 - `Flow` is a derived practice capability, not a user-declared item type
-- an item is considered `Flow` only when it has user-authored non-snare voices
+- an item is considered `Flow` only when it has user-authored off-snare voices on non-kick notes
+- no voice assignments and all-default voices are the same single-surface state
+- default kick placement on `K` does not make an item `Flow`
 - `Single Surface` is the universal baseline practice mode, not an item classification
 
 ### Flow H: Warmup
@@ -883,7 +885,7 @@ Must not show:
 - if explanatory/help content is needed, it should live in optional help, not as a permanent top card
 - the add entry point may sit inline with search as a compact `New` / `+` control
 - flow voice assignments remain user-authored item data and must not add extra list-level per-item launch buttons
-- any `Flow` filter on this screen must be derived from authored non-snare voices
+- any `Flow` filter on this screen must be derived from authored off-snare voices on non-kick notes
 - do not present `Single Surface` as an item property filter; all items can be practiced on one surface
 
 ---
@@ -988,7 +990,7 @@ Practice Item lets the user inspect and edit one item cleanly.
 - accent/ghost controls
 - flow voice controls
 - `Practice on One Surface`
-- `Practice in Flow` when the item has authored non-snare voices
+- `Practice in Flow` when the item has authored off-snare voices on non-kick notes
 - session setup controls for BPM and duration
 - practice CTA
 - open in matrix CTA
@@ -1008,6 +1010,8 @@ Practice Item lets the user inspect and edit one item cleanly.
 - practice CTA launches the chosen mode
 - accents, ghosts, and flow voice assignments are user-authored edit layers
 - base material enters the app plain unless the user has explicitly edited it
+- no voice assignments and all-default voices must collapse to the same single-surface state
+- voice displays outside the editor should only appear when the item has authored off-snare voices on non-kick notes
 - Matrix selection and phrase building must not inject authored markings automatically
 - item edits should live in a local draft until the user explicitly saves them
 - navigating away with unsaved item changes should prompt the user to save, discard, or keep editing

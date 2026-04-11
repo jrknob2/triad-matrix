@@ -5,6 +5,7 @@ import '../../features/app/app_formatters.dart';
 import '../../features/app/drumcabulary_ui.dart';
 import '../../state/app_controller.dart';
 import '../practice/widgets/pattern_display_text.dart';
+import '../practice/widgets/pattern_voice_display.dart';
 
 enum _FocusViewFilter { all, flow }
 
@@ -297,6 +298,24 @@ class _FocusItemCard extends StatelessWidget {
                   ),
                   grouping: controller.displayGroupingFor(item.id),
                 ),
+                if (controller.hasNonSnareVoice(item.id)) ...<Widget>[
+                  const SizedBox(height: 6),
+                  PatternVoiceDisplay(
+                    tokens: controller.noteTokensFor(item.id),
+                    markings: controller.noteMarkingsFor(item.id),
+                    voices: controller.noteVoicesFor(item.id),
+                    patternStyle: Theme.of(context).textTheme.titleSmall
+                        ?.copyWith(
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.3,
+                        ),
+                    voiceStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: const Color(0xFF6A5E4C),
+                      fontWeight: FontWeight.w700,
+                    ),
+                    grouping: controller.displayGroupingFor(item.id),
+                  ),
+                ],
                 const SizedBox(height: 6),
                 Text(
                   '${item.family.label} • ${controller.matrixProgressStateFor(item.id).label}',
@@ -377,6 +396,24 @@ class _SearchResultCard extends StatelessWidget {
                   ),
                   grouping: controller.displayGroupingFor(item.id),
                 ),
+                if (controller.hasNonSnareVoice(item.id)) ...<Widget>[
+                  const SizedBox(height: 6),
+                  PatternVoiceDisplay(
+                    tokens: controller.noteTokensFor(item.id),
+                    markings: controller.noteMarkingsFor(item.id),
+                    voices: controller.noteVoicesFor(item.id),
+                    patternStyle: Theme.of(context).textTheme.titleSmall
+                        ?.copyWith(
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.3,
+                        ),
+                    voiceStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: const Color(0xFF6A5E4C),
+                      fontWeight: FontWeight.w700,
+                    ),
+                    grouping: controller.displayGroupingFor(item.id),
+                  ),
+                ],
                 const SizedBox(height: 6),
                 Text(
                   item.family.label,
