@@ -408,6 +408,9 @@ Optional:
 - search must help the player find and add practice items quickly without turning Focus into a second Matrix
 - filter state must always have a clear way back to `All`
 - the user should never wonder whether an item is “saved”, “mastered”, or “current”
+- the screen should not duplicate its own title with a second visible `Working On` heading
+- the add entry point may live inline with search as a compact `New` / `+` control
+- no extra per-item flow-launch button should appear in the list
 - there should be no fake summary cards trying to turn this into a dashboard
 
 ---

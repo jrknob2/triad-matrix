@@ -5,7 +5,6 @@ import '../../features/app/app_formatters.dart';
 import '../../features/app/drumcabulary_ui.dart';
 import '../../state/app_controller.dart';
 import '../practice/widgets/pattern_display_text.dart';
-import '../practice/widgets/pattern_voice_display.dart';
 
 enum _FocusViewFilter { all, singleSurface, flow }
 
@@ -55,58 +54,43 @@ class _FocusScreenState extends State<FocusScreen> {
         final List<PracticeItemV1> searchSource = widget.controller.items
             .where((PracticeItemV1 item) => !item.isWarmup)
             .toList(growable: false);
-        final List<PracticeItemV1> visibleItems = (hasSearch
-                ? searchSource.where(
-                    (PracticeItemV1 item) => _matchesSearch(item, _searchQuery),
-                  )
-                : allItems)
-            .where(_matchesViewFilter)
-            .toList(growable: false)
-          ..sort(_compareVisibleItems);
+        final List<PracticeItemV1> visibleItems =
+            (hasSearch
+                    ? searchSource.where(
+                        (PracticeItemV1 item) =>
+                            _matchesSearch(item, _searchQuery),
+                      )
+                    : allItems)
+                .where(_matchesViewFilter)
+                .toList(growable: false)
+              ..sort(_compareVisibleItems);
 
         return DrumScreen(
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
             children: <Widget>[
-              DrumPanel(
-                tone: DrumPanelTone.warm,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    const DrumSectionTitle(text: 'Working On'),
-                    const SizedBox(height: 8),
-                    Text(
-                      'This is the pool you are working from right now. Search to add something fast or trim what no longer belongs here.',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: const Color(0xFF5B5345),
-                        height: 1.35,
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: (String value) => setState(() {
+                        _searchQuery = value;
+                        _visibleItemCount = 5;
+                      }),
+                      decoration: const InputDecoration(
+                        hintText: 'Search all practice items',
+                        prefixIcon: Icon(Icons.search_rounded),
+                        isDense: true,
                       ),
                     ),
-                    const SizedBox(height: 14),
-                    DrumActionRow(
-                      children: <Widget>[
-                        OutlinedButton.icon(
-                          onPressed: widget.onOpenMatrix,
-                          icon: const Icon(Icons.grid_view_rounded),
-                          label: const Text('Add From Matrix'),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 14),
-              TextField(
-                controller: _searchController,
-                onChanged: (String value) => setState(() {
-                  _searchQuery = value;
-                  _visibleItemCount = 5;
-                }),
-                decoration: const InputDecoration(
-                  hintText: 'Search all practice items',
-                  prefixIcon: Icon(Icons.search_rounded),
-                  isDense: true,
-                ),
+                  ),
+                  const SizedBox(width: 10),
+                  OutlinedButton(
+                    onPressed: widget.onOpenMatrix,
+                    child: const Text('New'),
+                  ),
+                ],
               ),
               const SizedBox(height: 14),
               SingleChildScrollView(
@@ -146,29 +130,31 @@ class _FocusScreenState extends State<FocusScreen> {
                   filterLabel: _labelForViewFilter(_viewFilter),
                 )
               else
-                ...visibleItems.take(_visibleItemCount).map(
-                  (PracticeItemV1 item) => Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: widget.controller.isDirectRoutineEntry(item.id)
-                        ? _FocusItemCard(
-                            controller: widget.controller,
-                            item: item,
-                            viewFilter: _viewFilter,
-                            onOpenItem: widget.onOpenItem,
-                            onPracticeItemInMode:
-                                widget.onPracticeItemInMode,
-                            onRemoveItem: () =>
-                                widget.controller.toggleRoutineItem(item.id),
-                          )
-                        : _SearchResultCard(
-                            controller: widget.controller,
-                            item: item,
-                            onOpenItem: widget.onOpenItem,
-                            onAddItem: () =>
-                                widget.controller.toggleRoutineItem(item.id),
-                          ),
-                  ),
-                ),
+                ...visibleItems
+                    .take(_visibleItemCount)
+                    .map(
+                      (PracticeItemV1 item) => Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: widget.controller.isDirectRoutineEntry(item.id)
+                            ? _FocusItemCard(
+                                controller: widget.controller,
+                                item: item,
+                                viewFilter: _viewFilter,
+                                onOpenItem: widget.onOpenItem,
+                                onPracticeItemInMode:
+                                    widget.onPracticeItemInMode,
+                                onRemoveItem: () => widget.controller
+                                    .toggleRoutineItem(item.id),
+                              )
+                            : _SearchResultCard(
+                                controller: widget.controller,
+                                item: item,
+                                onOpenItem: widget.onOpenItem,
+                                onAddItem: () => widget.controller
+                                    .toggleRoutineItem(item.id),
+                              ),
+                      ),
+                    ),
               if (visibleItems.length > _visibleItemCount)
                 Align(
                   alignment: Alignment.centerLeft,
@@ -307,30 +293,15 @@ class _FocusItemCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                if (viewFilter == _FocusViewFilter.flow)
-                  PatternVoiceDisplay(
-                    tokens: controller.noteTokensFor(item.id),
-                    markings: controller.noteMarkingsFor(item.id),
-                    voices: controller.noteVoicesFor(item.id),
-                    patternStyle: Theme.of(context).textTheme.titleMedium
-                        ?.copyWith(
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: -0.5,
-                        ),
-                    voiceStyle: Theme.of(context).textTheme.labelMedium,
-                    grouping: controller.displayGroupingFor(item.id),
-                    showRepeatIndicator: false,
-                  )
-                else
-                  PatternDisplayText(
-                    tokens: controller.noteTokensFor(item.id),
-                    markings: controller.noteMarkingsFor(item.id),
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -0.5,
-                    ),
-                    grouping: controller.displayGroupingFor(item.id),
+                PatternDisplayText(
+                  tokens: controller.noteTokensFor(item.id),
+                  markings: controller.noteMarkingsFor(item.id),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.5,
                   ),
+                  grouping: controller.displayGroupingFor(item.id),
+                ),
                 const SizedBox(height: 6),
                 Text(
                   '${item.family.label} • ${controller.matrixProgressStateFor(item.id).label}',
@@ -359,14 +330,6 @@ class _FocusItemCard extends StatelessWidget {
                 onPressed: () =>
                     onPracticeItemInMode(item.id, PracticeModeV1.singleSurface),
               ),
-              if (controller.hasNonSnareVoice(item.id))
-                IconButton(
-                  tooltip: 'Practice in Flow',
-                  visualDensity: VisualDensity.compact,
-                  icon: const Icon(Icons.alt_route_rounded),
-                  onPressed: () =>
-                      onPracticeItemInMode(item.id, PracticeModeV1.flow),
-                ),
               IconButton(
                 tooltip: 'Edit',
                 visualDensity: VisualDensity.compact,

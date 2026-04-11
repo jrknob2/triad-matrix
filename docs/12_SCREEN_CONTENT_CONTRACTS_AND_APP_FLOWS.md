@@ -873,6 +873,11 @@ Must not show:
 - search results that are already in `Working On` should use the normal current-work controls
 - filter state must always have an explicit `All` path or equivalent clear state
 - long visible item lists should default to 5 rows and use `Show More` for the rest
+- do not repeat the screen title inside a second hero/card heading when no new information is added
+- this screen should default to less verbose presentation
+- if explanatory/help content is needed, it should live in optional help, not as a permanent top card
+- the add entry point may sit inline with search as a compact `New` / `+` control
+- flow voice assignments remain user-authored item data and must not add extra list-level per-item launch buttons
 
 ---
 

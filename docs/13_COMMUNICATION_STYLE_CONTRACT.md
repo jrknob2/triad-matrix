@@ -359,6 +359,7 @@ A line of student-facing copy passes only if:
 3. it uses drummer-facing language where appropriate
 4. it does not explain the app when it should direct practice
 5. it does not duplicate information the UI already shows
+6. if a screen is already identified by navigation/app bar context, do not restate that same label in a decorative intro card unless new information is added
 6. it would not feel out of place in a teacher's handout
 
 ---
