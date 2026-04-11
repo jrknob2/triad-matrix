@@ -412,6 +412,7 @@ Optional:
 - the add entry point may live inline with search as a compact `New` / `+` control
 - no extra per-item flow-launch button should appear in the list
 - there should be no fake summary cards trying to turn this into a dashboard
+- removing an item should require confirmation with the item's notation visible in the prompt
 
 ---
 

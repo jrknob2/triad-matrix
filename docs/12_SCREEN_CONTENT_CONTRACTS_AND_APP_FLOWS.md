@@ -212,6 +212,8 @@ Rules:
 - `Working On` is a broad active pool, not a forced tiny queue
 - the app must not hard-cap the length of `Working On`
 - overload guidance belongs in session setup and active-rotation guidance, not in the existence of the list itself
+- removing an item from `Working On` must require explicit confirmation
+- the confirmation must show the item's notation so the player can verify the exact item being removed
 
 ### Flow F: Progress Review
 
@@ -888,6 +890,7 @@ Must not show:
 - any `Flow` filter on this screen must be derived from authored off-snare voices on non-kick notes
 - `Single Surface` may appear as a derived list filter and must mean the item has no authored off-snare voices on non-kick notes
 - do not present `Single Surface / Flow` as an authored item mode toggle; they are derived list states
+- removing an item from this screen should confirm first and show the item's notation in the confirmation
 
 ---
 

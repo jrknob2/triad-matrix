@@ -143,8 +143,7 @@ class _FocusScreenState extends State<FocusScreen> {
                                 onOpenItem: widget.onOpenItem,
                                 onPracticeItemInMode:
                                     widget.onPracticeItemInMode,
-                                onRemoveItem: () => widget.controller
-                                    .toggleRoutineItem(item.id),
+                                onRemoveItem: () => _confirmRemoveItem(item),
                               )
                             : _SearchResultCard(
                                 controller: widget.controller,
@@ -209,6 +208,66 @@ class _FocusScreenState extends State<FocusScreen> {
       _FocusViewFilter.singleSurface => 'Single Surface',
       _FocusViewFilter.flow => 'Flow',
     };
+  }
+
+  Future<void> _confirmRemoveItem(PracticeItemV1 item) async {
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        final List<String> tokens = widget.controller.noteTokensFor(item.id);
+        final List<PatternNoteMarkingV1> markings = widget.controller
+            .noteMarkingsFor(item.id);
+        final bool showVoices = widget.controller.hasNonSnareVoice(item.id);
+        return AlertDialog(
+          title: const Text('Remove From Working On?'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                'This only removes the item from Working On. It does not delete the practice item.',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 14),
+              PatternDisplayText(
+                tokens: tokens,
+                markings: markings,
+                grouping: widget.controller.displayGroupingFor(item.id),
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              if (showVoices) ...<Widget>[
+                const SizedBox(height: 8),
+                PatternVoiceDisplay(
+                  tokens: tokens,
+                  markings: markings,
+                  voices: widget.controller.noteVoicesFor(item.id),
+                  grouping: widget.controller.displayGroupingFor(item.id),
+                  patternStyle: Theme.of(context).textTheme.bodyMedium
+                      ?.copyWith(fontWeight: FontWeight.w900),
+                  voiceStyle: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ],
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Remove'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true) {
+      widget.controller.toggleRoutineItem(item.id);
+    }
   }
 }
 
