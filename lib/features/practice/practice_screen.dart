@@ -5,14 +5,12 @@ import '../../state/app_controller.dart';
 import '../app/app_formatters.dart';
 import '../app/drumcabulary_ui.dart';
 import 'widgets/pattern_display_text.dart';
-import 'widgets/session_setup_controls.dart';
 
 class PracticeScreen extends StatefulWidget {
   final AppController controller;
   final ValueChanged<PracticeSessionLogV1> onRepeatPreviousSession;
   final VoidCallback onPracticeWarmup;
-  final void Function(List<String>, PracticeModeV1, int, TimerPresetV1)
-  onStartWorkingOnSession;
+  final void Function(List<String>, PracticeModeV1) onStartWorkingOnSession;
   final VoidCallback onOpenMatrix;
   final VoidCallback onOpenFocus;
 
@@ -40,15 +38,11 @@ class _PracticeScreenState extends State<PracticeScreen> {
   Set<String> _selectedItemIds = <String>{};
   Set<WorkingOnSessionFilterV1> _filters = <WorkingOnSessionFilterV1>{};
   PracticeModeV1 _practiceMode = PracticeModeV1.singleSurface;
-  late int _workingOnBpm;
-  late TimerPresetV1 _workingOnTimerPreset;
 
   @override
   void initState() {
     super.initState();
     _previousSessionSearchController = TextEditingController();
-    _workingOnBpm = widget.controller.profile.defaultBpm;
-    _workingOnTimerPreset = widget.controller.profile.defaultTimerPreset;
   }
 
   @override
@@ -211,13 +205,6 @@ class _PracticeScreenState extends State<PracticeScreen> {
                                 itemId,
                               };
                             }
-                            if (_selectedItemIds.length == 1) {
-                              final String selectedId = _selectedItemIds.first;
-                              _workingOnBpm = widget.controller
-                                  .launchBpmForItem(selectedId);
-                              _workingOnTimerPreset = widget.controller
-                                  .launchTimerPresetForItem(selectedId);
-                            }
                           });
                         },
                         onSelectVisible: visibleItems.isEmpty
@@ -247,20 +234,10 @@ class _PracticeScreenState extends State<PracticeScreen> {
                           }
                           setState(() => _practiceMode = mode);
                         },
-                        bpm: _workingOnBpm,
-                        timerPreset: _workingOnTimerPreset,
-                        onBpmChanged: (int next) {
-                          setState(() => _workingOnBpm = next.clamp(30, 260));
-                        },
-                        onTimerPresetChanged: (TimerPresetV1 next) {
-                          setState(() => _workingOnTimerPreset = next);
-                        },
                         onStart: canStart
                             ? () => widget.onStartWorkingOnSession(
                                 selectedItemIds,
                                 effectivePracticeMode,
-                                _workingOnBpm,
-                                _workingOnTimerPreset,
                               )
                             : null,
                       ),
@@ -572,16 +549,12 @@ class _WorkingOnSessionSetup extends StatelessWidget {
   final PracticeModeV1 practiceMode;
   final bool canFlowSelection;
   final bool broadRotation;
-  final int bpm;
-  final TimerPresetV1 timerPreset;
   final ValueChanged<WorkingOnSessionFilterV1> onToggleFilter;
   final ValueChanged<String> onToggleItem;
   final VoidCallback? onSelectVisible;
   final VoidCallback? onShowMore;
   final VoidCallback? onClearSelection;
   final ValueChanged<PracticeModeV1> onSetPracticeMode;
-  final ValueChanged<int> onBpmChanged;
-  final ValueChanged<TimerPresetV1> onTimerPresetChanged;
   final VoidCallback? onStart;
 
   const _WorkingOnSessionSetup({
@@ -593,16 +566,12 @@ class _WorkingOnSessionSetup extends StatelessWidget {
     required this.practiceMode,
     required this.canFlowSelection,
     required this.broadRotation,
-    required this.bpm,
-    required this.timerPreset,
     required this.onToggleFilter,
     required this.onToggleItem,
     required this.onSelectVisible,
     required this.onShowMore,
     required this.onClearSelection,
     required this.onSetPracticeMode,
-    required this.onBpmChanged,
-    required this.onTimerPresetChanged,
     required this.onStart,
   });
 
@@ -722,13 +691,6 @@ class _WorkingOnSessionSetup extends StatelessWidget {
                 ).textTheme.bodySmall?.copyWith(color: const Color(0xFF6A5E4C)),
               ),
             ],
-            const SizedBox(height: 14),
-            SessionSetupControls(
-              bpm: bpm,
-              timerPreset: timerPreset,
-              onBpmChanged: onBpmChanged,
-              onTimerPresetChanged: onTimerPresetChanged,
-            ),
             const SizedBox(height: 14),
             const DrumEyebrow(text: 'Items'),
             const SizedBox(height: 8),

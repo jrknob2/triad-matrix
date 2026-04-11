@@ -293,7 +293,6 @@ Must support:
 - `From Working On` inside `Choose Patterns to Practice`
 - exact item selection for a session
 - derived session-scope filters based on actual item properties and progress state
-- BPM and duration controls before starting the session
 - remembered last BPM and duration for single-item practice without storing them as authored item data
 - a short recent-session list with enough pattern detail to recognize the session
 - search within that recent-session list by practiced pattern

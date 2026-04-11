@@ -195,17 +195,10 @@ class _AppShellState extends State<AppShell> {
   void _openWorkingOnSelectionPractice(
     List<String> itemIds,
     PracticeModeV1 mode,
-    int bpm,
-    TimerPresetV1 timerPreset,
   ) {
     if (itemIds.isEmpty) return;
     final PracticeSessionSetupV1 setup = widget.controller
-        .buildSessionForWorkingOnSelection(
-          itemIds,
-          practiceMode: mode,
-          bpm: bpm,
-          timerPreset: timerPreset,
-        );
+        .buildSessionForWorkingOnSelection(itemIds, practiceMode: mode);
     _shellNavigatorKey.currentState?.push(
       MaterialPageRoute<void>(
         builder: (_) =>

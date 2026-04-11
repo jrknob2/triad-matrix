@@ -433,10 +433,17 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
           widget.controller.noteVoicesFor(item.id),
           _voiceAssignments,
         ) ||
-        widget.controller.competencyFor(item.id) != _competency;
+        widget.controller.competencyFor(item.id) != _competency ||
+        widget.controller.launchBpmForItem(item.id) != _sessionBpm ||
+        widget.controller.launchTimerPresetForItem(item.id) != _timerPreset;
   }
 
   void _saveDraft({bool saveToWorkingOn = false}) {
+    widget.controller.rememberLaunchPreferencesForItem(
+      itemId: widget.itemId,
+      bpm: _sessionBpm,
+      timerPreset: _timerPreset,
+    );
     widget.controller.savePracticeItemEdits(
       itemId: widget.itemId,
       accentedNoteIndices: _accentedNoteIndices,
