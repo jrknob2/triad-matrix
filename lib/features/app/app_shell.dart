@@ -236,7 +236,6 @@ class _AppShellState extends State<AppShell> {
         builder: (_) => ItemDetailScreen(
           controller: widget.controller,
           itemId: itemId,
-          onPracticeItem: _openPracticeItem,
           onPracticeItemInMode: _openPracticeItemInMode,
           onBuildComboFromItem: _openCombinationBuilderFromItem,
         ),

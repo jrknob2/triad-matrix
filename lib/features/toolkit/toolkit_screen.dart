@@ -6,7 +6,7 @@ import '../../features/app/drumcabulary_ui.dart';
 import '../../state/app_controller.dart';
 import '../practice/widgets/pattern_display_text.dart';
 
-enum _FocusViewFilter { all, singleSurface, flow }
+enum _FocusViewFilter { all, flow }
 
 class FocusScreen extends StatefulWidget {
   final AppController controller;
@@ -139,7 +139,6 @@ class _FocusScreenState extends State<FocusScreen> {
                             ? _FocusItemCard(
                                 controller: widget.controller,
                                 item: item,
-                                viewFilter: _viewFilter,
                                 onOpenItem: widget.onOpenItem,
                                 onPracticeItemInMode:
                                     widget.onPracticeItemInMode,
@@ -187,7 +186,6 @@ class _FocusScreenState extends State<FocusScreen> {
   bool _matchesViewFilter(PracticeItemV1 item) {
     return switch (_viewFilter) {
       _FocusViewFilter.all => true,
-      _FocusViewFilter.singleSurface => true,
       _FocusViewFilter.flow => widget.controller.hasNonSnareVoice(item.id),
     };
   }
@@ -205,7 +203,6 @@ class _FocusScreenState extends State<FocusScreen> {
   String _labelForViewFilter(_FocusViewFilter filter) {
     return switch (filter) {
       _FocusViewFilter.all => 'All',
-      _FocusViewFilter.singleSurface => 'One Surface',
       _FocusViewFilter.flow => 'Flow',
     };
   }
@@ -269,7 +266,6 @@ class _FocusSearchEmptyState extends StatelessWidget {
 class _FocusItemCard extends StatelessWidget {
   final AppController controller;
   final PracticeItemV1 item;
-  final _FocusViewFilter viewFilter;
   final ValueChanged<String> onOpenItem;
   final void Function(String, PracticeModeV1) onPracticeItemInMode;
   final VoidCallback onRemoveItem;
@@ -277,7 +273,6 @@ class _FocusItemCard extends StatelessWidget {
   const _FocusItemCard({
     required this.controller,
     required this.item,
-    required this.viewFilter,
     required this.onOpenItem,
     required this.onPracticeItemInMode,
     required this.onRemoveItem,

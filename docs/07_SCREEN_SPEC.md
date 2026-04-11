@@ -489,7 +489,8 @@ Practice Item is the detail/edit screen for one piece of material.
 - allow accent/ghost editing
 - allow flow voice assignment
 - allow session BPM and duration setup before launch
-- allow launch into `Single Surface` or `Flow`
+- allow launch into `Single Surface`
+- allow launch into `Flow` only when the item has authored non-snare voices
 - allow opening that item in Matrix
 - use explicit save for edits
 - warn before leaving with unsaved changes
@@ -504,6 +505,7 @@ Practice Item is the detail/edit screen for one piece of material.
 - the pattern display is the primary signal
 - controls under it are clearly for editing the item, not playing it
 - session setup values should feel like launch defaults, not authored pattern data
+- `Flow` should read as derived capability from voice assignments, not a user-declared item mode
 - accents, ghosts, and flow voice assignments only appear when they were authored by the user
 - edits should not write through immediately while the user is still working on the screen
 

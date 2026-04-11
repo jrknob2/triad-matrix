@@ -248,8 +248,8 @@ Goal:
 Path:
 
 1. `Practice Item` or `Matrix`
-2. choose `Flow`
-3. adjust voice assignments if needed
+2. adjust voice assignments if needed
+3. `Practice in Flow` when the item has authored non-snare voices
 4. `Practice Session`
 
 Screens involved:
@@ -260,9 +260,14 @@ Screens involved:
 
 Required controls:
 
-- `Single Surface / Flow` mode control in Practice Item
 - voice assignment editor in Practice Item
-- `Flow` practice CTA
+- `Practice in Flow` CTA
+
+Rules:
+
+- `Flow` is a derived practice capability, not a user-declared item type
+- an item is considered `Flow` only when it has user-authored non-snare voices
+- `Single Surface` is the universal baseline practice mode, not an item classification
 
 ### Flow H: Warmup
 
@@ -827,7 +832,7 @@ Focus is the current working set.
 
 - current items list
 - search field
-- mode filter if it serves item selection
+- derived item filter if it serves item selection
 - add entry point
 - play/edit/remove controls
 
@@ -878,6 +883,8 @@ Must not show:
 - if explanatory/help content is needed, it should live in optional help, not as a permanent top card
 - the add entry point may sit inline with search as a compact `New` / `+` control
 - flow voice assignments remain user-authored item data and must not add extra list-level per-item launch buttons
+- any `Flow` filter on this screen must be derived from authored non-snare voices
+- do not present `Single Surface` as an item property filter; all items can be practiced on one surface
 
 ---
 
@@ -980,7 +987,8 @@ Practice Item lets the user inspect and edit one item cleanly.
 - assessment/competency summary
 - accent/ghost controls
 - flow voice controls
-- `Single Surface / Flow`
+- `Practice on One Surface`
+- `Practice in Flow` when the item has authored non-snare voices
 - session setup controls for BPM and duration
 - practice CTA
 - open in matrix CTA

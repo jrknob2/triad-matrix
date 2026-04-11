@@ -15,7 +15,6 @@ import '../practice/widgets/voice_assignment_editor.dart';
 class ItemDetailScreen extends StatefulWidget {
   final AppController controller;
   final String itemId;
-  final ValueChanged<String> onPracticeItem;
   final void Function(String, PracticeModeV1) onPracticeItemInMode;
   final ValueChanged<String> onBuildComboFromItem;
 
@@ -23,7 +22,6 @@ class ItemDetailScreen extends StatefulWidget {
     super.key,
     required this.controller,
     required this.itemId,
-    required this.onPracticeItem,
     required this.onPracticeItemInMode,
     required this.onBuildComboFromItem,
   });
@@ -33,7 +31,6 @@ class ItemDetailScreen extends StatefulWidget {
 }
 
 class _ItemDetailScreenState extends State<ItemDetailScreen> {
-  PracticeModeV1 _viewMode = PracticeModeV1.singleSurface;
   late List<int> _accentedNoteIndices;
   late List<int> _ghostNoteIndices;
   late List<DrumVoiceV1> _voiceAssignments;
@@ -59,6 +56,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
           itemId: item.id,
         );
         final List<String> tokens = widget.controller.noteTokensFor(item.id);
+        final bool flowCapable = _voiceAssignments.any(
+          (DrumVoiceV1 voice) => voice != DrumVoiceV1.snare,
+        );
         final List<PatternNoteMarkingV1> draftMarkings = _draftMarkingsFor(
           item.noteCount,
         );
@@ -84,50 +84,15 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            children: PracticeModeV1.values
-                                .map(
-                                  (PracticeModeV1 mode) => Padding(
-                                    padding: const EdgeInsets.only(right: 8),
-                                    child: DrumSelectablePill(
-                                      label: Text(mode.label),
-                                      selected: _viewMode == mode,
-                                      onPressed: () {
-                                        setState(() => _viewMode = mode);
-                                      },
-                                    ),
-                                  ),
-                                )
-                                .toList(growable: false),
-                          ),
+                        PatternDisplayText(
+                          tokens: tokens,
+                          markings: draftMarkings,
+                          style: Theme.of(context).textTheme.headlineMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -0.8,
+                              ),
                         ),
-                        const SizedBox(height: 16),
-                        if (_viewMode == PracticeModeV1.flow)
-                          PatternVoiceDisplay(
-                            tokens: tokens,
-                            markings: draftMarkings,
-                            voices: _voiceAssignments,
-                            patternStyle: Theme.of(context)
-                                .textTheme
-                                .headlineMedium
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: -0.8,
-                                ),
-                            voiceStyle: Theme.of(context).textTheme.titleMedium,
-                          )
-                        else
-                          PatternDisplayText(
-                            tokens: tokens,
-                            markings: draftMarkings,
-                            style: Theme.of(context).textTheme.headlineMedium
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: -0.8,
-                                ),
-                          ),
                         const SizedBox(height: 12),
                         Text(
                           'Accents & Ghosts',
@@ -140,26 +105,32 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                           onTapNote: _cycleMarking,
                           showHelpText: false,
                         ),
-                        if (_viewMode == PracticeModeV1.flow) ...<Widget>[
-                          const SizedBox(height: 16),
-                          Text(
-                            'Flow Voices',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          const SizedBox(height: 8),
-                          VoiceAssignmentEditor(
-                            tokens: tokens,
-                            voices: _voiceAssignments,
-                            onTapNote: _cycleVoice,
-                            showHelpText: false,
-                          ),
-                          const SizedBox(height: 12),
-                          _FlowReadinessNote(
-                            ready: _voiceAssignments.any(
-                              (DrumVoiceV1 voice) => voice != DrumVoiceV1.snare,
-                            ),
-                          ),
-                        ],
+                        const SizedBox(height: 16),
+                        Text(
+                          'Flow Voices',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 8),
+                        PatternVoiceDisplay(
+                          tokens: tokens,
+                          markings: draftMarkings,
+                          voices: _voiceAssignments,
+                          patternStyle: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -0.5,
+                              ),
+                          voiceStyle: Theme.of(context).textTheme.labelLarge,
+                        ),
+                        const SizedBox(height: 8),
+                        VoiceAssignmentEditor(
+                          tokens: tokens,
+                          voices: _voiceAssignments,
+                          onTapNote: _cycleVoice,
+                          showHelpText: false,
+                        ),
+                        const SizedBox(height: 12),
+                        _FlowReadinessNote(ready: flowCapable),
                       ],
                     ),
                   ),
@@ -292,13 +263,30 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                             bpm: _sessionBpm,
                             timerPreset: _timerPreset,
                           );
-                          widget.onPracticeItemInMode(item.id, _viewMode);
+                          widget.onPracticeItemInMode(
+                            item.id,
+                            PracticeModeV1.singleSurface,
+                          );
                         },
-                  child: Text(
-                    _viewMode == PracticeModeV1.flow
-                        ? 'Practice in Flow'
-                        : 'Practice on One Surface',
-                  ),
+                  child: const Text('Practice on One Surface'),
+                ),
+                const SizedBox(height: 8),
+                FilledButton.tonal(
+                  onPressed: isDraftItem || !flowCapable
+                      ? null
+                      : () async {
+                          if (hasUnsavedChanges) _saveDraft();
+                          widget.controller.rememberLaunchPreferencesForItem(
+                            itemId: item.id,
+                            bpm: _sessionBpm,
+                            timerPreset: _timerPreset,
+                          );
+                          widget.onPracticeItemInMode(
+                            item.id,
+                            PracticeModeV1.flow,
+                          );
+                        },
+                  child: const Text('Practice in Flow'),
                 ),
                 const SizedBox(height: 8),
                 OutlinedButton(
