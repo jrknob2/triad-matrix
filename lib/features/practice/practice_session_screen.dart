@@ -265,7 +265,15 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                 child: OutlinedButton(
                   onPressed: canEndSession ? _endSession : null,
                   style: secondaryTransportStyle,
-                  child: Text(isWarmup ? 'End Warmup' : 'End'),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      const Icon(Icons.stop_rounded, size: 18),
+                      const SizedBox(width: 8),
+                      Text(isWarmup ? 'End Warmup' : 'End'),
+                    ],
+                  ),
                 ),
               ),
             ],

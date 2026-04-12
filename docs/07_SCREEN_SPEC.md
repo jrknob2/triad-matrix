@@ -312,7 +312,7 @@ Must support:
 - `From Working On` inside `Choose Patterns to Practice`
 - exact item selection for a session
 - derived session-scope filters based on actual item properties and progress state
-- remembered last BPM and duration for single-item practice without storing them as authored item data
+- saved single-item practice BPM and duration defaults without storing them as authored notation/item data
 - a short recent-session list with enough pattern detail to recognize the session
 - search within that recent-session list by practiced pattern
 - `Load More` for older sessions
@@ -320,6 +320,7 @@ Must support:
 - `From Working On` should not show duplicate count chips when the same count is already carried by the start action
 - list-item metadata should use concise subtext with dot separators, not chip-style badges, unless the chip itself is the primary interaction
 - list rows in `Practice` and `Working On` should follow the same shared formatting rules unless an explicit exception is documented
+- if the current action selects every item in the visible filtered slice, the label should be `Select All`, not `Select Visible`
 
 Optional later:
 

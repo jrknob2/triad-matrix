@@ -1823,14 +1823,6 @@ class AppController extends ChangeNotifier {
       sourceName: setup.sourceName,
     );
 
-    if (setup.practiceItemIds.length == 1) {
-      _launchPreferencesByItemId[setup.practiceItemIds.first] =
-          PracticeLaunchPreferenceV1(
-            practiceItemId: setup.practiceItemIds.first,
-            bpm: setup.bpm,
-            timerPreset: setup.timerPreset,
-          );
-    }
     _sessions = <PracticeSessionLogV1>[session, ..._sessions];
     if (!_isWarmupSession(session)) {
       _recordManualAssessment(

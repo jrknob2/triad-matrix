@@ -841,7 +841,7 @@ class _WorkingOnSessionSetup extends StatelessWidget {
                   spacing: 8,
                   children: <Widget>[
                     DrumActionPill(
-                      label: const Text('Select Visible'),
+                      label: const Text('Select All'),
                       onPressed: onSelectVisible,
                     ),
                     DrumActionPill(

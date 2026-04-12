@@ -704,7 +704,7 @@ Optional later:
 - this screen should reduce choice friction, not add setup friction
 - `Choose Patterns to Practice` is the entry into normal tracked practice
 - `From Working On` belongs inside `Choose Patterns to Practice`, not as a separate peer card
-- single-item practice should remember the last BPM and duration used for that item without storing them as authored item data
+- single-item practice should use saved BPM and duration defaults without storing them as authored notation/item data
 - `Warm Up` remains separate because it is a distinct prep mode, not a slice of current work
 - `Repeat a Previous Session` should open a recent-session browser, not silently assume the last session is the right one
 
@@ -728,6 +728,7 @@ Rules:
   - `This is a big session. Pick 3 or 4 if you want cleaner reps.`
 - the setup surface may also advise when the actively trained rotation has grown too wide
 - active-rotation guidance should treat roughly `4-8` actively pushed items as the normal zone
+- if the current action selects every item in the visible filtered slice, the label should be `Select All`
 - when recent active rotation grows beyond that, the app may advise shrinking the core rotation, but must not hard-block it
 - long visible item lists should default to 5 rows and use `Show More` for the rest
 - per-pattern BPM and duration do not belong on this list-based setup surface
@@ -846,6 +847,7 @@ Practice Session is execution only.
 - running transport state should present `Pause` and `Reset`
 - `End` should stay disabled until the session has actually started and session data exists
 - transport buttons shown together should use the same height and visual weight
+- peer transport buttons shown together should use consistent icon treatment
 
 ---
 
@@ -884,6 +886,7 @@ Session Summary closes a tracked session and collects limited useful feedback.
 - one assessment target item per session summary
 - wording must stay action-oriented
 - if session BPM differs from the item's saved practice BPM, Session Summary should offer a way to save the BPM back to that item
+- session completion itself must not silently overwrite the item's saved practice BPM
 - back navigation from Session Summary should return to the player screen for that session
 - back navigation from the player should return to Practice
 

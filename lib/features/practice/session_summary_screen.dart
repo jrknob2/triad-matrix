@@ -252,7 +252,7 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                   },
                   child: Text(recommendation.practiceLabel),
                 ),
-                TextButton(
+                OutlinedButton(
                   onPressed: () {
                     Navigator.of(context).popUntil((route) => route.isFirst);
                   },
