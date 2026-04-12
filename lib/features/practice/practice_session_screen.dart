@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 
 import '../../features/app/app_formatters.dart';
+import '../../features/app/app_viewport.dart';
 import '../../features/app/drumcabulary_ui.dart';
 import '../../state/app_controller.dart';
 import '../../core/practice/practice_domain_v1.dart';
@@ -81,6 +82,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isTablet = AppViewport.isTablet(context);
     final bool isWarmup = _isWarmup;
     final String currentItemId = _currentItemId;
     final List<String> tokens = widget.controller.noteTokensFor(currentItemId);
@@ -97,163 +99,199 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
       ),
       body: DrumScreen(
         warm: false,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: <Widget>[
-            DrumPanel(
-              tone: DrumPanelTone.dark,
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: <Widget>[
-                  if (_setup.practiceItemIds.length > 1) ...<Widget>[
-                    _SessionStepper(
-                      currentIndex: _currentItemIndex,
-                      itemCount: _setup.practiceItemIds.length,
-                      onPrevious: _currentItemIndex == 0
-                          ? null
-                          : () => _changeItem(_currentItemIndex - 1),
-                      onNext:
-                          _currentItemIndex == _setup.practiceItemIds.length - 1
-                          ? null
-                          : () => _changeItem(_currentItemIndex + 1),
-                      dark: true,
+        child: isTablet
+            ? Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Expanded(
+                      flex: 5,
+                      child: _buildPlayerPanel(
+                        context,
+                        isWarmup: isWarmup,
+                        currentItemId: currentItemId,
+                        markings: markings,
+                        tokens: tokens,
+                        transport: transport,
+                        voices: voices,
+                      ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(width: AppViewport.splitPaneGap),
+                    SizedBox(
+                      width: 360,
+                      child: _buildSessionControlsPanel(context),
+                    ),
                   ],
-                  _PlayerNotation(
-                    setup: _setup,
+                ),
+              )
+            : ListView(
+                padding: const EdgeInsets.all(16),
+                children: <Widget>[
+                  _buildPlayerPanel(
+                    context,
                     isWarmup: isWarmup,
-                    grouping: widget.controller.displayGroupingFor(
-                      currentItemId,
-                    ),
-                    tokens: tokens,
+                    currentItemId: currentItemId,
                     markings: markings,
+                    tokens: tokens,
+                    transport: transport,
                     voices: voices,
                   ),
-                  const SizedBox(height: 18),
-                  _BeatPulse(
-                    beatLit: _beatLit,
-                    bpm: _bpm,
-                    enabled: _pulseEnabled,
-                  ),
-                  const SizedBox(height: 18),
-                  Text(
-                    transport.timerText,
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      color: _warmupComplete || _targetReached
-                          ? const Color(0xFFFFC08D)
-                          : const Color(0xFFFFF4DE),
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  if (transport.statusText != null) ...<Widget>[
-                    const SizedBox(height: 8),
-                    Text(
-                      transport.statusText!,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: const Color(0xFFFFC08D),
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 18),
-                  Wrap(
-                    alignment: WrapAlignment.center,
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: <Widget>[
-                      SizedBox(
-                        height: 58,
-                        child: FilledButton.icon(
-                          onPressed: _toggleRunning,
-                          icon: Icon(_running ? Icons.pause : Icons.play_arrow),
-                          label: Text(_running ? 'Pause' : 'Play'),
-                        ),
-                      ),
-                      OutlinedButton(
-                        onPressed: _endSession,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFFFFF4DE),
-                          side: const BorderSide(color: Color(0xFFFFF4DE)),
-                        ),
-                        child: Text(isWarmup ? 'End Warmup' : 'End Session'),
-                      ),
-                    ],
-                  ),
+                  const SizedBox(height: 16),
+                  _buildSessionControlsPanel(context),
                 ],
               ),
+      ),
+    );
+  }
+
+  Widget _buildPlayerPanel(
+    BuildContext context, {
+    required bool isWarmup,
+    required String currentItemId,
+    required List<PatternNoteMarkingV1> markings,
+    required List<String> tokens,
+    required _SessionTransportState transport,
+    required List<DrumVoiceV1> voices,
+  }) {
+    return DrumPanel(
+      tone: DrumPanelTone.dark,
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        children: <Widget>[
+          if (_setup.practiceItemIds.length > 1) ...<Widget>[
+            _SessionStepper(
+              currentIndex: _currentItemIndex,
+              itemCount: _setup.practiceItemIds.length,
+              onPrevious: _currentItemIndex == 0
+                  ? null
+                  : () => _changeItem(_currentItemIndex - 1),
+              onNext: _currentItemIndex == _setup.practiceItemIds.length - 1
+                  ? null
+                  : () => _changeItem(_currentItemIndex + 1),
+              dark: true,
             ),
             const SizedBox(height: 16),
-            DrumPanel(
-              child: Column(
-                children: <Widget>[
-                  Row(
-                    children: <Widget>[
-                      Text(
-                        'BPM',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const Spacer(),
-                      Text(
-                        '$_bpm',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ],
-                  ),
-                  Row(
-                    children: <Widget>[
-                      IconButton(
-                        onPressed: _bpm <= 30
-                            ? null
-                            : () => _updateBpm(_bpm - 1),
-                        icon: const Icon(Icons.remove_circle_outline),
-                      ),
-                      Expanded(
-                        child: Slider(
-                          value: _bpm.toDouble(),
-                          min: 30,
-                          max: 260,
-                          divisions: 230,
-                          label: '$_bpm BPM',
-                          onChanged: (double value) {
-                            _updateBpm(value.round());
-                          },
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: _bpm >= 260
-                            ? null
-                            : () => _updateBpm(_bpm + 1),
-                        icon: const Icon(Icons.add_circle_outline),
-                      ),
-                    ],
-                  ),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('Click'),
-                    value: _clickEnabled,
-                    onChanged: _updateClickEnabled,
-                  ),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('Pulse'),
-                    value: _pulseEnabled,
-                    onChanged: (bool value) {
-                      setState(() {
-                        _pulseEnabled = value;
-                        if (!value) {
-                          _beatLit = false;
-                        }
-                      });
-                    },
-                  ),
-                ],
+          ],
+          _PlayerNotation(
+            setup: _setup,
+            isWarmup: isWarmup,
+            grouping: widget.controller.displayGroupingFor(currentItemId),
+            tokens: tokens,
+            markings: markings,
+            voices: voices,
+          ),
+          const SizedBox(height: 18),
+          _BeatPulse(beatLit: _beatLit, bpm: _bpm, enabled: _pulseEnabled),
+          const SizedBox(height: 18),
+          Text(
+            transport.timerText,
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+              color: _warmupComplete || _targetReached
+                  ? const Color(0xFFFFC08D)
+                  : const Color(0xFFFFF4DE),
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          if (transport.statusText != null) ...<Widget>[
+            const SizedBox(height: 8),
+            Text(
+              transport.statusText!,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: const Color(0xFFFFC08D),
+                fontWeight: FontWeight.w900,
               ),
             ),
           ],
-        ),
+          const SizedBox(height: 18),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 12,
+            runSpacing: 12,
+            children: <Widget>[
+              SizedBox(
+                height: 58,
+                child: FilledButton.icon(
+                  onPressed: _toggleRunning,
+                  icon: Icon(_running ? Icons.pause : Icons.play_arrow),
+                  label: Text(_running ? 'Pause' : 'Play'),
+                ),
+              ),
+              OutlinedButton(
+                onPressed: _endSession,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFFFFF4DE),
+                  side: const BorderSide(color: Color(0xFFFFF4DE)),
+                ),
+                child: Text(isWarmup ? 'End Warmup' : 'End Session'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSessionControlsPanel(BuildContext context) {
+    return DrumPanel(
+      child: Column(
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Text('BPM', style: Theme.of(context).textTheme.titleMedium),
+              const Spacer(),
+              Text(
+                '$_bpm',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+              ),
+            ],
+          ),
+          Row(
+            children: <Widget>[
+              IconButton(
+                onPressed: _bpm <= 30 ? null : () => _updateBpm(_bpm - 1),
+                icon: const Icon(Icons.remove_circle_outline),
+              ),
+              Expanded(
+                child: Slider(
+                  value: _bpm.toDouble(),
+                  min: 30,
+                  max: 260,
+                  divisions: 230,
+                  label: '$_bpm BPM',
+                  onChanged: (double value) {
+                    _updateBpm(value.round());
+                  },
+                ),
+              ),
+              IconButton(
+                onPressed: _bpm >= 260 ? null : () => _updateBpm(_bpm + 1),
+                icon: const Icon(Icons.add_circle_outline),
+              ),
+            ],
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Click'),
+            value: _clickEnabled,
+            onChanged: _updateClickEnabled,
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Pulse'),
+            value: _pulseEnabled,
+            onChanged: (bool value) {
+              setState(() {
+                _pulseEnabled = value;
+                if (!value) {
+                  _beatLit = false;
+                }
+              });
+            },
+          ),
+        ],
       ),
     );
   }

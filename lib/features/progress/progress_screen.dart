@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/practice/practice_domain_v1.dart';
 import '../../features/app/app_formatters.dart';
+import '../../features/app/app_viewport.dart';
 import '../../features/app/drumcabulary_ui.dart';
 import '../../state/app_controller.dart';
 import '../practice/widgets/pattern_display_text.dart';
@@ -144,6 +145,7 @@ class _OverviewView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isTablet = AppViewport.isTablet(context);
     final Duration trackedTime =
         controller.totalTime() -
         controller.totalTime(family: MaterialFamilyV1.custom) -
@@ -198,6 +200,150 @@ class _OverviewView extends StatelessWidget {
       controller,
     );
 
+    final Widget statusPanel = DrumPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              const Expanded(
+                child: DrumSectionTitle(text: 'Assessment Status'),
+              ),
+              DrumTag(
+                child: Text(
+                  'Catalog',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: statusCounts
+                .map(
+                  (_StatusCount status) => DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: status.color,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0x22000000)),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            '${status.count}',
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(fontWeight: FontWeight.w900),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(status.label),
+                        ],
+                      ),
+                    ),
+                  ),
+                )
+                .toList(growable: false),
+          ),
+        ],
+      ),
+    );
+
+    final Widget trendPanel = DrumPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              const Expanded(
+                child: DrumSectionTitle(text: 'Assessment Mix, Last 6 Weeks'),
+              ),
+              DrumTag(
+                child: Text(
+                  'Catalog',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Weekly assessment status across the catalog.',
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: const Color(0xFF5E584D)),
+          ),
+          const SizedBox(height: 10),
+          const _ChartLegend(
+            entries: <_LegendEntry>[
+              _LegendEntry('Not Practiced', Color(0xFFFFFFFF)),
+              _LegendEntry('Active', Color(0xFF86B4E1)),
+              _LegendEntry('Needs Work', Color(0xFFE38E80)),
+              _LegendEntry('Strong', Color(0xFF84B884)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (controller.assessmentResults.length < 3)
+            const Text(
+              'Not enough assessed sessions yet to draw a useful trend.',
+            )
+          else
+            _WeeklyStatusMixChart(buckets: buckets),
+        ],
+      ),
+    );
+
+    final Widget coveragePanel = DrumPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              const Expanded(
+                child: DrumSectionTitle(text: 'Coverage Snapshot'),
+              ),
+              DrumTag(
+                child: Text(
+                  'Catalog',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _CoverageSnapshotRow(
+            label: 'Triads Seen',
+            count: controller.practicedTriadCount,
+            total: controller.triadMatrixItems.length,
+          ),
+          const SizedBox(height: 8),
+          _CoverageSnapshotRow(
+            label: 'Hands Only',
+            count: controller.practicedHandsOnlyTriadCount,
+            total: controller.totalHandsOnlyTriadCount,
+          ),
+          const SizedBox(height: 8),
+          _CoverageSnapshotRow(
+            label: 'Has Kick',
+            count: controller.practicedKickTriadCount,
+            total: controller.totalKickTriadCount,
+          ),
+        ],
+      ),
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -221,151 +367,18 @@ class _OverviewView extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
-        DrumPanel(
-          child: Column(
+        if (isTablet)
+          Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Row(
-                children: <Widget>[
-                  const Expanded(
-                    child: DrumSectionTitle(text: 'Assessment Status'),
-                  ),
-                  DrumTag(
-                    child: Text(
-                      'Catalog',
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: statusCounts
-                    .map(
-                      (_StatusCount status) => DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: status.color,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: const Color(0x22000000)),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 10,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: <Widget>[
-                              Text(
-                                '${status.count}',
-                                style: Theme.of(context).textTheme.titleLarge
-                                    ?.copyWith(fontWeight: FontWeight.w900),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(status.label),
-                            ],
-                          ),
-                        ),
-                      ),
-                    )
-                    .toList(growable: false),
-              ),
+              Expanded(child: statusPanel),
+              const SizedBox(width: AppViewport.splitPaneGap),
+              Expanded(flex: 2, child: trendPanel),
             ],
-          ),
-        ),
+          )
+        else ...<Widget>[statusPanel, const SizedBox(height: 12), trendPanel],
         const SizedBox(height: 12),
-        DrumPanel(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Row(
-                children: <Widget>[
-                  const Expanded(
-                    child: DrumSectionTitle(
-                      text: 'Assessment Mix, Last 6 Weeks',
-                    ),
-                  ),
-                  DrumTag(
-                    child: Text(
-                      'Catalog',
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Weekly assessment status across the catalog.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: const Color(0xFF5E584D),
-                ),
-              ),
-              const SizedBox(height: 10),
-              const _ChartLegend(
-                entries: <_LegendEntry>[
-                  _LegendEntry('Not Practiced', Color(0xFFFFFFFF)),
-                  _LegendEntry('Active', Color(0xFF86B4E1)),
-                  _LegendEntry('Needs Work', Color(0xFFE38E80)),
-                  _LegendEntry('Strong', Color(0xFF84B884)),
-                ],
-              ),
-              const SizedBox(height: 12),
-              if (controller.assessmentResults.length < 3)
-                const Text(
-                  'Not enough assessed sessions yet to draw a useful trend.',
-                )
-              else
-                _WeeklyStatusMixChart(buckets: buckets),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        DrumPanel(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Row(
-                children: <Widget>[
-                  const Expanded(
-                    child: DrumSectionTitle(text: 'Coverage Snapshot'),
-                  ),
-                  DrumTag(
-                    child: Text(
-                      'Catalog',
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              _CoverageSnapshotRow(
-                label: 'Triads Seen',
-                count: controller.practicedTriadCount,
-                total: controller.triadMatrixItems.length,
-              ),
-              const SizedBox(height: 8),
-              _CoverageSnapshotRow(
-                label: 'Hands Only',
-                count: controller.practicedHandsOnlyTriadCount,
-                total: controller.totalHandsOnlyTriadCount,
-              ),
-              const SizedBox(height: 8),
-              _CoverageSnapshotRow(
-                label: 'Has Kick',
-                count: controller.practicedKickTriadCount,
-                total: controller.totalKickTriadCount,
-              ),
-            ],
-          ),
-        ),
+        coveragePanel,
       ],
     );
   }
@@ -390,6 +403,7 @@ class _ByItemView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isTablet = AppViewport.isTablet(context);
     final List<PracticeItemV1> items = switch (scope) {
       _ItemScope.workingOn => controller.activeWorkItems,
       _ItemScope.catalog =>
@@ -446,51 +460,116 @@ class _ByItemView extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        DrumPanel(
-          child: Column(
+        if (isTablet)
+          Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              DrumSectionTitle(
-                text: scope == _ItemScope.workingOn
-                    ? 'Working On Items'
-                    : 'Catalog',
-              ),
-              const SizedBox(height: 8),
-              Text(
-                scope == _ItemScope.workingOn
-                    ? 'Select an item to inspect its assessment history.'
-                    : 'Select tracked material to inspect its assessment history.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: const Color(0xFF5E584D),
-                ),
-              ),
-              const SizedBox(height: 12),
-              if (items.isEmpty)
-                Text(
-                  scope == _ItemScope.workingOn
-                      ? 'Nothing is in Working On yet.'
-                      : 'No tracked material yet.',
-                )
-              else
-                ...items.map(
-                  (PracticeItemV1 item) => _ProgressItemRow(
-                    item: item,
-                    controller: controller,
-                    selected: item.id == selectedItemId,
-                    onSelectItem: () => onSelectItem(item.id),
-                    onOpenItem: onOpenItem,
+              SizedBox(
+                width: 360,
+                child: DrumPanel(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      DrumSectionTitle(
+                        text: scope == _ItemScope.workingOn
+                            ? 'Working On Items'
+                            : 'Catalog',
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        scope == _ItemScope.workingOn
+                            ? 'Select an item to inspect its assessment history.'
+                            : 'Select tracked material to inspect its assessment history.',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: const Color(0xFF5E584D),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      if (items.isEmpty)
+                        Text(
+                          scope == _ItemScope.workingOn
+                              ? 'Nothing is in Working On yet.'
+                              : 'No tracked material yet.',
+                        )
+                      else
+                        ...items.map(
+                          (PracticeItemV1 item) => _ProgressItemRow(
+                            item: item,
+                            controller: controller,
+                            selected: item.id == selectedItemId,
+                            onSelectItem: () => onSelectItem(item.id),
+                            onOpenItem: onOpenItem,
+                          ),
+                        ),
+                    ],
                   ),
                 ),
+              ),
+              const SizedBox(width: AppViewport.splitPaneGap),
+              Expanded(
+                child: selectedItem == null
+                    ? DrumPanel(
+                        child: Text(
+                          'Select an item to inspect its assessment history.',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(color: const Color(0xFF5E584D)),
+                        ),
+                      )
+                    : _ItemAssessmentPanel(
+                        controller: controller,
+                        item: selectedItem,
+                        onOpenItem: onOpenItem,
+                      ),
+              ),
             ],
+          )
+        else ...<Widget>[
+          DrumPanel(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                DrumSectionTitle(
+                  text: scope == _ItemScope.workingOn
+                      ? 'Working On Items'
+                      : 'Catalog',
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  scope == _ItemScope.workingOn
+                      ? 'Select an item to inspect its assessment history.'
+                      : 'Select tracked material to inspect its assessment history.',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: const Color(0xFF5E584D),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                if (items.isEmpty)
+                  Text(
+                    scope == _ItemScope.workingOn
+                        ? 'Nothing is in Working On yet.'
+                        : 'No tracked material yet.',
+                  )
+                else
+                  ...items.map(
+                    (PracticeItemV1 item) => _ProgressItemRow(
+                      item: item,
+                      controller: controller,
+                      selected: item.id == selectedItemId,
+                      onSelectItem: () => onSelectItem(item.id),
+                      onOpenItem: onOpenItem,
+                    ),
+                  ),
+              ],
+            ),
           ),
-        ),
-        if (selectedItem != null) ...<Widget>[
-          const SizedBox(height: 12),
-          _ItemAssessmentPanel(
-            controller: controller,
-            item: selectedItem,
-            onOpenItem: onOpenItem,
-          ),
+          if (selectedItem != null) ...<Widget>[
+            const SizedBox(height: 12),
+            _ItemAssessmentPanel(
+              controller: controller,
+              item: selectedItem,
+              onOpenItem: onOpenItem,
+            ),
+          ],
         ],
       ],
     );
@@ -578,6 +657,7 @@ class _TrendView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isTablet = AppViewport.isTablet(context);
     final DateTime today = DateTime.now();
     final List<_DayBucket> buckets = List<_DayBucket>.generate(7, (int index) {
       final DateTime day = DateTime(
@@ -605,58 +685,73 @@ class _TrendView extends StatelessWidget {
           bucket.total.inSeconds > maxValue ? bucket.total.inSeconds : maxValue,
     );
 
+    final Widget practiceTimePanel = DrumPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const DrumSectionTitle(text: 'Practice Time, Last 7 Days'),
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: buckets
+                .map(
+                  (_DayBucket bucket) => Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: _TrendBar(
+                        label: _dayLabel(bucket.day),
+                        value: bucket.total,
+                        maxSeconds: maxSeconds == 0 ? 1 : maxSeconds,
+                      ),
+                    ),
+                  ),
+                )
+                .toList(growable: false),
+          ),
+        ],
+      ),
+    );
+
+    final Widget recentSessionsPanel = DrumPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const DrumSectionTitle(text: 'Recent Sessions'),
+          const SizedBox(height: 10),
+          if (controller.recentSessions.isEmpty)
+            const Text('No tracked sessions yet.')
+          else
+            ...controller.recentSessions
+                .take(5)
+                .map(
+                  (PracticeSessionLogV1 session) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      '${formatShortDate(session.endedAt)} • ${formatDuration(session.duration)} • ${session.practiceMode.label}',
+                    ),
+                  ),
+                ),
+        ],
+      ),
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        DrumPanel(
-          child: Column(
+        if (isTablet)
+          Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              const DrumSectionTitle(text: 'Practice Time, Last 7 Days'),
-              const SizedBox(height: 12),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: buckets
-                    .map(
-                      (_DayBucket bucket) => Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          child: _TrendBar(
-                            label: _dayLabel(bucket.day),
-                            value: bucket.total,
-                            maxSeconds: maxSeconds == 0 ? 1 : maxSeconds,
-                          ),
-                        ),
-                      ),
-                    )
-                    .toList(growable: false),
-              ),
+              Expanded(flex: 2, child: practiceTimePanel),
+              const SizedBox(width: AppViewport.splitPaneGap),
+              Expanded(child: recentSessionsPanel),
             ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        DrumPanel(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              const DrumSectionTitle(text: 'Recent Sessions'),
-              const SizedBox(height: 10),
-              if (controller.recentSessions.isEmpty)
-                const Text('No tracked sessions yet.')
-              else
-                ...controller.recentSessions
-                    .take(5)
-                    .map(
-                      (PracticeSessionLogV1 session) => Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Text(
-                          '${formatShortDate(session.endedAt)} • ${formatDuration(session.duration)} • ${session.practiceMode.label}',
-                        ),
-                      ),
-                    ),
-            ],
-          ),
-        ),
+          )
+        else ...<Widget>[
+          practiceTimePanel,
+          const SizedBox(height: 12),
+          recentSessionsPanel,
+        ],
       ],
     );
   }
@@ -848,40 +943,52 @@ class _MetricStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isTablet = AppViewport.isTablet(context);
+    final List<Widget> metricCards = metrics
+        .map(
+          (_MetricData metric) => SizedBox(
+            width: isTablet ? 220 : 155,
+            child: DrumPanel(
+              tone: DrumPanelTone.warm,
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    metric.title,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    metric.value,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    metric.note,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        )
+        .toList(growable: false);
+
+    if (isTablet) {
+      return Wrap(spacing: 10, runSpacing: 10, children: metricCards);
+    }
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
-        children: metrics
+        children: metricCards
             .map(
-              (_MetricData metric) => Padding(
+              (Widget child) => Padding(
                 padding: const EdgeInsets.only(right: 10),
-                child: SizedBox(
-                  width: 155,
-                  child: DrumPanel(
-                    tone: DrumPanelTone.warm,
-                    padding: const EdgeInsets.all(14),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(
-                          metric.title,
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          metric.value,
-                          style: Theme.of(context).textTheme.headlineSmall
-                              ?.copyWith(fontWeight: FontWeight.w900),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          metric.note,
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                child: child,
               ),
             )
             .toList(growable: false),

@@ -46,6 +46,15 @@ Secondary routes:
 
 No `Practice Setup` screen exists in this model.
 
+Phone and iPad may use different shell layouts.
+
+Rules:
+
+- phone uses bottom navigation
+- iPad uses a persistent side navigation rail
+- iPad may keep related working surfaces visible together when width allows
+- `Practice Session` may open as an immersive fullscreen route on iPad only
+
 ---
 
 ## 1. Coach
@@ -210,6 +219,11 @@ Matrix is the structural map of the triad system and the main phrase-building su
 - specific view/filter preset already active
 - context visible but lightweight
 
+#### State D: iPad Split Layout
+
+- grid remains primary on the left
+- phrase editor and action context remain visible on the right
+
 ### Primary Actions
 
 - `Single Surface`
@@ -253,6 +267,7 @@ Phrase rule:
 - compact horizontal controls are preferred before adding more stacked filter rows
 - row and column slicers must look touchable, not like passive labels
 - Matrix action controls should change meaningfully between single-triad selection and phrase-building selection
+- on iPad, phrase-building context should not push the grid far down the page when both can fit side by side
 
 ---
 
@@ -341,6 +356,7 @@ Warmup rules:
 - session player feels like an execution surface, not a config form
 - warmup behaves like temporary prep, not core curriculum
 - the player must not contain an in-session `Warm Up` entry point
+- on iPad, launch choices and the active browser/setup surface should share the screen when width allows
 
 ---
 
@@ -413,6 +429,7 @@ Optional:
 - no extra per-item flow-launch button should appear in the list
 - there should be no fake summary cards trying to turn this into a dashboard
 - removing an item should require confirmation with the item's notation visible in the prompt
+- on iPad, the list should use width for denser row composition before growing taller
 
 ---
 
@@ -474,6 +491,7 @@ Progress measures development.
 - no copy like “this is the same status language used by Coach and Matrix”
 - graph titles must say what is being measured
 - status differences must be visually obvious in graphs
+- on iPad, metrics and graphs should prefer multi-column composition before vertical phone-style stacking
 
 ---
 

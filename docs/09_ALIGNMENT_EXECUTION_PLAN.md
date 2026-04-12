@@ -227,6 +227,19 @@ Tasks:
 - review spacing, contrast, hierarchy, and empty states
 - verify every surface against its acceptance criteria
 
+### Phase 7A. iPad responsive pass
+
+Goal:
+
+- make the app feel native to iPad instead of a centered phone app on a larger canvas
+
+Tasks:
+
+- add an iPad shell with persistent side navigation
+- add split-pane layouts where they reduce navigation friction
+- keep phone behavior unchanged
+- allow immersive fullscreen practice session on iPad
+
 ### Phase 8. Audio assessment
 
 Goal:

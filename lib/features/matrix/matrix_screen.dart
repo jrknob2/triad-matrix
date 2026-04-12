@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/practice/practice_domain_v1.dart';
 import '../../features/app/app_formatters.dart';
 import '../../features/app/drumcabulary_ui.dart';
+import '../app/app_viewport.dart';
 import '../../state/app_controller.dart';
 import '../practice/widgets/pattern_sequence_editor.dart';
 import 'widgets/triad_matrix_grid.dart';
@@ -62,6 +63,7 @@ class _MatrixScreenState extends State<MatrixScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isTablet = AppViewport.isTablet(context);
     final MatrixFiltersV1 matrixFilters = MatrixFiltersV1(
       lane: null,
       filters: _effectiveFilters,
@@ -75,82 +77,117 @@ class _MatrixScreenState extends State<MatrixScreen> {
         .where((String itemId) => !widget.controller.isPhraseReady(itemId))
         .toList(growable: false);
 
+    final Widget matrixGrid = TriadMatrixGrid(
+      controller: widget.controller,
+      filters: matrixFilters,
+      selection: matrixSelection,
+      onToggleRow: _toggleRow,
+      onToggleColumn: _toggleColumn,
+      onTapItem: _toggleItemSelection,
+    );
+
+    final Widget phrasePanel = _MatrixPhrasePanel(
+      controller: widget.controller,
+      selectedItemIds: _selectedItemIds,
+      onRemoveAt: _removeSelectedAt,
+      actionPills: _buildActionPills(),
+      showProgressLegend: _view == _MatrixPrimaryView.progress,
+      warningMessage: _selectedItemIds.length > 1 && notReadyItemIds.isNotEmpty
+          ? 'Some of these triads are not ready yet. You can save the phrase now, but it may be better to work on them more first.'
+          : null,
+    );
+
     return DrumScreen(
       warm: false,
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-        children: <Widget>[
-          const DrumEyebrow(text: 'Look At'),
-          const SizedBox(height: 8),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: _MatrixPrimaryView.values
-                  .map(
-                    (_MatrixPrimaryView view) => Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: DrumSelectablePill(
-                        label: _chipText(_viewLabel(view), _view == view),
-                        selected: _view == view,
-                        onPressed: () => _selectView(view),
-                      ),
-                    ),
-                  )
-                  .toList(growable: false),
-            ),
-          ),
-          const SizedBox(height: 10),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(children: _buildFilterPills()),
-          ),
-          if (_view == _MatrixPrimaryView.progress) ...<Widget>[
-            const SizedBox(height: 10),
-            const _ProgressLegendCard(),
-          ],
-          if (_selectedItemIds.isNotEmpty) ...<Widget>[
-            const SizedBox(height: 10),
-            DrumPanel(
-              tone: DrumPanelTone.warm,
-              padding: const EdgeInsets.all(14),
-              child: Column(
+      child: isTablet
+          ? Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+              child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  const DrumEyebrow(text: 'Phrase'),
-                  const SizedBox(height: 8),
-                  PatternSequenceEditor(
-                    controller: widget.controller,
-                    itemIds: _selectedItemIds,
-                    onRemoveAt: _removeSelectedAt,
-                  ),
-                  const SizedBox(height: 10),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(children: _buildActionPills()),
-                  ),
-                  if (_selectedItemIds.length > 1 && notReadyItemIds.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 10),
-                      child: _MatrixPhraseWarning(
-                        message:
-                            'Some of these triads are not ready yet. You can save the phrase now, but it may be better to work on them more first.',
-                      ),
+                  Expanded(
+                    flex: 5,
+                    child: ListView(
+                      children: <Widget>[
+                        const DrumEyebrow(text: 'Look At'),
+                        const SizedBox(height: 8),
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: _MatrixPrimaryView.values
+                                .map(
+                                  (_MatrixPrimaryView view) => Padding(
+                                    padding: const EdgeInsets.only(right: 8),
+                                    child: DrumSelectablePill(
+                                      label: _chipText(
+                                        _viewLabel(view),
+                                        _view == view,
+                                      ),
+                                      selected: _view == view,
+                                      onPressed: () => _selectView(view),
+                                    ),
+                                  ),
+                                )
+                                .toList(growable: false),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(children: _buildFilterPills()),
+                        ),
+                        const SizedBox(height: 12),
+                        matrixGrid,
+                      ],
                     ),
+                  ),
+                  const SizedBox(width: AppViewport.splitPaneGap),
+                  SizedBox(
+                    width: 340,
+                    child: ListView(children: <Widget>[phrasePanel]),
+                  ),
                 ],
               ),
+            )
+          : ListView(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+              children: <Widget>[
+                const DrumEyebrow(text: 'Look At'),
+                const SizedBox(height: 8),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: _MatrixPrimaryView.values
+                        .map(
+                          (_MatrixPrimaryView view) => Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: DrumSelectablePill(
+                              label: _chipText(_viewLabel(view), _view == view),
+                              selected: _view == view,
+                              onPressed: () => _selectView(view),
+                            ),
+                          ),
+                        )
+                        .toList(growable: false),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(children: _buildFilterPills()),
+                ),
+                if (_view == _MatrixPrimaryView.progress) ...<Widget>[
+                  const SizedBox(height: 10),
+                  const _ProgressLegendCard(),
+                ],
+                if (_selectedItemIds.isNotEmpty) ...<Widget>[
+                  const SizedBox(height: 10),
+                  phrasePanel,
+                ],
+                const SizedBox(height: 12),
+                matrixGrid,
+              ],
             ),
-          ],
-          const SizedBox(height: 12),
-          TriadMatrixGrid(
-            controller: widget.controller,
-            filters: matrixFilters,
-            selection: matrixSelection,
-            onToggleRow: _toggleRow,
-            onToggleColumn: _toggleColumn,
-            onTapItem: _toggleItemSelection,
-          ),
-        ],
-      ),
     );
   }
 
@@ -580,6 +617,73 @@ class _MatrixScreenState extends State<MatrixScreen> {
         16,
       _ => 8,
     };
+  }
+}
+
+class _MatrixPhrasePanel extends StatelessWidget {
+  final AppController controller;
+  final List<String> selectedItemIds;
+  final ValueChanged<int> onRemoveAt;
+  final List<Widget> actionPills;
+  final bool showProgressLegend;
+  final String? warningMessage;
+
+  const _MatrixPhrasePanel({
+    required this.controller,
+    required this.selectedItemIds,
+    required this.onRemoveAt,
+    required this.actionPills,
+    required this.showProgressLegend,
+    required this.warningMessage,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        if (showProgressLegend) ...<Widget>[
+          const _ProgressLegendCard(),
+          const SizedBox(height: 10),
+        ],
+        DrumPanel(
+          tone: DrumPanelTone.warm,
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              const DrumEyebrow(text: 'Phrase'),
+              const SizedBox(height: 8),
+              if (selectedItemIds.isEmpty)
+                Text(
+                  'Select triads in the grid to build a phrase or practice one item directly.',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: const Color(0xFF5E584D),
+                    height: 1.35,
+                  ),
+                )
+              else ...<Widget>[
+                PatternSequenceEditor(
+                  controller: controller,
+                  itemIds: selectedItemIds,
+                  onRemoveAt: onRemoveAt,
+                ),
+                const SizedBox(height: 10),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(children: actionPills),
+                ),
+                if (warningMessage != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: _MatrixPhraseWarning(message: warningMessage!),
+                  ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }
 

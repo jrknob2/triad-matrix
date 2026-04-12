@@ -17,6 +17,10 @@ If a control or block cannot be justified by a defined flow in this document, it
 The bottom app navigation must remain visible across primary and detail flows.
 Detail screens and session flows should live inside the shell, not cover it.
 
+Exception:
+
+- on iPad, `Practice Session` may open as an immersive fullscreen route that temporarily leaves the shell chrome
+
 Communication rules for all student-facing text are defined in:
 
 - [13_COMMUNICATION_STYLE_CONTRACT.md](/Users/terryknoblock/Development/flutter-projects/traid_trainer/docs/13_COMMUNICATION_STYLE_CONTRACT.md)
@@ -50,6 +54,11 @@ Interpretation:
 - avoid turning short values or short explanations into full-height stacked cards when they can sit side by side
 - when a screen feels tall before it feels clear, the layout is probably wrong
 - charts and summaries should prefer row-based composition when the viewport allows it
+
+Tablet rule:
+
+- on iPad, prefer split-pane and multi-column composition over centered phone-width layouts
+- keep phone and tablet flows aligned conceptually, but do not force the same visual structure on both
 
 ## Control Affordance Rule
 

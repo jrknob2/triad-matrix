@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/practice/practice_domain_v1.dart';
 import '../../state/app_controller.dart';
+import 'app_viewport.dart';
 import '../matrix/matrix_screen.dart';
 import '../library/combination_builder_screen.dart';
 import '../library/item_detail_screen.dart';
@@ -30,6 +31,9 @@ class _AppShellState extends State<AppShell> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isTablet = AppViewport.isTablet(context);
+    final bool extendedRail = AppViewport.useExtendedRail(context);
+
     return AnimatedBuilder(
       animation: widget.controller,
       builder: (BuildContext context, _) {
@@ -76,29 +80,75 @@ class _AppShellState extends State<AppShell> {
           ),
         ];
 
-        return Scaffold(
-          body: Navigator(
-            key: _shellNavigatorKey,
-            pages: <Page<void>>[
-              MaterialPage<void>(
-                key: ValueKey<int>(_currentIndex),
-                child: Scaffold(
-                  appBar: AppBar(
-                    title: Text(_titles[_currentIndex]),
-                    actions: <Widget>[
-                      IconButton(
-                        onPressed: _openSettings,
-                        icon: const Icon(Icons.settings),
-                        tooltip: 'Settings',
-                      ),
-                    ],
-                  ),
-                  body: IndexedStack(index: _currentIndex, children: tabs),
+        final Widget shellContent = Navigator(
+          key: _shellNavigatorKey,
+          pages: <Page<void>>[
+            MaterialPage<void>(
+              key: ValueKey<int>(_currentIndex),
+              child: Scaffold(
+                appBar: AppBar(
+                  title: Text(_titles[_currentIndex]),
+                  actions: <Widget>[
+                    IconButton(
+                      onPressed: _openSettings,
+                      icon: const Icon(Icons.settings),
+                      tooltip: 'Settings',
+                    ),
+                  ],
                 ),
+                body: IndexedStack(index: _currentIndex, children: tabs),
               ),
-            ],
-            onDidRemovePage: (_) {},
-          ),
+            ),
+          ],
+          onDidRemovePage: (_) {},
+        );
+
+        if (isTablet) {
+          return Scaffold(
+            body: Row(
+              children: <Widget>[
+                NavigationRail(
+                  selectedIndex: _currentIndex,
+                  extended: extendedRail,
+                  onDestinationSelected: _selectTab,
+                  leading: const SizedBox(height: 8),
+                  destinations: const <NavigationRailDestination>[
+                    NavigationRailDestination(
+                      icon: Icon(Icons.wb_sunny_outlined),
+                      selectedIcon: Icon(Icons.wb_sunny),
+                      label: Text('Coach'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.grid_view_outlined),
+                      selectedIcon: Icon(Icons.grid_view_rounded),
+                      label: Text('Matrix'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.play_circle_outline_rounded),
+                      selectedIcon: Icon(Icons.play_circle_rounded),
+                      label: Text('Practice'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.backpack_outlined),
+                      selectedIcon: Icon(Icons.backpack),
+                      label: Text('Focus'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.bar_chart_outlined),
+                      selectedIcon: Icon(Icons.bar_chart),
+                      label: Text('Progress'),
+                    ),
+                  ],
+                ),
+                const VerticalDivider(width: 1),
+                Expanded(child: shellContent),
+              ],
+            ),
+          );
+        }
+
+        return Scaffold(
+          body: shellContent,
           bottomNavigationBar: DecoratedBox(
             decoration: const BoxDecoration(
               color: Color(0xFFE8DDD0),
@@ -114,12 +164,7 @@ class _AppShellState extends State<AppShell> {
             child: NavigationBar(
               backgroundColor: const Color(0xFFE8DDD0),
               selectedIndex: _currentIndex,
-              onDestinationSelected: (int index) {
-                _shellNavigatorKey.currentState?.popUntil(
-                  (route) => route.isFirst,
-                );
-                setState(() => _currentIndex = index);
-              },
+              onDestinationSelected: _selectTab,
               destinations: const <NavigationDestination>[
                 NavigationDestination(
                   icon: Icon(Icons.wb_sunny_outlined),
@@ -179,16 +224,8 @@ class _AppShellState extends State<AppShell> {
   }
 
   void _openPracticeItemInMode(String itemId, PracticeModeV1 mode) {
-    _shellNavigatorKey.currentState?.push(
-      MaterialPageRoute<void>(
-        builder: (_) => PracticeSessionScreen(
-          controller: widget.controller,
-          setup: widget.controller.buildSessionForItem(
-            itemId,
-            practiceMode: mode,
-          ),
-        ),
-      ),
+    _openPracticeSession(
+      widget.controller.buildSessionForItem(itemId, practiceMode: mode),
     );
   }
 
@@ -197,37 +234,41 @@ class _AppShellState extends State<AppShell> {
     PracticeModeV1 mode,
   ) {
     if (itemIds.isEmpty) return;
-    final PracticeSessionSetupV1 setup = widget.controller
-        .buildSessionForWorkingOnSelection(itemIds, practiceMode: mode);
-    _shellNavigatorKey.currentState?.push(
-      MaterialPageRoute<void>(
-        builder: (_) =>
-            PracticeSessionScreen(controller: widget.controller, setup: setup),
+    _openPracticeSession(
+      widget.controller.buildSessionForWorkingOnSelection(
+        itemIds,
+        practiceMode: mode,
       ),
     );
   }
 
   void _openWarmupPractice() {
-    _shellNavigatorKey.currentState?.push(
-      MaterialPageRoute<void>(
-        builder: (_) => PracticeSessionScreen(
-          controller: widget.controller,
-          setup: widget.controller.buildWarmupSession(),
-        ),
-      ),
-    );
+    _openPracticeSession(widget.controller.buildWarmupSession());
   }
 
   void _repeatPreviousSession(PracticeSessionLogV1 session) {
     final PracticeSessionSetupV1? setup = widget.controller
         .buildSessionFromSessionOrNull(session);
     if (setup == null) return;
-    _shellNavigatorKey.currentState?.push(
-      MaterialPageRoute<void>(
-        builder: (_) =>
-            PracticeSessionScreen(controller: widget.controller, setup: setup),
-      ),
+    _openPracticeSession(setup);
+  }
+
+  void _selectTab(int index) {
+    _shellNavigatorKey.currentState?.popUntil((route) => route.isFirst);
+    setState(() => _currentIndex = index);
+  }
+
+  void _openPracticeSession(PracticeSessionSetupV1 setup) {
+    final Route<void> route = MaterialPageRoute<void>(
+      builder: (_) =>
+          PracticeSessionScreen(controller: widget.controller, setup: setup),
+      fullscreenDialog: AppViewport.isTablet(context),
     );
+    if (AppViewport.isTablet(context)) {
+      Navigator.of(context).push(route);
+    } else {
+      _shellNavigatorKey.currentState?.push(route);
+    }
   }
 
   void _openItemDetail(String itemId) {

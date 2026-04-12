@@ -49,6 +49,17 @@ Optional later routes:
 - `Dedicated Flow Setup`
 - `Audio Assessment Detail`
 
+## Form Factors
+
+Phone remains the baseline layout.
+
+iPad rules:
+
+- use the same product model, but not the same visual structure
+- use wide layouts deliberately instead of centering phone-width content
+- keep related working surfaces visible together when that reduces navigation friction
+- allow immersive fullscreen practice on iPad without changing phone behavior
+
 ---
 
 ## Screen Responsibilities
@@ -89,6 +100,11 @@ Matrix is responsible for:
 - phrase construction
 - sending material to practice or focus
 
+On iPad, Matrix should prefer split composition:
+
+- grid and structural browsing on the left
+- phrase editor and phrase actions on the right
+
 Matrix is not responsible for:
 
 - direct progress narrative
@@ -111,6 +127,11 @@ Practice is responsible for:
 - working-set entry
 - the execution player
 
+On iPad, Practice should prefer split composition:
+
+- launch choices on the left
+- previous-session browser or session-setup surface on the right
+
 Practice is not responsible for:
 
 - broad coaching
@@ -129,6 +150,8 @@ Focus is responsible for:
 - add/remove
 - simple edit/open
 - launch practice
+
+On iPad, Focus should use the available width for denser row composition and clearer separation of search, filters, and list controls.
 
 Focus is not responsible for:
 
@@ -150,6 +173,8 @@ Progress is responsible for:
 - coverage
 - lead balance
 - flow readiness later
+
+On iPad, Progress should prefer multi-column graph and metric composition before reverting to tall phone-style stacks.
 
 Progress is not responsible for:
 
