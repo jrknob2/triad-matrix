@@ -385,6 +385,7 @@ Running transport rules:
 - multi-item tracked sessions should only carry practiced patterns into Session Summary
 - Session Summary should open on the first practiced pattern, not the last viewed pattern
 - when a pattern's BPM changed during the session, Session Summary should present one BPM save choice for that pattern
+- Session Summary should use explicit per-pattern `Submit` and `Skip`, not implicit auto-save on every selection
 
 ---
 

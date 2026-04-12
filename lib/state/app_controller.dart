@@ -1918,6 +1918,12 @@ class AppController extends ChangeNotifier {
       _notifyChanged();
       return;
     }
+    if (selfReportControl == null &&
+        selfReportTension == null &&
+        selfReportTempoReadiness == null) {
+      _notifyChanged();
+      return;
+    }
     _recordManualAssessment(
       session: session,
       itemIdOverride: itemId,

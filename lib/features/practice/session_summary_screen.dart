@@ -26,6 +26,8 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
   SelfReportControlV1? _control;
   SelfReportTensionV1? _tension;
   final Set<String> _savedBpmItemIds = <String>{};
+  final Set<String> _submittedItemIds = <String>{};
+  final Set<String> _skippedItemIds = <String>{};
   late int _currentItemIndex;
 
   @override
@@ -84,7 +86,6 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
       needsTempoDecision: bpmAdjusted,
     );
     final bool canSaveBpm =
-        !_savedBpmItemIds.contains(currentItemId) &&
         bpmAdjusted &&
         widget.controller.launchBpmForItem(currentItemId) !=
             currentRuntime.endingBpm;
@@ -176,7 +177,6 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                     labelFor: (SelfReportControlV1 value) => value.label,
                     onSelected: (SelfReportControlV1 value) {
                       setState(() => _control = value);
-                      _saveAssessment(session.id, currentItemId);
                     },
                   ),
                   const SizedBox(height: 16),
@@ -187,7 +187,6 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                     labelFor: (SelfReportTensionV1 value) => value.label,
                     onSelected: (SelfReportTensionV1 value) {
                       setState(() => _tension = value);
-                      _saveAssessment(session.id, currentItemId);
                     },
                   ),
                   if (recommendation != null) ...<Widget>[
@@ -215,7 +214,7 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  'This rep ended at ${currentRuntime.endingBpm} BPM.',
+                                  'You changed the BPM from ${currentRuntime.startingBpm} to ${currentRuntime.endingBpm}. Save it at ${currentRuntime.endingBpm}?',
                                   style: Theme.of(context).textTheme.bodyMedium,
                                 ),
                               ],
@@ -224,21 +223,23 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                           const SizedBox(width: 12),
                           Checkbox(
                             value: _savedBpmItemIds.contains(currentItemId),
-                            onChanged: (bool? value) {
-                              if (value != true) return;
-                              widget.controller
-                                  .rememberLaunchPreferencesForItem(
-                                    itemId: currentItemId,
-                                    bpm: currentRuntime.endingBpm,
-                                    timerPreset: widget.controller
-                                        .launchTimerPresetForItem(
-                                          currentItemId,
-                                        ),
-                                  );
-                              setState(() {
-                                _savedBpmItemIds.add(currentItemId);
-                              });
-                            },
+                            onChanged: _savedBpmItemIds.contains(currentItemId)
+                                ? null
+                                : (bool? value) {
+                                    if (value != true) return;
+                                    setState(() {
+                                      widget.controller
+                                          .rememberLaunchPreferencesForItem(
+                                            itemId: currentItemId,
+                                            bpm: currentRuntime.endingBpm,
+                                            timerPreset: widget.controller
+                                                .launchTimerPresetForItem(
+                                                  currentItemId,
+                                                ),
+                                          );
+                                      _savedBpmItemIds.add(currentItemId);
+                                    });
+                                  },
                           ),
                         ],
                       ),
@@ -260,6 +261,20 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                   ),
                 OutlinedButton(
                   onPressed: () {
+                    _skipCurrentItem(session.id, currentItemId);
+                  },
+                  child: const Text('Skip'),
+                ),
+                OutlinedButton(
+                  onPressed: (_control == null || _tension == null)
+                      ? null
+                      : () {
+                          _submitCurrentItem(session.id, currentItemId);
+                        },
+                  child: const Text('Submit'),
+                ),
+                OutlinedButton(
+                  onPressed: () {
                     final int nextBpm =
                         recommendation?.nextBpm(currentRuntime.endingBpm) ??
                         currentRuntime.endingBpm;
@@ -277,12 +292,6 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                     );
                   },
                   child: Text(recommendation?.practiceLabel ?? 'Play It Again'),
-                ),
-                OutlinedButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('Submit'),
                 ),
               ],
             ),
@@ -326,6 +335,72 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
       selfReportTension: _tension,
       selfReportTempoReadiness: null,
     );
+  }
+
+  void _submitCurrentItem(String sessionId, String itemId) {
+    _saveAssessment(sessionId, itemId);
+    setState(() {
+      _submittedItemIds.add(itemId);
+      _skippedItemIds.remove(itemId);
+    });
+    _advanceOrClose(sessionId, itemId);
+  }
+
+  void _skipCurrentItem(String sessionId, String itemId) {
+    widget.controller.updateSessionAssessment(
+      sessionId: sessionId,
+      itemId: itemId,
+      selfReportControl: null,
+      selfReportTension: null,
+      selfReportTempoReadiness: null,
+    );
+    setState(() {
+      _control = null;
+      _tension = null;
+      _submittedItemIds.remove(itemId);
+      _skippedItemIds.add(itemId);
+    });
+    _advanceOrClose(sessionId, itemId);
+  }
+
+  void _advanceOrClose(String sessionId, String currentItemId) {
+    final PracticeSessionLogV1? session = widget.controller.sessionById(
+      widget.sessionId,
+    );
+    if (session == null) return;
+    final int nextIndex = _nextPendingItemIndex(session, currentItemId);
+    if (nextIndex == -1) {
+      Navigator.of(context).pop();
+      return;
+    }
+    _changeItem(session, nextIndex);
+  }
+
+  int _nextPendingItemIndex(
+    PracticeSessionLogV1 session,
+    String currentItemId,
+  ) {
+    final Set<String> handledItemIds = <String>{
+      ..._submittedItemIds,
+      ..._skippedItemIds,
+    };
+    handledItemIds.add(currentItemId);
+    final int currentIndex = session.practiceItemIds.indexOf(currentItemId);
+    for (
+      int index = currentIndex + 1;
+      index < session.practiceItemIds.length;
+      index += 1
+    ) {
+      if (!handledItemIds.contains(session.practiceItemIds[index])) {
+        return index;
+      }
+    }
+    for (int index = 0; index < currentIndex; index += 1) {
+      if (!handledItemIds.contains(session.practiceItemIds[index])) {
+        return index;
+      }
+    }
+    return -1;
   }
 
   _SessionRecommendation? _recommendationFor({

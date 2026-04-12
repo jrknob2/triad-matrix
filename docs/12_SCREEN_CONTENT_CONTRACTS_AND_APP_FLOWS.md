@@ -897,6 +897,7 @@ Session Summary closes a tracked session and collects limited useful feedback.
 - `Practice Again`
 - close/back
 - `Submit`
+- `Skip`
 
 ### Rules
 
@@ -904,11 +905,16 @@ Session Summary closes a tracked session and collects limited useful feedback.
 - multi-item sessions must allow the user to navigate and assess each item individually inside the same summary flow
 - each item in a multi-item session should have its own assessment state for that session
 - Session Summary should only include patterns that were actually practiced in that session
+- assessment choices should stay local to the current rep until the user presses `Submit`
+- each practiced pattern should have its own explicit `Submit` action
+- each practiced pattern should also allow `Skip` so the user can leave that rep unassessed
 - wording must stay action-oriented
 - top metadata should describe the assessed item and the session clearly without mixing item-level and session-level labels in misleading ways
 - if BPM did not change during the session, the summary should not ask a tempo question
 - if BPM did change for the current item during the session, the summary should offer one explicit BPM save choice for that current item
 - the BPM save choice should live inside the BPM sub-card, not as a separate detached action
+- the BPM save card should remain visible after it is checked so the saved decision stays legible
+- BPM save copy should name both the starting and ending BPM values
 - recommendation copy should not duplicate the instructional text already visible above the controls
 - if session BPM differs from the item's saved practice BPM, Session Summary should offer a way to save the BPM back to that current item
 - session completion itself must not silently overwrite the item's saved practice BPM
