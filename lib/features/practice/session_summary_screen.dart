@@ -220,18 +220,13 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
             const SizedBox(height: 16),
             DrumActionRow(
               children: <Widget>[
-                FilledButton(
-                  onPressed: () {
-                    if (!widget.controller.isInRoutine(firstItem.id)) {
+                if (!widget.controller.isInRoutine(firstItem.id))
+                  FilledButton(
+                    onPressed: () {
                       widget.controller.toggleRoutineItem(firstItem.id);
-                    }
-                  },
-                  child: Text(
-                    widget.controller.isInRoutine(firstItem.id)
-                        ? 'In Working On'
-                        : 'Add to Working On',
+                    },
+                    child: const Text('Add to Working On'),
                   ),
-                ),
                 OutlinedButton(
                   onPressed: () {
                     Navigator.of(context).pushReplacement(

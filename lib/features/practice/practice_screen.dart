@@ -723,14 +723,6 @@ class _PreviousSessionRow extends StatelessWidget {
                           fontWeight: FontWeight.w900,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        session.practiceMode.label,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: const Color(0xFF6A5E4C),
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
                       const SizedBox(height: 6),
                       Text(
                         controller.sessionPatternSummary(session),

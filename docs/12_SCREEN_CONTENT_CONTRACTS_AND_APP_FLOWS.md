@@ -158,6 +158,7 @@ Rules:
 - session setup is where the player narrows that broader pool into today's slice
 - `Repeat a Previous Session` should browse recent sessions, not only repeat the single most recent one
 - previous-session rows must show enough session content to be recognizable, including the patterns practiced
+- low-value metadata like practice mode should not appear there unless it changes a real choice
 - previous-session browsing may start short and offer `Load More`
 - `From Working On` should not show duplicate count chips when the same information is already expressed by the start action
 
@@ -869,7 +870,6 @@ Session Summary closes a tracked session and collects limited useful feedback.
 - practiced item/pattern
 - duration
 - BPM
-- mode
 - session check
 - conditional tempo check when BPM changed during the session
 - next-step recommendation after meaningful assessment input exists
@@ -882,6 +882,7 @@ Session Summary closes a tracked session and collects limited useful feedback.
 - multiple unrelated CTAs
 - session-level metadata that confuses the currently assessed item
 - low-value detail like click state when it does not change the next decision
+- inert buttons with no effect
 
 ### Required Controls
 
