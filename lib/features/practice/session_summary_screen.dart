@@ -45,9 +45,11 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
     }
     final firstItem = widget.controller.itemById(primaryItemId);
     final bool isWorkingOnSource = session.sourceName == 'Working On';
-    final _SessionRecommendation recommendation = _recommendationFor(session);
+    final bool bpmAdjusted = session.startingBpm != session.bpm;
+    final _SessionRecommendation? recommendation = _recommendationFor(session);
     final bool canSaveBpm =
         !_savedBpm &&
+        bpmAdjusted &&
         session.practiceItemIds.length == 1 &&
         widget.controller.launchBpmForItem(primaryItemId) != session.bpm;
 
@@ -99,16 +101,11 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                     label: 'Mode',
                     value: session.practiceMode.label,
                   ),
-                  _SummaryMetric(label: 'Family', value: session.family.label),
                   _SummaryMetric(
                     label: 'Duration',
                     value: formatDuration(session.duration),
                   ),
                   _SummaryMetric(label: 'BPM', value: '${session.bpm}'),
-                  _SummaryMetric(
-                    label: 'Click',
-                    value: session.clickEnabled ? 'On' : 'Off',
-                  ),
                 ],
               ),
             ),
@@ -146,18 +143,28 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                     },
                   ),
                   const SizedBox(height: 16),
-                  _AssessmentChoiceGroup<SelfReportTempoReadinessV1>(
-                    title: 'Tempo',
-                    value: _tempoReadiness,
-                    values: SelfReportTempoReadinessV1.values,
-                    labelFor: (SelfReportTempoReadinessV1 value) => value.label,
-                    onSelected: (SelfReportTempoReadinessV1 value) {
-                      setState(() => _tempoReadiness = value);
-                      _saveAssessment(session.id);
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  _RecommendationPanel(recommendation: recommendation),
+                  if (bpmAdjusted) ...<Widget>[
+                    const SizedBox(height: 16),
+                    _AssessmentChoiceGroup<bool>(
+                      title: 'Keep ${session.bpm} BPM next time?',
+                      value: _keepAdjustedTempoValue(session),
+                      values: const <bool>[true, false],
+                      labelFor: (bool value) => value ? 'Yes' : 'No',
+                      onSelected: (bool value) {
+                        setState(
+                          () => _tempoReadiness = _tempoReadinessForAdjustedBpm(
+                            session,
+                            value,
+                          ),
+                        );
+                        _saveAssessment(session.id);
+                      },
+                    ),
+                  ],
+                  if (recommendation != null) ...<Widget>[
+                    const SizedBox(height: 16),
+                    _RecommendationPanel(recommendation: recommendation),
+                  ],
                   if (canSaveBpm) ...<Widget>[
                     const SizedBox(height: 16),
                     DrumPanel(
@@ -244,13 +251,15 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                                           practiceMode: session.practiceMode,
                                         ))
                                   .copyWith(
-                                    bpm: recommendation.nextBpm(session.bpm),
+                                    bpm:
+                                        recommendation?.nextBpm(session.bpm) ??
+                                        session.bpm,
                                   ),
                         ),
                       ),
                     );
                   },
-                  child: Text(recommendation.practiceLabel),
+                  child: Text(recommendation?.practiceLabel ?? 'Play It Again'),
                 ),
                 OutlinedButton(
                   onPressed: () {
@@ -285,16 +294,32 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
     );
   }
 
-  _SessionRecommendation _recommendationFor(PracticeSessionLogV1 session) {
+  bool? _keepAdjustedTempoValue(PracticeSessionLogV1 session) {
+    if (session.startingBpm == session.bpm) return null;
+    final SelfReportTempoReadinessV1? readiness = _tempoReadiness;
+    if (readiness == null) return null;
+    if (readiness == SelfReportTempoReadinessV1.same) return false;
+    return readiness == _tempoReadinessForAdjustedBpm(session, true);
+  }
+
+  SelfReportTempoReadinessV1 _tempoReadinessForAdjustedBpm(
+    PracticeSessionLogV1 session,
+    bool keepAdjustedTempo,
+  ) {
+    if (!keepAdjustedTempo) return SelfReportTempoReadinessV1.same;
+    return session.bpm > session.startingBpm
+        ? SelfReportTempoReadinessV1.increase
+        : SelfReportTempoReadinessV1.decrease;
+  }
+
+  _SessionRecommendation? _recommendationFor(PracticeSessionLogV1 session) {
+    final bool needsTempoDecision = session.startingBpm != session.bpm;
     final bool incomplete =
-        _control == null || _tension == null || _tempoReadiness == null;
+        _control == null ||
+        _tension == null ||
+        (needsTempoDecision && _tempoReadiness == null);
     if (incomplete) {
-      return const _SessionRecommendation(
-        title: 'Check this rep first',
-        body: 'Answer the three checks above, then choose the next rep.',
-        practiceLabel: 'Play It Again',
-        bpmAdjustment: 0,
-      );
+      return null;
     }
 
     final bool slowDown =

@@ -863,9 +863,9 @@ Session Summary closes a tracked session and collects limited useful feedback.
 - duration
 - BPM
 - mode
-- family
 - session check
-- next-step recommendation
+- conditional tempo check when BPM changed during the session
+- next-step recommendation after meaningful assessment input exists
 - practice again
 
 ### Forbidden Content
@@ -873,6 +873,8 @@ Session Summary closes a tracked session and collects limited useful feedback.
 - warmup summary
 - long analytics
 - multiple unrelated CTAs
+- session-level metadata that confuses the currently assessed item
+- low-value detail like click state when it does not change the next decision
 
 ### Required Controls
 
@@ -885,6 +887,10 @@ Session Summary closes a tracked session and collects limited useful feedback.
 - one summary per tracked session
 - one assessment target item per session summary
 - wording must stay action-oriented
+- top metadata should describe the assessed item and the session clearly without mixing item-level and session-level labels in misleading ways
+- if BPM did not change during the session, the summary should not ask a tempo question
+- if BPM did change during the session, the summary may ask whether the ending BPM should be kept for the next rep
+- recommendation copy should not duplicate the instructional text already visible above the controls
 - if session BPM differs from the item's saved practice BPM, Session Summary should offer a way to save the BPM back to that item
 - session completion itself must not silently overwrite the item's saved practice BPM
 - back navigation from Session Summary should return to the player screen for that session

@@ -483,6 +483,7 @@ class PracticeSessionLogV1 {
   final String? assessmentItemId;
   final MaterialFamilyV1 family;
   final PracticeModeV1 practiceMode;
+  final int startingBpm;
   final int bpm;
   final bool clickEnabled;
   final String? routineId;
@@ -498,12 +499,13 @@ class PracticeSessionLogV1 {
     required this.assessmentItemId,
     required this.family,
     required this.practiceMode,
+    int? startingBpm,
     required this.bpm,
     required this.clickEnabled,
     required this.routineId,
     required this.reflection,
     this.sourceName = '',
-  });
+  }) : startingBpm = startingBpm ?? bpm;
 
   PracticeSessionLogV1 copyWith({
     String? id,
@@ -515,6 +517,7 @@ class PracticeSessionLogV1 {
     bool clearAssessmentItemId = false,
     MaterialFamilyV1? family,
     PracticeModeV1? practiceMode,
+    int? startingBpm,
     int? bpm,
     bool? clickEnabled,
     String? routineId,
@@ -534,6 +537,7 @@ class PracticeSessionLogV1 {
           : (assessmentItemId ?? this.assessmentItemId),
       family: family ?? this.family,
       practiceMode: practiceMode ?? this.practiceMode,
+      startingBpm: startingBpm ?? this.startingBpm,
       bpm: bpm ?? this.bpm,
       clickEnabled: clickEnabled ?? this.clickEnabled,
       routineId: clearRoutineId ? null : (routineId ?? this.routineId),

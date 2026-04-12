@@ -1798,6 +1798,7 @@ class AppController extends ChangeNotifier {
   PracticeSessionLogV1 completeSession(
     PracticeSessionSetupV1 setup,
     Duration duration, {
+    int? endingBpm,
     String? assessmentItemId,
     ReflectionRatingV1? reflection,
     SelfReportControlV1? selfReportControl,
@@ -1816,7 +1817,8 @@ class AppController extends ChangeNotifier {
           (setup.practiceItemIds.isEmpty ? null : setup.practiceItemIds.first),
       family: setup.family,
       practiceMode: setup.practiceMode,
-      bpm: setup.bpm,
+      startingBpm: setup.bpm,
+      bpm: endingBpm ?? setup.bpm,
       clickEnabled: setup.clickEnabled,
       routineId: setup.routineId,
       reflection: reflection,
