@@ -60,6 +60,12 @@ Tablet rule:
 - on iPad, prefer split-pane and multi-column composition over centered phone-width layouts
 - keep phone and tablet flows aligned conceptually, but do not force the same visual structure on both
 
+Filter row rule:
+
+- any UI surface that exposes filters should label that section `Filters`
+- filter pills should live in one horizontally scrollable row
+- do not wrap filter pills into multiple lines
+
 ## Control Affordance Rule
 
 Interactive controls must look interactive without helper text.

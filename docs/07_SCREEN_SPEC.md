@@ -275,6 +275,7 @@ Phrase rule:
 - row and column slicers must look touchable, not like passive labels
 - Matrix action controls should change meaningfully between single-triad selection and phrase-building selection
 - on iPad, phrase-building context should not push the grid far down the page when both can fit side by side
+- filter controls should be labeled `Filters` and rendered in a single horizontally scrollable row
 
 ---
 
@@ -319,6 +320,7 @@ Must support:
 - a short recent-session list with enough pattern detail to recognize the session
 - search within that recent-session list by practiced pattern
 - `Load More` for older sessions
+- any filter controls should be labeled `Filters` and rendered in a single horizontally scrollable row
 
 Optional later:
 

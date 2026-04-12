@@ -815,18 +815,24 @@ class _WorkingOnSessionSetup extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 14),
-            const DrumEyebrow(text: 'Filter'),
+            const DrumEyebrow(text: 'Filters'),
             const SizedBox(height: 8),
-            DrumActionRow(
-              children: WorkingOnSessionFilterV1.values
-                  .map(
-                    (WorkingOnSessionFilterV1 filter) => DrumSelectablePill(
-                      label: Text(filter.label),
-                      selected: filters.contains(filter),
-                      onPressed: () => onToggleFilter(filter),
-                    ),
-                  )
-                  .toList(growable: false),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: WorkingOnSessionFilterV1.values
+                    .map(
+                      (WorkingOnSessionFilterV1 filter) => Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: DrumSelectablePill(
+                          label: Text(filter.label),
+                          selected: filters.contains(filter),
+                          onPressed: () => onToggleFilter(filter),
+                        ),
+                      ),
+                    )
+                    .toList(growable: false),
+              ),
             ),
             const SizedBox(height: 14),
             Row(
