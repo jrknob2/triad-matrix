@@ -908,6 +908,7 @@ Session Summary closes a tracked session and collects limited useful feedback.
 - assessment choices should stay local to the current rep until the user presses `Submit`
 - each practiced pattern should have its own explicit `Submit` action
 - each practiced pattern should also allow `Skip` so the user can leave that rep unassessed
+- recommendation copy should respond to both control and tension, not only one of them
 - wording must stay action-oriented
 - top metadata should describe the assessed item and the session clearly without mixing item-level and session-level labels in misleading ways
 - if BPM did not change during the session, the summary should not ask a tempo question
@@ -915,12 +916,14 @@ Session Summary closes a tracked session and collects limited useful feedback.
 - the BPM save choice should live inside the BPM sub-card, not as a separate detached action
 - the BPM save card should remain visible after it is checked so the saved decision stays legible
 - BPM save copy should name both the starting and ending BPM values
+- BPM save choice should stay local until `Submit`, so the user can still change their mind before submitting the rep
 - recommendation copy should not duplicate the instructional text already visible above the controls
 - if session BPM differs from the item's saved practice BPM, Session Summary should offer a way to save the BPM back to that current item
 - session completion itself must not silently overwrite the item's saved practice BPM
 - back navigation from Session Summary should return to the player screen for that session
 - back navigation from the player should return to Practice
 - the final completion action should be labeled `Submit`
+- `Practice Again` should remain a stable replay action, not change label by recommendation state
 
 ---
 

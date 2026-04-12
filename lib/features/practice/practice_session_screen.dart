@@ -232,18 +232,16 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
             ),
           ],
           const SizedBox(height: 18),
-          Wrap(
-            alignment: WrapAlignment.center,
-            spacing: 12,
-            runSpacing: 12,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
               SizedBox(
                 height: 48,
-                width: 116,
+                width: 108,
                 child: FilledButton.icon(
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
+                      horizontal: 12,
                       vertical: 10,
                     ),
                   ),
@@ -252,10 +250,11 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                   label: Text(_running ? 'Pause' : 'Play'),
                 ),
               ),
-              if (!isWarmup && _running)
+              const SizedBox(width: 10),
+              if (!isWarmup && _running) ...<Widget>[
                 SizedBox(
                   height: 48,
-                  width: 116,
+                  width: 108,
                   child: OutlinedButton.icon(
                     onPressed: _resetCurrentSessionRun,
                     style: secondaryTransportStyle,
@@ -263,9 +262,11 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                     label: const Text('Reset'),
                   ),
                 ),
+                const SizedBox(width: 10),
+              ],
               SizedBox(
                 height: 48,
-                width: 116,
+                width: 108,
                 child: OutlinedButton(
                   onPressed: canEndSession ? _endSession : null,
                   style: secondaryTransportStyle,

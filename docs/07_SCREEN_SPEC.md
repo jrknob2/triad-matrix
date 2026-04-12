@@ -386,6 +386,8 @@ Running transport rules:
 - Session Summary should open on the first practiced pattern, not the last viewed pattern
 - when a pattern's BPM changed during the session, Session Summary should present one BPM save choice for that pattern
 - Session Summary should use explicit per-pattern `Submit` and `Skip`, not implicit auto-save on every selection
+- the player's running transport controls should fit in one row on phone without wrapping
+- Session Summary recommendations should influence the message, not rename the replay action
 
 ---
 

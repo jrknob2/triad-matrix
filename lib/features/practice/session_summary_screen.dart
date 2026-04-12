@@ -25,7 +25,7 @@ class SessionSummaryScreen extends StatefulWidget {
 class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
   SelfReportControlV1? _control;
   SelfReportTensionV1? _tension;
-  final Set<String> _savedBpmItemIds = <String>{};
+  final Set<String> _pendingSaveBpmItemIds = <String>{};
   final Set<String> _submittedItemIds = <String>{};
   final Set<String> _skippedItemIds = <String>{};
   late int _currentItemIndex;
@@ -85,10 +85,8 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
     final _SessionRecommendation? recommendation = _recommendationFor(
       needsTempoDecision: bpmAdjusted,
     );
-    final bool canSaveBpm =
-        bpmAdjusted &&
-        widget.controller.launchBpmForItem(currentItemId) !=
-            currentRuntime.endingBpm;
+    final bool canSaveBpm = bpmAdjusted;
+    final bool wantsToSaveBpm = _pendingSaveBpmItemIds.contains(currentItemId);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Session Summary')),
@@ -222,24 +220,16 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                           ),
                           const SizedBox(width: 12),
                           Checkbox(
-                            value: _savedBpmItemIds.contains(currentItemId),
-                            onChanged: _savedBpmItemIds.contains(currentItemId)
-                                ? null
-                                : (bool? value) {
-                                    if (value != true) return;
-                                    setState(() {
-                                      widget.controller
-                                          .rememberLaunchPreferencesForItem(
-                                            itemId: currentItemId,
-                                            bpm: currentRuntime.endingBpm,
-                                            timerPreset: widget.controller
-                                                .launchTimerPresetForItem(
-                                                  currentItemId,
-                                                ),
-                                          );
-                                      _savedBpmItemIds.add(currentItemId);
-                                    });
-                                  },
+                            value: wantsToSaveBpm,
+                            onChanged: (bool? value) {
+                              setState(() {
+                                if (value == true) {
+                                  _pendingSaveBpmItemIds.add(currentItemId);
+                                } else {
+                                  _pendingSaveBpmItemIds.remove(currentItemId);
+                                }
+                              });
+                            },
                           ),
                         ],
                       ),
@@ -275,9 +265,6 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                 ),
                 OutlinedButton(
                   onPressed: () {
-                    final int nextBpm =
-                        recommendation?.nextBpm(currentRuntime.endingBpm) ??
-                        currentRuntime.endingBpm;
                     Navigator.of(context).pushReplacement(
                       MaterialPageRoute<void>(
                         builder: (_) => PracticeSessionScreen(
@@ -285,13 +272,13 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                           setup: widget.controller.buildSessionForItem(
                             currentItem.id,
                             practiceMode: session.practiceMode,
-                            bpm: nextBpm,
+                            bpm: currentRuntime.endingBpm,
                           ),
                         ),
                       ),
                     );
                   },
-                  child: Text(recommendation?.practiceLabel ?? 'Play It Again'),
+                  child: const Text('Play It Again'),
                 ),
               ],
             ),
@@ -325,6 +312,7 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
         .assessmentForSessionItem(sessionId, itemId);
     _control = result?.selfReportControl;
     _tension = result?.selfReportTension;
+    _pendingSaveBpmItemIds.remove(itemId);
   }
 
   void _saveAssessment(String sessionId, String itemId) {
@@ -338,10 +326,25 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
   }
 
   void _submitCurrentItem(String sessionId, String itemId) {
+    final PracticeSessionLogV1? session = widget.controller.sessionById(
+      widget.sessionId,
+    );
+    if (session != null && _pendingSaveBpmItemIds.contains(itemId)) {
+      final PracticeSessionItemRuntimeV1? runtime = widget.controller
+          .sessionItemRuntimeFor(session, itemId);
+      if (runtime != null) {
+        widget.controller.rememberLaunchPreferencesForItem(
+          itemId: itemId,
+          bpm: runtime.endingBpm,
+          timerPreset: widget.controller.launchTimerPresetForItem(itemId),
+        );
+      }
+    }
     _saveAssessment(sessionId, itemId);
     setState(() {
       _submittedItemIds.add(itemId);
       _skippedItemIds.remove(itemId);
+      _pendingSaveBpmItemIds.remove(itemId);
     });
     _advanceOrClose(sessionId, itemId);
   }
@@ -359,6 +362,7 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
       _tension = null;
       _submittedItemIds.remove(itemId);
       _skippedItemIds.add(itemId);
+      _pendingSaveBpmItemIds.remove(itemId);
     });
     _advanceOrClose(sessionId, itemId);
   }
@@ -415,12 +419,25 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
         _control == SelfReportControlV1.low ||
         _tension == SelfReportTensionV1.high;
     if (slowDown) {
+      if (_control == SelfReportControlV1.low &&
+          _tension == SelfReportTensionV1.high) {
+        return const _SessionRecommendation(
+          title: 'This rep was strained and unstable',
+          body:
+              'Control dropped and tension rose. Bring the motion down and get the shape back under your hands before pushing it.',
+        );
+      }
+      if (_control == SelfReportControlV1.low) {
+        return const _SessionRecommendation(
+          title: 'This rep lost control',
+          body:
+              'The sticking is not holding together yet. Keep the motion smaller and get the cycle clean again first.',
+        );
+      }
       return const _SessionRecommendation(
-        title: 'Next rep: slow down',
+        title: 'This rep carried extra tension',
         body:
-            'Keep it smaller and cleaner. The next win is evenness and relaxed motion, not more tempo.',
-        practiceLabel: 'Play It Slower',
-        bpmAdjustment: -6,
+            'The pattern may be holding, but the motion is tightening up. Stay relaxed before you ask for more tempo.',
       );
     }
 
@@ -430,20 +447,16 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
         !needsTempoDecision;
     if (bumpUp) {
       return const _SessionRecommendation(
-        title: 'Next rep: bring it up',
+        title: 'This rep held together',
         body:
             'The phrase held together. Add a little tempo and make sure the sound stays relaxed.',
-        practiceLabel: 'Bring It Up',
-        bpmAdjustment: 4,
       );
     }
 
     return const _SessionRecommendation(
-      title: 'Next rep: stay here',
+      title: 'This rep still needs a few more passes',
       body:
           'This tempo still has work in it. Stay here until the motion and sound come back cleanly.',
-      practiceLabel: 'Stay Here',
-      bpmAdjustment: 0,
     );
   }
 }
@@ -451,17 +464,8 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
 class _SessionRecommendation {
   final String title;
   final String body;
-  final String practiceLabel;
-  final int bpmAdjustment;
 
-  const _SessionRecommendation({
-    required this.title,
-    required this.body,
-    required this.practiceLabel,
-    required this.bpmAdjustment,
-  });
-
-  int nextBpm(int currentBpm) => (currentBpm + bpmAdjustment).clamp(40, 240);
+  const _SessionRecommendation({required this.title, required this.body});
 }
 
 class _SummaryMetric extends StatelessWidget {
