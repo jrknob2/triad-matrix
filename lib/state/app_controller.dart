@@ -1035,6 +1035,17 @@ class AppController extends ChangeNotifier {
     return _combinations.firstWhere((combo) => combo.id == id);
   }
 
+  List<String> matrixSelectionItemIdsForItem(String itemId) {
+    final PracticeItemV1 item = itemById(itemId);
+    if (item.isCombo) {
+      return List<String>.from(combinationById(itemId).itemIds);
+    }
+    if (item.isTriad) {
+      return <String>[itemId];
+    }
+    return const <String>[];
+  }
+
   PracticeCombinationV1? combinationForItemIdsOrNull(List<String> itemIds) {
     for (final PracticeCombinationV1 combo in _combinations) {
       if (_sameOrderedItemIds(combo.itemIds, itemIds)) return combo;
@@ -1049,6 +1060,68 @@ class AppController extends ChangeNotifier {
 
   String comboDisplayName(List<String> itemIds) {
     return itemIds.map((itemId) => itemById(itemId).name).join('-');
+  }
+
+  void updateCombinationSelection({
+    required String comboId,
+    required List<String> itemIds,
+  }) {
+    if (itemIds.isEmpty) return;
+
+    final PracticeItemV1 existingItem = itemById(comboId);
+    if (!existingItem.isCombo) return;
+
+    final String comboName = comboDisplayName(itemIds);
+    final int noteCount = itemIds.fold<int>(
+      0,
+      (int sum, String itemId) => sum + itemById(itemId).noteCount,
+    );
+    final List<DrumVoiceV1> previousVoices = noteVoicesFor(comboId);
+    final List<DrumVoiceV1> fallbackVoices = <DrumVoiceV1>[];
+    for (final String entryId in itemIds) {
+      fallbackVoices.addAll(
+        _effectiveVoicesForItem(_sanitizedItem(itemById(entryId))),
+      );
+    }
+    final List<DrumVoiceV1> nextVoices = List<DrumVoiceV1>.generate(
+      noteCount,
+      (int index) => index < previousVoices.length
+          ? previousVoices[index]
+          : fallbackVoices[index],
+      growable: false,
+    );
+
+    _combinations = _combinations
+        .map((PracticeCombinationV1 combo) {
+          if (combo.id != comboId) return combo;
+          return combo.copyWith(
+            name: comboName,
+            itemIds: List<String>.from(itemIds),
+          );
+        })
+        .toList(growable: false);
+
+    _items = _items
+        .map((PracticeItemV1 item) {
+          if (item.id != comboId) return item;
+          return _sanitizedItem(
+            item.copyWith(
+              name: comboName,
+              sticking: comboName,
+              noteCount: noteCount,
+              accentedNoteIndices: item.accentedNoteIndices
+                  .where((int index) => index < noteCount)
+                  .toList(growable: false),
+              ghostNoteIndices: item.ghostNoteIndices
+                  .where((int index) => index < noteCount)
+                  .toList(growable: false),
+              voiceAssignments: nextVoices,
+            ),
+          );
+        })
+        .toList(growable: false);
+
+    _notifyChanged();
   }
 
   bool combinationContainsItem({

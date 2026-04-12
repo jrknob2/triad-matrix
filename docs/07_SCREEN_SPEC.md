@@ -256,6 +256,10 @@ Phrase rule:
 - once more than one triad is selected, Matrix should behave like phrase-building mode and default practice from that selection to Flow
 - if selected phrase material includes triads that are not ready, Matrix should show guidance instead of blocking phrase building
 - `Add to Working On` should open authoring/edit flow, not silently create duplicates or save immediately
+- when Matrix is opened from `Practice Item`, it should reuse Matrix in edit mode instead of routing to a separate builder screen
+- Matrix edit mode must preload the item's current triad sequence on first render
+- Matrix edit mode should replace `Add to Working On` with a return action back to `Working On`
+- moving from `Practice Item` into Matrix and back must preserve authored markings and voice assignments unless the user explicitly changes and saves them
 
 ### Acceptance Criteria
 

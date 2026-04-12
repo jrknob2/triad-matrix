@@ -278,14 +278,39 @@ class _AppShellState extends State<AppShell> {
           controller: widget.controller,
           itemId: itemId,
           onPracticeItemInMode: _openPracticeItemInMode,
-          onBuildComboFromItem: _openCombinationBuilderFromItem,
+          onOpenInMatrix: _openMatrixForItemEdit,
         ),
       ),
     );
   }
 
-  void _openCombinationBuilderFromItem(String itemId) {
-    _openCombinationBuilderFromItems(<String>[itemId]);
+  Future<List<String>?> _openMatrixForItemEdit(String itemId) {
+    final List<String> selectedItemIds = widget.controller
+        .matrixSelectionItemIdsForItem(itemId);
+    return _shellNavigatorKey.currentState!.push<List<String>>(
+      MaterialPageRoute<List<String>>(
+        builder: (BuildContext routeContext) => Scaffold(
+          appBar: AppBar(title: const Text('Triad Matrix')),
+          body: MatrixScreen(
+            controller: widget.controller,
+            request: MatrixScreenRequest(
+              version: 1,
+              lane: null,
+              filters: const <TriadMatrixFilterV1>{},
+              selectedItemIds: selectedItemIds,
+              editingItemId: itemId,
+            ),
+            onOpenItem: _openItemDetail,
+            onPracticeItem: _openPracticeItem,
+            onPracticeItemInMode: _openPracticeItemInMode,
+            onBuildComboFromItems: _openCombinationBuilderFromItems,
+            onFinishEditing: (List<String> itemIds) {
+              Navigator.of(routeContext).pop(itemIds);
+            },
+          ),
+        ),
+      ),
+    );
   }
 
   void _openCombinationBuilderFromItems(List<String> itemIds) {

@@ -14,11 +14,15 @@ class MatrixScreenRequest {
   final int version;
   final LearningLaneV1? lane;
   final Set<TriadMatrixFilterV1> filters;
+  final List<String> selectedItemIds;
+  final String? editingItemId;
 
   const MatrixScreenRequest({
     required this.version,
     required this.lane,
     required this.filters,
+    this.selectedItemIds = const <String>[],
+    this.editingItemId,
   });
 }
 
@@ -29,6 +33,7 @@ class MatrixScreen extends StatefulWidget {
   final ValueChanged<String> onPracticeItem;
   final void Function(String, PracticeModeV1) onPracticeItemInMode;
   final ValueChanged<List<String>> onBuildComboFromItems;
+  final ValueChanged<List<String>>? onFinishEditing;
 
   const MatrixScreen({
     super.key,
@@ -38,6 +43,7 @@ class MatrixScreen extends StatefulWidget {
     required this.onPracticeItem,
     required this.onPracticeItemInMode,
     required this.onBuildComboFromItems,
+    this.onFinishEditing,
   });
 
   @override
@@ -51,6 +57,16 @@ class _MatrixScreenState extends State<MatrixScreen> {
   final Set<String> _selectedColumns = <String>{};
   final List<String> _selectedItemIds = <String>[];
   int? _appliedRequestVersion;
+
+  @override
+  void initState() {
+    super.initState();
+    final MatrixScreenRequest? request = widget.request;
+    if (request != null) {
+      _appliedRequestVersion = request.version;
+      _applyRequest(request);
+    }
+  }
 
   @override
   void didUpdateWidget(covariant MatrixScreen oldWidget) {
@@ -197,6 +213,9 @@ class _MatrixScreenState extends State<MatrixScreen> {
 
   bool get _isPhraseBuilding => _selectedItemIds.length > 1;
 
+  bool get _isEditingFromPracticeItem =>
+      widget.request?.editingItemId != null && widget.onFinishEditing != null;
+
   bool get _selectionIsInRoutine {
     final String? itemId = _selectionRoutineItemId;
     return itemId != null && widget.controller.isDirectRoutineEntry(itemId);
@@ -241,12 +260,20 @@ class _MatrixScreenState extends State<MatrixScreen> {
         padding: const EdgeInsets.only(right: 8),
         child: DrumActionPill(
           label: Text(
-            _selectionIsInRoutine ? 'In Working On' : 'Add to Working On',
+            _isEditingFromPracticeItem
+                ? 'Back to Working On'
+                : _selectionIsInRoutine
+                ? 'In Working On'
+                : 'Add to Working On',
           ),
-          onPressed: _selectionIsInRoutine ? null : _addSelectionToWorkingOn,
+          onPressed: _isEditingFromPracticeItem
+              ? (_selectedItemIds.isEmpty ? null : _finishEditing)
+              : _selectionIsInRoutine
+              ? null
+              : _addSelectionToWorkingOn,
         ),
       ),
-      if (_selectedItemIds.length > 1)
+      if (_selectedItemIds.length > 1 && !_isEditingFromPracticeItem)
         Padding(
           padding: const EdgeInsets.only(right: 8),
           child: DrumActionPill(
@@ -254,7 +281,7 @@ class _MatrixScreenState extends State<MatrixScreen> {
             onPressed: _saveSelection,
           ),
         ),
-      if (_selectedItemIds.length == 1)
+      if (_selectedItemIds.length == 1 && !_isEditingFromPracticeItem)
         Padding(
           padding: const EdgeInsets.only(right: 8),
           child: DrumActionPill(
@@ -382,6 +409,10 @@ class _MatrixScreenState extends State<MatrixScreen> {
     });
   }
 
+  void _finishEditing() {
+    widget.onFinishEditing?.call(List<String>.from(_selectedItemIds));
+  }
+
   void _removeSelectedAt(int index) {
     if (index < 0 || index >= _selectedItemIds.length) return;
     setState(() {
@@ -483,7 +514,9 @@ class _MatrixScreenState extends State<MatrixScreen> {
         ..addAll(_normalizedIncomingFilters(request));
       _selectedRows.clear();
       _selectedColumns.clear();
-      _selectedItemIds.clear();
+      _selectedItemIds
+        ..clear()
+        ..addAll(request.selectedItemIds);
     });
   }
 

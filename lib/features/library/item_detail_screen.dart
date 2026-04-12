@@ -16,14 +16,14 @@ class ItemDetailScreen extends StatefulWidget {
   final AppController controller;
   final String itemId;
   final void Function(String, PracticeModeV1) onPracticeItemInMode;
-  final ValueChanged<String> onBuildComboFromItem;
+  final Future<List<String>?> Function(String) onOpenInMatrix;
 
   const ItemDetailScreen({
     super.key,
     required this.controller,
     required this.itemId,
     required this.onPracticeItemInMode,
-    required this.onBuildComboFromItem,
+    required this.onOpenInMatrix,
   });
 
   @override
@@ -51,6 +51,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       builder: (BuildContext context, _) {
         final PracticeItemV1 item = widget.controller.itemById(widget.itemId);
         final bool isDraftItem = !item.saved;
+        final bool supportsMatrixEditing = item.isTriad || item.isCombo;
         final Duration totalTime = widget.controller.totalTime(itemId: item.id);
         final int sessionCount = widget.controller.sessionCount(
           itemId: item.id,
@@ -302,7 +303,32 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                 ),
                 const SizedBox(height: 8),
                 OutlinedButton(
-                  onPressed: () => widget.onBuildComboFromItem(item.id),
+                  onPressed: isDraftItem || !supportsMatrixEditing
+                      ? null
+                      : () async {
+                          if (hasUnsavedChanges) {
+                            _saveDraft();
+                          }
+                          final List<String>? selection = await widget
+                              .onOpenInMatrix(item.id);
+                          if (!mounted ||
+                              selection == null ||
+                              !item.isCombo ||
+                              listEquals(
+                                selection,
+                                widget.controller.matrixSelectionItemIdsForItem(
+                                  item.id,
+                                ),
+                              )) {
+                            return;
+                          }
+                          widget.controller.updateCombinationSelection(
+                            comboId: item.id,
+                            itemIds: selection,
+                          );
+                          _loadDraftFromController();
+                          setState(() {});
+                        },
                   child: const Text('Open in Matrix'),
                 ),
                 if (!isDraftItem) ...<Widget>[
