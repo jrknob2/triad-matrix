@@ -16,6 +16,7 @@ class PatternVoiceDisplay extends StatelessWidget {
   final bool showRepeatIndicator;
   final bool scrollable;
   final bool showPatternRow;
+  final bool wrap;
 
   const PatternVoiceDisplay({
     super.key,
@@ -31,6 +32,7 @@ class PatternVoiceDisplay extends StatelessWidget {
     this.showRepeatIndicator = false,
     this.scrollable = true,
     this.showPatternRow = true,
+    this.wrap = false,
   }) : assert(tokens.length == markings.length),
        assert(tokens.length == voices.length);
 
@@ -49,58 +51,66 @@ class PatternVoiceDisplay extends StatelessWidget {
     );
     final double separatorWidth = (cellWidth * 0.45).clamp(14.0, 28.0);
 
-    final Widget content = Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: <Widget>[
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            if (showPatternRow)
-              Row(
-                children: _rowCells(
-                  tokens,
-                  separators,
-                  separatorWidth,
-                  (int index) => _patternText(
-                    tokens[index],
-                    markings[index],
-                    resolvedPatternStyle,
-                  ),
-                  resolvedPatternStyle,
-                ),
+    final Widget content = wrap
+        ? LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints constraints) {
+              final double maxWidth = constraints.maxWidth.isFinite
+                  ? constraints.maxWidth
+                  : double.infinity;
+              final List<_PatternVoiceChunk> chunks = _chunksForWidth(
+                maxWidth: maxWidth,
+                separators: separators,
+                separatorWidth: separatorWidth,
+              );
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  for (int i = 0; i < chunks.length; i++) ...<Widget>[
+                    _chunkWidget(
+                      chunk: chunks[i],
+                      separators: separators,
+                      separatorWidth: separatorWidth,
+                      patternStyle: resolvedPatternStyle,
+                      voiceStyle: resolvedVoiceStyle,
+                    ),
+                    if (i < chunks.length - 1) const SizedBox(height: 10),
+                  ],
+                  if (showRepeatIndicator)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Icon(
+                        Icons.repeat_rounded,
+                        size: (resolvedPatternStyle.fontSize ?? 20) * 1.05,
+                        color: resolvedPatternStyle.color,
+                      ),
+                    ),
+                ],
+              );
+            },
+          )
+        : Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: <Widget>[
+              _chunkWidget(
+                chunk: _PatternVoiceChunk(start: 0, end: tokens.length),
+                separators: separators,
+                separatorWidth: separatorWidth,
+                patternStyle: resolvedPatternStyle,
+                voiceStyle: resolvedVoiceStyle,
               ),
-            if (showPatternRow) const SizedBox(height: 6),
-            Row(
-              children: _rowCells(
-                tokens,
-                separators,
-                separatorWidth,
-                (int index) => Text(
-                  voices[index].shortLabel,
-                  textAlign: TextAlign.center,
-                  style: resolvedVoiceStyle.copyWith(
-                    color: const Color(0xFF5B5345),
-                    fontWeight: FontWeight.w800,
+              if (showRepeatIndicator)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Icon(
+                    Icons.repeat_rounded,
+                    size: (resolvedPatternStyle.fontSize ?? 20) * 1.05,
+                    color: resolvedPatternStyle.color,
                   ),
                 ),
-                resolvedVoiceStyle,
-                showSeparatorText: false,
-              ),
-            ),
-          ],
-        ),
-        if (showRepeatIndicator)
-          Padding(
-            padding: const EdgeInsets.only(top: 6),
-            child: Icon(
-              Icons.repeat_rounded,
-              size: (resolvedPatternStyle.fontSize ?? 20) * 1.05,
-              color: resolvedPatternStyle.color,
-            ),
-          ),
-      ],
-    );
+            ],
+          );
 
     if (!scrollable) return content;
 
@@ -110,16 +120,93 @@ class PatternVoiceDisplay extends StatelessWidget {
     );
   }
 
-  List<Widget> _rowCells(
-    List<String> tokens,
-    List<String> separators,
-    double separatorWidth,
-    Widget Function(int index) noteCellFor,
-    TextStyle separatorStyle, {
+  Widget _chunkWidget({
+    required _PatternVoiceChunk chunk,
+    required List<String> separators,
+    required double separatorWidth,
+    required TextStyle patternStyle,
+    required TextStyle voiceStyle,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        if (showPatternRow)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: _rowCellsForRange(
+              chunk: chunk,
+              separators: separators,
+              separatorWidth: separatorWidth,
+              noteCellFor: (int index) =>
+                  _patternText(tokens[index], markings[index], patternStyle),
+              separatorStyle: patternStyle,
+            ),
+          ),
+        if (showPatternRow) const SizedBox(height: 6),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: _rowCellsForRange(
+            chunk: chunk,
+            separators: separators,
+            separatorWidth: separatorWidth,
+            noteCellFor: (int index) => Text(
+              voices[index].shortLabel,
+              textAlign: TextAlign.center,
+              style: voiceStyle.copyWith(
+                color: const Color(0xFF5B5345),
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            separatorStyle: voiceStyle,
+            showSeparatorText: false,
+          ),
+        ),
+      ],
+    );
+  }
+
+  List<_PatternVoiceChunk> _chunksForWidth({
+    required double maxWidth,
+    required List<String> separators,
+    required double separatorWidth,
+  }) {
+    if (!maxWidth.isFinite || maxWidth <= 0) {
+      return <_PatternVoiceChunk>[
+        _PatternVoiceChunk(start: 0, end: tokens.length),
+      ];
+    }
+
+    final List<_PatternVoiceChunk> chunks = <_PatternVoiceChunk>[];
+    int start = 0;
+    while (start < tokens.length) {
+      double width = 0;
+      int end = start;
+      while (end < tokens.length) {
+        final double nextWidth =
+            cellWidth + (separators[end].isNotEmpty ? separatorWidth : 0);
+        if (end > start && width + nextWidth > maxWidth) {
+          break;
+        }
+        width += nextWidth;
+        end++;
+      }
+      if (end == start) end++;
+      chunks.add(_PatternVoiceChunk(start: start, end: end));
+      start = end;
+    }
+    return chunks;
+  }
+
+  List<Widget> _rowCellsForRange({
+    required _PatternVoiceChunk chunk,
+    required List<String> separators,
+    required double separatorWidth,
+    required Widget Function(int index) noteCellFor,
+    required TextStyle separatorStyle,
     bool showSeparatorText = true,
   }) {
     return <Widget>[
-      for (int index = 0; index < tokens.length; index++) ...<Widget>[
+      for (int index = chunk.start; index < chunk.end; index++) ...<Widget>[
         _PatternVoiceCell(width: cellWidth, child: noteCellFor(index)),
         if (separators[index].isNotEmpty)
           _PatternVoiceCell(
@@ -197,4 +284,11 @@ class _PatternVoiceCell extends StatelessWidget {
       child: Center(child: child),
     );
   }
+}
+
+class _PatternVoiceChunk {
+  final int start;
+  final int end;
+
+  const _PatternVoiceChunk({required this.start, required this.end});
 }

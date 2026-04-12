@@ -83,15 +83,43 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        PatternDisplayText(
-                          tokens: tokens,
-                          markings: draftMarkings,
-                          style: Theme.of(context).textTheme.headlineMedium
-                              ?.copyWith(
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: -0.8,
+                        flowCapable
+                            ? PatternVoiceDisplay(
+                                tokens: tokens,
+                                markings: draftMarkings,
+                                voices: _voiceAssignments,
+                                grouping: widget.controller.displayGroupingFor(
+                                  item.id,
+                                ),
+                                scrollable: false,
+                                wrap: true,
+                                cellWidth: 34,
+                                patternStyle: Theme.of(context)
+                                    .textTheme
+                                    .headlineMedium
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: -0.4,
+                                    ),
+                                voiceStyle: Theme.of(context)
+                                    .textTheme
+                                    .titleSmall
+                                    ?.copyWith(fontWeight: FontWeight.w800),
+                              )
+                            : PatternDisplayText(
+                                tokens: tokens,
+                                markings: draftMarkings,
+                                grouping: widget.controller.displayGroupingFor(
+                                  item.id,
+                                ),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .headlineMedium
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: -0.8,
+                                    ),
                               ),
-                        ),
                         const SizedBox(height: 12),
                         Text(
                           'Accents & Ghosts',
@@ -110,23 +138,6 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                         const SizedBox(height: 8),
-                        if (flowCapable) ...<Widget>[
-                          PatternVoiceDisplay(
-                            tokens: tokens,
-                            markings: draftMarkings,
-                            voices: _voiceAssignments,
-                            showPatternRow: false,
-                            patternStyle: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: -0.5,
-                                ),
-                            voiceStyle: Theme.of(context).textTheme.labelLarge,
-                          ),
-                          const SizedBox(height: 8),
-                        ],
                         VoiceAssignmentEditor(
                           tokens: tokens,
                           voices: _voiceAssignments,
