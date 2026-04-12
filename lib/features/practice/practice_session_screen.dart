@@ -56,6 +56,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   bool _completionStateVisible = false;
   bool _summaryOpenedForCurrentRun = false;
   Duration _elapsedOffset = Duration.zero;
+  late Map<String, int> _itemBpmById;
   late bool _pulseEnabled;
   late int _bpm;
   late bool _clickEnabled;
@@ -66,7 +67,8 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   void initState() {
     super.initState();
     _setup = widget.setup;
-    _bpm = _setup.bpm;
+    _itemBpmById = Map<String, int>.from(_setup.itemBpmById);
+    _bpm = _itemBpmById[_currentItemId] ?? _setup.bpm;
     _clickEnabled = _setup.family == MaterialFamilyV1.warmup
         ? false
         : _setup.clickEnabled;
@@ -395,7 +397,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     final PracticeSessionLogV1 session = widget.controller.completeSession(
       _setup.copyWith(clickEnabled: _clickEnabled),
       _elapsed,
-      endingBpm: _bpm,
+      endingBpmByItemId: _itemBpmById,
       assessmentItemId: _currentItemId,
     );
     _summaryOpenedForCurrentRun = true;
@@ -417,7 +419,9 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     }
     setState(() {
       _currentItemIndex = nextIndex;
+      _bpm = _itemBpmById[_currentItemId] ?? _setup.bpm;
     });
+    _restartBeatTicker();
   }
 
   void _scrubWarmupToItem(int nextIndex) {
@@ -598,8 +602,10 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   }
 
   void _updateBpm(int bpm) {
+    final int nextBpm = bpm.clamp(30, 260);
     setState(() {
-      _bpm = bpm.clamp(30, 260);
+      _bpm = nextBpm;
+      _itemBpmById[_currentItemId] = nextBpm;
     });
     _restartBeatTicker();
   }

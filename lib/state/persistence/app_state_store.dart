@@ -302,6 +302,9 @@ class AppStateStore {
       'practiceMode': session.practiceMode.name,
       'startingBpm': session.startingBpm,
       'bpm': session.bpm,
+      'itemRuntimes': session.itemRuntimes
+          .map(_practiceSessionItemRuntimeToMap)
+          .toList(growable: false),
       'clickEnabled': session.clickEnabled,
       'routineId': session.routineId,
       'reflection': session.reflection?.name,
@@ -321,6 +324,14 @@ class AppStateStore {
       practiceMode: PracticeModeV1.values.byName(map['practiceMode'] as String),
       startingBpm: (map['startingBpm'] as int?) ?? (map['bpm'] as int),
       bpm: map['bpm'] as int,
+      itemRuntimes:
+          ((map['itemRuntimes'] as List<dynamic>?) ?? const <dynamic>[])
+              .map(
+                (dynamic item) => _practiceSessionItemRuntimeFromMap(
+                  item as Map<String, dynamic>,
+                ),
+              )
+              .toList(growable: false),
       clickEnabled: map['clickEnabled'] as bool,
       routineId: map['routineId'] as String?,
       reflection: map['reflection'] == null
@@ -338,6 +349,26 @@ class AppStateStore {
       'bpm': preference.bpm,
       'timerPreset': preference.timerPreset.name,
     };
+  }
+
+  Map<String, dynamic> _practiceSessionItemRuntimeToMap(
+    PracticeSessionItemRuntimeV1 runtime,
+  ) {
+    return <String, dynamic>{
+      'practiceItemId': runtime.practiceItemId,
+      'startingBpm': runtime.startingBpm,
+      'endingBpm': runtime.endingBpm,
+    };
+  }
+
+  PracticeSessionItemRuntimeV1 _practiceSessionItemRuntimeFromMap(
+    Map<String, dynamic> map,
+  ) {
+    return PracticeSessionItemRuntimeV1(
+      practiceItemId: map['practiceItemId'] as String,
+      startingBpm: map['startingBpm'] as int,
+      endingBpm: map['endingBpm'] as int,
+    );
   }
 
   PracticeLaunchPreferenceV1 _practiceLaunchPreferenceFromMap(

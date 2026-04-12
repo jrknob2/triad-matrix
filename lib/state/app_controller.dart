@@ -627,6 +627,16 @@ class AppController extends ChangeNotifier {
     return null;
   }
 
+  PracticeSessionItemRuntimeV1? sessionItemRuntimeFor(
+    PracticeSessionLogV1 session,
+    String itemId,
+  ) {
+    for (final PracticeSessionItemRuntimeV1 runtime in session.itemRuntimes) {
+      if (runtime.practiceItemId == itemId) return runtime;
+    }
+    return null;
+  }
+
   CompetencyLevelV1 competencyFor(String itemId) {
     return _competencyByItemId[itemId]?.level ?? CompetencyLevelV1.notStarted;
   }
@@ -1716,6 +1726,7 @@ class AppController extends ChangeNotifier {
       family: item.family,
       practiceMode: practiceMode,
       bpm: bpm ?? launchBpmForItem(itemId),
+      itemBpmById: <String, int>{itemId: bpm ?? launchBpmForItem(itemId)},
       timerPreset: timerPreset ?? launchTimerPresetForItem(itemId),
       clickEnabled: _profile.clickEnabledByDefault,
       routineId: routineId,
@@ -1731,6 +1742,12 @@ class AppController extends ChangeNotifier {
     TimerPresetV1? timerPreset,
   }) {
     final String? singleItemId = itemIds.length == 1 ? itemIds.first : null;
+    final Map<String, int> itemBpmById = <String, int>{
+      for (final String itemId in itemIds)
+        itemId: singleItemId == null
+            ? launchBpmForItem(itemId)
+            : (bpm ?? launchBpmForItem(itemId)),
+    };
     return PracticeSessionSetupV1(
       practiceItemIds: itemIds,
       family: itemIds.length == 1
@@ -1742,6 +1759,7 @@ class AppController extends ChangeNotifier {
           (singleItemId == null
               ? _profile.defaultBpm
               : launchBpmForItem(singleItemId)),
+      itemBpmById: itemBpmById,
       timerPreset:
           timerPreset ??
           (singleItemId == null
@@ -1761,6 +1779,10 @@ class AppController extends ChangeNotifier {
       family: MaterialFamilyV1.warmup,
       practiceMode: PracticeModeV1.singleSurface,
       bpm: _profile.defaultBpm,
+      itemBpmById: <String, int>{
+        for (final PracticeItemV1 item in warmupItems)
+          item.id: _profile.defaultBpm,
+      },
       timerPreset: TimerPresetV1.none,
       clickEnabled: false,
       routineId: null,
@@ -1781,13 +1803,19 @@ class AppController extends ChangeNotifier {
         .where((String itemId) => itemByIdOrNull(itemId) != null)
         .toList(growable: false);
     if (itemIds.isEmpty) return null;
+    final Map<String, int> itemBpmById = <String, int>{
+      for (final String itemId in itemIds)
+        itemId:
+            sessionItemRuntimeFor(session, itemId)?.endingBpm ?? session.bpm,
+    };
     return PracticeSessionSetupV1(
       practiceItemIds: itemIds,
       family: itemIds.length == 1
           ? itemById(itemIds.first).family
           : MaterialFamilyV1.combo,
       practiceMode: session.practiceMode,
-      bpm: session.bpm,
+      bpm: itemBpmById[itemIds.first] ?? session.bpm,
+      itemBpmById: itemBpmById,
       timerPreset: _profile.defaultTimerPreset,
       clickEnabled: session.clickEnabled,
       routineId: session.routineId,
@@ -1798,6 +1826,7 @@ class AppController extends ChangeNotifier {
   PracticeSessionLogV1 completeSession(
     PracticeSessionSetupV1 setup,
     Duration duration, {
+    Map<String, int>? endingBpmByItemId,
     int? endingBpm,
     String? assessmentItemId,
     ReflectionRatingV1? reflection,
@@ -1806,19 +1835,43 @@ class AppController extends ChangeNotifier {
     SelfReportTempoReadinessV1? selfReportTempoReadiness,
   }) {
     final DateTime endedAt = DateTime.now();
+    final Map<String, int> resolvedEndingBpmByItemId =
+        endingBpmByItemId ??
+        <String, int>{
+          for (final String itemId in setup.practiceItemIds)
+            itemId: endingBpm ?? setup.itemBpmById[itemId] ?? setup.bpm,
+        };
+    final List<PracticeSessionItemRuntimeV1> itemRuntimes = setup
+        .practiceItemIds
+        .map(
+          (String itemId) => PracticeSessionItemRuntimeV1(
+            practiceItemId: itemId,
+            startingBpm: setup.itemBpmById[itemId] ?? setup.bpm,
+            endingBpm: resolvedEndingBpmByItemId[itemId] ?? setup.bpm,
+          ),
+        )
+        .toList(growable: false);
+    final String? resolvedAssessmentItemId =
+        assessmentItemId ??
+        (setup.practiceItemIds.isEmpty ? null : setup.practiceItemIds.first);
     final PracticeSessionLogV1 session = PracticeSessionLogV1(
       id: 'session_${endedAt.microsecondsSinceEpoch}',
       startedAt: endedAt.subtract(duration),
       endedAt: endedAt,
       duration: duration,
       practiceItemIds: setup.practiceItemIds,
-      assessmentItemId:
-          assessmentItemId ??
-          (setup.practiceItemIds.isEmpty ? null : setup.practiceItemIds.first),
+      assessmentItemId: resolvedAssessmentItemId,
       family: setup.family,
       practiceMode: setup.practiceMode,
-      startingBpm: setup.bpm,
-      bpm: endingBpm ?? setup.bpm,
+      startingBpm: resolvedAssessmentItemId == null
+          ? setup.bpm
+          : (setup.itemBpmById[resolvedAssessmentItemId] ?? setup.bpm),
+      bpm: resolvedAssessmentItemId == null
+          ? (endingBpm ?? setup.bpm)
+          : (resolvedEndingBpmByItemId[resolvedAssessmentItemId] ??
+                endingBpm ??
+                setup.bpm),
+      itemRuntimes: itemRuntimes,
       clickEnabled: setup.clickEnabled,
       routineId: setup.routineId,
       reflection: reflection,
@@ -1840,6 +1893,7 @@ class AppController extends ChangeNotifier {
 
   void updateSessionAssessment({
     required String sessionId,
+    required String itemId,
     required SelfReportControlV1? selfReportControl,
     required SelfReportTensionV1? selfReportTension,
     required SelfReportTempoReadinessV1? selfReportTempoReadiness,
@@ -1848,7 +1902,9 @@ class AppController extends ChangeNotifier {
     if (session == null) return;
     _assessmentResults = _assessmentResults
         .where(
-          (SessionAssessmentResultV1 result) => result.sessionId != sessionId,
+          (SessionAssessmentResultV1 result) =>
+              !(result.sessionId == sessionId &&
+                  result.practiceItemId == itemId),
         )
         .toList(growable: false);
     if (_isWarmupSession(session)) {
@@ -1857,6 +1913,7 @@ class AppController extends ChangeNotifier {
     }
     _recordManualAssessment(
       session: session,
+      itemIdOverride: itemId,
       selfReportControl: selfReportControl,
       selfReportTension: selfReportTension,
       selfReportTempoReadiness: selfReportTempoReadiness,
@@ -1877,20 +1934,27 @@ class AppController extends ChangeNotifier {
     _notifyChanged();
   }
 
-  SessionAssessmentResultV1? assessmentForSession(String sessionId) {
+  SessionAssessmentResultV1? assessmentForSessionItem(
+    String sessionId,
+    String itemId,
+  ) {
     for (final SessionAssessmentResultV1 result in _assessmentResults) {
-      if (result.sessionId == sessionId) return result;
+      if (result.sessionId == sessionId && result.practiceItemId == itemId) {
+        return result;
+      }
     }
     return null;
   }
 
   void _recordManualAssessment({
     required PracticeSessionLogV1 session,
+    String? itemIdOverride,
     required SelfReportControlV1? selfReportControl,
     required SelfReportTensionV1? selfReportTension,
     required SelfReportTempoReadinessV1? selfReportTempoReadiness,
   }) {
     final String? itemId =
+        itemIdOverride ??
         session.assessmentItemId ??
         (session.practiceItemIds.isEmpty
             ? null
@@ -1923,6 +1987,11 @@ class AppController extends ChangeNotifier {
     required SelfReportTensionV1? selfReportTension,
     required SelfReportTempoReadinessV1? selfReportTempoReadiness,
   }) {
+    final PracticeSessionItemRuntimeV1? runtime = sessionItemRuntimeFor(
+      session,
+      itemId,
+    );
+    final int attemptedBpm = runtime?.endingBpm ?? session.bpm;
     final double controlScore = switch (selfReportControl) {
       SelfReportControlV1.high => 0.88,
       SelfReportControlV1.medium => 0.64,
@@ -1972,8 +2041,8 @@ class AppController extends ChangeNotifier {
       practiceMode: session.practiceMode,
       inputType: AssessmentInputTypeV1.manual,
       confidence: confidence,
-      attemptedBpm: session.bpm,
-      estimatedBpm: session.bpm.toDouble(),
+      attemptedBpm: attemptedBpm,
+      estimatedBpm: attemptedBpm.toDouble(),
       stabilityScore: stability,
       driftScore: drift,
       jitterScore: jitter,

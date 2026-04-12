@@ -428,43 +428,84 @@ class PracticeRoutineV1 {
 }
 
 @immutable
+class PracticeSessionItemRuntimeV1 {
+  final String practiceItemId;
+  final int startingBpm;
+  final int endingBpm;
+
+  const PracticeSessionItemRuntimeV1({
+    required this.practiceItemId,
+    required this.startingBpm,
+    required this.endingBpm,
+  });
+
+  PracticeSessionItemRuntimeV1 copyWith({
+    String? practiceItemId,
+    int? startingBpm,
+    int? endingBpm,
+  }) {
+    return PracticeSessionItemRuntimeV1(
+      practiceItemId: practiceItemId ?? this.practiceItemId,
+      startingBpm: startingBpm ?? this.startingBpm,
+      endingBpm: endingBpm ?? this.endingBpm,
+    );
+  }
+}
+
+@immutable
 class PracticeSessionSetupV1 {
   final List<String> practiceItemIds;
   final MaterialFamilyV1 family;
   final PracticeModeV1 practiceMode;
   final int bpm;
+  final Map<String, int> itemBpmById;
   final TimerPresetV1 timerPreset;
   final bool clickEnabled;
   final String? routineId;
   final String sourceName;
 
-  const PracticeSessionSetupV1({
+  PracticeSessionSetupV1({
     required this.practiceItemIds,
     required this.family,
     required this.practiceMode,
     required this.bpm,
+    Map<String, int>? itemBpmById,
     required this.timerPreset,
     required this.clickEnabled,
     required this.routineId,
     this.sourceName = '',
-  });
+  }) : itemBpmById = Map<String, int>.unmodifiable(
+         itemBpmById ??
+             <String, int>{
+               for (final String itemId in practiceItemIds) itemId: bpm,
+             },
+       );
 
   PracticeSessionSetupV1 copyWith({
     List<String>? practiceItemIds,
     MaterialFamilyV1? family,
     PracticeModeV1? practiceMode,
     int? bpm,
+    Map<String, int>? itemBpmById,
     TimerPresetV1? timerPreset,
     bool? clickEnabled,
     String? routineId,
     String? sourceName,
     bool clearRoutineId = false,
   }) {
+    final List<String> nextPracticeItemIds =
+        practiceItemIds ?? this.practiceItemIds;
+    final int nextBpm = bpm ?? this.bpm;
     return PracticeSessionSetupV1(
-      practiceItemIds: practiceItemIds ?? this.practiceItemIds,
+      practiceItemIds: nextPracticeItemIds,
       family: family ?? this.family,
       practiceMode: practiceMode ?? this.practiceMode,
-      bpm: bpm ?? this.bpm,
+      bpm: nextBpm,
+      itemBpmById:
+          itemBpmById ??
+          this.itemBpmById.map(
+            (String key, int value) => MapEntry<String, int>(key, value),
+          ),
       timerPreset: timerPreset ?? this.timerPreset,
       clickEnabled: clickEnabled ?? this.clickEnabled,
       routineId: clearRoutineId ? null : (routineId ?? this.routineId),
@@ -485,12 +526,13 @@ class PracticeSessionLogV1 {
   final PracticeModeV1 practiceMode;
   final int startingBpm;
   final int bpm;
+  final List<PracticeSessionItemRuntimeV1> itemRuntimes;
   final bool clickEnabled;
   final String? routineId;
   final ReflectionRatingV1? reflection;
   final String sourceName;
 
-  const PracticeSessionLogV1({
+  PracticeSessionLogV1({
     required this.id,
     required this.startedAt,
     required this.endedAt,
@@ -501,11 +543,24 @@ class PracticeSessionLogV1 {
     required this.practiceMode,
     int? startingBpm,
     required this.bpm,
+    List<PracticeSessionItemRuntimeV1>? itemRuntimes,
     required this.clickEnabled,
     required this.routineId,
     required this.reflection,
     this.sourceName = '',
-  }) : startingBpm = startingBpm ?? bpm;
+  }) : startingBpm = startingBpm ?? bpm,
+       itemRuntimes = List<PracticeSessionItemRuntimeV1>.unmodifiable(
+         itemRuntimes ??
+             practiceItemIds
+                 .map(
+                   (String itemId) => PracticeSessionItemRuntimeV1(
+                     practiceItemId: itemId,
+                     startingBpm: startingBpm ?? bpm,
+                     endingBpm: bpm,
+                   ),
+                 )
+                 .toList(growable: false),
+       );
 
   PracticeSessionLogV1 copyWith({
     String? id,
@@ -519,6 +574,7 @@ class PracticeSessionLogV1 {
     PracticeModeV1? practiceMode,
     int? startingBpm,
     int? bpm,
+    List<PracticeSessionItemRuntimeV1>? itemRuntimes,
     bool? clickEnabled,
     String? routineId,
     bool clearRoutineId = false,
@@ -539,6 +595,7 @@ class PracticeSessionLogV1 {
       practiceMode: practiceMode ?? this.practiceMode,
       startingBpm: startingBpm ?? this.startingBpm,
       bpm: bpm ?? this.bpm,
+      itemRuntimes: itemRuntimes ?? this.itemRuntimes,
       clickEnabled: clickEnabled ?? this.clickEnabled,
       routineId: clearRoutineId ? null : (routineId ?? this.routineId),
       reflection: clearReflection ? null : (reflection ?? this.reflection),

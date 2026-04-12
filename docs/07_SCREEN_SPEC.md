@@ -341,6 +341,7 @@ Must show:
 Must do:
 
 - when the timer reaches the target duration, switch to a clear completed visual state without force-ending the session
+- in multi-item sessions, BPM changes should belong to the currently shown item, not the whole session globally
 
 #### State C: Warmup Session
 
@@ -380,6 +381,7 @@ Running transport rules:
 - the player must not contain an in-session `Warm Up` entry point
 - back from Session Summary returns to the player
 - back from the player returns to Practice
+- multi-item sessions should preserve item-specific runtime BPM while the player moves between items
 
 ---
 

@@ -4,9 +4,9 @@ import '../../core/practice/practice_domain_v1.dart';
 import '../../features/app/app_formatters.dart';
 import '../../features/app/drumcabulary_ui.dart';
 import '../../state/app_controller.dart';
+import 'practice_session_screen.dart';
 import 'widgets/pattern_display_text.dart';
 import 'widgets/pattern_voice_display.dart';
-import 'practice_session_screen.dart';
 
 class SessionSummaryScreen extends StatefulWidget {
   final AppController controller;
@@ -26,32 +26,69 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
   SelfReportControlV1? _control;
   SelfReportTensionV1? _tension;
   SelfReportTempoReadinessV1? _tempoReadiness;
-  bool _assessmentLoaded = false;
-  bool _savedBpm = false;
+  final Set<String> _savedBpmItemIds = <String>{};
+  late int _currentItemIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    final PracticeSessionLogV1? session = widget.controller.sessionById(
+      widget.sessionId,
+    );
+    final int seededIndex = session == null
+        ? 0
+        : _initialItemIndexForSession(session).clamp(
+            0,
+            session.practiceItemIds.isEmpty
+                ? 0
+                : session.practiceItemIds.length - 1,
+          );
+    _currentItemIndex = seededIndex;
+    if (session != null && session.practiceItemIds.isNotEmpty) {
+      _loadAssessmentForItem(
+        session.id,
+        session.practiceItemIds[_currentItemIndex],
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final session = widget.controller.sessionById(widget.sessionId);
+    final PracticeSessionLogV1? session = widget.controller.sessionById(
+      widget.sessionId,
+    );
     if (session == null) {
       return const Scaffold(body: Center(child: Text('Session not found.')));
     }
-    _loadAssessmentOnce(session.id);
-
-    final String primaryItemId =
-        session.assessmentItemId ??
-        (session.practiceItemIds.isEmpty ? '' : session.practiceItemIds.first);
-    if (primaryItemId.isEmpty) {
+    if (session.practiceItemIds.isEmpty) {
       return const Scaffold(body: Center(child: Text('Session not found.')));
     }
-    final firstItem = widget.controller.itemById(primaryItemId);
-    final bool isWorkingOnSource = session.sourceName == 'Working On';
-    final bool bpmAdjusted = session.startingBpm != session.bpm;
-    final _SessionRecommendation? recommendation = _recommendationFor(session);
+
+    final int safeIndex = _currentItemIndex.clamp(
+      0,
+      session.practiceItemIds.length - 1,
+    );
+    final String currentItemId = session.practiceItemIds[safeIndex];
+    final PracticeItemV1 currentItem = widget.controller.itemById(
+      currentItemId,
+    );
+    final PracticeSessionItemRuntimeV1 currentRuntime =
+        widget.controller.sessionItemRuntimeFor(session, currentItemId) ??
+        PracticeSessionItemRuntimeV1(
+          practiceItemId: currentItemId,
+          startingBpm: session.startingBpm,
+          endingBpm: session.bpm,
+        );
+    final bool bpmAdjusted =
+        currentRuntime.startingBpm != currentRuntime.endingBpm;
+    final _SessionRecommendation? recommendation = _recommendationFor(
+      needsTempoDecision: bpmAdjusted,
+    );
     final bool canSaveBpm =
-        !_savedBpm &&
+        !_savedBpmItemIds.contains(currentItemId) &&
         bpmAdjusted &&
-        session.practiceItemIds.length == 1 &&
-        widget.controller.launchBpmForItem(primaryItemId) != session.bpm;
+        widget.controller.launchBpmForItem(currentItemId) !=
+            currentRuntime.endingBpm;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Session Summary')),
@@ -64,15 +101,28 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
+                  if (session.practiceItemIds.length > 1) ...<Widget>[
+                    _SummaryStepper(
+                      currentIndex: safeIndex,
+                      itemCount: session.practiceItemIds.length,
+                      onPrevious: safeIndex == 0
+                          ? null
+                          : () => _changeItem(session, safeIndex - 1),
+                      onNext: safeIndex == session.practiceItemIds.length - 1
+                          ? null
+                          : () => _changeItem(session, safeIndex + 1),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
                   if (session.practiceMode == PracticeModeV1.flow)
                     PatternVoiceDisplay(
-                      tokens: widget.controller.noteTokensFor(primaryItemId),
+                      tokens: widget.controller.noteTokensFor(currentItemId),
                       markings: widget.controller.noteMarkingsFor(
-                        primaryItemId,
+                        currentItemId,
                       ),
-                      voices: widget.controller.noteVoicesFor(primaryItemId),
+                      voices: widget.controller.noteVoicesFor(currentItemId),
                       grouping: widget.controller.displayGroupingFor(
-                        primaryItemId,
+                        currentItemId,
                       ),
                       patternStyle: Theme.of(context).textTheme.headlineMedium
                           ?.copyWith(
@@ -83,12 +133,12 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                     )
                   else
                     PatternDisplayText(
-                      tokens: widget.controller.noteTokensFor(primaryItemId),
+                      tokens: widget.controller.noteTokensFor(currentItemId),
                       markings: widget.controller.noteMarkingsFor(
-                        primaryItemId,
+                        currentItemId,
                       ),
                       grouping: widget.controller.displayGroupingFor(
-                        primaryItemId,
+                        currentItemId,
                       ),
                       style: Theme.of(context).textTheme.headlineMedium
                           ?.copyWith(
@@ -98,14 +148,13 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                     ),
                   const SizedBox(height: 12),
                   _SummaryMetric(
-                    label: 'Mode',
-                    value: session.practiceMode.label,
-                  ),
-                  _SummaryMetric(
                     label: 'Duration',
                     value: formatDuration(session.duration),
                   ),
-                  _SummaryMetric(label: 'BPM', value: '${session.bpm}'),
+                  _SummaryMetric(
+                    label: 'BPM',
+                    value: '${currentRuntime.endingBpm}',
+                  ),
                 ],
               ),
             ),
@@ -117,7 +166,7 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                   const DrumSectionTitle(text: 'Check The Rep'),
                   const SizedBox(height: 8),
                   Text(
-                    'Mark how it felt, then decide what the next rep needs.',
+                    'Mark how this pattern felt, then decide what the next rep needs.',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 16),
@@ -128,7 +177,7 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                     labelFor: (SelfReportControlV1 value) => value.label,
                     onSelected: (SelfReportControlV1 value) {
                       setState(() => _control = value);
-                      _saveAssessment(session.id);
+                      _saveAssessment(session.id, currentItemId);
                     },
                   ),
                   const SizedBox(height: 16),
@@ -139,25 +188,24 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                     labelFor: (SelfReportTensionV1 value) => value.label,
                     onSelected: (SelfReportTensionV1 value) {
                       setState(() => _tension = value);
-                      _saveAssessment(session.id);
+                      _saveAssessment(session.id, currentItemId);
                     },
                   ),
-                  const SizedBox(height: 16),
                   if (bpmAdjusted) ...<Widget>[
                     const SizedBox(height: 16),
                     _AssessmentChoiceGroup<bool>(
-                      title: 'Keep ${session.bpm} BPM?',
-                      value: _keepAdjustedTempoValue(session),
+                      title: 'Keep ${currentRuntime.endingBpm} BPM?',
+                      value: _keepAdjustedTempoValue(currentRuntime),
                       values: const <bool>[true, false],
                       labelFor: (bool value) => value ? 'Yes' : 'No',
                       onSelected: (bool value) {
-                        setState(
-                          () => _tempoReadiness = _tempoReadinessForAdjustedBpm(
-                            session,
+                        setState(() {
+                          _tempoReadiness = _tempoReadinessForAdjustedBpm(
+                            currentRuntime,
                             value,
-                          ),
-                        );
-                        _saveAssessment(session.id);
+                          );
+                        });
+                        _saveAssessment(session.id, currentItemId);
                       },
                     ),
                   ],
@@ -186,7 +234,7 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  'This rep ended at ${session.bpm} BPM. Save that as the starting BPM for this item?',
+                                  'This rep ended at ${currentRuntime.endingBpm} BPM. Save that as the starting BPM for this item?',
                                   style: Theme.of(context).textTheme.bodyMedium,
                                 ),
                               ],
@@ -197,15 +245,15 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                             onPressed: () {
                               widget.controller
                                   .rememberLaunchPreferencesForItem(
-                                    itemId: primaryItemId,
-                                    bpm: session.bpm,
+                                    itemId: currentItemId,
+                                    bpm: currentRuntime.endingBpm,
                                     timerPreset: widget.controller
                                         .launchTimerPresetForItem(
-                                          primaryItemId,
+                                          currentItemId,
                                         ),
                                   );
                               setState(() {
-                                _savedBpm = true;
+                                _savedBpmItemIds.add(currentItemId);
                               });
                             },
                             child: const Text('Save BPM'),
@@ -220,36 +268,28 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
             const SizedBox(height: 16),
             DrumActionRow(
               children: <Widget>[
-                if (!widget.controller.isInRoutine(firstItem.id))
+                if (!widget.controller.isInRoutine(currentItem.id))
                   FilledButton(
                     onPressed: () {
-                      widget.controller.toggleRoutineItem(firstItem.id);
+                      widget.controller.toggleRoutineItem(currentItem.id);
+                      setState(() {});
                     },
                     child: const Text('Add to Working On'),
                   ),
                 OutlinedButton(
                   onPressed: () {
+                    final int nextBpm =
+                        recommendation?.nextBpm(currentRuntime.endingBpm) ??
+                        currentRuntime.endingBpm;
                     Navigator.of(context).pushReplacement(
                       MaterialPageRoute<void>(
                         builder: (_) => PracticeSessionScreen(
                           controller: widget.controller,
-                          setup:
-                              (isWorkingOnSource
-                                      ? widget.controller
-                                            .buildSessionForWorkingOnSelection(
-                                              session.practiceItemIds,
-                                              practiceMode:
-                                                  session.practiceMode,
-                                            )
-                                      : widget.controller.buildSessionForItem(
-                                          firstItem.id,
-                                          practiceMode: session.practiceMode,
-                                        ))
-                                  .copyWith(
-                                    bpm:
-                                        recommendation?.nextBpm(session.bpm) ??
-                                        session.bpm,
-                                  ),
+                          setup: widget.controller.buildSessionForItem(
+                            currentItem.id,
+                            practiceMode: session.practiceMode,
+                            bpm: nextBpm,
+                          ),
                         ),
                       ),
                     );
@@ -258,7 +298,7 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                 ),
                 OutlinedButton(
                   onPressed: () {
-                    Navigator.of(context).popUntil((route) => route.isFirst);
+                    Navigator.of(context).pop();
                   },
                   child: const Text('Done'),
                 ),
@@ -270,45 +310,64 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
     );
   }
 
-  void _loadAssessmentOnce(String sessionId) {
-    if (_assessmentLoaded) return;
-    _assessmentLoaded = true;
+  int _initialItemIndexForSession(PracticeSessionLogV1 session) {
+    final String? assessmentItemId = session.assessmentItemId;
+    if (assessmentItemId == null) return 0;
+    final int index = session.practiceItemIds.indexOf(assessmentItemId);
+    return index < 0 ? 0 : index;
+  }
+
+  void _changeItem(PracticeSessionLogV1 session, int nextIndex) {
+    final int clampedIndex = nextIndex.clamp(
+      0,
+      session.practiceItemIds.length - 1,
+    );
+    final String nextItemId = session.practiceItemIds[clampedIndex];
+    setState(() {
+      _currentItemIndex = clampedIndex;
+      _loadAssessmentForItem(session.id, nextItemId);
+    });
+  }
+
+  void _loadAssessmentForItem(String sessionId, String itemId) {
     final SessionAssessmentResultV1? result = widget.controller
-        .assessmentForSession(sessionId);
+        .assessmentForSessionItem(sessionId, itemId);
     _control = result?.selfReportControl;
     _tension = result?.selfReportTension;
     _tempoReadiness = result?.selfReportTempoReadiness;
   }
 
-  void _saveAssessment(String sessionId) {
+  void _saveAssessment(String sessionId, String itemId) {
     widget.controller.updateSessionAssessment(
       sessionId: sessionId,
+      itemId: itemId,
       selfReportControl: _control,
       selfReportTension: _tension,
       selfReportTempoReadiness: _tempoReadiness,
     );
   }
 
-  bool? _keepAdjustedTempoValue(PracticeSessionLogV1 session) {
-    if (session.startingBpm == session.bpm) return null;
+  bool? _keepAdjustedTempoValue(PracticeSessionItemRuntimeV1 runtime) {
+    if (runtime.startingBpm == runtime.endingBpm) return null;
     final SelfReportTempoReadinessV1? readiness = _tempoReadiness;
     if (readiness == null) return null;
     if (readiness == SelfReportTempoReadinessV1.same) return false;
-    return readiness == _tempoReadinessForAdjustedBpm(session, true);
+    return readiness == _tempoReadinessForAdjustedBpm(runtime, true);
   }
 
   SelfReportTempoReadinessV1 _tempoReadinessForAdjustedBpm(
-    PracticeSessionLogV1 session,
+    PracticeSessionItemRuntimeV1 runtime,
     bool keepAdjustedTempo,
   ) {
     if (!keepAdjustedTempo) return SelfReportTempoReadinessV1.same;
-    return session.bpm > session.startingBpm
+    return runtime.endingBpm > runtime.startingBpm
         ? SelfReportTempoReadinessV1.increase
         : SelfReportTempoReadinessV1.decrease;
   }
 
-  _SessionRecommendation? _recommendationFor(PracticeSessionLogV1 session) {
-    final bool needsTempoDecision = session.startingBpm != session.bpm;
+  _SessionRecommendation? _recommendationFor({
+    required bool needsTempoDecision,
+  }) {
     final bool incomplete =
         _control == null ||
         _tension == null ||
@@ -471,6 +530,40 @@ class _AssessmentChoiceGroup<T> extends StatelessWidget {
               )
               .toList(growable: false),
         ),
+      ],
+    );
+  }
+}
+
+class _SummaryStepper extends StatelessWidget {
+  final int currentIndex;
+  final int itemCount;
+  final VoidCallback? onPrevious;
+  final VoidCallback? onNext;
+
+  const _SummaryStepper({
+    required this.currentIndex,
+    required this.itemCount,
+    required this.onPrevious,
+    required this.onNext,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        IconButton(onPressed: onPrevious, icon: const Icon(Icons.chevron_left)),
+        Expanded(
+          child: Center(
+            child: Text(
+              '${currentIndex + 1} / $itemCount',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+            ),
+          ),
+        ),
+        IconButton(onPressed: onNext, icon: const Icon(Icons.chevron_right)),
       ],
     );
   }

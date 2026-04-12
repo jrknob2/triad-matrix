@@ -844,6 +844,9 @@ Practice Session is execution only.
 - when the timer reaches the target duration, the player should enter a clear completed visual state
 - reaching target duration must not silently stop the session
 - `End` leads to summary
+- in multi-item sessions, BPM is per-item runtime state
+- changing BPM during a multi-item session must apply to the currently shown item only
+- when the player moves between items, the item's current runtime BPM must be restored
 
 ### Control Rules
 
@@ -874,6 +877,7 @@ Session Summary closes a tracked session and collects limited useful feedback.
 - conditional tempo check when BPM changed during the session
 - next-step recommendation after meaningful assessment input exists
 - practice again
+- prev/next when the session includes multiple assessed items
 
 ### Forbidden Content
 
@@ -893,13 +897,14 @@ Session Summary closes a tracked session and collects limited useful feedback.
 ### Rules
 
 - one summary per tracked session
-- one assessment target item per session summary
+- multi-item sessions must allow the user to navigate and assess each item individually inside the same summary flow
+- each item in a multi-item session should have its own assessment state for that session
 - wording must stay action-oriented
 - top metadata should describe the assessed item and the session clearly without mixing item-level and session-level labels in misleading ways
 - if BPM did not change during the session, the summary should not ask a tempo question
-- if BPM did change during the session, the summary may ask whether the ending BPM should be kept for the next rep
+- if BPM did change for the current item during the session, the summary may ask whether the ending BPM should be kept for that item next time
 - recommendation copy should not duplicate the instructional text already visible above the controls
-- if session BPM differs from the item's saved practice BPM, Session Summary should offer a way to save the BPM back to that item
+- if session BPM differs from the item's saved practice BPM, Session Summary should offer a way to save the BPM back to that current item
 - session completion itself must not silently overwrite the item's saved practice BPM
 - back navigation from Session Summary should return to the player screen for that session
 - back navigation from the player should return to Practice
