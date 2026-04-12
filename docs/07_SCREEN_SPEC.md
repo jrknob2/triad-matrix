@@ -46,14 +46,13 @@ Secondary routes:
 
 No `Practice Setup` screen exists in this model.
 
-Phone and iPad may use different shell layouts.
+Phone is the only MVP layout target.
+
+iPad is deferred until after MVP.
 
 Rules:
 
 - phone uses bottom navigation
-- iPad uses a persistent side navigation rail
-- iPad may keep related working surfaces visible together when width allows
-- `Practice Session` may open as an immersive fullscreen route on iPad only
 
 ---
 
@@ -61,7 +60,7 @@ Rules:
 
 ### Purpose
 
-Coach tells the player what to do next and why.
+Coach gives a progress-aware summary first, then one concrete next action.
 
 ### Must Do
 
@@ -70,7 +69,8 @@ Coach tells the player what to do next and why.
 - point the player back to current work when momentum matters
 - surface cleanup needs
 - surface next-step opportunities
-- sound like a teacher noticing a problem or readiness signal and responding to it
+- sound like a teacher reading progress and responding to it
+- lead with summary, then one concrete next action
 
 ### Must Not Do
 
@@ -125,7 +125,8 @@ Condition:
 Must show:
 
 - one or two cards max
-- clear next action
+- summary-first guidance
+- one clear next action
 - evidence that feels concrete, not theoretical
 
 #### State D: Active Development
@@ -171,6 +172,7 @@ Must show:
 ### Acceptance Criteria
 
 - user should always know the next best action
+- user should first understand how practice is going overall
 - no internal/framework wording may appear
 - no static filler cards may appear once real data exists
 - the screen should feel sparse, not busy
@@ -219,11 +221,6 @@ Matrix is the structural map of the triad system and the main phrase-building su
 
 - specific view/filter preset already active
 - context visible but lightweight
-
-#### State D: iPad Split Layout
-
-- grid remains primary on the left
-- phrase editor and action context remain visible on the right
 
 ### Primary Actions
 
@@ -274,7 +271,6 @@ Phrase rule:
 - compact horizontal controls are preferred before adding more stacked filter rows
 - row and column slicers must look touchable, not like passive labels
 - Matrix action controls should change meaningfully between single-triad selection and phrase-building selection
-- on iPad, phrase-building context should not push the grid far down the page when both can fit side by side
 - filter controls should be labeled `Filters` and rendered in a single horizontally scrollable row
 
 ---
@@ -337,7 +333,12 @@ Must show:
 - notation
 - pulse / click / BPM / timer
 - prev/next when source contains multiple items
-- `End Session`
+- `Play`
+- `End`
+
+Must do:
+
+- when the timer reaches the target duration, switch to a clear completed visual state without force-ending the session
 
 #### State C: Warmup Session
 
@@ -357,6 +358,11 @@ Warmup rules:
 - auto-advance
 - untracked
 - entered from `Practice` only
+
+Running transport rules:
+
+- while running, primary transport controls are `Pause` and `Reset`
+- `End` remains the session-exit control for normal tracked sessions
 
 ### Acceptance Criteria
 
@@ -441,7 +447,6 @@ Optional:
 - no extra per-item flow-launch button should appear in the list
 - there should be no fake summary cards trying to turn this into a dashboard
 - removing an item should require confirmation with the item's notation visible in the prompt
-- on iPad, the list should use width for denser row composition before growing taller
 
 ---
 
@@ -503,7 +508,6 @@ Progress measures development.
 - no copy like “this is the same status language used by Coach and Matrix”
 - graph titles must say what is being measured
 - status differences must be visually obvious in graphs
-- on iPad, metrics and graphs should prefer multi-column composition before vertical phone-style stacking
 
 ---
 

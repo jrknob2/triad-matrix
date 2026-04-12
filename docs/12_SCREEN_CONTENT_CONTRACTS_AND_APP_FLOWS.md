@@ -17,9 +17,7 @@ If a control or block cannot be justified by a defined flow in this document, it
 The bottom app navigation must remain visible across primary and detail flows.
 Detail screens and session flows should live inside the shell, not cover it.
 
-Exception:
-
-- on iPad, `Practice Session` may open as an immersive fullscreen route that temporarily leaves the shell chrome
+iPad-specific shell and fullscreen session exceptions are deferred until after MVP.
 
 Communication rules for all student-facing text are defined in:
 
@@ -65,8 +63,8 @@ Interpretation:
 
 Tablet rule:
 
-- on iPad, prefer split-pane and multi-column composition over centered phone-width layouts
-- keep phone and tablet flows aligned conceptually, but do not force the same visual structure on both
+- tablet-specific layout work is deferred until after MVP
+- current active contracts should optimize the phone experience first
 
 Filter row rule:
 
@@ -296,6 +294,8 @@ Rules:
 - no voice assignments and all-default voices are the same single-surface state
 - default kick placement on `K` does not make an item `Flow`
 - `Single Surface` is the universal baseline practice mode, not an item classification
+- free-built phrases remain allowed in v1
+- curated phrase guidance is a later product layer and should not constrain current free-building behavior
 
 ### Flow H: Warmup
 
@@ -331,13 +331,15 @@ Required controls:
 
 Coach answers:
 
+- how is my practice going overall
 - what should I do next
 - why now
 - what is the shortest useful path into practice
 
 ### Allowed Content
 
-- 1 to 3 action cards
+- 1 to 2 cards
+- one summary-first lead card
 - short evidence lines
 - one primary CTA per card
 - optional secondary `See in Matrix`
@@ -371,6 +373,12 @@ Visible card identity should be a coaching move, not the internal type.
 - short body
 - one concrete reason
 - one primary CTA
+
+Coach structure rule:
+
+- the first card should read as a progress-aware summary
+- Coach may include one concrete next action beneath that summary
+- Coach should not feel like a stack of drill commands
 
 Preferred visible title shapes:
 
@@ -442,6 +450,10 @@ Show:
 - `Focus`
 - `Needs Work`
 
+Rule:
+
+- first visible card should summarize the slowdown or inconsistency before naming the next action
+
 #### Steady Progress
 
 Show:
@@ -449,6 +461,11 @@ Show:
 - `Focus`
 - `Needs Work`
 - `Momentum`
+
+Rule:
+
+- lead with progress summary
+- follow with one next action only when it adds value
 
 #### Phrase Ready
 
@@ -458,12 +475,20 @@ Show:
 - `Momentum`
 - `Next Unlock`
 
+Rule:
+
+- summary should state readiness before pointing to phrase work
+
 #### Flow Ready
 
 Show:
 
 - `Momentum`
 - `Next Unlock`
+
+Rule:
+
+- summary should state readiness before pointing to flow work
 
 ---
 
@@ -805,7 +830,9 @@ Practice Session is execution only.
 ### Normal Session Rules
 
 - target reached may cue, but not force-end
-- `End Session` leads to summary
+- when the timer reaches the target duration, the player should enter a clear completed visual state
+- reaching target duration must not silently stop the session
+- `End` leads to summary
 
 ### Control Rules
 
@@ -813,6 +840,8 @@ Practice Session is execution only.
 - notation is the primary visual signal
 - pulse/click/BPM/timer support the playing, not the screen narrative
 - the player must not contain controls that switch the session into a different source type
+- default stopped transport state should present `Play` and `End`
+- running transport state should present `Pause` and `Reset`
 
 ---
 
@@ -850,6 +879,7 @@ Session Summary closes a tracked session and collects limited useful feedback.
 - one summary per tracked session
 - one assessment target item per session summary
 - wording must stay action-oriented
+- if session BPM differs from the item's saved practice BPM, Session Summary should offer a way to save the BPM back to that item
 
 ---
 
@@ -902,7 +932,8 @@ Must not show:
 
 - `Working On` may be broader than today's session scope
 - Focus must not imply that every item in the list should be practiced in one sitting
-- Focus is where current material is maintained
+- `Working On` is for active development
+- `Maintain` is a separate bucket for refresh and retention of already-strong material
 - Practice session setup is where the player chooses today's slice
 - search on this screen should look across all practice items, not only items already in `Working On`
 - search results that are not in `Working On` should support add/open behavior

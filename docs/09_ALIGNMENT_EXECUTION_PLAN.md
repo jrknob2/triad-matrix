@@ -8,6 +8,10 @@ It exists because the app improved locally but drifted globally. The product now
 
 This plan is the bridge from the current app to a tighter v1.
 
+Current pass triage now lives in:
+
+- [15_MVP_TRIAGE_AND_PASS_ORDER.md](/Users/terryknoblock/Development/flutter-projects/traid_trainer/docs/15_MVP_TRIAGE_AND_PASS_ORDER.md)
+
 ---
 
 ## What Went Wrong
