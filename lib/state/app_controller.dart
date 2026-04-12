@@ -1826,6 +1826,7 @@ class AppController extends ChangeNotifier {
   PracticeSessionLogV1 completeSession(
     PracticeSessionSetupV1 setup,
     Duration duration, {
+    List<String>? practicedItemIds,
     Map<String, int>? endingBpmByItemId,
     int? endingBpm,
     String? assessmentItemId,
@@ -1835,31 +1836,37 @@ class AppController extends ChangeNotifier {
     SelfReportTempoReadinessV1? selfReportTempoReadiness,
   }) {
     final DateTime endedAt = DateTime.now();
+    final List<String> resolvedPracticedItemIds =
+        practicedItemIds == null || practicedItemIds.isEmpty
+        ? List<String>.from(setup.practiceItemIds)
+        : List<String>.from(practicedItemIds);
     final Map<String, int> resolvedEndingBpmByItemId =
         endingBpmByItemId ??
         <String, int>{
-          for (final String itemId in setup.practiceItemIds)
+          for (final String itemId in resolvedPracticedItemIds)
             itemId: endingBpm ?? setup.itemBpmById[itemId] ?? setup.bpm,
         };
-    final List<PracticeSessionItemRuntimeV1> itemRuntimes = setup
-        .practiceItemIds
-        .map(
-          (String itemId) => PracticeSessionItemRuntimeV1(
-            practiceItemId: itemId,
-            startingBpm: setup.itemBpmById[itemId] ?? setup.bpm,
-            endingBpm: resolvedEndingBpmByItemId[itemId] ?? setup.bpm,
-          ),
-        )
-        .toList(growable: false);
+    final List<PracticeSessionItemRuntimeV1> itemRuntimes =
+        resolvedPracticedItemIds
+            .map(
+              (String itemId) => PracticeSessionItemRuntimeV1(
+                practiceItemId: itemId,
+                startingBpm: setup.itemBpmById[itemId] ?? setup.bpm,
+                endingBpm: resolvedEndingBpmByItemId[itemId] ?? setup.bpm,
+              ),
+            )
+            .toList(growable: false);
     final String? resolvedAssessmentItemId =
         assessmentItemId ??
-        (setup.practiceItemIds.isEmpty ? null : setup.practiceItemIds.first);
+        (resolvedPracticedItemIds.isEmpty
+            ? null
+            : resolvedPracticedItemIds.first);
     final PracticeSessionLogV1 session = PracticeSessionLogV1(
       id: 'session_${endedAt.microsecondsSinceEpoch}',
       startedAt: endedAt.subtract(duration),
       endedAt: endedAt,
       duration: duration,
-      practiceItemIds: setup.practiceItemIds,
+      practiceItemIds: resolvedPracticedItemIds,
       assessmentItemId: resolvedAssessmentItemId,
       family: setup.family,
       practiceMode: setup.practiceMode,

@@ -57,6 +57,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   bool _summaryOpenedForCurrentRun = false;
   Duration _elapsedOffset = Duration.zero;
   late Map<String, int> _itemBpmById;
+  late List<String> _practicedItemIds;
   late bool _pulseEnabled;
   late int _bpm;
   late bool _clickEnabled;
@@ -68,6 +69,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     super.initState();
     _setup = widget.setup;
     _itemBpmById = Map<String, int>.from(_setup.itemBpmById);
+    _practicedItemIds = <String>[];
     _bpm = _itemBpmById[_currentItemId] ?? _setup.bpm;
     _clickEnabled = _setup.family == MaterialFamilyV1.warmup
         ? false
@@ -354,7 +356,11 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     setState(() {
       if (shouldStart) {
         if (_summaryOpenedForCurrentRun) {
-          _resetRunState(clearElapsed: true, clearFlags: true);
+          _resetRunState(
+            clearElapsed: true,
+            clearFlags: true,
+            clearPracticedItems: true,
+          );
           _summaryOpenedForCurrentRun = false;
         }
         if (_setup.family == MaterialFamilyV1.warmup && _warmupComplete) {
@@ -369,6 +375,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
         _completionStateVisible = false;
         _running = true;
         _stopwatch.start();
+        _markCurrentItemPracticed();
         _startElapsedTicker();
       } else {
         _running = false;
@@ -397,8 +404,11 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     final PracticeSessionLogV1 session = widget.controller.completeSession(
       _setup.copyWith(clickEnabled: _clickEnabled),
       _elapsed,
+      practicedItemIds: _practicedItemIds,
       endingBpmByItemId: _itemBpmById,
-      assessmentItemId: _currentItemId,
+      assessmentItemId: _practicedItemIds.isEmpty
+          ? _currentItemId
+          : _practicedItemIds.first,
     );
     _summaryOpenedForCurrentRun = true;
 
@@ -455,7 +465,11 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     });
   }
 
-  void _resetRunState({bool clearElapsed = true, bool clearFlags = false}) {
+  void _resetRunState({
+    bool clearElapsed = true,
+    bool clearFlags = false,
+    bool clearPracticedItems = false,
+  }) {
     if (_running) {
       _stopwatch.stop();
     }
@@ -474,12 +488,19 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
       _completionChimed = false;
       _completionStateVisible = false;
     }
+    if (clearPracticedItems) {
+      _practicedItemIds = <String>[];
+    }
   }
 
   void _resetCurrentSessionRun() {
     if (_isWarmup) return;
     setState(() {
-      _resetRunState(clearElapsed: true, clearFlags: true);
+      _resetRunState(
+        clearElapsed: true,
+        clearFlags: true,
+        clearPracticedItems: true,
+      );
     });
   }
 
@@ -520,6 +541,9 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   void _startElapsedTicker() {
     _elapsedTicker?.cancel();
     _elapsedTicker = Timer.periodic(const Duration(milliseconds: 250), (_) {
+      if (_running && !_isWarmup) {
+        _markCurrentItemPracticed();
+      }
       if (_setup.family == MaterialFamilyV1.warmup) {
         _syncWarmupProgress();
       } else {
@@ -643,6 +667,13 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     } catch (_) {
       // Ignore transient playback errors during completion chime.
     }
+  }
+
+  void _markCurrentItemPracticed() {
+    if (_isWarmup) return;
+    final String itemId = _currentItemId;
+    if (_practicedItemIds.contains(itemId)) return;
+    _practicedItemIds = <String>[..._practicedItemIds, itemId];
   }
 }
 

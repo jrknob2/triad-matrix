@@ -382,6 +382,9 @@ Running transport rules:
 - back from Session Summary returns to the player
 - back from the player returns to Practice
 - multi-item sessions should preserve item-specific runtime BPM while the player moves between items
+- multi-item tracked sessions should only carry practiced patterns into Session Summary
+- Session Summary should open on the first practiced pattern, not the last viewed pattern
+- when a pattern's BPM changed during the session, Session Summary should present one BPM save choice for that pattern
 
 ---
 

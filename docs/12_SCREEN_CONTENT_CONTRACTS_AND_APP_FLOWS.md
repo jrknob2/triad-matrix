@@ -847,6 +847,9 @@ Practice Session is execution only.
 - in multi-item sessions, BPM is per-item runtime state
 - changing BPM during a multi-item session must apply to the currently shown item only
 - when the player moves between items, the item's current runtime BPM must be restored
+- in a multi-item session, only patterns that were actually practiced should be recorded into the completed tracked session
+- viewing a pattern without playing it should not make it part of the tracked assessed set
+- when a tracked multi-item session ends, Session Summary should open on the first practiced pattern
 
 ### Control Rules
 
@@ -893,21 +896,25 @@ Session Summary closes a tracked session and collects limited useful feedback.
 - session check choices
 - `Practice Again`
 - close/back
+- `Submit`
 
 ### Rules
 
 - one summary per tracked session
 - multi-item sessions must allow the user to navigate and assess each item individually inside the same summary flow
 - each item in a multi-item session should have its own assessment state for that session
+- Session Summary should only include patterns that were actually practiced in that session
 - wording must stay action-oriented
 - top metadata should describe the assessed item and the session clearly without mixing item-level and session-level labels in misleading ways
 - if BPM did not change during the session, the summary should not ask a tempo question
-- if BPM did change for the current item during the session, the summary may ask whether the ending BPM should be kept for that item next time
+- if BPM did change for the current item during the session, the summary should offer one explicit BPM save choice for that current item
+- the BPM save choice should live inside the BPM sub-card, not as a separate detached action
 - recommendation copy should not duplicate the instructional text already visible above the controls
 - if session BPM differs from the item's saved practice BPM, Session Summary should offer a way to save the BPM back to that current item
 - session completion itself must not silently overwrite the item's saved practice BPM
 - back navigation from Session Summary should return to the player screen for that session
 - back navigation from the player should return to Practice
+- the final completion action should be labeled `Submit`
 
 ---
 

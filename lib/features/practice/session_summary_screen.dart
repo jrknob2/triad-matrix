@@ -25,7 +25,6 @@ class SessionSummaryScreen extends StatefulWidget {
 class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
   SelfReportControlV1? _control;
   SelfReportTensionV1? _tension;
-  SelfReportTempoReadinessV1? _tempoReadiness;
   final Set<String> _savedBpmItemIds = <String>{};
   late int _currentItemIndex;
 
@@ -191,24 +190,6 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                       _saveAssessment(session.id, currentItemId);
                     },
                   ),
-                  if (bpmAdjusted) ...<Widget>[
-                    const SizedBox(height: 16),
-                    _AssessmentChoiceGroup<bool>(
-                      title: 'Keep ${currentRuntime.endingBpm} BPM?',
-                      value: _keepAdjustedTempoValue(currentRuntime),
-                      values: const <bool>[true, false],
-                      labelFor: (bool value) => value ? 'Yes' : 'No',
-                      onSelected: (bool value) {
-                        setState(() {
-                          _tempoReadiness = _tempoReadinessForAdjustedBpm(
-                            currentRuntime,
-                            value,
-                          );
-                        });
-                        _saveAssessment(session.id, currentItemId);
-                      },
-                    ),
-                  ],
                   if (recommendation != null) ...<Widget>[
                     const SizedBox(height: 16),
                     _RecommendationPanel(recommendation: recommendation),
@@ -234,15 +215,17 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  'This rep ended at ${currentRuntime.endingBpm} BPM. Save that as the starting BPM for this item?',
+                                  'This rep ended at ${currentRuntime.endingBpm} BPM.',
                                   style: Theme.of(context).textTheme.bodyMedium,
                                 ),
                               ],
                             ),
                           ),
                           const SizedBox(width: 12),
-                          OutlinedButton(
-                            onPressed: () {
+                          Checkbox(
+                            value: _savedBpmItemIds.contains(currentItemId),
+                            onChanged: (bool? value) {
+                              if (value != true) return;
                               widget.controller
                                   .rememberLaunchPreferencesForItem(
                                     itemId: currentItemId,
@@ -256,7 +239,6 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                                 _savedBpmItemIds.add(currentItemId);
                               });
                             },
-                            child: const Text('Save BPM'),
                           ),
                         ],
                       ),
@@ -300,7 +282,7 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                   onPressed: () {
                     Navigator.of(context).pop();
                   },
-                  child: const Text('Done'),
+                  child: const Text('Submit'),
                 ),
               ],
             ),
@@ -334,7 +316,6 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
         .assessmentForSessionItem(sessionId, itemId);
     _control = result?.selfReportControl;
     _tension = result?.selfReportTension;
-    _tempoReadiness = result?.selfReportTempoReadiness;
   }
 
   void _saveAssessment(String sessionId, String itemId) {
@@ -343,43 +324,21 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
       itemId: itemId,
       selfReportControl: _control,
       selfReportTension: _tension,
-      selfReportTempoReadiness: _tempoReadiness,
+      selfReportTempoReadiness: null,
     );
-  }
-
-  bool? _keepAdjustedTempoValue(PracticeSessionItemRuntimeV1 runtime) {
-    if (runtime.startingBpm == runtime.endingBpm) return null;
-    final SelfReportTempoReadinessV1? readiness = _tempoReadiness;
-    if (readiness == null) return null;
-    if (readiness == SelfReportTempoReadinessV1.same) return false;
-    return readiness == _tempoReadinessForAdjustedBpm(runtime, true);
-  }
-
-  SelfReportTempoReadinessV1 _tempoReadinessForAdjustedBpm(
-    PracticeSessionItemRuntimeV1 runtime,
-    bool keepAdjustedTempo,
-  ) {
-    if (!keepAdjustedTempo) return SelfReportTempoReadinessV1.same;
-    return runtime.endingBpm > runtime.startingBpm
-        ? SelfReportTempoReadinessV1.increase
-        : SelfReportTempoReadinessV1.decrease;
   }
 
   _SessionRecommendation? _recommendationFor({
     required bool needsTempoDecision,
   }) {
-    final bool incomplete =
-        _control == null ||
-        _tension == null ||
-        (needsTempoDecision && _tempoReadiness == null);
+    final bool incomplete = _control == null || _tension == null;
     if (incomplete) {
       return null;
     }
 
     final bool slowDown =
         _control == SelfReportControlV1.low ||
-        _tension == SelfReportTensionV1.high ||
-        _tempoReadiness == SelfReportTempoReadinessV1.decrease;
+        _tension == SelfReportTensionV1.high;
     if (slowDown) {
       return const _SessionRecommendation(
         title: 'Next rep: slow down',
@@ -393,7 +352,7 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
     final bool bumpUp =
         _control == SelfReportControlV1.high &&
         _tension == SelfReportTensionV1.none &&
-        _tempoReadiness == SelfReportTempoReadinessV1.increase;
+        !needsTempoDecision;
     if (bumpUp) {
       return const _SessionRecommendation(
         title: 'Next rep: bring it up',
