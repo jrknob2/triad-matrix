@@ -158,6 +158,25 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     required List<DrumVoiceV1> voices,
   }) {
     final bool canEndSession = _canEndSession;
+    final ButtonStyle secondaryTransportStyle = ButtonStyle(
+      minimumSize: const WidgetStatePropertyAll<Size>(Size(116, 48)),
+      maximumSize: const WidgetStatePropertyAll<Size>(Size(116, 48)),
+      padding: const WidgetStatePropertyAll<EdgeInsetsGeometry>(
+        EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      ),
+      foregroundColor: WidgetStateProperty.resolveWith<Color>((states) {
+        if (states.contains(WidgetState.disabled)) {
+          return const Color(0xB3FFF4DE);
+        }
+        return const Color(0xFFFFF4DE);
+      }),
+      side: WidgetStateProperty.resolveWith<BorderSide>((states) {
+        if (states.contains(WidgetState.disabled)) {
+          return const BorderSide(color: Color(0x66FFF4DE));
+        }
+        return const BorderSide(color: Color(0xFFFFF4DE));
+      }),
+    );
     return DrumPanel(
       tone: DrumPanelTone.dark,
       padding: const EdgeInsets.all(20),
@@ -215,9 +234,15 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
             runSpacing: 12,
             children: <Widget>[
               SizedBox(
-                height: 58,
-                width: 140,
+                height: 48,
+                width: 116,
                 child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                  ),
                   onPressed: _toggleRunning,
                   icon: Icon(_running ? Icons.pause : Icons.play_arrow),
                   label: Text(_running ? 'Pause' : 'Play'),
@@ -225,27 +250,21 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
               ),
               if (!isWarmup && _running)
                 SizedBox(
-                  height: 58,
-                  width: 140,
+                  height: 48,
+                  width: 116,
                   child: OutlinedButton.icon(
                     onPressed: _resetCurrentSessionRun,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFFFFF4DE),
-                      side: const BorderSide(color: Color(0xFFFFF4DE)),
-                    ),
+                    style: secondaryTransportStyle,
                     icon: const Icon(Icons.restart_alt),
                     label: const Text('Reset'),
                   ),
                 ),
               SizedBox(
-                height: 58,
-                width: 140,
+                height: 48,
+                width: 116,
                 child: OutlinedButton(
                   onPressed: canEndSession ? _endSession : null,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFFFFF4DE),
-                    side: const BorderSide(color: Color(0xFFFFF4DE)),
-                  ),
+                  style: secondaryTransportStyle,
                   child: Text(isWarmup ? 'End Warmup' : 'End'),
                 ),
               ),

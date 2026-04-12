@@ -79,12 +79,14 @@ class PatternVoiceDisplay extends StatelessWidget {
                     if (i < chunks.length - 1) const SizedBox(height: 10),
                   ],
                   if (showRepeatIndicator)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 6),
-                      child: Icon(
-                        Icons.repeat_rounded,
-                        size: (resolvedPatternStyle.fontSize ?? 20) * 1.05,
-                        color: resolvedPatternStyle.color,
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Icon(
+                          Icons.repeat_rounded,
+                          size: (resolvedPatternStyle.fontSize ?? 20) * 1.05,
+                          color: resolvedPatternStyle.color,
+                        ),
                       ),
                     ),
                 ],

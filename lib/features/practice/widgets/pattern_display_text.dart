@@ -62,12 +62,14 @@ class PatternDisplayText extends StatelessWidget {
           ),
         ),
         if (showRepeatIndicator)
-          Padding(
-            padding: const EdgeInsets.only(top: 6),
-            child: Icon(
-              Icons.repeat_rounded,
-              size: (baseStyle.fontSize ?? 20) * 1.05,
-              color: baseStyle.color,
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Icon(
+                Icons.repeat_rounded,
+                size: (baseStyle.fontSize ?? 20) * 1.05,
+                color: baseStyle.color,
+              ),
             ),
           ),
       ],

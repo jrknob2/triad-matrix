@@ -83,6 +83,8 @@ Rules:
 - primary and secondary actions must remain visually distinct on both light and dark surfaces
 - if a surface is dark or visually busy, action controls must use stronger contrast and edge definition than they use on light surfaces
 - the user should not have to tap to discover whether a label is actionable
+- button sizing should stay proportional to the surrounding UI and shared control system
+- one screen should not introduce oversized buttons that visually dominate the app without a specific contract reason
 
 ---
 
