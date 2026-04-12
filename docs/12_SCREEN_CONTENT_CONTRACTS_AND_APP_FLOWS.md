@@ -56,7 +56,8 @@ Notation rule:
 - left alignment for notation needs an explicit exception, not ad hoc local styling
 - notation may wrap only between note cells or documented group boundaries, never inside a marked token
 - marked tokens like `^R` and `(R)` must remain visually intact as one unit
-- on phone-sized player screens, very long patterns should stop wrapping after a practical density limit and switch to horizontal scrolling instead of adding more wrapped lines
+- when grouped phrase notation wraps, the group separator should stay at the end of the row it belongs to
+- long player phrases may wrap on phone, but that wrapping must occur on practical group boundaries rather than by raw character position
 
 ## Layout Rule
 
@@ -1114,10 +1115,10 @@ Practice Item lets the user inspect and edit one item cleanly.
 
 - editing controls appear under the pattern
 - mode control changes editing context
-- tapping the notation selects one note at a time
+- tapping the notation selects one or more assignable notes
 - selection and assignment are separate actions
-- `Accents & Ghosts` assigns the marking for the selected note
-- `Flow Voices` assigns the voice for the selected note
+- `Accents & Ghosts` assigns the marking for the selected note set
+- `Flow Voices` assigns the voice for the selected note set
 - session setup controls belong here for single-item practice
 - last BPM and duration for a single item should be remembered outside the authored item data
 - practice CTA launches the chosen mode
@@ -1130,6 +1131,9 @@ Practice Item lets the user inspect and edit one item cleanly.
 - the `Flow Voices` section should contain voice editing controls only, not a second notation preview
 - the notation block should be the note-selection surface, so the screen does not need a per-note chip grid for editing
 - when entering voice editing, effective default voices remain `snare` for hand notes and `kick` for `K` notes unless the user assigns something else
+- selection should toggle on tap so the user can build or reduce a note set before applying an edit
+- applying a marking or voice assignment should clear the current note selection
+- kick notes should not be assignable through this editing surface
 - Matrix selection and phrase building must not inject authored markings automatically
 - item edits should live in a local draft until the user explicitly saves them
 - navigating away with unsaved item changes should prompt the user to save, discard, or keep editing

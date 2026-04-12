@@ -389,7 +389,7 @@ Running transport rules:
 - the player's running transport controls should fit in one row on phone without wrapping
 - Session Summary recommendations should influence the message, not rename the replay action
 - player notation on phone must never break inside a marked token
-- once phrase length exceeds the practical phone wrap limit, player notation should switch to horizontal scrolling instead of adding more wrapped lines
+- player phrase wrapping should break on group boundaries, with the separator staying at the end of the row
 
 ---
 
@@ -553,10 +553,10 @@ Practice Item is the detail/edit screen for one piece of material.
 ### Acceptance Criteria
 
 - the pattern display is the primary signal
-- tapping the notation selects a single note; it does not directly assign markings or voices
+- tapping the notation selects one or more assignable notes; it does not directly assign markings or voices
 - controls under it are clearly for editing the item, not playing it
-- accent/ghost controls act on the currently selected note
-- voice controls act on the currently selected note
+- accent/ghost controls act on the current selected note set
+- voice controls act on the current selected note set
 - session setup values should feel like launch defaults, not authored pattern data
 - `Flow` should read as derived capability from voice assignments, not a user-declared item mode
 - no voice assignments and all-default voices should be treated as the same single-surface state
@@ -569,6 +569,9 @@ Practice Item is the detail/edit screen for one piece of material.
 - when the item has flow voices, that primary notation block should render as a unified two-row pattern/voice display
 - the `Flow Voices` section should contain editing controls, not a second notation preview
 - edits should not write through immediately while the user is still working on the screen
+- selection should toggle on tap so the user can add and remove notes from the current selected set
+- applying a marking or voice assignment should clear the current selection
+- kick notes should not be assignable in this editor flow
 
 ---
 

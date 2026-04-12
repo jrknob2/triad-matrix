@@ -33,7 +33,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   late CompetencyLevelV1 _competency;
   late int _sessionBpm;
   late TimerPresetV1 _timerPreset;
-  int _selectedNoteIndex = 0;
+  late Set<int> _selectedNoteIndices;
 
   @override
   void initState() {
@@ -57,10 +57,6 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         final bool flowCapable = _hasDraftFlowVoices(tokens, _voiceAssignments);
         final List<PatternNoteMarkingV1> draftMarkings = _draftMarkingsFor(
           item.noteCount,
-        );
-        final int selectedNoteIndex = _selectedNoteIndex.clamp(
-          0,
-          tokens.length - 1,
         );
         final bool hasUnsavedChanges = _hasUnsavedChanges(item);
 
@@ -91,15 +87,22 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                           grouping: widget.controller.displayGroupingFor(
                             item.id,
                           ),
-                          selectedIndex: selectedNoteIndex,
+                          selectedIndices: _selectedNoteIndices,
                           showVoices: flowCapable,
                           onSelect: (int index) {
-                            setState(() => _selectedNoteIndex = index);
+                            if (tokens[index] == 'K') return;
+                            setState(() {
+                              if (_selectedNoteIndices.contains(index)) {
+                                _selectedNoteIndices.remove(index);
+                              } else {
+                                _selectedNoteIndices.add(index);
+                              }
+                            });
                           },
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Tap a note to edit it.',
+                          'Tap notes to select them, then assign one change.',
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(color: const Color(0xFF5B5345)),
                         ),
@@ -112,9 +115,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                         _SelectedMarkingEditor(
                           tokens: tokens,
                           markings: draftMarkings,
-                          selectedIndex: selectedNoteIndex,
+                          selectedIndices: _selectedNoteIndices,
                           onChanged: (PatternNoteMarkingV1 next) {
-                            _setMarking(selectedNoteIndex, next);
+                            _setMarkingForSelection(next);
                           },
                         ),
                         const SizedBox(height: 16),
@@ -126,9 +129,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                         _SelectedVoiceEditor(
                           tokens: tokens,
                           voices: _voiceAssignments,
-                          selectedIndex: selectedNoteIndex,
+                          selectedIndices: _selectedNoteIndices,
                           onChanged: (DrumVoiceV1 next) {
-                            _setVoice(selectedNoteIndex, next);
+                            _setVoiceForSelection(next);
                           },
                         ),
                         if (flowCapable) ...<Widget>[
@@ -360,7 +363,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     _competency = widget.controller.competencyFor(item.id);
     _sessionBpm = widget.controller.launchBpmForItem(item.id);
     _timerPreset = widget.controller.launchTimerPresetForItem(item.id);
-    _selectedNoteIndex = _selectedNoteIndex.clamp(0, item.noteCount - 1);
+    _selectedNoteIndices = <int>{};
   }
 
   List<PatternNoteMarkingV1> _draftMarkingsFor(int noteCount) {
@@ -373,31 +376,42 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     });
   }
 
-  void _setMarking(int noteIndex, PatternNoteMarkingV1 next) {
+  void _setMarkingForSelection(PatternNoteMarkingV1 next) {
+    if (_selectedNoteIndices.isEmpty) return;
     setState(() {
       final Set<int> accents = _accentedNoteIndices.toSet();
       final Set<int> ghosts = _ghostNoteIndices.toSet();
-      accents.remove(noteIndex);
-      ghosts.remove(noteIndex);
-      switch (next) {
-        case PatternNoteMarkingV1.normal:
-          break;
-        case PatternNoteMarkingV1.accent:
-          accents.add(noteIndex);
-          break;
-        case PatternNoteMarkingV1.ghost:
-          ghosts.add(noteIndex);
-          break;
+      for (final int noteIndex in _selectedNoteIndices) {
+        accents.remove(noteIndex);
+        ghosts.remove(noteIndex);
+        switch (next) {
+          case PatternNoteMarkingV1.normal:
+            break;
+          case PatternNoteMarkingV1.accent:
+            accents.add(noteIndex);
+            break;
+          case PatternNoteMarkingV1.ghost:
+            ghosts.add(noteIndex);
+            break;
+        }
       }
       _accentedNoteIndices = accents.toList()..sort();
       _ghostNoteIndices = ghosts.toList()..sort();
+      _selectedNoteIndices = <int>{};
     });
   }
 
-  void _setVoice(int noteIndex, DrumVoiceV1 next) {
+  void _setVoiceForSelection(DrumVoiceV1 next) {
+    if (_selectedNoteIndices.isEmpty) return;
     setState(() {
-      _voiceAssignments = List<DrumVoiceV1>.from(_voiceAssignments)
-        ..[noteIndex] = next;
+      final List<DrumVoiceV1> nextAssignments = List<DrumVoiceV1>.from(
+        _voiceAssignments,
+      );
+      for (final int index in _selectedNoteIndices) {
+        nextAssignments[index] = next;
+      }
+      _voiceAssignments = nextAssignments;
+      _selectedNoteIndices = <int>{};
     });
   }
 
@@ -417,6 +431,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       ) {
         return tokens[index] == 'K' ? DrumVoiceV1.kick : DrumVoiceV1.snare;
       });
+      _selectedNoteIndices = <int>{};
     });
   }
 
@@ -492,7 +507,7 @@ class _SelectableNotationBlock extends StatelessWidget {
   final List<PatternNoteMarkingV1> markings;
   final List<DrumVoiceV1> voices;
   final PatternGroupingV1 grouping;
-  final int selectedIndex;
+  final Set<int> selectedIndices;
   final bool showVoices;
   final ValueChanged<int> onSelect;
 
@@ -501,7 +516,7 @@ class _SelectableNotationBlock extends StatelessWidget {
     required this.markings,
     required this.voices,
     required this.grouping,
-    required this.selectedIndex,
+    required this.selectedIndices,
     required this.showVoices,
     required this.onSelect,
   });
@@ -551,7 +566,8 @@ class _SelectableNotationBlock extends StatelessWidget {
                       token: tokens[index],
                       marking: markings[index],
                       voice: voices[index],
-                      selected: index == selectedIndex,
+                      selected: selectedIndices.contains(index),
+                      enabled: tokens[index] != 'K',
                       showVoice: showVoices,
                       patternStyle: patternStyle,
                       voiceStyle: voiceStyle,
@@ -612,6 +628,7 @@ class _SelectableNotationCell extends StatelessWidget {
   final PatternNoteMarkingV1 marking;
   final DrumVoiceV1 voice;
   final bool selected;
+  final bool enabled;
   final bool showVoice;
   final TextStyle patternStyle;
   final TextStyle voiceStyle;
@@ -622,6 +639,7 @@ class _SelectableNotationCell extends StatelessWidget {
     required this.marking,
     required this.voice,
     required this.selected,
+    required this.enabled,
     required this.showVoice,
     required this.patternStyle,
     required this.voiceStyle,
@@ -634,7 +652,7 @@ class _SelectableNotationCell extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
+        onTap: enabled ? onTap : null,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
           width: 52,
@@ -643,7 +661,9 @@ class _SelectableNotationCell extends StatelessWidget {
             color: selected ? const Color(0xFFE7D6A8) : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: selected ? const Color(0xFF8E6B1F) : Colors.transparent,
+              color: selected
+                  ? const Color(0xFF8E6B1F)
+                  : (enabled ? Colors.transparent : const Color(0x14000000)),
             ),
           ),
           child: Column(
@@ -656,7 +676,17 @@ class _SelectableNotationCell extends StatelessWidget {
                   style: patternStyle,
                   children: switch (marking) {
                     PatternNoteMarkingV1.normal => <InlineSpan>[
-                      TextSpan(text: token, style: patternStyle),
+                      TextSpan(
+                        text: token,
+                        style: enabled
+                            ? patternStyle
+                            : patternStyle.copyWith(
+                                color:
+                                    (patternStyle.color ??
+                                            const Color(0xFF101010))
+                                        .withValues(alpha: 0.45),
+                              ),
+                      ),
                     ],
                     PatternNoteMarkingV1.accent => <InlineSpan>[
                       TextSpan(text: '^', style: patternStyle),
@@ -696,32 +726,40 @@ class _SelectableNotationCell extends StatelessWidget {
 class _SelectedMarkingEditor extends StatelessWidget {
   final List<String> tokens;
   final List<PatternNoteMarkingV1> markings;
-  final int selectedIndex;
+  final Set<int> selectedIndices;
   final ValueChanged<PatternNoteMarkingV1> onChanged;
 
   const _SelectedMarkingEditor({
     required this.tokens,
     required this.markings,
-    required this.selectedIndex,
+    required this.selectedIndices,
     required this.onChanged,
   });
 
   @override
   Widget build(BuildContext context) {
-    final String token = tokens[selectedIndex];
-    final PatternNoteMarkingV1 current = markings[selectedIndex];
-    final List<PatternNoteMarkingV1> allowed = token == 'K'
-        ? const <PatternNoteMarkingV1>[
-            PatternNoteMarkingV1.normal,
-            PatternNoteMarkingV1.ghost,
-          ]
-        : PatternNoteMarkingV1.values;
+    if (selectedIndices.isEmpty) {
+      return Text(
+        'Select one or more hand notes to set accents or ghosts.',
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+          color: const Color(0xFF5B5345),
+          fontWeight: FontWeight.w700,
+        ),
+      );
+    }
+    final List<int> sortedIndices = selectedIndices.toList()..sort();
+    final Set<PatternNoteMarkingV1> currentValues = sortedIndices
+        .map((int index) => markings[index])
+        .toSet();
+    final PatternNoteMarkingV1? current = currentValues.length == 1
+        ? currentValues.first
+        : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Text(
-          'Note ${selectedIndex + 1} · ${_markingLabel(token, current)}',
+          _selectionLabel(sortedIndices, tokens, current),
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: const Color(0xFF5B5345),
             fontWeight: FontWeight.w700,
@@ -731,11 +769,11 @@ class _SelectedMarkingEditor extends StatelessWidget {
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: allowed
+          children: PatternNoteMarkingV1.values
               .map(
                 (PatternNoteMarkingV1 option) => DrumSelectablePill(
                   label: Text(_markingOptionLabel(option)),
-                  selected: current == option,
+                  selected: current != null && current == option,
                   onPressed: () => onChanged(option),
                 ),
               )
@@ -760,34 +798,59 @@ class _SelectedMarkingEditor extends StatelessWidget {
       PatternNoteMarkingV1.ghost => '($token)',
     };
   }
+
+  static String _selectionLabel(
+    List<int> indices,
+    List<String> tokens,
+    PatternNoteMarkingV1? current,
+  ) {
+    final String positions = indices
+        .map((int index) => '${index + 1}')
+        .join(', ');
+    if (indices.length == 1) {
+      final String token = tokens[indices.first];
+      return current == null
+          ? 'Note ${indices.first + 1} · $token'
+          : 'Note ${indices.first + 1} · ${_markingLabel(token, current)}';
+    }
+    if (current == null) {
+      return '${indices.length} notes selected · $positions';
+    }
+    return '${indices.length} notes selected · ${_markingOptionLabel(current)}';
+  }
 }
 
 class _SelectedVoiceEditor extends StatelessWidget {
   final List<String> tokens;
   final List<DrumVoiceV1> voices;
-  final int selectedIndex;
+  final Set<int> selectedIndices;
   final ValueChanged<DrumVoiceV1> onChanged;
 
   const _SelectedVoiceEditor({
     required this.tokens,
     required this.voices,
-    required this.selectedIndex,
+    required this.selectedIndices,
     required this.onChanged,
   });
 
   @override
   Widget build(BuildContext context) {
-    final String token = tokens[selectedIndex];
-    final DrumVoiceV1 current = voices[selectedIndex];
-    if (token == 'K') {
+    if (selectedIndices.isEmpty) {
       return Text(
-        'Note ${selectedIndex + 1} · K:K. Kick notes stay on kick.',
+        'Select one or more hand notes to assign a voice.',
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
           color: const Color(0xFF5B5345),
           fontWeight: FontWeight.w700,
         ),
       );
     }
+    final List<int> sortedIndices = selectedIndices.toList()..sort();
+    final Set<DrumVoiceV1> currentValues = sortedIndices
+        .map((int index) => voices[index])
+        .toSet();
+    final DrumVoiceV1? current = currentValues.length == 1
+        ? currentValues.first
+        : null;
 
     const List<DrumVoiceV1> options = <DrumVoiceV1>[
       DrumVoiceV1.snare,
@@ -801,7 +864,9 @@ class _SelectedVoiceEditor extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Text(
-          'Note ${selectedIndex + 1} · $token:${current.shortLabel}',
+          current == null
+              ? '${sortedIndices.length} notes selected'
+              : '${sortedIndices.length} notes selected · ${current.shortLabel}',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: const Color(0xFF5B5345),
             fontWeight: FontWeight.w700,
@@ -815,7 +880,7 @@ class _SelectedVoiceEditor extends StatelessWidget {
               .map(
                 (DrumVoiceV1 option) => DrumSelectablePill(
                   label: Text(option.shortLabel),
-                  selected: current == option,
+                  selected: current != null && current == option,
                   onPressed: () => onChanged(option),
                 ),
               )

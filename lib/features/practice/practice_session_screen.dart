@@ -181,6 +181,18 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
         return const BorderSide(color: Color(0xFFFFF4DE));
       }),
     );
+    final ButtonStyle primaryTransportStyle = FilledButton.styleFrom(
+      minimumSize: const Size(116, 48),
+      maximumSize: const Size(116, 48),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      backgroundColor: const Color(0xFFFFF4DE),
+      foregroundColor: const Color(0xFF211B14),
+      side: const BorderSide(color: Color(0xFFFFF4DE)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+        fontWeight: FontWeight.w900,
+      ),
+    );
     return DrumPanel(
       tone: DrumPanelTone.dark,
       padding: const EdgeInsets.all(20),
@@ -203,7 +215,6 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
           _PlayerNotation(
             setup: _setup,
             isWarmup: isWarmup,
-            isCompactViewport: !AppViewport.isTablet(context),
             grouping: widget.controller.displayGroupingFor(currentItemId),
             tokens: tokens,
             markings: markings,
@@ -240,12 +251,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                 height: 48,
                 width: 108,
                 child: FilledButton.icon(
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
-                    ),
-                  ),
+                  style: primaryTransportStyle,
                   onPressed: _toggleRunning,
                   icon: Icon(_running ? Icons.pause : Icons.play_arrow),
                   label: Text(_running ? 'Pause' : 'Play'),
@@ -784,7 +790,6 @@ class _BeatPulse extends StatelessWidget {
 class _PlayerNotation extends StatelessWidget {
   final PracticeSessionSetupV1 setup;
   final bool isWarmup;
-  final bool isCompactViewport;
   final PatternGroupingV1 grouping;
   final List<String> tokens;
   final List<PatternNoteMarkingV1> markings;
@@ -793,7 +798,6 @@ class _PlayerNotation extends StatelessWidget {
   const _PlayerNotation({
     required this.setup,
     required this.isWarmup,
-    required this.isCompactViewport,
     required this.grouping,
     required this.tokens,
     required this.markings,
@@ -802,11 +806,8 @@ class _PlayerNotation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool usePhoneLongPatternMode =
-        isCompactViewport && tokens.length > 15;
     final double fontSize = switch (tokens.length) {
       >= 24 => 20,
-      > 15 => 22,
       >= 16 => 25,
       >= 12 => 28,
       _ => 31,
@@ -852,8 +853,8 @@ class _PlayerNotation extends StatelessWidget {
                 voices: voices,
                 grouping: grouping,
                 showRepeatIndicator: true,
-                scrollable: usePhoneLongPatternMode,
-                wrap: !usePhoneLongPatternMode,
+                scrollable: false,
+                wrap: true,
                 cellWidth: tokens.length >= 24 ? 34 : (isWarmup ? 44 : 42),
                 patternStyle: patternStyle,
                 voiceStyle: voiceStyle,
@@ -868,10 +869,10 @@ class _PlayerNotation extends StatelessWidget {
                 ),
                 grouping: grouping,
                 showRepeatIndicator: true,
-                scrollable: usePhoneLongPatternMode,
+                scrollable: false,
                 showPatternRow: true,
                 showVoiceRow: false,
-                wrap: !usePhoneLongPatternMode,
+                wrap: true,
                 cellWidth: tokens.length >= 24 ? 34 : (isWarmup ? 44 : 42),
                 patternStyle: patternStyle,
                 voiceStyle: voiceStyle,

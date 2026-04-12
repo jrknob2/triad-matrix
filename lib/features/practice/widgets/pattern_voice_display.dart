@@ -185,25 +185,66 @@ class PatternVoiceDisplay extends StatelessWidget {
       ];
     }
 
+    final List<_PatternVoiceSegment> segments = _segmentsForSeparators(
+      separators: separators,
+      separatorWidth: separatorWidth,
+    );
     final List<_PatternVoiceChunk> chunks = <_PatternVoiceChunk>[];
-    int start = 0;
-    while (start < tokens.length) {
+    int segmentIndex = 0;
+    while (segmentIndex < segments.length) {
       double width = 0;
-      int end = start;
-      while (end < tokens.length) {
-        final double nextWidth =
-            cellWidth + (separators[end].isNotEmpty ? separatorWidth : 0);
-        if (end > start && width + nextWidth > maxWidth) {
+      int endSegmentIndex = segmentIndex;
+      while (endSegmentIndex < segments.length) {
+        final double nextWidth = segments[endSegmentIndex].width;
+        if (endSegmentIndex > segmentIndex && width + nextWidth > maxWidth) {
           break;
         }
         width += nextWidth;
-        end++;
+        endSegmentIndex++;
       }
-      if (end == start) end++;
-      chunks.add(_PatternVoiceChunk(start: start, end: end));
-      start = end;
+      if (endSegmentIndex == segmentIndex) {
+        endSegmentIndex++;
+      }
+      chunks.add(
+        _PatternVoiceChunk(
+          start: segments[segmentIndex].start,
+          end: segments[endSegmentIndex - 1].end,
+        ),
+      );
+      segmentIndex = endSegmentIndex;
     }
     return chunks;
+  }
+
+  List<_PatternVoiceSegment> _segmentsForSeparators({
+    required List<String> separators,
+    required double separatorWidth,
+  }) {
+    final List<_PatternVoiceSegment> segments = <_PatternVoiceSegment>[];
+    int start = 0;
+    double width = 0;
+    for (int index = 0; index < tokens.length; index += 1) {
+      width += cellWidth + (separators[index].isNotEmpty ? separatorWidth : 0);
+      final bool closesSegment =
+          separators[index].isNotEmpty || index == tokens.length - 1;
+      if (closesSegment) {
+        segments.add(
+          _PatternVoiceSegment(start: start, end: index + 1, width: width),
+        );
+        start = index + 1;
+        width = 0;
+      }
+    }
+    if (segments.isEmpty && tokens.isNotEmpty) {
+      segments.add(
+        _PatternVoiceSegment(
+          start: 0,
+          end: tokens.length,
+          width: tokens.length * cellWidth,
+        ),
+      );
+    }
+    return segments;
   }
 
   List<Widget> _rowCellsForRange({
@@ -309,4 +350,16 @@ class _PatternVoiceChunk {
   final int end;
 
   const _PatternVoiceChunk({required this.start, required this.end});
+}
+
+class _PatternVoiceSegment {
+  final int start;
+  final int end;
+  final double width;
+
+  const _PatternVoiceSegment({
+    required this.start,
+    required this.end,
+    required this.width,
+  });
 }
