@@ -203,6 +203,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
           _PlayerNotation(
             setup: _setup,
             isWarmup: isWarmup,
+            isCompactViewport: !AppViewport.isTablet(context),
             grouping: widget.controller.displayGroupingFor(currentItemId),
             tokens: tokens,
             markings: markings,
@@ -783,6 +784,7 @@ class _BeatPulse extends StatelessWidget {
 class _PlayerNotation extends StatelessWidget {
   final PracticeSessionSetupV1 setup;
   final bool isWarmup;
+  final bool isCompactViewport;
   final PatternGroupingV1 grouping;
   final List<String> tokens;
   final List<PatternNoteMarkingV1> markings;
@@ -791,6 +793,7 @@ class _PlayerNotation extends StatelessWidget {
   const _PlayerNotation({
     required this.setup,
     required this.isWarmup,
+    required this.isCompactViewport,
     required this.grouping,
     required this.tokens,
     required this.markings,
@@ -799,8 +802,11 @@ class _PlayerNotation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool usePhoneLongPatternMode =
+        isCompactViewport && tokens.length > 15;
     final double fontSize = switch (tokens.length) {
-      >= 24 => 22,
+      >= 24 => 20,
+      > 15 => 22,
       >= 16 => 25,
       >= 12 => 28,
       _ => 31,
@@ -846,8 +852,8 @@ class _PlayerNotation extends StatelessWidget {
                 voices: voices,
                 grouping: grouping,
                 showRepeatIndicator: true,
-                scrollable: false,
-                wrap: true,
+                scrollable: usePhoneLongPatternMode,
+                wrap: !usePhoneLongPatternMode,
                 cellWidth: tokens.length >= 24 ? 34 : (isWarmup ? 44 : 42),
                 patternStyle: patternStyle,
                 voiceStyle: voiceStyle,
@@ -862,10 +868,10 @@ class _PlayerNotation extends StatelessWidget {
                 ),
                 grouping: grouping,
                 showRepeatIndicator: true,
-                scrollable: false,
+                scrollable: usePhoneLongPatternMode,
                 showPatternRow: true,
                 showVoiceRow: false,
-                wrap: true,
+                wrap: !usePhoneLongPatternMode,
                 cellWidth: tokens.length >= 24 ? 34 : (isWarmup ? 44 : 42),
                 patternStyle: patternStyle,
                 voiceStyle: voiceStyle,

@@ -388,6 +388,8 @@ Running transport rules:
 - Session Summary should use explicit per-pattern `Submit` and `Skip`, not implicit auto-save on every selection
 - the player's running transport controls should fit in one row on phone without wrapping
 - Session Summary recommendations should influence the message, not rename the replay action
+- player notation on phone must never break inside a marked token
+- once phrase length exceeds the practical phone wrap limit, player notation should switch to horizontal scrolling instead of adding more wrapped lines
 
 ---
 

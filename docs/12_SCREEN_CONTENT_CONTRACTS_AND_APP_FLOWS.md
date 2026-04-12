@@ -54,6 +54,9 @@ Notation rule:
 - notation readouts should be center-justified everywhere by default
 - if a notation surface also wraps, each wrapped line group should remain visually centered
 - left alignment for notation needs an explicit exception, not ad hoc local styling
+- notation may wrap only between note cells or documented group boundaries, never inside a marked token
+- marked tokens like `^R` and `(R)` must remain visually intact as one unit
+- on phone-sized player screens, very long patterns should stop wrapping after a practical density limit and switch to horizontal scrolling instead of adding more wrapped lines
 
 ## Layout Rule
 

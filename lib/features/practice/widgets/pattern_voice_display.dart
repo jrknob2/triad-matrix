@@ -235,24 +235,33 @@ class PatternVoiceDisplay extends StatelessWidget {
     PatternNoteMarkingV1 marking,
     TextStyle baseStyle,
   ) {
-    return RichText(
-      textAlign: TextAlign.center,
-      text: TextSpan(
-        style: baseStyle,
-        children: switch (marking) {
-          PatternNoteMarkingV1.normal => <InlineSpan>[
-            TextSpan(text: token, style: baseStyle),
-          ],
-          PatternNoteMarkingV1.accent => <InlineSpan>[
-            TextSpan(text: '^', style: baseStyle),
-            TextSpan(text: token, style: baseStyle),
-          ],
-          PatternNoteMarkingV1.ghost => <InlineSpan>[
-            TextSpan(text: '(', style: baseStyle),
-            TextSpan(text: token, style: _ghostStyleForToken(token, baseStyle)),
-            TextSpan(text: ')', style: baseStyle),
-          ],
-        },
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: RichText(
+        textAlign: TextAlign.center,
+        softWrap: false,
+        maxLines: 1,
+        overflow: TextOverflow.visible,
+        text: TextSpan(
+          style: baseStyle,
+          children: switch (marking) {
+            PatternNoteMarkingV1.normal => <InlineSpan>[
+              TextSpan(text: token, style: baseStyle),
+            ],
+            PatternNoteMarkingV1.accent => <InlineSpan>[
+              TextSpan(text: '^', style: baseStyle),
+              TextSpan(text: token, style: baseStyle),
+            ],
+            PatternNoteMarkingV1.ghost => <InlineSpan>[
+              TextSpan(text: '(', style: baseStyle),
+              TextSpan(
+                text: token,
+                style: _ghostStyleForToken(token, baseStyle),
+              ),
+              TextSpan(text: ')', style: baseStyle),
+            ],
+          },
+        ),
       ),
     );
   }
