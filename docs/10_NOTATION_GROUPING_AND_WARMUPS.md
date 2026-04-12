@@ -33,6 +33,11 @@ Examples:
 
 The default rich pattern display remains spaced so existing screens do not visually change unless a grouping is explicitly passed.
 
+Exception:
+
+- saved triad phrases / combo items should display with triad grouping by default so phrase boundaries remain readable
+- example: `LLL-RRR`, not `LLLRRR`
+
 The aligned voice display defaults to no extra separators because it already uses fixed-width note cells. When a grouping is passed, the pattern and voice rows both reserve separator space so the two rows remain aligned.
 
 ## Warmup Direction

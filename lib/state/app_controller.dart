@@ -804,6 +804,7 @@ class AppController extends ChangeNotifier {
 
   PatternGroupingV1 displayGroupingFor(String itemId) {
     final PracticeItemV1 item = itemById(itemId);
+    if (item.isCombo) return PatternGroupingV1.triads;
     if (!item.isWarmup) return PatternGroupingV1.spaced;
     if (item.tags.contains('paradiddle-diddle')) {
       return const PatternGroupingV1(groupSize: 6, separator: '-');
