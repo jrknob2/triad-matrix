@@ -9,7 +9,6 @@ import '../../features/app/app_viewport.dart';
 import '../../features/app/drumcabulary_ui.dart';
 import '../../state/app_controller.dart';
 import '../../core/practice/practice_domain_v1.dart';
-import 'widgets/pattern_display_text.dart';
 import 'widgets/pattern_voice_display.dart';
 import 'session_summary_screen.dart';
 
@@ -32,12 +31,14 @@ class _SessionTransportState {
   final Duration? target;
   final String timerText;
   final String? statusText;
+  final bool completed;
 
   const _SessionTransportState({
     required this.elapsed,
     required this.target,
     required this.timerText,
     required this.statusText,
+    required this.completed,
   });
 }
 
@@ -52,6 +53,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   bool _targetReached = false;
   bool _warmupComplete = false;
   bool _completionChimed = false;
+  bool _completionStateVisible = false;
   Duration _elapsedOffset = Duration.zero;
   late bool _pulseEnabled;
   late int _bpm;
@@ -187,6 +189,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
           Text(
             transport.timerText,
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+              fontFamily: 'Courier',
               color: _warmupComplete || _targetReached
                   ? const Color(0xFFFFC08D)
                   : const Color(0xFFFFF4DE),
@@ -217,13 +220,26 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                   label: Text(_running ? 'Pause' : 'Play'),
                 ),
               ),
+              if (!isWarmup && _running)
+                SizedBox(
+                  height: 58,
+                  child: OutlinedButton.icon(
+                    onPressed: _resetCurrentSessionRun,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFFFFF4DE),
+                      side: const BorderSide(color: Color(0xFFFFF4DE)),
+                    ),
+                    icon: const Icon(Icons.restart_alt),
+                    label: const Text('Reset'),
+                  ),
+                ),
               OutlinedButton(
                 onPressed: _endSession,
                 style: OutlinedButton.styleFrom(
                   foregroundColor: const Color(0xFFFFF4DE),
                   side: const BorderSide(color: Color(0xFFFFF4DE)),
                 ),
-                child: Text(isWarmup ? 'End Warmup' : 'End Session'),
+                child: Text(isWarmup ? 'End Warmup' : 'End'),
               ),
             ],
           ),
@@ -307,7 +323,9 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
           _warmupComplete = false;
           _targetReached = false;
           _completionChimed = false;
+          _completionStateVisible = false;
         }
+        _completionStateVisible = false;
         _running = true;
         _stopwatch.start();
         _startElapsedTicker();
@@ -408,7 +426,15 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
       _targetReached = false;
       _warmupComplete = false;
       _completionChimed = false;
+      _completionStateVisible = false;
     }
+  }
+
+  void _resetCurrentSessionRun() {
+    if (_isWarmup) return;
+    setState(() {
+      _resetRunState(clearElapsed: true, clearFlags: true);
+    });
   }
 
   Duration? _targetDuration() {
@@ -431,12 +457,13 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
         : '${formatDuration(_elapsed)} / ${formatDuration(target)}';
     final String? statusText = _warmupComplete
         ? 'Warmup complete'
-        : (_targetReached ? 'Target reached' : null);
+        : (_completionStateVisible ? 'Target reached' : null);
     return _SessionTransportState(
       elapsed: _elapsed,
       target: target,
       timerText: timerText,
       statusText: statusText,
+      completed: _completionStateVisible || _warmupComplete,
     );
   }
 
@@ -477,8 +504,11 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     final Duration? target = _targetDuration();
     if (target == null) return;
     if (_elapsed >= target) {
-      _targetReached = true;
-      _playCompletionChimeOnce();
+      if (!_targetReached) {
+        _targetReached = true;
+        _completionStateVisible = true;
+        _playCompletionChimeOnce();
+      }
     }
   }
 
@@ -686,34 +716,40 @@ class _PlayerNotation extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final double fontSize = switch (tokens.length) {
-      >= 24 => 24,
-      >= 16 => 28,
-      >= 12 => 31,
-      _ => 34,
+      >= 24 => 22,
+      >= 16 => 25,
+      >= 12 => 28,
+      _ => 31,
     };
     final TextStyle patternStyle =
         Theme.of(context).textTheme.displaySmall?.copyWith(
           color: const Color(0xFFFFF4DE),
           fontWeight: FontWeight.w900,
           fontSize: fontSize,
-          letterSpacing: isWarmup ? 1.3 : 0.4,
+          letterSpacing: 0.1,
+          fontFamily: 'Courier',
+          height: 1.0,
         ) ??
-        TextStyle(
+        const TextStyle(
           color: Color(0xFFFFF4DE),
           fontWeight: FontWeight.w900,
-          fontSize: fontSize,
-          letterSpacing: 0.4,
+          fontSize: 31,
+          letterSpacing: 0.1,
+          fontFamily: 'Courier',
+          height: 1.0,
         );
 
     final TextStyle voiceStyle =
         Theme.of(context).textTheme.titleMedium?.copyWith(
           color: const Color(0xFFE5D5BB),
           fontWeight: FontWeight.w800,
+          fontFamily: 'Courier',
         ) ??
         const TextStyle(
           color: Color(0xFFE5D5BB),
           fontWeight: FontWeight.w800,
           fontSize: 16,
+          fontFamily: 'Courier',
         );
 
     return SizedBox(
@@ -727,18 +763,28 @@ class _PlayerNotation extends StatelessWidget {
                 grouping: grouping,
                 showRepeatIndicator: true,
                 scrollable: false,
-                cellWidth: tokens.length >= 24 ? 32 : (isWarmup ? 42 : 40),
+                wrap: true,
+                cellWidth: tokens.length >= 24 ? 34 : (isWarmup ? 44 : 42),
                 patternStyle: patternStyle,
                 voiceStyle: voiceStyle,
               )
-            : PatternDisplayText(
+            : PatternVoiceDisplay(
                 tokens: tokens,
                 markings: markings,
+                voices: List<DrumVoiceV1>.filled(
+                  tokens.length,
+                  DrumVoiceV1.snare,
+                  growable: false,
+                ),
                 grouping: grouping,
                 showRepeatIndicator: true,
-                style: patternStyle,
-                textAlign: TextAlign.center,
-                maxLines: 2,
+                scrollable: false,
+                showPatternRow: true,
+                showVoiceRow: false,
+                wrap: true,
+                cellWidth: tokens.length >= 24 ? 34 : (isWarmup ? 44 : 42),
+                patternStyle: patternStyle,
+                voiceStyle: voiceStyle,
               ),
       ),
     );

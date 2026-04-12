@@ -27,6 +27,7 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
   SelfReportTensionV1? _tension;
   SelfReportTempoReadinessV1? _tempoReadiness;
   bool _assessmentLoaded = false;
+  bool _savedBpm = false;
 
   @override
   Widget build(BuildContext context) {
@@ -45,6 +46,10 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
     final firstItem = widget.controller.itemById(primaryItemId);
     final bool isWorkingOnSource = session.sourceName == 'Working On';
     final _SessionRecommendation recommendation = _recommendationFor(session);
+    final bool canSaveBpm =
+        !_savedBpm &&
+        session.practiceItemIds.length == 1 &&
+        widget.controller.launchBpmForItem(primaryItemId) != session.bpm;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Session Summary')),
@@ -153,6 +158,55 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                   ),
                   const SizedBox(height: 16),
                   _RecommendationPanel(recommendation: recommendation),
+                  if (canSaveBpm) ...<Widget>[
+                    const SizedBox(height: 16),
+                    DrumPanel(
+                      tone: DrumPanelTone.blue,
+                      padding: const EdgeInsets.all(14),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          const Icon(Icons.speed_rounded, size: 20),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Text(
+                                  'Save BPM',
+                                  style: Theme.of(context).textTheme.titleSmall
+                                      ?.copyWith(fontWeight: FontWeight.w900),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'This rep ended at ${session.bpm} BPM. Save that as the starting BPM for this item?',
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          OutlinedButton(
+                            onPressed: () {
+                              widget.controller
+                                  .rememberLaunchPreferencesForItem(
+                                    itemId: primaryItemId,
+                                    bpm: session.bpm,
+                                    timerPreset: widget.controller
+                                        .launchTimerPresetForItem(
+                                          primaryItemId,
+                                        ),
+                                  );
+                              setState(() {
+                                _savedBpm = true;
+                              });
+                            },
+                            child: const Text('Save BPM'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -182,7 +236,8 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                                       ? widget.controller
                                             .buildSessionForWorkingOnSelection(
                                               session.practiceItemIds,
-                                              practiceMode: session.practiceMode,
+                                              practiceMode:
+                                                  session.practiceMode,
                                             )
                                       : widget.controller.buildSessionForItem(
                                           firstItem.id,

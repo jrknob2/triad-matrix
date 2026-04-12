@@ -16,6 +16,7 @@ class PatternVoiceDisplay extends StatelessWidget {
   final bool showRepeatIndicator;
   final bool scrollable;
   final bool showPatternRow;
+  final bool showVoiceRow;
   final bool wrap;
 
   const PatternVoiceDisplay({
@@ -32,6 +33,7 @@ class PatternVoiceDisplay extends StatelessWidget {
     this.showRepeatIndicator = false,
     this.scrollable = true,
     this.showPatternRow = true,
+    this.showVoiceRow = true,
     this.wrap = false,
   }) : assert(tokens.length == markings.length),
        assert(tokens.length == voices.length);
@@ -142,25 +144,27 @@ class PatternVoiceDisplay extends StatelessWidget {
               separatorStyle: patternStyle,
             ),
           ),
-        if (showPatternRow) const SizedBox(height: 6),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: _rowCellsForRange(
-            chunk: chunk,
-            separators: separators,
-            separatorWidth: separatorWidth,
-            noteCellFor: (int index) => Text(
-              voices[index].shortLabel,
-              textAlign: TextAlign.center,
-              style: voiceStyle.copyWith(
-                color: const Color(0xFF5B5345),
-                fontWeight: FontWeight.w800,
+        if (showVoiceRow) ...<Widget>[
+          if (showPatternRow) const SizedBox(height: 6),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: _rowCellsForRange(
+              chunk: chunk,
+              separators: separators,
+              separatorWidth: separatorWidth,
+              noteCellFor: (int index) => Text(
+                voices[index].shortLabel,
+                textAlign: TextAlign.center,
+                style: voiceStyle.copyWith(
+                  color: const Color(0xFF5B5345),
+                  fontWeight: FontWeight.w800,
+                ),
               ),
+              separatorStyle: voiceStyle,
+              showSeparatorText: false,
             ),
-            separatorStyle: voiceStyle,
-            showSeparatorText: false,
           ),
-        ),
+        ],
       ],
     );
   }
