@@ -49,6 +49,12 @@ List item rule:
 - list items should use one shared formatting model across screens by default
 - typography, spacing, metadata treatment, and action placement should stay consistent unless a specific exception is documented
 
+Notation rule:
+
+- notation readouts should be center-justified everywhere by default
+- if a notation surface also wraps, each wrapped line group should remain visually centered
+- left alignment for notation needs an explicit exception, not ad hoc local styling
+
 ## Layout Rule
 
 Use horizontal space before adding more vertical stacking.
@@ -729,6 +735,7 @@ Rules:
 - the setup surface may also advise when the actively trained rotation has grown too wide
 - active-rotation guidance should treat roughly `4-8` actively pushed items as the normal zone
 - if the current action selects every item in the visible filtered slice, the label should be `Select All`
+- selection actions like `Select All` and `Clear` are not filters and should live in their own labeled action row
 - when recent active rotation grows beyond that, the app may advise shrinking the core rotation, but must not hard-block it
 - long visible item lists should default to 5 rows and use `Show More` for the rest
 - per-pattern BPM and duration do not belong on this list-based setup surface

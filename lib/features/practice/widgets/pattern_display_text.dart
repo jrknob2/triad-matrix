@@ -18,7 +18,7 @@ class PatternDisplayText extends StatelessWidget {
     required this.tokens,
     required this.markings,
     this.style,
-    this.textAlign = TextAlign.start,
+    this.textAlign = TextAlign.center,
     this.ghostScale = 0.84,
     this.ghostOpacity = 0.72,
     this.grouping = PatternGroupingV1.spaced,
@@ -42,23 +42,26 @@ class PatternDisplayText extends StatelessWidget {
         _ => CrossAxisAlignment.start,
       },
       children: <Widget>[
-        RichText(
-          textAlign: textAlign,
-          maxLines: maxLines,
-          overflow: TextOverflow.visible,
-          text: TextSpan(
-            style: baseStyle,
-            children: <InlineSpan>[
-              for (
-                int index = 0;
-                index < tokens.length;
-                index++
-              ) ...<InlineSpan>[
-                ..._spansForToken(tokens[index], markings[index], baseStyle),
-                if (separators[index].isNotEmpty)
-                  TextSpan(text: separators[index], style: baseStyle),
+        Align(
+          alignment: Alignment.center,
+          child: RichText(
+            textAlign: textAlign,
+            maxLines: maxLines,
+            overflow: TextOverflow.visible,
+            text: TextSpan(
+              style: baseStyle,
+              children: <InlineSpan>[
+                for (
+                  int index = 0;
+                  index < tokens.length;
+                  index++
+                ) ...<InlineSpan>[
+                  ..._spansForToken(tokens[index], markings[index], baseStyle),
+                  if (separators[index].isNotEmpty)
+                    TextSpan(text: separators[index], style: baseStyle),
+                ],
               ],
-            ],
+            ),
           ),
         ),
         if (showRepeatIndicator)

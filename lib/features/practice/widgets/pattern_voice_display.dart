@@ -64,32 +64,35 @@ class PatternVoiceDisplay extends StatelessWidget {
                 separators: separators,
                 separatorWidth: separatorWidth,
               );
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  for (int i = 0; i < chunks.length; i++) ...<Widget>[
-                    _chunkWidget(
-                      chunk: chunks[i],
-                      separators: separators,
-                      separatorWidth: separatorWidth,
-                      patternStyle: resolvedPatternStyle,
-                      voiceStyle: resolvedVoiceStyle,
-                    ),
-                    if (i < chunks.length - 1) const SizedBox(height: 10),
-                  ],
-                  if (showRepeatIndicator)
-                    Center(
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: Icon(
-                          Icons.repeat_rounded,
-                          size: (resolvedPatternStyle.fontSize ?? 20) * 1.05,
-                          color: resolvedPatternStyle.color,
+              return Align(
+                alignment: Alignment.center,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: <Widget>[
+                    for (int i = 0; i < chunks.length; i++) ...<Widget>[
+                      _chunkWidget(
+                        chunk: chunks[i],
+                        separators: separators,
+                        separatorWidth: separatorWidth,
+                        patternStyle: resolvedPatternStyle,
+                        voiceStyle: resolvedVoiceStyle,
+                      ),
+                      if (i < chunks.length - 1) const SizedBox(height: 10),
+                    ],
+                    if (showRepeatIndicator)
+                      Center(
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Icon(
+                            Icons.repeat_rounded,
+                            size: (resolvedPatternStyle.fontSize ?? 20) * 1.05,
+                            color: resolvedPatternStyle.color,
+                          ),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               );
             },
           )
@@ -132,7 +135,7 @@ class PatternVoiceDisplay extends StatelessWidget {
     required TextStyle voiceStyle,
   }) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: <Widget>[
         if (showPatternRow)
           Row(

@@ -146,7 +146,7 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                   if (bpmAdjusted) ...<Widget>[
                     const SizedBox(height: 16),
                     _AssessmentChoiceGroup<bool>(
-                      title: 'Keep ${session.bpm} BPM next time?',
+                      title: 'Keep ${session.bpm} BPM?',
                       value: _keepAdjustedTempoValue(session),
                       values: const <bool>[true, false],
                       labelFor: (bool value) => value ? 'Yes' : 'No',

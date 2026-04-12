@@ -834,21 +834,18 @@ class _WorkingOnSessionSetup extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 14),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+            const DrumEyebrow(text: 'Selection'),
+            const SizedBox(height: 8),
+            DrumActionRow(
+              spacing: 8,
               children: <Widget>[
-                DrumActionRow(
-                  spacing: 8,
-                  children: <Widget>[
-                    DrumActionPill(
-                      label: const Text('Select All'),
-                      onPressed: onSelectVisible,
-                    ),
-                    DrumActionPill(
-                      label: const Text('Clear'),
-                      onPressed: onClearSelection,
-                    ),
-                  ],
+                DrumActionPill(
+                  label: const Text('Select All'),
+                  onPressed: onSelectVisible,
+                ),
+                DrumActionPill(
+                  label: const Text('Clear'),
+                  onPressed: onClearSelection,
                 ),
               ],
             ),
