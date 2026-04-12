@@ -6,11 +6,7 @@ import '../../features/app/app_formatters.dart';
 import '../../features/app/drumcabulary_ui.dart';
 import '../../features/app/unsaved_changes_dialog.dart';
 import '../../state/app_controller.dart';
-import '../practice/widgets/pattern_display_text.dart';
-import '../practice/widgets/pattern_marking_editor.dart';
-import '../practice/widgets/pattern_voice_display.dart';
 import '../practice/widgets/session_setup_controls.dart';
-import '../practice/widgets/voice_assignment_editor.dart';
 
 class ItemDetailScreen extends StatefulWidget {
   final AppController controller;
@@ -37,6 +33,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   late CompetencyLevelV1 _competency;
   late int _sessionBpm;
   late TimerPresetV1 _timerPreset;
+  int _selectedNoteIndex = 0;
 
   @override
   void initState() {
@@ -61,6 +58,10 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         final List<PatternNoteMarkingV1> draftMarkings = _draftMarkingsFor(
           item.noteCount,
         );
+        final int selectedNoteIndex = _selectedNoteIndex.clamp(
+          0,
+          tokens.length - 1,
+        );
         final bool hasUnsavedChanges = _hasUnsavedChanges(item);
 
         return PopScope(
@@ -83,54 +84,38 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        flowCapable
-                            ? PatternVoiceDisplay(
-                                tokens: tokens,
-                                markings: draftMarkings,
-                                voices: _voiceAssignments,
-                                grouping: widget.controller.displayGroupingFor(
-                                  item.id,
-                                ),
-                                scrollable: false,
-                                wrap: true,
-                                cellWidth: 34,
-                                patternStyle: Theme.of(context)
-                                    .textTheme
-                                    .headlineMedium
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: -0.4,
-                                    ),
-                                voiceStyle: Theme.of(context)
-                                    .textTheme
-                                    .titleSmall
-                                    ?.copyWith(fontWeight: FontWeight.w800),
-                              )
-                            : PatternDisplayText(
-                                tokens: tokens,
-                                markings: draftMarkings,
-                                grouping: widget.controller.displayGroupingFor(
-                                  item.id,
-                                ),
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .headlineMedium
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: -0.8,
-                                    ),
-                              ),
+                        _SelectableNotationBlock(
+                          tokens: tokens,
+                          markings: draftMarkings,
+                          voices: _voiceAssignments,
+                          grouping: widget.controller.displayGroupingFor(
+                            item.id,
+                          ),
+                          selectedIndex: selectedNoteIndex,
+                          showVoices: flowCapable,
+                          onSelect: (int index) {
+                            setState(() => _selectedNoteIndex = index);
+                          },
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Tap a note to edit it.',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: const Color(0xFF5B5345)),
+                        ),
                         const SizedBox(height: 12),
                         Text(
                           'Accents & Ghosts',
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                         const SizedBox(height: 8),
-                        PatternMarkingEditor(
+                        _SelectedMarkingEditor(
                           tokens: tokens,
                           markings: draftMarkings,
-                          onTapNote: _cycleMarking,
-                          showHelpText: false,
+                          selectedIndex: selectedNoteIndex,
+                          onChanged: (PatternNoteMarkingV1 next) {
+                            _setMarking(selectedNoteIndex, next);
+                          },
                         ),
                         const SizedBox(height: 16),
                         Text(
@@ -138,11 +123,13 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                         const SizedBox(height: 8),
-                        VoiceAssignmentEditor(
+                        _SelectedVoiceEditor(
                           tokens: tokens,
                           voices: _voiceAssignments,
-                          onTapNote: _cycleVoice,
-                          showHelpText: false,
+                          selectedIndex: selectedNoteIndex,
+                          onChanged: (DrumVoiceV1 next) {
+                            _setVoice(selectedNoteIndex, next);
+                          },
                         ),
                         if (flowCapable) ...<Widget>[
                           const SizedBox(height: 8),
@@ -373,6 +360,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     _competency = widget.controller.competencyFor(item.id);
     _sessionBpm = widget.controller.launchBpmForItem(item.id);
     _timerPreset = widget.controller.launchTimerPresetForItem(item.id);
+    _selectedNoteIndex = _selectedNoteIndex.clamp(0, item.noteCount - 1);
   }
 
   List<PatternNoteMarkingV1> _draftMarkingsFor(int noteCount) {
@@ -385,14 +373,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     });
   }
 
-  void _cycleMarking(int noteIndex) {
-    final PracticeItemV1 item = widget.controller.itemById(widget.itemId);
-    final String token = widget.controller.noteTokensFor(item.id)[noteIndex];
-    final PatternNoteMarkingV1 current = _draftMarkingsFor(
-      item.noteCount,
-    )[noteIndex];
-    final PatternNoteMarkingV1 next = _nextMarking(token, current);
-
+  void _setMarking(int noteIndex, PatternNoteMarkingV1 next) {
     setState(() {
       final Set<int> accents = _accentedNoteIndices.toSet();
       final Set<int> ghosts = _ghostNoteIndices.toSet();
@@ -413,50 +394,11 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     });
   }
 
-  void _cycleVoice(int noteIndex) {
-    final PracticeItemV1 item = widget.controller.itemById(widget.itemId);
-    final String token = widget.controller.noteTokensFor(item.id)[noteIndex];
-    final DrumVoiceV1 current = _voiceAssignments[noteIndex];
-    final DrumVoiceV1 next = _nextVoice(token, current);
+  void _setVoice(int noteIndex, DrumVoiceV1 next) {
     setState(() {
       _voiceAssignments = List<DrumVoiceV1>.from(_voiceAssignments)
         ..[noteIndex] = next;
     });
-  }
-
-  PatternNoteMarkingV1 _nextMarking(
-    String token,
-    PatternNoteMarkingV1 current,
-  ) {
-    if (token == 'K') {
-      return switch (current) {
-        PatternNoteMarkingV1.normal => PatternNoteMarkingV1.ghost,
-        PatternNoteMarkingV1.accent => PatternNoteMarkingV1.ghost,
-        PatternNoteMarkingV1.ghost => PatternNoteMarkingV1.normal,
-      };
-    }
-
-    return switch (current) {
-      PatternNoteMarkingV1.normal => PatternNoteMarkingV1.accent,
-      PatternNoteMarkingV1.accent => PatternNoteMarkingV1.ghost,
-      PatternNoteMarkingV1.ghost => PatternNoteMarkingV1.normal,
-    };
-  }
-
-  DrumVoiceV1 _nextVoice(String token, DrumVoiceV1 current) {
-    if (token == 'K') return DrumVoiceV1.kick;
-
-    const List<DrumVoiceV1> cycle = <DrumVoiceV1>[
-      DrumVoiceV1.snare,
-      DrumVoiceV1.rackTom,
-      DrumVoiceV1.tom2,
-      DrumVoiceV1.floorTom,
-      DrumVoiceV1.hihat,
-    ];
-
-    final int index = cycle.indexOf(current);
-    if (index < 0) return cycle.first;
-    return cycle[(index + 1) % cycle.length];
   }
 
   bool _hasDraftFlowVoices(List<String> tokens, List<DrumVoiceV1> voices) {
@@ -543,6 +485,351 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       _ => false,
     };
   }
+}
+
+class _SelectableNotationBlock extends StatelessWidget {
+  final List<String> tokens;
+  final List<PatternNoteMarkingV1> markings;
+  final List<DrumVoiceV1> voices;
+  final PatternGroupingV1 grouping;
+  final int selectedIndex;
+  final bool showVoices;
+  final ValueChanged<int> onSelect;
+
+  const _SelectableNotationBlock({
+    required this.tokens,
+    required this.markings,
+    required this.voices,
+    required this.grouping,
+    required this.selectedIndex,
+    required this.showVoices,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final TextStyle patternStyle =
+        Theme.of(context).textTheme.headlineMedium?.copyWith(
+          fontWeight: FontWeight.w900,
+          letterSpacing: -0.5,
+        ) ??
+        const TextStyle(fontSize: 28, fontWeight: FontWeight.w900);
+    final TextStyle voiceStyle =
+        Theme.of(context).textTheme.titleSmall?.copyWith(
+          fontWeight: FontWeight.w800,
+          color: const Color(0xFF5B5345),
+        ) ??
+        const TextStyle(fontSize: 14, fontWeight: FontWeight.w800);
+    final List<String> separators = List<String>.generate(
+      tokens.length,
+      (int index) => grouping.separatorAfter(index, tokens.length),
+      growable: false,
+    );
+
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final double maxWidth = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : double.infinity;
+        final List<_NotationChunk> chunks = _chunksForWidth(
+          maxWidth,
+          separators,
+        );
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            for (int i = 0; i < chunks.length; i++) ...<Widget>[
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  for (
+                    int index = chunks[i].start;
+                    index < chunks[i].end;
+                    index++
+                  ) ...<Widget>[
+                    _SelectableNotationCell(
+                      token: tokens[index],
+                      marking: markings[index],
+                      voice: voices[index],
+                      selected: index == selectedIndex,
+                      showVoice: showVoices,
+                      patternStyle: patternStyle,
+                      voiceStyle: voiceStyle,
+                      onTap: () => onSelect(index),
+                    ),
+                    if (separators[index].isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 2),
+                        child: Text(
+                          separators[index],
+                          style: patternStyle.copyWith(
+                            color: const Color(0xFF6B6254),
+                          ),
+                        ),
+                      ),
+                  ],
+                ],
+              ),
+              if (i < chunks.length - 1) const SizedBox(height: 10),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
+  List<_NotationChunk> _chunksForWidth(
+    double maxWidth,
+    List<String> separators,
+  ) {
+    const double cellWidth = 40;
+    const double separatorWidth = 10;
+    if (!maxWidth.isFinite || maxWidth <= 0) {
+      return <_NotationChunk>[_NotationChunk(start: 0, end: tokens.length)];
+    }
+    final List<_NotationChunk> chunks = <_NotationChunk>[];
+    int start = 0;
+    while (start < tokens.length) {
+      double width = 0;
+      int end = start;
+      while (end < tokens.length) {
+        final double nextWidth =
+            cellWidth + (separators[end].isNotEmpty ? separatorWidth : 0);
+        if (end > start && width + nextWidth > maxWidth) break;
+        width += nextWidth;
+        end++;
+      }
+      if (end == start) end++;
+      chunks.add(_NotationChunk(start: start, end: end));
+      start = end;
+    }
+    return chunks;
+  }
+}
+
+class _SelectableNotationCell extends StatelessWidget {
+  final String token;
+  final PatternNoteMarkingV1 marking;
+  final DrumVoiceV1 voice;
+  final bool selected;
+  final bool showVoice;
+  final TextStyle patternStyle;
+  final TextStyle voiceStyle;
+  final VoidCallback onTap;
+
+  const _SelectableNotationCell({
+    required this.token,
+    required this.marking,
+    required this.voice,
+    required this.selected,
+    required this.showVoice,
+    required this.patternStyle,
+    required this.voiceStyle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          width: 36,
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          decoration: BoxDecoration(
+            color: selected ? const Color(0xFFE7D6A8) : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: selected ? const Color(0xFF8E6B1F) : Colors.transparent,
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              RichText(
+                textAlign: TextAlign.center,
+                text: TextSpan(
+                  style: patternStyle,
+                  children: switch (marking) {
+                    PatternNoteMarkingV1.normal => <InlineSpan>[
+                      TextSpan(text: token, style: patternStyle),
+                    ],
+                    PatternNoteMarkingV1.accent => <InlineSpan>[
+                      TextSpan(text: '^', style: patternStyle),
+                      TextSpan(text: token, style: patternStyle),
+                    ],
+                    PatternNoteMarkingV1.ghost => <InlineSpan>[
+                      TextSpan(text: '(', style: patternStyle),
+                      TextSpan(
+                        text: token,
+                        style: patternStyle.copyWith(
+                          fontSize: (patternStyle.fontSize ?? 28) * 0.84,
+                          color: (patternStyle.color ?? const Color(0xFF101010))
+                              .withValues(alpha: 0.72),
+                        ),
+                      ),
+                      TextSpan(text: ')', style: patternStyle),
+                    ],
+                  },
+                ),
+              ),
+              if (showVoice) ...<Widget>[
+                const SizedBox(height: 2),
+                Text(
+                  voice.shortLabel,
+                  style: voiceStyle,
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SelectedMarkingEditor extends StatelessWidget {
+  final List<String> tokens;
+  final List<PatternNoteMarkingV1> markings;
+  final int selectedIndex;
+  final ValueChanged<PatternNoteMarkingV1> onChanged;
+
+  const _SelectedMarkingEditor({
+    required this.tokens,
+    required this.markings,
+    required this.selectedIndex,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final String token = tokens[selectedIndex];
+    final PatternNoteMarkingV1 current = markings[selectedIndex];
+    final List<PatternNoteMarkingV1> allowed = token == 'K'
+        ? const <PatternNoteMarkingV1>[
+            PatternNoteMarkingV1.normal,
+            PatternNoteMarkingV1.ghost,
+          ]
+        : PatternNoteMarkingV1.values;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          'Note ${selectedIndex + 1} · ${_markingLabel(token, current)}',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: const Color(0xFF5B5345),
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: allowed
+              .map(
+                (PatternNoteMarkingV1 option) => DrumSelectablePill(
+                  label: Text(_markingOptionLabel(option)),
+                  selected: current == option,
+                  onPressed: () => onChanged(option),
+                ),
+              )
+              .toList(growable: false),
+        ),
+      ],
+    );
+  }
+
+  static String _markingOptionLabel(PatternNoteMarkingV1 marking) {
+    return switch (marking) {
+      PatternNoteMarkingV1.normal => 'Normal',
+      PatternNoteMarkingV1.accent => 'Accent',
+      PatternNoteMarkingV1.ghost => 'Ghost',
+    };
+  }
+
+  static String _markingLabel(String token, PatternNoteMarkingV1 marking) {
+    return switch (marking) {
+      PatternNoteMarkingV1.normal => token,
+      PatternNoteMarkingV1.accent => '^$token',
+      PatternNoteMarkingV1.ghost => '($token)',
+    };
+  }
+}
+
+class _SelectedVoiceEditor extends StatelessWidget {
+  final List<String> tokens;
+  final List<DrumVoiceV1> voices;
+  final int selectedIndex;
+  final ValueChanged<DrumVoiceV1> onChanged;
+
+  const _SelectedVoiceEditor({
+    required this.tokens,
+    required this.voices,
+    required this.selectedIndex,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final String token = tokens[selectedIndex];
+    final DrumVoiceV1 current = voices[selectedIndex];
+    if (token == 'K') {
+      return Text(
+        'Note ${selectedIndex + 1} · K:K. Kick notes stay on kick.',
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+          color: const Color(0xFF5B5345),
+          fontWeight: FontWeight.w700,
+        ),
+      );
+    }
+
+    const List<DrumVoiceV1> options = <DrumVoiceV1>[
+      DrumVoiceV1.snare,
+      DrumVoiceV1.rackTom,
+      DrumVoiceV1.tom2,
+      DrumVoiceV1.floorTom,
+      DrumVoiceV1.hihat,
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          'Note ${selectedIndex + 1} · $token:${current.shortLabel}',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: const Color(0xFF5B5345),
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: options
+              .map(
+                (DrumVoiceV1 option) => DrumSelectablePill(
+                  label: Text(option.shortLabel),
+                  selected: current == option,
+                  onPressed: () => onChanged(option),
+                ),
+              )
+              .toList(growable: false),
+        ),
+      ],
+    );
+  }
+}
+
+class _NotationChunk {
+  final int start;
+  final int end;
+
+  const _NotationChunk({required this.start, required this.end});
 }
 
 class _FlowReadinessNote extends StatelessWidget {

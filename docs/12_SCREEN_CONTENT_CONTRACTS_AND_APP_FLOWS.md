@@ -541,8 +541,10 @@ Rules:
 
 - a single selected triad is direct item selection
 - selecting a second triad turns the editor into phrase-building mode
+- shows a readable notation line for the whole phrase
 - shows exact ordered sequence
 - owns exact occurrence removal
+- notation readout and removable chips serve different jobs and should both be visible
 - grid reflects membership only
 - additional triads may be added freely while building a phrase
 - if a phrase includes triads that are not ready, Matrix should show inline guidance instead of blocking selection
@@ -1018,6 +1020,10 @@ Practice Item lets the user inspect and edit one item cleanly.
 
 - editing controls appear under the pattern
 - mode control changes editing context
+- tapping the notation selects one note at a time
+- selection and assignment are separate actions
+- `Accents & Ghosts` assigns the marking for the selected note
+- `Flow Voices` assigns the voice for the selected note
 - session setup controls belong here for single-item practice
 - last BPM and duration for a single item should be remembered outside the authored item data
 - practice CTA launches the chosen mode
@@ -1028,6 +1034,8 @@ Practice Item lets the user inspect and edit one item cleanly.
 - Practice Item should have one primary notation block at the top of the screen
 - when flow voices exist, that top block should become the unified two-row pattern/voice display
 - the `Flow Voices` section should contain voice editing controls only, not a second notation preview
+- the notation block should be the note-selection surface, so the screen does not need a per-note chip grid for editing
+- when entering voice editing, effective default voices remain `snare` for hand notes and `kick` for `K` notes unless the user assigns something else
 - Matrix selection and phrase building must not inject authored markings automatically
 - item edits should live in a local draft until the user explicitly saves them
 - navigating away with unsaved item changes should prompt the user to save, discard, or keep editing

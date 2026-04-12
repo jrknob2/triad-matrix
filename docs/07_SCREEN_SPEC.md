@@ -211,6 +211,7 @@ Matrix is the structural map of the triad system and the main phrase-building su
 #### State B: Selection / Phrase Building
 
 - one or more items selected
+- phrase notation readout visible
 - phrase editor visible above grid
 - action row visible
 
@@ -236,7 +237,8 @@ Matrix is the structural map of the triad system and the main phrase-building su
 ### Interaction Rule
 
 The grid shows membership.  
-The phrase editor shows order.
+The phrase notation readout shows the whole phrase.  
+The phrase editor shows exact ordered occurrences.
 
 If an item appears anywhere in the phrase, its matrix cell is selected.  
 Exact removal happens in the phrase editor, not inside the cell.
@@ -260,6 +262,7 @@ Phrase rule:
 - Matrix edit mode must preload the item's current triad sequence on first render
 - Matrix edit mode should replace `Add to Working On` with a return action back to `Working On`
 - moving from `Practice Item` into Matrix and back must preserve authored markings and voice assignments unless the user explicitly changes and saves them
+- the phrase panel should show both a readable notation line for the whole phrase and removable chips for exact occurrence editing
 
 ### Acceptance Criteria
 
@@ -526,7 +529,10 @@ Practice Item is the detail/edit screen for one piece of material.
 ### Acceptance Criteria
 
 - the pattern display is the primary signal
+- tapping the notation selects a single note; it does not directly assign markings or voices
 - controls under it are clearly for editing the item, not playing it
+- accent/ghost controls act on the currently selected note
+- voice controls act on the currently selected note
 - session setup values should feel like launch defaults, not authored pattern data
 - `Flow` should read as derived capability from voice assignments, not a user-declared item mode
 - no voice assignments and all-default voices should be treated as the same single-surface state
@@ -535,6 +541,7 @@ Practice Item is the detail/edit screen for one piece of material.
 - accents, ghosts, and flow voice assignments only appear when they were authored by the user
 - saved triad phrases / combo items should render with visible triad grouping by default
 - Practice Item should show one primary notation block
+- the editing UI should avoid rendering one chip per note when the notation itself can serve as the selection surface
 - when the item has flow voices, that primary notation block should render as a unified two-row pattern/voice display
 - the `Flow Voices` section should contain editing controls, not a second notation preview
 - edits should not write through immediately while the user is still working on the screen

@@ -5,6 +5,7 @@ import '../../features/app/app_formatters.dart';
 import '../../features/app/drumcabulary_ui.dart';
 import '../app/app_viewport.dart';
 import '../../state/app_controller.dart';
+import '../practice/widgets/pattern_display_text.dart';
 import '../practice/widgets/pattern_sequence_editor.dart';
 import 'widgets/triad_matrix_grid.dart';
 
@@ -672,6 +673,13 @@ class _MatrixPhrasePanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final List<String> phraseTokens = selectedItemIds
+        .expand(controller.noteTokensFor)
+        .toList(growable: false);
+    final List<PatternNoteMarkingV1> phraseMarkings = selectedItemIds
+        .expand(controller.noteMarkingsFor)
+        .toList(growable: false);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
@@ -696,6 +704,16 @@ class _MatrixPhrasePanel extends StatelessWidget {
                   ),
                 )
               else ...<Widget>[
+                PatternDisplayText(
+                  tokens: phraseTokens,
+                  markings: phraseMarkings,
+                  grouping: PatternGroupingV1.triads,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.4,
+                  ),
+                ),
+                const SizedBox(height: 10),
                 PatternSequenceEditor(
                   controller: controller,
                   itemIds: selectedItemIds,
