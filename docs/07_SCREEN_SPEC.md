@@ -363,6 +363,8 @@ Running transport rules:
 
 - while running, primary transport controls are `Pause` and `Reset`
 - `End` remains the session-exit control for normal tracked sessions
+- `End` stays disabled until the session has actually started and has session data
+- transport buttons shown together should share the same visual weight and size
 
 ### Acceptance Criteria
 
@@ -374,7 +376,8 @@ Running transport rules:
 - session player feels like an execution surface, not a config form
 - warmup behaves like temporary prep, not core curriculum
 - the player must not contain an in-session `Warm Up` entry point
-- on iPad, launch choices and the active browser/setup surface should share the screen when width allows
+- back from Session Summary returns to the player
+- back from the player returns to Practice
 
 ---
 

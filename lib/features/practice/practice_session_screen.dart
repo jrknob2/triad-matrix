@@ -54,6 +54,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   bool _warmupComplete = false;
   bool _completionChimed = false;
   bool _completionStateVisible = false;
+  bool _summaryOpenedForCurrentRun = false;
   Duration _elapsedOffset = Duration.zero;
   late bool _pulseEnabled;
   late int _bpm;
@@ -156,6 +157,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     required _SessionTransportState transport,
     required List<DrumVoiceV1> voices,
   }) {
+    final bool canEndSession = _canEndSession;
     return DrumPanel(
       tone: DrumPanelTone.dark,
       padding: const EdgeInsets.all(20),
@@ -214,6 +216,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
             children: <Widget>[
               SizedBox(
                 height: 58,
+                width: 140,
                 child: FilledButton.icon(
                   onPressed: _toggleRunning,
                   icon: Icon(_running ? Icons.pause : Icons.play_arrow),
@@ -223,6 +226,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
               if (!isWarmup && _running)
                 SizedBox(
                   height: 58,
+                  width: 140,
                   child: OutlinedButton.icon(
                     onPressed: _resetCurrentSessionRun,
                     style: OutlinedButton.styleFrom(
@@ -233,13 +237,17 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                     label: const Text('Reset'),
                   ),
                 ),
-              OutlinedButton(
-                onPressed: _endSession,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFFFFF4DE),
-                  side: const BorderSide(color: Color(0xFFFFF4DE)),
+              SizedBox(
+                height: 58,
+                width: 140,
+                child: OutlinedButton(
+                  onPressed: canEndSession ? _endSession : null,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFFFFF4DE),
+                    side: const BorderSide(color: Color(0xFFFFF4DE)),
+                  ),
+                  child: Text(isWarmup ? 'End Warmup' : 'End'),
                 ),
-                child: Text(isWarmup ? 'End Warmup' : 'End'),
               ),
             ],
           ),
@@ -316,6 +324,10 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     final bool shouldStart = !_running;
     setState(() {
       if (shouldStart) {
+        if (_summaryOpenedForCurrentRun) {
+          _resetRunState(clearElapsed: true, clearFlags: true);
+          _summaryOpenedForCurrentRun = false;
+        }
         if (_setup.family == MaterialFamilyV1.warmup && _warmupComplete) {
           _elapsedOffset = Duration.zero;
           _stopwatch.reset();
@@ -344,6 +356,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   }
 
   void _endSession() {
+    if (!_canEndSession) return;
     if (_isWarmup) {
       _resetRunState(clearElapsed: false);
       Navigator.of(context).pop();
@@ -357,8 +370,9 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
       _elapsed,
       assessmentItemId: _currentItemId,
     );
+    _summaryOpenedForCurrentRun = true;
 
-    Navigator.of(context).pushReplacement(
+    Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => SessionSummaryScreen(
           controller: widget.controller,
@@ -449,6 +463,10 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   String get _currentItemId => _setup.practiceItemIds[_currentItemIndex];
 
   Duration get _elapsed => _elapsedOffset + _stopwatch.elapsed;
+
+  bool get _hasSessionData => _elapsed.inMilliseconds > 0;
+
+  bool get _canEndSession => _hasSessionData && !_summaryOpenedForCurrentRun;
 
   _SessionTransportState get _transportState {
     final Duration? target = _targetDuration();

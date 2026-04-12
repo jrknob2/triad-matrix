@@ -842,6 +842,8 @@ Practice Session is execution only.
 - the player must not contain controls that switch the session into a different source type
 - default stopped transport state should present `Play` and `End`
 - running transport state should present `Pause` and `Reset`
+- `End` should stay disabled until the session has actually started and session data exists
+- transport buttons shown together should use the same height and visual weight
 
 ---
 
@@ -880,6 +882,8 @@ Session Summary closes a tracked session and collects limited useful feedback.
 - one assessment target item per session summary
 - wording must stay action-oriented
 - if session BPM differs from the item's saved practice BPM, Session Summary should offer a way to save the BPM back to that item
+- back navigation from Session Summary should return to the player screen for that session
+- back navigation from the player should return to Practice
 
 ---
 
