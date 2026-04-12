@@ -15,6 +15,7 @@ class PatternVoiceDisplay extends StatelessWidget {
   final PatternGroupingV1 grouping;
   final bool showRepeatIndicator;
   final bool scrollable;
+  final bool showPatternRow;
 
   const PatternVoiceDisplay({
     super.key,
@@ -29,6 +30,7 @@ class PatternVoiceDisplay extends StatelessWidget {
     this.grouping = PatternGroupingV1.none,
     this.showRepeatIndicator = false,
     this.scrollable = true,
+    this.showPatternRow = true,
   }) : assert(tokens.length == markings.length),
        assert(tokens.length == voices.length);
 
@@ -54,20 +56,21 @@ class PatternVoiceDisplay extends StatelessWidget {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Row(
-              children: _rowCells(
-                tokens,
-                separators,
-                separatorWidth,
-                (int index) => _patternText(
-                  tokens[index],
-                  markings[index],
+            if (showPatternRow)
+              Row(
+                children: _rowCells(
+                  tokens,
+                  separators,
+                  separatorWidth,
+                  (int index) => _patternText(
+                    tokens[index],
+                    markings[index],
+                    resolvedPatternStyle,
+                  ),
                   resolvedPatternStyle,
                 ),
-                resolvedPatternStyle,
               ),
-            ),
-            const SizedBox(height: 6),
+            if (showPatternRow) const SizedBox(height: 6),
             Row(
               children: _rowCells(
                 tokens,

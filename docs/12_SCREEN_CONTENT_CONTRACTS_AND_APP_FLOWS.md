@@ -1025,6 +1025,7 @@ Practice Item lets the user inspect and edit one item cleanly.
 - base material enters the app plain unless the user has explicitly edited it
 - no voice assignments and all-default voices must collapse to the same single-surface state
 - voice displays outside the editor should only appear when the item has authored off-snare voices on non-kick notes
+- when Practice Item shows a flow voice display, it should show only the voice mapping context and must not repeat a second pattern readout
 - Matrix selection and phrase building must not inject authored markings automatically
 - item edits should live in a local draft until the user explicitly saves them
 - navigating away with unsaved item changes should prompt the user to save, discard, or keep editing

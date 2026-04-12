@@ -115,6 +115,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                             tokens: tokens,
                             markings: draftMarkings,
                             voices: _voiceAssignments,
+                            showPatternRow: false,
                             patternStyle: Theme.of(context)
                                 .textTheme
                                 .titleMedium

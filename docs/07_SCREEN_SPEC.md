@@ -534,6 +534,7 @@ Practice Item is the detail/edit screen for one piece of material.
 - list filters may still expose `Single Surface` and `Flow` as derived item states
 - accents, ghosts, and flow voice assignments only appear when they were authored by the user
 - saved triad phrases / combo items should render with visible triad grouping by default
+- Practice Item should show one primary pattern readout, not duplicate it again inside the Flow Voices section
 - edits should not write through immediately while the user is still working on the screen
 
 ---
