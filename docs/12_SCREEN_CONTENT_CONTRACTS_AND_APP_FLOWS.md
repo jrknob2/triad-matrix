@@ -48,6 +48,8 @@ List item rule:
 - overall metadata inside list items should be rendered as concise subtext
 - separate metadata values with dots
 - do not use chips for list-item metadata unless the chip itself is the action the user is taking
+- list items should use one shared formatting model across screens by default
+- typography, spacing, metadata treatment, and action placement should stay consistent unless a specific exception is documented
 
 ## Layout Rule
 

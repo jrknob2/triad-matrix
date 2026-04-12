@@ -5,8 +5,7 @@ import '../../state/app_controller.dart';
 import '../app/app_formatters.dart';
 import '../app/app_viewport.dart';
 import '../app/drumcabulary_ui.dart';
-import 'widgets/pattern_display_text.dart';
-import 'widgets/pattern_voice_display.dart';
+import 'widgets/practice_item_summary_block.dart';
 
 class PracticeScreen extends StatefulWidget {
   final AppController controller;
@@ -997,38 +996,11 @@ class _SelectableWorkingOnRow extends StatelessWidget {
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      PatternDisplayText(
-                        tokens: controller.noteTokensFor(item.id),
-                        markings: controller.noteMarkingsFor(item.id),
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w900,
-                        ),
-                        grouping: controller.displayGroupingFor(item.id),
-                      ),
-                      if (controller.hasNonSnareVoice(item.id)) ...<Widget>[
-                        const SizedBox(height: 6),
-                        PatternVoiceDisplay(
-                          tokens: controller.noteTokensFor(item.id),
-                          markings: controller.noteMarkingsFor(item.id),
-                          voices: controller.noteVoicesFor(item.id),
-                          patternStyle: Theme.of(context).textTheme.titleSmall
-                              ?.copyWith(fontWeight: FontWeight.w900),
-                          voiceStyle: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(fontWeight: FontWeight.w700),
-                          grouping: controller.displayGroupingFor(item.id),
-                        ),
-                      ],
-                      const SizedBox(height: 6),
-                      Text(
-                        _workingOnMetadata(controller, item, status),
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: const Color(0xFF6A5E4C),
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
+                  child: PracticeItemSummaryBlock(
+                    controller: controller,
+                    item: item,
+                    metadataLines: <String>[
+                      _workingOnMetadata(controller, item, status),
                     ],
                   ),
                 ),

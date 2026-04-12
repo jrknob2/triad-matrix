@@ -323,6 +323,7 @@ Must support:
 - any filter controls should be labeled `Filters` and rendered in a single horizontally scrollable row
 - `From Working On` should not show duplicate count chips when the same count is already carried by the start action
 - list-item metadata should use concise subtext with dot separators, not chip-style badges, unless the chip itself is the primary interaction
+- list rows in `Practice` and `Working On` should follow the same shared formatting rules unless an explicit exception is documented
 
 Optional later:
 

@@ -6,6 +6,7 @@ import '../../features/app/drumcabulary_ui.dart';
 import '../../state/app_controller.dart';
 import '../practice/widgets/pattern_display_text.dart';
 import '../practice/widgets/pattern_voice_display.dart';
+import '../practice/widgets/practice_item_summary_block.dart';
 
 enum _FocusViewFilter { all, singleSurface, flow }
 
@@ -186,8 +187,9 @@ class _FocusScreenState extends State<FocusScreen> {
   bool _matchesViewFilter(PracticeItemV1 item) {
     return switch (_viewFilter) {
       _FocusViewFilter.all => true,
-      _FocusViewFilter.singleSurface =>
-        !widget.controller.hasNonSnareVoice(item.id),
+      _FocusViewFilter.singleSurface => !widget.controller.hasNonSnareVoice(
+        item.id,
+      ),
       _FocusViewFilter.flow => widget.controller.hasNonSnareVoice(item.id),
     };
   }
@@ -233,9 +235,9 @@ class _FocusScreenState extends State<FocusScreen> {
                 tokens: tokens,
                 markings: markings,
                 grouping: widget.controller.displayGroupingFor(item.id),
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w900,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
               ),
               if (showVoices) ...<Widget>[
                 const SizedBox(height: 8),
@@ -244,8 +246,9 @@ class _FocusScreenState extends State<FocusScreen> {
                   markings: markings,
                   voices: widget.controller.noteVoicesFor(item.id),
                   grouping: widget.controller.displayGroupingFor(item.id),
-                  patternStyle: Theme.of(context).textTheme.bodyMedium
-                      ?.copyWith(fontWeight: FontWeight.w900),
+                  patternStyle: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w900),
                   voiceStyle: Theme.of(context).textTheme.bodySmall,
                 ),
               ],
@@ -348,50 +351,12 @@ class _FocusItemCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: <Widget>[
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                PatternDisplayText(
-                  tokens: controller.noteTokensFor(item.id),
-                  markings: controller.noteMarkingsFor(item.id),
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -0.5,
-                  ),
-                  grouping: controller.displayGroupingFor(item.id),
-                ),
-                if (controller.hasNonSnareVoice(item.id)) ...<Widget>[
-                  const SizedBox(height: 6),
-                  PatternVoiceDisplay(
-                    tokens: controller.noteTokensFor(item.id),
-                    markings: controller.noteMarkingsFor(item.id),
-                    voices: controller.noteVoicesFor(item.id),
-                    patternStyle: Theme.of(context).textTheme.titleSmall
-                        ?.copyWith(
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: -0.3,
-                        ),
-                    voiceStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: const Color(0xFF6A5E4C),
-                      fontWeight: FontWeight.w700,
-                    ),
-                    grouping: controller.displayGroupingFor(item.id),
-                  ),
-                ],
-                const SizedBox(height: 6),
-                Text(
-                  '${item.family.label} • ${controller.matrixProgressStateFor(item.id).label}',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: const Color(0xFF6A5E4C),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '${formatDuration(controller.totalTime(itemId: item.id))} logged',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: const Color(0xFF6A5E4C),
-                  ),
-                ),
+            child: PracticeItemSummaryBlock(
+              controller: controller,
+              item: item,
+              metadataLines: <String>[
+                '${item.family.label} • ${controller.matrixProgressStateFor(item.id).label}',
+                '${formatDuration(controller.totalTime(itemId: item.id))} logged',
               ],
             ),
           ),
@@ -446,44 +411,10 @@ class _SearchResultCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: <Widget>[
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                PatternDisplayText(
-                  tokens: controller.noteTokensFor(item.id),
-                  markings: controller.noteMarkingsFor(item.id),
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -0.5,
-                  ),
-                  grouping: controller.displayGroupingFor(item.id),
-                ),
-                if (controller.hasNonSnareVoice(item.id)) ...<Widget>[
-                  const SizedBox(height: 6),
-                  PatternVoiceDisplay(
-                    tokens: controller.noteTokensFor(item.id),
-                    markings: controller.noteMarkingsFor(item.id),
-                    voices: controller.noteVoicesFor(item.id),
-                    patternStyle: Theme.of(context).textTheme.titleSmall
-                        ?.copyWith(
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: -0.3,
-                        ),
-                    voiceStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: const Color(0xFF6A5E4C),
-                      fontWeight: FontWeight.w700,
-                    ),
-                    grouping: controller.displayGroupingFor(item.id),
-                  ),
-                ],
-                const SizedBox(height: 6),
-                Text(
-                  item.family.label,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: const Color(0xFF6A5E4C),
-                  ),
-                ),
-              ],
+            child: PracticeItemSummaryBlock(
+              controller: controller,
+              item: item,
+              metadataLines: <String>[item.family.label],
             ),
           ),
           const SizedBox(width: 8),
