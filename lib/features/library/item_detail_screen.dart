@@ -582,7 +582,7 @@ class _SelectableNotationBlock extends StatelessWidget {
     double maxWidth,
     List<String> separators,
   ) {
-    const double cellWidth = 40;
+    const double cellWidth = 52;
     const double separatorWidth = 10;
     if (!maxWidth.isFinite || maxWidth <= 0) {
       return <_NotationChunk>[_NotationChunk(start: 0, end: tokens.length)];
@@ -637,7 +637,7 @@ class _SelectableNotationCell extends StatelessWidget {
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
-          width: 36,
+          width: 52,
           padding: const EdgeInsets.symmetric(vertical: 4),
           decoration: BoxDecoration(
             color: selected ? const Color(0xFFE7D6A8) : Colors.transparent,
@@ -651,6 +651,7 @@ class _SelectableNotationCell extends StatelessWidget {
             children: <Widget>[
               RichText(
                 textAlign: TextAlign.center,
+                softWrap: false,
                 text: TextSpan(
                   style: patternStyle,
                   children: switch (marking) {
