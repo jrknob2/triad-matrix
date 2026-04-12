@@ -43,6 +43,12 @@ No screen should contain:
 - controls that belong to another screen
 - duplicate information with no new value
 
+List item rule:
+
+- overall metadata inside list items should be rendered as concise subtext
+- separate metadata values with dots
+- do not use chips for list-item metadata unless the chip itself is the action the user is taking
+
 ## Layout Rule
 
 Use horizontal space before adding more vertical stacking.
@@ -145,6 +151,7 @@ Rules:
 - `Repeat a Previous Session` should browse recent sessions, not only repeat the single most recent one
 - previous-session rows must show enough session content to be recognizable, including the patterns practiced
 - previous-session browsing may start short and offer `Load More`
+- `From Working On` should not show duplicate count chips when the same information is already expressed by the start action
 
 ### Flow C: Coach-Driven Practice
 
@@ -695,6 +702,7 @@ Rules:
 - when recent active rotation grows beyond that, the app may advise shrinking the core rotation, but must not hard-block it
 - long visible item lists should default to 5 rows and use `Show More` for the rest
 - per-pattern BPM and duration do not belong on this list-based setup surface
+- `visible` counts should not be surfaced here unless they change a decision the user can make
 
 ### Category And Filter Derivation For `From Working On`
 

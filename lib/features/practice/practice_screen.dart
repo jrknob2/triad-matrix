@@ -836,17 +836,8 @@ class _WorkingOnSessionSetup extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             Row(
+              mainAxisAlignment: MainAxisAlignment.end,
               children: <Widget>[
-                Expanded(
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: <Widget>[
-                      DrumTag(child: Text('$selectedCount selected')),
-                      DrumTag(child: Text('${visibleItems.length} visible')),
-                    ],
-                  ),
-                ),
                 DrumActionRow(
                   spacing: 8,
                   children: <Widget>[
@@ -1031,34 +1022,12 @@ class _SelectableWorkingOnRow extends StatelessWidget {
                         ),
                       ],
                       const SizedBox(height: 6),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: <Widget>[
-                          DrumTag(
-                            backgroundColor: const Color(0xFFF6F2EA),
-                            child: Text(
-                              status.label,
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(fontWeight: FontWeight.w700),
-                            ),
-                          ),
-                          if (controller.hasKick(item.id))
-                            const DrumTag(
-                              backgroundColor: Color(0xFFF6F2EA),
-                              child: Text('Kick'),
-                            ),
-                          if (controller.hasNonSnareVoice(item.id))
-                            const DrumTag(
-                              backgroundColor: Color(0xFFF6F2EA),
-                              child: Text('Flow'),
-                            ),
-                          if (controller.hasDoubles(item.id))
-                            const DrumTag(
-                              backgroundColor: Color(0xFFF6F2EA),
-                              child: Text('Doubles'),
-                            ),
-                        ],
+                      Text(
+                        _workingOnMetadata(controller, item, status),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: const Color(0xFF6A5E4C),
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ],
                   ),
@@ -1070,4 +1039,16 @@ class _SelectableWorkingOnRow extends StatelessWidget {
       ),
     );
   }
+}
+
+String _workingOnMetadata(
+  AppController controller,
+  PracticeItemV1 item,
+  MatrixProgressStateV1 status,
+) {
+  final List<String> parts = <String>[status.label];
+  if (controller.hasKick(item.id)) parts.add('Kick');
+  if (controller.hasNonSnareVoice(item.id)) parts.add('Flow');
+  if (controller.hasDoubles(item.id)) parts.add('Doubles');
+  return parts.join(' • ');
 }
