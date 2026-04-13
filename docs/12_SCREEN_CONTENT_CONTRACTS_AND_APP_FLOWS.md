@@ -102,6 +102,36 @@ Rules:
 
 ## Primary App Flows
 
+### Startup Flow
+
+Goal:
+
+- give the app a clear branded first frame before the shell appears
+
+Path:
+
+1. `Startup Splash`
+2. app initialization completes
+3. minimum splash duration completes
+4. `Coach`
+
+Screens involved:
+
+- Startup Splash
+- Coach
+
+Required controls:
+
+- none
+
+Rules:
+
+- startup splash is display-only, not interactive
+- startup splash should show the app icon as the primary visual
+- startup splash should stay visible for 3 seconds
+- startup splash should not show shell navigation or other app controls
+- startup splash should transition directly into the normal app shell when ready
+
 ### Flow A: First Light Start
 
 Goal:
@@ -1109,6 +1139,7 @@ Only if those counts are actually correct for the visible scope.
 - coverage wording should use plain language like `covered` or `practiced`, not vague terms like `seen`
 - `seen` should not appear as active app language for progress or coverage
 - coverage values should read clearly without forcing the user to decode slash notation or awkward shorthand
+- when the row label already carries the category meaning, the value column should stay numeric rather than repeating words like `covered`
 
 ---
 

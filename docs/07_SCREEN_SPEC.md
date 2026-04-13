@@ -43,6 +43,7 @@ Secondary routes:
 - `Practice Item`
 - `Session Summary`
 - `Settings`
+- `Startup Splash`
 
 No `Practice Setup` screen exists in this model.
 
@@ -53,6 +54,33 @@ iPad is deferred until after MVP.
 Rules:
 
 - phone uses bottom navigation
+
+---
+
+## 0. Startup Splash
+
+### Purpose
+
+Startup Splash gives the app a clear branded first frame while startup finishes.
+
+### Must Do
+
+- show the app icon as the dominant visual
+- remain visible for 3 seconds
+- transition into the normal shell when startup is ready
+
+### Must Not Do
+
+- show navigation
+- show settings
+- expose actions or decisions
+
+### Acceptance Criteria
+
+- the first frame is the branded splash, not a blank scaffold or delayed shell
+- the splash is display-only
+- the splash leads directly into the normal app shell
+- the app icon is the largest visual element on the screen
 
 ---
 
@@ -536,6 +564,7 @@ Progress measures development.
 - vertical bar charts should use flat bottoms with only modest top-corner rounding instead of pill silhouettes
 - non-stacked bar charts should use a lighter fill with a darker border
 - coverage summary wording should use clear `covered` or `practiced` language instead of `seen`
+- coverage value columns should stay numeric when the row label already carries the category meaning
 
 ---
 
