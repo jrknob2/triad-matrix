@@ -520,7 +520,7 @@ class AppController extends ChangeNotifier {
       ctaLabel: 'Work on This',
       ctaAction: CoachActionV1.startPractice,
       matrixFilters: const <TriadMatrixFilterV1>{
-        TriadMatrixFilterV1.underPracticed,
+        TriadMatrixFilterV1.inRoutine,
       },
       practiceMode: PracticeModeV1.singleSurface,
     );
@@ -1140,7 +1140,8 @@ class AppController extends ChangeNotifier {
       return false;
     }
     if (activeFilters.contains(TriadMatrixFilterV1.activeStatus) &&
-        matrixProgressStateFor(itemId) != MatrixProgressStateV1.active) {
+        (matrixProgressStateFor(itemId) != MatrixProgressStateV1.active ||
+            !isInRoutine(itemId))) {
       return false;
     }
     if (activeFilters.contains(TriadMatrixFilterV1.needsWorkStatus) &&

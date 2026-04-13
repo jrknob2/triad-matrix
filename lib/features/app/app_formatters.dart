@@ -161,12 +161,12 @@ extension AppMockScenarioLabel on AppMockScenarioV1 {
 
 extension TriadMatrixFilterLabel on TriadMatrixFilterV1 {
   String get label => switch (this) {
-    TriadMatrixFilterV1.inRoutine => 'Working On',
-    TriadMatrixFilterV1.inPhrases => 'Saved Phrases',
+    TriadMatrixFilterV1.inRoutine => 'In Working On',
+    TriadMatrixFilterV1.inPhrases => 'In Phrases',
     TriadMatrixFilterV1.underPracticed => 'Lightly Worked',
     TriadMatrixFilterV1.recent => 'Recent',
     TriadMatrixFilterV1.notTrained => 'Not Practiced',
-    TriadMatrixFilterV1.activeStatus => 'Active',
+    TriadMatrixFilterV1.activeStatus => 'Actively Working On',
     TriadMatrixFilterV1.needsWorkStatus => 'Needs Work',
     TriadMatrixFilterV1.strongStatus => 'Strong',
     TriadMatrixFilterV1.rightLead => 'Right',

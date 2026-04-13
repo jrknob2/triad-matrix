@@ -87,14 +87,14 @@ Filter family:
 ### Status
 
 - `Not Trained`
-- `Active`
+- `Actively Working On`
 - `Needs Work`
-- `Strong`
 
 Rules:
 
 - exclusive
 - only one status can be active at a time
+- `Actively Working On` means the item is both in `Working On` and currently in the middle progress state between `Not Practiced`, `Needs Work`, and `Strong`
 
 Progress view may later add optional secondary scope filters like:
 
@@ -103,6 +103,11 @@ Progress view may later add optional secondary scope filters like:
 - `Recent`
 
 but those are not required in the base contract.
+
+Rules:
+
+- `never seen` is not a valid matrix/product state label
+- `Strong` should be visible in the cell progress color and legend, not repeated as a separate filter
 
 ## Structural Slicers
 
@@ -216,7 +221,7 @@ Persistent decoration rule:
 ## Progress View Interaction Rules
 
 - status filters are exclusive
-- secondary progress filters such as `Working On`, `In Phrases`, `Light Time`, and `Recent` are independent narrowing filters
+- secondary progress filters such as `In Working On`, `In Phrases`, and `Recent` are independent narrowing filters
 - selecting a new status replaces the previous status
 - secondary filters may be combined with status filters using `AND`
 - progress filter behavior should feel as explicit and predictable as Traits filter behavior

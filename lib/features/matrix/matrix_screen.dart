@@ -127,8 +127,7 @@ class _MatrixScreenState extends State<MatrixScreen> {
                       children: <Widget>[
                         const DrumEyebrow(text: 'Look At'),
                         const SizedBox(height: 8),
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
+                        DrumHorizontalControlStrip(
                           child: Row(
                             children: _MatrixPrimaryView.values
                                 .map(
@@ -150,8 +149,7 @@ class _MatrixScreenState extends State<MatrixScreen> {
                         const SizedBox(height: 10),
                         const DrumEyebrow(text: 'Filters'),
                         const SizedBox(height: 8),
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
+                        DrumHorizontalControlStrip(
                           child: Row(children: _buildFilterPills()),
                         ),
                         const SizedBox(height: 12),
@@ -172,8 +170,7 @@ class _MatrixScreenState extends State<MatrixScreen> {
               children: <Widget>[
                 const DrumEyebrow(text: 'Look At'),
                 const SizedBox(height: 8),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
+                DrumHorizontalControlStrip(
                   child: Row(
                     children: _MatrixPrimaryView.values
                         .map(
@@ -192,8 +189,7 @@ class _MatrixScreenState extends State<MatrixScreen> {
                 const SizedBox(height: 10),
                 const DrumEyebrow(text: 'Filters'),
                 const SizedBox(height: 8),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
+                DrumHorizontalControlStrip(
                   child: Row(children: _buildFilterPills()),
                 ),
                 if (_view == _MatrixPrimaryView.progress) ...<Widget>[
@@ -600,10 +596,8 @@ class _MatrixScreenState extends State<MatrixScreen> {
         TriadMatrixFilterV1.notTrained,
         TriadMatrixFilterV1.activeStatus,
         TriadMatrixFilterV1.needsWorkStatus,
-        TriadMatrixFilterV1.strongStatus,
         TriadMatrixFilterV1.inRoutine,
         TriadMatrixFilterV1.inPhrases,
-        TriadMatrixFilterV1.underPracticed,
         TriadMatrixFilterV1.recent,
       ],
     };
@@ -635,9 +629,6 @@ class _MatrixScreenState extends State<MatrixScreen> {
       _MatrixPrimaryView.traits
           when filter == TriadMatrixFilterV1.leftLead ||
               filter == TriadMatrixFilterV1.endsWithKick =>
-        16,
-      _MatrixPrimaryView.progress
-          when filter == TriadMatrixFilterV1.strongStatus =>
         16,
       _ => 8,
     };
@@ -710,8 +701,7 @@ class _MatrixPhrasePanel extends StatelessWidget {
                   onRemoveAt: onRemoveAt,
                 ),
                 const SizedBox(height: 10),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
+                DrumHorizontalControlStrip(
                   child: Row(children: actionPills),
                 ),
                 if (warningMessage != null)
@@ -742,10 +732,8 @@ const Set<TriadMatrixFilterV1> _progressFilters = <TriadMatrixFilterV1>{
   TriadMatrixFilterV1.notTrained,
   TriadMatrixFilterV1.activeStatus,
   TriadMatrixFilterV1.needsWorkStatus,
-  TriadMatrixFilterV1.strongStatus,
   TriadMatrixFilterV1.inRoutine,
   TriadMatrixFilterV1.inPhrases,
-  TriadMatrixFilterV1.underPracticed,
   TriadMatrixFilterV1.recent,
 };
 
@@ -753,7 +741,6 @@ const Set<TriadMatrixFilterV1> _statusFilters = <TriadMatrixFilterV1>{
   TriadMatrixFilterV1.notTrained,
   TriadMatrixFilterV1.activeStatus,
   TriadMatrixFilterV1.needsWorkStatus,
-  TriadMatrixFilterV1.strongStatus,
 };
 
 const Set<TriadMatrixFilterV1> _kickPlacementFilters = <TriadMatrixFilterV1>{

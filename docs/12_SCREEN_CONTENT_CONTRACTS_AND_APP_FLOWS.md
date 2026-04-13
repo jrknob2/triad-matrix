@@ -81,6 +81,7 @@ Filter row rule:
 - any UI surface that exposes filters should label that section `Filters`
 - filter pills should live in one horizontally scrollable row
 - do not wrap filter pills into multiple lines
+- if a horizontal control row extends off-screen, show a small `...` overflow cue beneath it so the user knows there is more to swipe to
 
 ## Control Affordance Rule
 
@@ -643,13 +644,18 @@ Examples:
   - `Doubles`
 - `Progress` view:
   - `Not Practiced`
-  - `Active`
+  - `Actively Working On`
   - `Needs Work`
-  - `Strong`
   - optional secondary:
-    - `Working On`
+    - `In Working On`
     - `In Phrases`
     - `Recent`
+
+Rules:
+
+- `never seen` is not a valid product state label
+- until `Toolbox` exists, membership-style states should use plain labels like `In Working On`
+- `Strong` is already visible through the matrix progress color and should not also appear as a separate progress filter
 
 #### Phrase Editor
 

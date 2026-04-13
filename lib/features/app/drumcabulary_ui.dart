@@ -88,6 +88,85 @@ class DrumActionRow extends StatelessWidget {
   }
 }
 
+class DrumHorizontalControlStrip extends StatefulWidget {
+  final Widget child;
+  final double indicatorTopPadding;
+
+  const DrumHorizontalControlStrip({
+    super.key,
+    required this.child,
+    this.indicatorTopPadding = 4,
+  });
+
+  @override
+  State<DrumHorizontalControlStrip> createState() =>
+      _DrumHorizontalControlStripState();
+}
+
+class _DrumHorizontalControlStripState extends State<DrumHorizontalControlStrip> {
+  late final ScrollController _controller;
+  bool _hasOverflow = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = ScrollController()..addListener(_updateOverflow);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _updateOverflow());
+  }
+
+  @override
+  void didUpdateWidget(covariant DrumHorizontalControlStrip oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _updateOverflow());
+  }
+
+  @override
+  void dispose() {
+    _controller
+      ..removeListener(_updateOverflow)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _updateOverflow() {
+    if (!mounted || !_controller.hasClients) return;
+    final bool nextHasOverflow = _controller.position.maxScrollExtent > 0;
+    if (nextHasOverflow == _hasOverflow) return;
+    setState(() {
+      _hasOverflow = nextHasOverflow;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) => _updateOverflow());
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        SingleChildScrollView(
+          controller: _controller,
+          scrollDirection: Axis.horizontal,
+          child: widget.child,
+        ),
+        if (_hasOverflow)
+          Padding(
+            padding: EdgeInsets.only(top: widget.indicatorTopPadding),
+            child: Center(
+              child: Text(
+                '...',
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: DrumcabularyTheme.mutedInk,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 class DrumSectionTitle extends StatelessWidget {
   final String text;
   final Color? color;

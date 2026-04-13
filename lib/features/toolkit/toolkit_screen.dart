@@ -96,8 +96,7 @@ class _FocusScreenState extends State<FocusScreen> {
                 ],
               ),
               const SizedBox(height: 14),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
+              DrumHorizontalControlStrip(
                 child: Row(
                   children: _FocusViewFilter.values
                       .map(

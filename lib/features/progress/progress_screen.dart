@@ -49,8 +49,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
             children: <Widget>[
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
+              DrumHorizontalControlStrip(
                 child: Row(
                   children: _ProgressView.values
                       .map(
@@ -417,8 +416,7 @@ class _ByItemView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
+        DrumHorizontalControlStrip(
           child: Row(
             children: _ItemScope.values
                 .map(

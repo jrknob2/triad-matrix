@@ -798,8 +798,7 @@ class _WorkingOnSessionSetup extends StatelessWidget {
             const SizedBox(height: 14),
             const DrumEyebrow(text: 'Filters'),
             const SizedBox(height: 8),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
+            DrumHorizontalControlStrip(
               child: Row(
                 children: WorkingOnSessionFilterV1.values
                     .map(
