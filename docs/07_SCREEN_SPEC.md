@@ -532,7 +532,9 @@ Progress measures development.
 - no copy like “this is the same status language used by Coach and Matrix”
 - graph titles must say what is being measured
 - status differences must be visually obvious in graphs
-- bar charts should use a shared flat-topped rounded-bar treatment instead of pill silhouettes
+- passive scope labels and legends should not look like buttons
+- vertical bar charts should use flat bottoms with only modest top-corner rounding instead of pill silhouettes
+- non-stacked bar charts should use a lighter fill with a darker border
 - coverage summary wording should use clear `covered` or `practiced` language instead of `seen`
 
 ---

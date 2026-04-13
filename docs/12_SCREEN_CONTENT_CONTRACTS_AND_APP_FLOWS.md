@@ -93,6 +93,8 @@ Rules:
 - primary and secondary actions must remain visually distinct on both light and dark surfaces
 - if a surface is dark or visually busy, action controls must use stronger contrast and edge definition than they use on light surfaces
 - the user should not have to tap to discover whether a label is actionable
+- passive labels, scope labels, legends, and other non-interactive markers must not use button-like containers or button-like affordances
+- non-interactive labels should read as labels immediately, not as tappable pills or chips
 - button sizing should stay proportional to the surrounding UI and shared control system
 - one screen should not introduce oversized buttons that visually dominate the app without a specific contract reason
 
@@ -1098,12 +1100,14 @@ Only if those counts are actually correct for the visible scope.
 - if a status-mix graph is shown, the status colors must be visually distinct at a glance
 - stacked status graphs must render visible colored segments, not pale empty containers
 - chart geometry should support comparison before decoration
-- comparison bar graphs should use flat tops with modest rounded corners, not pill/capsule silhouettes
+- vertical comparison bar graphs should use flat bottoms with only modest top-corner rounding, not pill/capsule silhouettes
+- non-stacked bar graphs should use a lighter fill with a darker border instead of a heavy dark fill
 - graph legends must read as legends, not as extra filters
 
 ### Coverage Snapshot Rules
 
 - coverage wording should use plain language like `covered` or `practiced`, not vague terms like `seen`
+- `seen` should not appear as active app language for progress or coverage
 - coverage values should read clearly without forcing the user to decode slash notation or awkward shorthand
 
 ---

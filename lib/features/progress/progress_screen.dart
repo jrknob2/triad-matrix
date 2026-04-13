@@ -13,8 +13,9 @@ enum _ProgressView { overview, byItem, byGroup, trend }
 
 enum _ItemScope { workingOn, catalog }
 
-const BorderRadius _barChartBorderRadius = BorderRadius.all(
-  Radius.circular(10),
+const BorderRadius _verticalBarBorderRadius = BorderRadius.only(
+  topLeft: Radius.circular(10),
+  topRight: Radius.circular(10),
 );
 
 class ProgressScreen extends StatefulWidget {
@@ -213,14 +214,7 @@ class _OverviewView extends StatelessWidget {
               const Expanded(
                 child: DrumSectionTitle(text: 'Assessment Status'),
               ),
-              DrumTag(
-                child: Text(
-                  'Catalog',
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
+              _PassiveScopeLabel(text: 'Catalog'),
             ],
           ),
           const SizedBox(height: 10),
@@ -270,14 +264,7 @@ class _OverviewView extends StatelessWidget {
               const Expanded(
                 child: DrumSectionTitle(text: 'Assessment Mix, Last 6 Weeks'),
               ),
-              DrumTag(
-                child: Text(
-                  'Catalog',
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
+              _PassiveScopeLabel(text: 'Catalog'),
             ],
           ),
           const SizedBox(height: 8),
@@ -316,19 +303,12 @@ class _OverviewView extends StatelessWidget {
               const Expanded(
                 child: DrumSectionTitle(text: 'Coverage Snapshot'),
               ),
-              DrumTag(
-                child: Text(
-                  'Catalog',
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
+              _PassiveScopeLabel(text: 'Catalog'),
             ],
           ),
           const SizedBox(height: 10),
           _CoverageSnapshotRow(
-            label: 'Triads Seen',
+            label: 'Triads Covered',
             count: controller.practicedTriadCount,
             total: controller.triadMatrixItems.length,
           ),
@@ -604,7 +584,7 @@ class _ByGroupView extends StatelessWidget {
         _MetricStrip(
           metrics: <_MetricData>[
             _MetricData(
-              title: 'Triads Seen',
+              title: 'Triads Covered',
               value:
                   '${controller.practicedTriadCount}/${controller.triadMatrixItems.length}',
               note: 'Across the matrix',
@@ -1229,22 +1209,22 @@ class _BalanceBar extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 6),
-        ClipRRect(
-          borderRadius: _barChartBorderRadius,
-          child: SizedBox(
-            height: 14,
-            child: Row(
-              children: <Widget>[
-                Expanded(
-                  flex: math.max(1, (leftFraction * 1000).round()),
-                  child: const ColoredBox(color: Color(0xFF83A9D6)),
-                ),
-                Expanded(
-                  flex: math.max(1, (rightFraction * 1000).round()),
-                  child: const ColoredBox(color: Color(0xFFE29A90)),
-                ),
-              ],
-            ),
+        Container(
+          height: 14,
+          decoration: BoxDecoration(
+            border: Border.all(color: const Color(0x22000000)),
+          ),
+          child: Row(
+            children: <Widget>[
+              Expanded(
+                flex: math.max(1, (leftFraction * 1000).round()),
+                child: const ColoredBox(color: Color(0xFF83A9D6)),
+              ),
+              Expanded(
+                flex: math.max(1, (rightFraction * 1000).round()),
+                child: const ColoredBox(color: Color(0xFFE29A90)),
+              ),
+            ],
           ),
         ),
       ],
@@ -1290,8 +1270,11 @@ class _TrendBar extends StatelessWidget {
               child: Container(
                 height: 18 + (92 * heightFactor),
                 decoration: const BoxDecoration(
-                  color: Color(0xFF26211C),
-                  borderRadius: _barChartBorderRadius,
+                  color: Color(0xFFF1ECE2),
+                  border: Border.fromBorderSide(
+                    BorderSide(color: Color(0xFF26211C), width: 1.5),
+                  ),
+                  borderRadius: _verticalBarBorderRadius,
                 ),
               ),
             ),
@@ -1404,11 +1387,11 @@ class _StackedStatusBar extends StatelessWidget {
       height: barHeight,
       decoration: const BoxDecoration(
         color: Color(0xFFF1ECE2),
-        borderRadius: _barChartBorderRadius,
+        borderRadius: _verticalBarBorderRadius,
         border: Border.fromBorderSide(BorderSide(color: Color(0x26000000))),
       ),
       child: ClipRRect(
-        borderRadius: _barChartBorderRadius,
+        borderRadius: _verticalBarBorderRadius,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: segments
@@ -1687,7 +1670,13 @@ class _MiniBarChart extends StatelessWidget {
                                           : bar.value / maxValue)),
                               decoration: BoxDecoration(
                                 color: bar.color,
-                                borderRadius: _barChartBorderRadius,
+                                border: const Border.fromBorderSide(
+                                  BorderSide(
+                                    color: Color(0xFF26211C),
+                                    width: 1.5,
+                                  ),
+                                ),
+                                borderRadius: _verticalBarBorderRadius,
                               ),
                             ),
                           ),
@@ -1704,6 +1693,23 @@ class _MiniBarChart extends StatelessWidget {
               ),
             )
             .toList(growable: false),
+      ),
+    );
+  }
+}
+
+class _PassiveScopeLabel extends StatelessWidget {
+  final String text;
+
+  const _PassiveScopeLabel({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+        color: const Color(0xFF6A5E4C),
+        fontWeight: FontWeight.w900,
       ),
     );
   }
