@@ -352,7 +352,8 @@ Must support:
 - `From Working On` should not show duplicate count chips when the same count is already carried by the start action
 - list-item metadata should use concise subtext with dot separators, not chip-style badges, unless the chip itself is the primary interaction
 - list rows in `Practice` and `Working On` should follow the same shared formatting rules unless an explicit exception is documented
-- selection actions like `Select All` and `Clear` should be separated from `Filters`
+- selection actions like `Select All` and `Clear` should be separated from `Filters` under an `Actions` label
+- when one or more items are selected, the start-practice action should appear in that same `Actions` row
 - if the current action selects every item in the visible filtered slice, the label should be `Select All`, not `Select Visible`
 
 Optional later:

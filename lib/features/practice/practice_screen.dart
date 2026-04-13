@@ -816,7 +816,7 @@ class _WorkingOnSessionSetup extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 14),
-            const DrumEyebrow(text: 'Selection'),
+            const DrumEyebrow(text: 'Actions'),
             const SizedBox(height: 8),
             DrumActionRow(
               spacing: 8,
@@ -829,6 +829,15 @@ class _WorkingOnSessionSetup extends StatelessWidget {
                   label: const Text('Clear'),
                   onPressed: onClearSelection,
                 ),
+                if (selectedCount > 0)
+                  FilledButton(
+                    onPressed: onStart,
+                    child: Text(
+                      selectedCount == 1
+                          ? 'Practice 1 Item'
+                          : 'Practice $selectedCount Items',
+                    ),
+                  ),
               ],
             ),
             if (sessionIsLarge) ...<Widget>[
@@ -912,18 +921,6 @@ class _WorkingOnSessionSetup extends StatelessWidget {
                   child: const Text('Show More'),
                 ),
               ),
-            const SizedBox(height: 6),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: onStart,
-                child: Text(
-                  selectedCount == 1
-                      ? 'Practice 1 Item'
-                      : 'Practice $selectedCount Items',
-                ),
-              ),
-            ),
           ],
         ),
       ),

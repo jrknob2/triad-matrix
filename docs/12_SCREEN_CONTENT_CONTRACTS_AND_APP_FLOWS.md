@@ -514,6 +514,14 @@ Hide:
 - momentum
 - progress-like summaries
 
+Rules:
+
+- this state should feel materially different from first light
+- if the recommended starter set has already been added, Coach should reflect that progress explicitly
+- the card may reference the full starter set, not collapse immediately to one pattern unless the user explicitly narrowed the set
+- beginner-facing starter copy should use `pad` or `snare`
+- the starter CTA should feel like beginning a first session, not a generic `Practice` action
+
 #### Early Struggle
 
 Show:
@@ -797,7 +805,8 @@ Rules:
 - the setup surface may also advise when the actively trained rotation has grown too wide
 - active-rotation guidance should treat roughly `4-8` actively pushed items as the normal zone
 - if the current action selects every item in the visible filtered slice, the label should be `Select All`
-- selection actions like `Select All` and `Clear` are not filters and should live in their own labeled action row
+- selection actions like `Select All` and `Clear` are not filters and should live in their own labeled `Actions` row
+- when the player has already selected one or more items, the start-practice action should appear in that same `Actions` row instead of sitting as a separate bottom button
 - when recent active rotation grows beyond that, the app may advise shrinking the core rotation, but must not hard-block it
 - long visible item lists should default to 5 rows and use `Show More` for the rest
 - per-pattern BPM and duration do not belong on this list-based setup surface

@@ -485,6 +485,23 @@ class AppController extends ChangeNotifier {
 
   CoachBlockV1? selectCoachFocus() {
     if (!hasLoggedPractice && activeWorkItems.isNotEmpty) {
+      final List<String> starterIds = recommendedStartingTriadItemIds;
+      final bool allStarterIdsPresent = starterIds.every(isDirectRoutineEntry);
+      if (allStarterIdsPresent) {
+        return CoachBlockV1(
+          id: 'focus_first_session_starter_set',
+          type: CoachBlockTypeV1.focus,
+          title: 'You are ready to start.',
+          subtitle: null,
+          body:
+              'Start on a pad or snare with these four triads: RRR, LLL, RLL, and LRR. Play them one at a time and keep the sound even.',
+          itemIds: starterIds,
+          ctaLabel: 'Start First Session',
+          ctaAction: CoachActionV1.startPractice,
+          matrixFilters: const <TriadMatrixFilterV1>{},
+          practiceMode: PracticeModeV1.singleSurface,
+        );
+      }
       final PracticeItemV1 target = activeWorkItems.first;
       return CoachBlockV1(
         id: 'focus_first_session',
