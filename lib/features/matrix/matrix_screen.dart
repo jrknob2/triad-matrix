@@ -247,7 +247,7 @@ class _MatrixScreenState extends State<MatrixScreen> {
       Padding(
         padding: const EdgeInsets.only(right: 8),
         child: DrumActionPill(
-          label: const Text('Practice'),
+          label: const Text('Try It Out'),
           onPressed: _isPhraseBuilding
               ? _practiceSelectionInFlow
               : _practiceSelection,

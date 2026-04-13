@@ -631,11 +631,11 @@ Serve:
 Rules:
 
 - with one selected triad:
-  - show `Practice`
+  - show `Try It Out`
   - show `Add to Working On`
   - do not show `Remove from Working On`
 - with more than one selected triad:
-  - show `Practice`
+  - show `Try It Out`
   - route that action to flow practice
   - show `Add to Working On`
   - show `Save`

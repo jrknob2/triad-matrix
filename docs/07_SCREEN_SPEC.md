@@ -253,7 +253,7 @@ Phrase rule:
 - additional triads may be appended freely while building a phrase
 - once more than one triad is selected, Matrix should behave like phrase-building mode and default practice from that selection to Flow
 - if selected phrase material includes triads that are not ready, Matrix should show guidance instead of blocking phrase building
-- Matrix `Practice` should be a try-it-now preview action, not a tracked-session entry
+- Matrix `Try It Out` should be a try-it-now preview action, not a tracked-session entry
 - Matrix preview practice should be untracked
 - Matrix preview practice should return to Matrix on end and should not open Session Summary
 - `Add to Working On` should open authoring/edit flow, not silently create duplicates or save immediately
