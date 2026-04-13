@@ -57,6 +57,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   bool _summaryOpenedForCurrentRun = false;
   bool _ephemeralItemsDiscarded = false;
   Duration _elapsedOffset = Duration.zero;
+  int? _lastWarmupAutoIndex;
   late Map<String, int> _itemBpmById;
   late List<String> _practicedItemIds;
   late bool _pulseEnabled;
@@ -285,7 +286,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                     children: <Widget>[
                       const Icon(Icons.stop_rounded, size: 18),
                       const SizedBox(width: 8),
-                      Text(isWarmup ? 'End Warmup' : 'End'),
+                      const Text('End'),
                     ],
                   ),
                 ),
@@ -451,7 +452,11 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
 
   void _changeItem(int nextIndex) {
     if (_setup.family == MaterialFamilyV1.warmup) {
-      _scrubWarmupToItem(nextIndex);
+      final int itemCount = _setup.practiceItemIds.length;
+      if (itemCount == 0) return;
+      setState(() {
+        _currentItemIndex = nextIndex.clamp(0, itemCount - 1);
+      });
       return;
     }
     setState(() {
@@ -459,37 +464,6 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
       _bpm = _itemBpmById[_currentItemId] ?? _setup.bpm;
     });
     _restartBeatTicker();
-  }
-
-  void _scrubWarmupToItem(int nextIndex) {
-    final int itemCount = _setup.practiceItemIds.length;
-    if (itemCount == 0) return;
-    final int clampedIndex = nextIndex.clamp(0, itemCount - 1);
-    final Duration currentElapsed = _elapsed;
-    final Duration secondIntoMinute = Duration(
-      seconds: currentElapsed.inSeconds % 60,
-      milliseconds:
-          currentElapsed.inMilliseconds - (currentElapsed.inSeconds * 1000),
-    );
-    final Duration desiredElapsed =
-        Duration(minutes: clampedIndex) + secondIntoMinute;
-    final bool shouldClearCompletion = desiredElapsed < _targetDuration()!;
-
-    setState(() {
-      _currentItemIndex = clampedIndex;
-      _elapsedOffset = desiredElapsed;
-      _stopwatch
-        ..stop()
-        ..reset();
-      if (_running) {
-        _stopwatch.start();
-      }
-      if (shouldClearCompletion) {
-        _warmupComplete = false;
-        _targetReached = false;
-        _completionChimed = false;
-      }
-    });
   }
 
   void _resetRunState({
@@ -503,6 +477,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     if (clearElapsed) {
       _elapsedOffset = Duration.zero;
       _stopwatch.reset();
+      _lastWarmupAutoIndex = null;
     }
     _elapsedTicker?.cancel();
     _beatTicker?.cancel();
@@ -586,9 +561,10 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
 
     final int elapsedSeconds = _elapsed.inSeconds;
     final int nextIndex = (elapsedSeconds ~/ 60).clamp(0, itemCount - 1);
-    if (nextIndex != _currentItemIndex && mounted) {
+    if (nextIndex != _lastWarmupAutoIndex && mounted) {
       setState(() {
         _currentItemIndex = nextIndex;
+        _lastWarmupAutoIndex = nextIndex;
       });
     }
 

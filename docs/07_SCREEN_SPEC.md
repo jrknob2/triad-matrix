@@ -356,7 +356,7 @@ Must show:
 - notation
 - pulse / click / BPM / timer
 - prev/next
-- `End Warmup`
+- `End`
 
 Warmup rules:
 
@@ -365,6 +365,7 @@ Warmup rules:
 - auto-advance
 - untracked
 - entered from `Practice` only
+- manual prev/next should change the visible warmup without changing elapsed timer progress
 
 Running transport rules:
 

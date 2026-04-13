@@ -849,10 +849,11 @@ Practice Session is execution only.
 
 - title changes to warmup
 - rudiment label visible
-- `End Warmup` replaces `End Session`
+- use `End` for the warmup exit control
 - warmup is not logged
 - warmup is entered from `Practice` only
 - warmup is not launched from inside an active session
+- manual prev/next in warmup should change the visible exercise without rewriting the deck timer elapsed value
 
 ### Normal Session Rules
 
