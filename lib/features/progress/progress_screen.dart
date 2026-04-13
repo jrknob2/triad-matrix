@@ -13,6 +13,10 @@ enum _ProgressView { overview, byItem, byGroup, trend }
 
 enum _ItemScope { workingOn, catalog }
 
+const BorderRadius _barChartBorderRadius = BorderRadius.all(
+  Radius.circular(10),
+);
+
 class ProgressScreen extends StatefulWidget {
   final AppController controller;
   final ValueChanged<String> onOpenItem;
@@ -689,7 +693,14 @@ class _TrendView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const DrumSectionTitle(text: 'Practice Time, Last 7 Days'),
+          const DrumSectionTitle(text: 'Practice Minutes, Last 7 Days'),
+          const SizedBox(height: 8),
+          Text(
+            'Minutes practiced each day.',
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: const Color(0xFF5E584D)),
+          ),
           const SizedBox(height: 12),
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
@@ -1164,7 +1175,7 @@ class _CoverageSnapshotRow extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: <Widget>[
             Text(
-              '$count seen',
+              '$count covered',
               style: Theme.of(
                 context,
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
@@ -1219,7 +1230,7 @@ class _BalanceBar extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         ClipRRect(
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: _barChartBorderRadius,
           child: SizedBox(
             height: 14,
             child: Row(
@@ -1266,7 +1277,7 @@ class _TrendBar extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         Text(
-          value.inSeconds == 0 ? '0' : '${value.inMinutes}',
+          value.inSeconds == 0 ? '0m' : '${value.inMinutes}m',
           style: Theme.of(context).textTheme.bodySmall,
         ),
         const SizedBox(height: 6),
@@ -1280,10 +1291,7 @@ class _TrendBar extends StatelessWidget {
                 height: 18 + (92 * heightFactor),
                 decoration: const BoxDecoration(
                   color: Color(0xFF26211C),
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(20),
-                    bottom: Radius.circular(4),
-                  ),
+                  borderRadius: _barChartBorderRadius,
                 ),
               ),
             ),
@@ -1396,17 +1404,11 @@ class _StackedStatusBar extends StatelessWidget {
       height: barHeight,
       decoration: const BoxDecoration(
         color: Color(0xFFF1ECE2),
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(14),
-          bottom: Radius.circular(4),
-        ),
+        borderRadius: _barChartBorderRadius,
         border: Border.fromBorderSide(BorderSide(color: Color(0x26000000))),
       ),
       child: ClipRRect(
-        borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(14),
-          bottom: Radius.circular(4),
-        ),
+        borderRadius: _barChartBorderRadius,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: segments
@@ -1685,10 +1687,7 @@ class _MiniBarChart extends StatelessWidget {
                                           : bar.value / maxValue)),
                               decoration: BoxDecoration(
                                 color: bar.color,
-                                borderRadius: const BorderRadius.vertical(
-                                  top: Radius.circular(22),
-                                  bottom: Radius.circular(4),
-                                ),
+                                borderRadius: _barChartBorderRadius,
                               ),
                             ),
                           ),

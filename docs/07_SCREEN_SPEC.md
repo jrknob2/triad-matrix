@@ -502,6 +502,7 @@ Progress measures development.
 - coverage summary
 - rolled-up assessment graph
 - visible graph scope
+- time-based bar graphs should make their unit explicit
 
 #### By Item
 
@@ -531,6 +532,8 @@ Progress measures development.
 - no copy like “this is the same status language used by Coach and Matrix”
 - graph titles must say what is being measured
 - status differences must be visually obvious in graphs
+- bar charts should use a shared flat-topped rounded-bar treatment instead of pill silhouettes
+- coverage summary wording should use clear `covered` or `practiced` language instead of `seen`
 
 ---
 

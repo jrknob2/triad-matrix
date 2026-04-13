@@ -1045,6 +1045,7 @@ Progress measures development.
 - overall coverage
 - rolled-up assessment graph
 - graph scope must be explicit
+- time-based bar graphs should make the unit explicit, not leave raw numbers floating without context
 
 #### By Item
 
@@ -1097,8 +1098,13 @@ Only if those counts are actually correct for the visible scope.
 - if a status-mix graph is shown, the status colors must be visually distinct at a glance
 - stacked status graphs must render visible colored segments, not pale empty containers
 - chart geometry should support comparison before decoration
-- prefer flatter bar bases over capsule shapes when the chart is about magnitude comparison
+- comparison bar graphs should use flat tops with modest rounded corners, not pill/capsule silhouettes
 - graph legends must read as legends, not as extra filters
+
+### Coverage Snapshot Rules
+
+- coverage wording should use plain language like `covered` or `practiced`, not vague terms like `seen`
+- coverage values should read clearly without forcing the user to decode slash notation or awkward shorthand
 
 ---
 
