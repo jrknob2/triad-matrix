@@ -351,7 +351,7 @@ class _GettingStartedCoachCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            'Welcome. Start with these four triads. Repeat each one slowly and evenly with a relaxed posture and grip.',
+            'Drumcabulary helps you build the control, flow, and confidence to move around the kit with ease. Start with these four triads. Repeat each one slowly and evenly with a relaxed posture and grip. Take your time. Clean reps build real progress.',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
               height: 1.35,
             ),

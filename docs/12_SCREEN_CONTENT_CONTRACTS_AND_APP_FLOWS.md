@@ -518,6 +518,7 @@ Rules:
 - starter copy should not explain `Working On`, loop mechanics, or other app/process details inside the coaching body
 - beginner starter advice should stay simple: repeat each item slowly and evenly with a relaxed posture and grip
 - starter copy may feel encouraging, but it should not drift into generic marketing language
+- starter copy may briefly explain what Drumcabulary helps the player build before naming the first step
 
 #### Early Struggle
 
