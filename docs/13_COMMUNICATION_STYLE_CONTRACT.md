@@ -261,6 +261,8 @@ Coach copy should not:
 - explain the screen
 - sound like motivational filler
 - expose internal card categories as the visible card identity
+- imply live listening or direct observation the app does not actually have in MVP
+- use internal terms like `one surface` when `pad` or `snare` would be clearer to the student
 
 Coach card titles should read like coaching moves, not buckets.
 
@@ -274,7 +276,6 @@ Prefer visible card starters like:
 - `You are ready for`
 - `Spend more time here`
 - `Keep this going`
-- `Clean this up`
 - `Move this around the kit`
 
 Avoid visible card labels like:
@@ -286,15 +287,15 @@ Avoid visible card labels like:
 
 Preferred structure:
 
-1. observation
+1. progress read or assessment-based read
 2. instruction
 3. reason if needed
 
 Example shape:
 
-- `Slow RLL down. The handoff is where it starts to rush.`
-- `You are ready for flow on RLR. Keep the sticking the same and move the voices.`
-- `Spend more time on LRR. It is close, but the loop still has a gap in it.`
+- `Keep up the good work. Slow and steady gets results.`
+- `This pattern is ready to move around the kit. Keep the sticking the same and move only the voices.`
+- `Stay with this one a little longer. Slow practice now will pay off later.`
 
 ### Matrix
 

@@ -446,6 +446,8 @@ Coach structure rule:
 - action cards should not lead with raw notation as the main sentence shape
 - if a specific pattern must be identified, prefer a lightweight pattern strip or supporting line over building the whole sentence around the notation
 - Coach should read like a progress report first and advice second
+- Coach must not sound like it is listening live unless the app actually has listening capability
+- beginner-facing instruction should prefer `pad` or `snare` instead of `one surface`
 
 Preferred visible title shapes:
 
@@ -471,6 +473,7 @@ Preferred visible title shapes:
 - robotic diagnostic phrases like `the weak spot is`
 - visible category labels that read like framework buckets
 - template-like statements that sound machine-assembled from item names and status flags
+- pseudo-observational phrases that imply the app directly heard the rep when it did not
 
 ### Primary Controls
 

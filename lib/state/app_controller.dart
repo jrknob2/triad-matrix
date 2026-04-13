@@ -401,14 +401,14 @@ class AppController extends ChangeNotifier {
       return CoachBlockV1(
         id: 'coach_summary_needs_work',
         type: CoachBlockTypeV1.summary,
-        title: 'You are putting time in, but the work is not settling yet.',
+        title: 'Keep up the good work.',
         subtitle: null,
         body:
-            'You practiced on ${_coachDayCountText(practiceDaysThisWeek)} this week and logged ${formatDuration(timeThisWeek)}. Some of the material still needs cleanup, so keep the tempo honest and stay with one pattern until the cycle comes back clean.',
+            'You practiced on ${_coachDayCountText(practiceDaysThisWeek)} this week and logged ${formatDuration(timeThisWeek)}. Slow and steady gets results, so stay with one pattern long enough for it to feel even and relaxed.',
         itemIds: practiceTarget == null
             ? const <String>[]
             : <String>[practiceTarget.id],
-        ctaLabel: 'Practice',
+        ctaLabel: 'Work on This',
         ctaAction: CoachActionV1.startPractice,
         matrixFilters: const <TriadMatrixFilterV1>{},
         practiceMode: PracticeModeV1.singleSurface,
@@ -489,12 +489,12 @@ class AppController extends ChangeNotifier {
       return CoachBlockV1(
         id: 'focus_first_session',
         type: CoachBlockTypeV1.focus,
-        title: 'Start here',
+        title: 'Start with this',
         subtitle: null,
         body:
-            'Play it on one surface first. Keep the sound even and the motion relaxed.',
+            'Begin on a pad or snare. Keep the sound even and the motion relaxed.',
         itemIds: <String>[target.id],
-        ctaLabel: 'Practice',
+        ctaLabel: 'Start With This',
         ctaAction: CoachActionV1.startPractice,
         matrixFilters: const <TriadMatrixFilterV1>{},
         practiceMode: PracticeModeV1.singleSurface,
@@ -518,7 +518,7 @@ class AppController extends ChangeNotifier {
             ? 'Spend a few more minutes on it. Stay on it until it comes back around smoothly with no gap.'
             : _focusBodyForAggregate(aggregate),
         itemIds: <String>[target.id],
-        ctaLabel: 'Practice',
+        ctaLabel: 'Work on This',
         ctaAction: CoachActionV1.startPractice,
         matrixFilters: const <TriadMatrixFilterV1>{},
         practiceMode: PracticeModeV1.singleSurface,
@@ -538,7 +538,7 @@ class AppController extends ChangeNotifier {
       body:
           'Put a few clean repetitions on it before you move on to something wider.',
       itemIds: <String>[target.id],
-      ctaLabel: 'Practice',
+      ctaLabel: 'Work on This',
       ctaAction: CoachActionV1.startPractice,
       matrixFilters: const <TriadMatrixFilterV1>{
         TriadMatrixFilterV1.underPracticed,
@@ -565,11 +565,11 @@ class AppController extends ChangeNotifier {
     return CoachBlockV1(
       id: 'needs_work_${target.id}',
       type: CoachBlockTypeV1.needsWork,
-      title: 'Clean this up',
+      title: 'Stay with this one',
       subtitle: null,
       body: _needsWorkBodyForAggregate(assessmentAggregateFor(target.id)),
       itemIds: <String>[target.id],
-      ctaLabel: 'Practice',
+      ctaLabel: 'Work on This',
       ctaAction: CoachActionV1.startPractice,
       matrixFilters: const <TriadMatrixFilterV1>{
         TriadMatrixFilterV1.needsWorkStatus,
@@ -692,19 +692,23 @@ class AppController extends ChangeNotifier {
 
   String _needsWorkBodyForAggregate(PracticeAssessmentAggregateV1? aggregate) {
     if (aggregate == null) {
-      return 'It is not holding yet. Slow it down and make the cycle clean again.';
+      return 'This pattern still needs slower, steadier reps. Back the tempo off and get the cycle even again.';
     }
 
-    final List<String> reasons = <String>[];
-    if (aggregate.stabilityScore < 0.50) reasons.add('shape');
-    if (aggregate.jitterScore >= 0.40) reasons.add('evenness');
-    if (aggregate.driftScore >= 0.45) reasons.add('time');
-    if (aggregate.continuityScore < 0.55) reasons.add('the handoff');
+    final bool continuityNeedsWork = aggregate.continuityScore < 0.55;
+    final bool timeNeedsWork =
+        aggregate.driftScore >= 0.45 || aggregate.jitterScore >= 0.40;
 
-    final String reasonText = reasons.isEmpty
-        ? 'the cycle'
-        : reasons.join(', ');
-    return 'It starts to lose $reasonText. Slow it down and make it clean again.';
+    if (continuityNeedsWork && timeNeedsWork) {
+      return 'This pattern still needs slower, steadier reps. Back the tempo off and make the whole cycle feel even again.';
+    }
+    if (continuityNeedsWork) {
+      return 'This pattern still needs more steady reps. Back the tempo off and make the handoff feel even again.';
+    }
+    if (timeNeedsWork) {
+      return 'This pattern still needs steadier time. Back the tempo off and keep the motion even.';
+    }
+    return 'This pattern still needs more steady reps. Back the tempo off and get the cycle even again.';
   }
 
   String _momentumBodyForAggregate(PracticeAssessmentAggregateV1? aggregate) {
