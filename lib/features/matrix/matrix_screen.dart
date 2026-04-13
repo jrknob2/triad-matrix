@@ -148,6 +148,8 @@ class _MatrixScreenState extends State<MatrixScreen> {
                           ),
                         ),
                         const SizedBox(height: 10),
+                        const DrumEyebrow(text: 'Filters'),
+                        const SizedBox(height: 8),
                         SingleChildScrollView(
                           scrollDirection: Axis.horizontal,
                           child: Row(children: _buildFilterPills()),
@@ -188,6 +190,8 @@ class _MatrixScreenState extends State<MatrixScreen> {
                   ),
                 ),
                 const SizedBox(height: 10),
+                const DrumEyebrow(text: 'Filters'),
+                const SizedBox(height: 8),
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(children: _buildFilterPills()),
