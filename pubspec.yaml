@@ -72,6 +72,7 @@ flutter:
   assets:
     - assets/audio/metronome_beep.wav
     - assets/icons/app_icon_1024.png
+    - assets/icons/app_icon_splash.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

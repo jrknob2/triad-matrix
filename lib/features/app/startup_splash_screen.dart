@@ -5,19 +5,26 @@ class StartupSplashScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: Color(0xFFF8F6F1),
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8F6F1),
       body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: EdgeInsets.all(24),
-            child: Image(
-              image: AssetImage('assets/icons/app_icon_1024.png'),
-              width: 220,
-              height: 220,
-              fit: BoxFit.contain,
-            ),
-          ),
+        child: LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+            final double iconWidth = (constraints.maxWidth * 0.76).clamp(
+              280.0,
+              520.0,
+            );
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Image(
+                  image: const AssetImage('assets/icons/app_icon_splash.png'),
+                  width: iconWidth,
+                  fit: BoxFit.contain,
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
