@@ -26,6 +26,17 @@ V1 begins with triads as the core system, supports longer triad-built phrases, a
 
 The app is not a neutral pattern bucket. It is a guided practice system.
 
+Post-MVP architecture direction:
+
+- v1 intentionally treats triads as the teaching root
+- a later domain-model refactor may generalize that root into a configurable pattern grammar
+- in that future model, triads would become one configured slice of a broader system defined by:
+  - symbol alphabet
+  - grouping size
+  - grouping/display rules
+  - optional rest support
+- this future architecture should not weaken the clarity of the current triad-first product surface during MVP
+
 ---
 
 ## App Map

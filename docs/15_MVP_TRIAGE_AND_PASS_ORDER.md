@@ -256,7 +256,21 @@ Initial thought:
 - keep this as a later platform pass
 - when it happens, it should be a real layout and flow redesign, not responsive patching
 
-### 2. Theme system
+### 2. Pattern grammar root-model refactor
+
+Initial thought:
+
+- the current app treats triads as the root system
+- long-term, triads should become one configured slice of a more general pattern grammar
+- that grammar should support:
+  - variable grouping sizes
+  - a configurable symbol alphabet
+  - rests as an additional symbol
+  - regrouping and later rudiment overlays
+- this is a domain-model refactor, not an MVP product-surface change
+- v1 should continue presenting triads as the teaching system even if the underlying model is generalized later
+
+### 3. Theme system
 
 Includes:
 
