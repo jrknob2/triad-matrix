@@ -65,7 +65,7 @@ class _AppShellState extends State<AppShell> {
             controller: widget.controller,
             onOpenItem: _openItemDetail,
             onPracticeItemInMode: _openPracticeItemInMode,
-            onOpenMatrix: () => setState(() => _currentIndex = 1),
+            onOpenMatrix: () => _openMatrix(prefersSaveToWorkingOn: true),
           ),
           ProgressScreen(
             key: ValueKey<String>('progress_${widget.controller.resetVersion}'),
@@ -205,6 +205,7 @@ class _AppShellState extends State<AppShell> {
     LearningLaneV1? lane,
     Set<TriadMatrixFilterV1>? filters,
     List<String>? selectedItemIds,
+    bool prefersSaveToWorkingOn = false,
   }) {
     setState(() {
       _matrixRequestVersion++;
@@ -213,6 +214,7 @@ class _AppShellState extends State<AppShell> {
         lane: lane,
         filters: filters ?? const <TriadMatrixFilterV1>{},
         selectedItemIds: selectedItemIds ?? const <String>[],
+        prefersSaveToWorkingOn: prefersSaveToWorkingOn,
       );
       _currentIndex = 1;
     });

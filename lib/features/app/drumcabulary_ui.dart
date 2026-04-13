@@ -193,24 +193,33 @@ class DrumSelectablePill extends StatelessWidget {
 class DrumActionPill extends StatelessWidget {
   final Widget label;
   final VoidCallback? onPressed;
+  final bool prominent;
 
   const DrumActionPill({
     super.key,
     required this.label,
     required this.onPressed,
+    this.prominent = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return ActionChip(
       label: DefaultTextStyle.merge(
-        style: const TextStyle(fontWeight: FontWeight.w900),
+        style: TextStyle(
+          fontWeight: FontWeight.w900,
+          color: prominent ? DrumcabularyTheme.surface : DrumcabularyTheme.ink,
+        ),
         child: label,
       ),
       onPressed: onPressed,
       visualDensity: VisualDensity.compact,
-      side: const BorderSide(color: DrumcabularyTheme.line),
-      backgroundColor: DrumcabularyTheme.surface,
+      side: BorderSide(
+        color: prominent ? DrumcabularyTheme.ink : DrumcabularyTheme.line,
+      ),
+      backgroundColor: prominent
+          ? DrumcabularyTheme.ink
+          : DrumcabularyTheme.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       labelPadding: const EdgeInsets.symmetric(horizontal: 4),
     );

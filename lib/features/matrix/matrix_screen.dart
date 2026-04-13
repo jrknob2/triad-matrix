@@ -17,6 +17,7 @@ class MatrixScreenRequest {
   final Set<TriadMatrixFilterV1> filters;
   final List<String> selectedItemIds;
   final String? editingItemId;
+  final bool prefersSaveToWorkingOn;
 
   const MatrixScreenRequest({
     required this.version,
@@ -24,6 +25,7 @@ class MatrixScreenRequest {
     required this.filters,
     this.selectedItemIds = const <String>[],
     this.editingItemId,
+    this.prefersSaveToWorkingOn = false,
   });
 }
 
@@ -213,6 +215,9 @@ class _MatrixScreenState extends State<MatrixScreen> {
   bool get _isEditingFromPracticeItem =>
       widget.request?.editingItemId != null && widget.onFinishEditing != null;
 
+  bool get _prefersSaveToWorkingOn =>
+      widget.request?.prefersSaveToWorkingOn ?? false;
+
   bool get _selectionIsInRoutine {
     final String? itemId = _selectionRoutineItemId;
     return itemId != null && widget.controller.isDirectRoutineEntry(itemId);
@@ -259,10 +264,16 @@ class _MatrixScreenState extends State<MatrixScreen> {
           label: Text(
             _isEditingFromPracticeItem
                 ? 'Back to Working On'
+                : _prefersSaveToWorkingOn
+                ? 'Save to Working On'
                 : _selectionIsInRoutine
                 ? 'In Working On'
                 : 'Add to Working On',
           ),
+          prominent:
+              !_isEditingFromPracticeItem &&
+              !_selectionIsInRoutine &&
+              _prefersSaveToWorkingOn,
           onPressed: _isEditingFromPracticeItem
               ? (_selectedItemIds.isEmpty ? null : _finishEditing)
               : _selectionIsInRoutine

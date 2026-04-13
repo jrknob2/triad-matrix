@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'drumcabulary_theme.dart';
+
 enum UnsavedChangesDecision { save, discard, keepEditing }
 
 Future<UnsavedChangesDecision?> showUnsavedChangesDialog(
@@ -13,13 +15,18 @@ Future<UnsavedChangesDecision?> showUnsavedChangesDialog(
     context: context,
     builder: (BuildContext context) {
       return AlertDialog(
+        backgroundColor: DrumcabularyTheme.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(28),
+          side: const BorderSide(color: DrumcabularyTheme.line),
+        ),
         title: Text(title),
         content: Text(message),
         actions: <Widget>[
           TextButton(
-            onPressed: () => Navigator.of(
-              context,
-            ).pop(UnsavedChangesDecision.keepEditing),
+            onPressed: () =>
+                Navigator.of(context).pop(UnsavedChangesDecision.keepEditing),
             child: const Text('Keep Editing'),
           ),
           TextButton(

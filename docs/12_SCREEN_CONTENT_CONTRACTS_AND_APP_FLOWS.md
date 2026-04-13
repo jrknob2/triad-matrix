@@ -682,6 +682,8 @@ Rules:
 - `Add to Working On` must not silently create or persist a new item
 - for an existing item or saved phrase, `Add to Working On` should prompt the user to open that item instead of creating a duplicate
 - for a new phrase, `Add to Working On` should open `Practice Item` as a draft authoring handoff
+- when Matrix is entered from `Focus -> New`, the primary action should read `Save to Working On` and carry the strongest visual emphasis
+- that entry should feel like authoring a new item, not like generic browsing with a secondary add action
 
 ### Matrix States
 
@@ -1224,6 +1226,7 @@ Rules:
   - save
   - discard
   - keep editing
+- the unsaved-changes prompt should use the app's own paper/surface motif, not a default tinted dialog color that feels foreign to the rest of the app
 - screens that are already explicit-save screens must still guard against losing unsaved edits on back navigation
 
 ---
