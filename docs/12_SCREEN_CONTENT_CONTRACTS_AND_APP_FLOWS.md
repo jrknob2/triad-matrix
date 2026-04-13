@@ -442,6 +442,10 @@ Coach structure rule:
 - Coach should not open with a pattern-specific command unless the user is in first-light or no-history states
 - when real practice history exists, the lead card should summarize momentum, consistency, or scope before naming a specific pattern
 - when a second card exists, it should be the single clearest next action, not another summary
+- summary cards should avoid raw notation and specific triad names in prose
+- action cards should not lead with raw notation as the main sentence shape
+- if a specific pattern must be identified, prefer a lightweight pattern strip or supporting line over building the whole sentence around the notation
+- Coach should read like a progress report first and advice second
 
 Preferred visible title shapes:
 
@@ -466,6 +470,7 @@ Preferred visible title shapes:
 - `reference point`
 - robotic diagnostic phrases like `the weak spot is`
 - visible category labels that read like framework buckets
+- template-like statements that sound machine-assembled from item names and status flags
 
 ### Primary Controls
 

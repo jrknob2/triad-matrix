@@ -346,10 +346,10 @@ class AppController extends ChangeNotifier {
       return CoachBlockV1(
         id: 'coach_summary_empty_working_on',
         type: CoachBlockTypeV1.summary,
-        title: 'You have practice logged, but nothing is in Working On.',
+        title: 'You have been practicing, but nothing is set aside right now.',
         subtitle: null,
         body:
-            'Choose one or two patterns and get them back under the hands. Keep the scope tight so the reps stay clear.',
+            'Pick one or two patterns to work on next. Keep the scope tight so the reps stay clear.',
         itemIds: const <String>[],
         ctaLabel: 'Open Matrix',
         ctaAction: CoachActionV1.openMatrix,
@@ -365,10 +365,10 @@ class AppController extends ChangeNotifier {
       return CoachBlockV1(
         id: 'coach_summary_stale',
         type: CoachBlockTypeV1.summary,
-        title: 'You have been away from the work a bit.',
+        title: 'Your practice has been quiet lately.',
         subtitle: null,
         body:
-            'Nothing has been tracked in the last week. Start with one pattern and get the motion relaxed again before you widen the scope.',
+            'Nothing has been tracked in the last week. Start back with one pattern and get the motion relaxed again before you widen the scope.',
         itemIds: practiceTarget == null
             ? const <String>[]
             : <String>[practiceTarget.id],
@@ -383,10 +383,10 @@ class AppController extends ChangeNotifier {
       return CoachBlockV1(
         id: 'coach_summary_scope_spread',
         type: CoachBlockTypeV1.summary,
-        title: 'You have a lot in Working On right now.',
+        title: 'Your reps are spread a little thin right now.',
         subtitle: null,
         body:
-            'You practiced on ${_coachDayCountText(practiceDaysThisWeek)} this week, but ${activeItems.length} active items can spread the reps thin. Keep the session scope tight and stay longer on what is still unsettled.',
+            'You practiced on ${_coachDayCountText(practiceDaysThisWeek)} this week, but ${activeItems.length} active items can spread the reps thin. Keep the session small and stay longer on what is still unsettled.',
         itemIds: practiceTarget == null
             ? const <String>[]
             : <String>[practiceTarget.id],
@@ -401,11 +401,10 @@ class AppController extends ChangeNotifier {
       return CoachBlockV1(
         id: 'coach_summary_needs_work',
         type: CoachBlockTypeV1.summary,
-        title:
-            'You are putting time in, but some of the work is still not holding.',
+        title: 'You are putting time in, but the work is not settling yet.',
         subtitle: null,
         body:
-            'You practiced on ${_coachDayCountText(practiceDaysThisWeek)} this week and logged ${formatDuration(timeThisWeek)}, but $needsWorkCount ${_pluralize('item', needsWorkCount)} still need cleanup. Keep the tempo honest and stay with one pattern until the cycle comes back clean.',
+            'You practiced on ${_coachDayCountText(practiceDaysThisWeek)} this week and logged ${formatDuration(timeThisWeek)}. Some of the material still needs cleanup, so keep the tempo honest and stay with one pattern until the cycle comes back clean.',
         itemIds: practiceTarget == null
             ? const <String>[]
             : <String>[practiceTarget.id],
@@ -420,10 +419,10 @@ class AppController extends ChangeNotifier {
       return CoachBlockV1(
         id: 'coach_summary_progress_ready',
         type: CoachBlockTypeV1.summary,
-        title: 'You are making good progress on new patterns.',
+        title: 'Your newer patterns are starting to hold.',
         subtitle: null,
         body:
-            'You practiced on ${_coachDayCountText(practiceDaysThisWeek)} this week, and $strongCount ${_pluralize('item', strongCount)} ${strongCount == 1 ? 'is' : 'are'} holding. Some of that work is ready to build into phrase or flow.',
+            'You practiced on ${_coachDayCountText(practiceDaysThisWeek)} this week, and some of that work is ready to build into phrase or flow.',
         itemIds: practiceTarget == null
             ? const <String>[]
             : <String>[practiceTarget.id],
@@ -438,7 +437,7 @@ class AppController extends ChangeNotifier {
       return CoachBlockV1(
         id: 'coach_summary_regular_reps',
         type: CoachBlockTypeV1.summary,
-        title: 'You are keeping regular reps on the work.',
+        title: 'You are keeping the work moving.',
         subtitle: null,
         body:
             'You practiced on ${_coachDayCountText(practiceDaysThisWeek)} this week. Keep the sound even, keep the motion relaxed, and do not widen the scope until the current work comes back clean.',
@@ -455,7 +454,7 @@ class AppController extends ChangeNotifier {
     return CoachBlockV1(
       id: 'coach_summary_sparse_reps',
       type: CoachBlockTypeV1.summary,
-      title: 'The work needs more steady reps.',
+      title: 'The work needs more steady return visits.',
       subtitle: null,
       body:
           'You practiced on ${_coachDayCountText(practiceDaysThisWeek)} this week. A few shorter return visits will tell you more than one long push.',
@@ -493,7 +492,7 @@ class AppController extends ChangeNotifier {
         title: 'Start here',
         subtitle: null,
         body:
-            'Begin with ${target.name}. Play it on one surface first. Keep the sound even and the motion relaxed.',
+            'Play it on one surface first. Keep the sound even and the motion relaxed.',
         itemIds: <String>[target.id],
         ctaLabel: 'Practice',
         ctaAction: CoachActionV1.startPractice,
@@ -516,8 +515,8 @@ class AppController extends ChangeNotifier {
         title: 'Try this next',
         subtitle: null,
         body: aggregate == null
-            ? 'Spend a few more minutes on ${target.name}. Stay on it until it comes back around smoothly with no gap.'
-            : '${target.name}: ${_focusBodyForAggregate(aggregate)}',
+            ? 'Spend a few more minutes on it. Stay on it until it comes back around smoothly with no gap.'
+            : _focusBodyForAggregate(aggregate),
         itemIds: <String>[target.id],
         ctaLabel: 'Practice',
         ctaAction: CoachActionV1.startPractice,
@@ -537,7 +536,7 @@ class AppController extends ChangeNotifier {
       title: 'Try this next',
       subtitle: null,
       body:
-          'Put a few clean repetitions on ${target.name} before you move on to something wider.',
+          'Put a few clean repetitions on it before you move on to something wider.',
       itemIds: <String>[target.id],
       ctaLabel: 'Practice',
       ctaAction: CoachActionV1.startPractice,
@@ -568,8 +567,7 @@ class AppController extends ChangeNotifier {
       type: CoachBlockTypeV1.needsWork,
       title: 'Clean this up',
       subtitle: null,
-      body:
-          '${target.name}: ${_needsWorkBodyForAggregate(assessmentAggregateFor(target.id))}',
+      body: _needsWorkBodyForAggregate(assessmentAggregateFor(target.id)),
       itemIds: <String>[target.id],
       ctaLabel: 'Practice',
       ctaAction: CoachActionV1.startPractice,
@@ -606,8 +604,7 @@ class AppController extends ChangeNotifier {
       type: CoachBlockTypeV1.momentum,
       title: target.isCombo ? 'Move this around the kit' : 'Keep this going',
       subtitle: null,
-      body:
-          '${target.name}: ${_momentumBodyForAggregate(assessmentAggregateFor(target.id))}',
+      body: _momentumBodyForAggregate(assessmentAggregateFor(target.id)),
       itemIds: <String>[target.id],
       ctaLabel: target.isCombo ? 'Move to Flow' : 'Build Phrase',
       ctaAction: target.isCombo
@@ -635,10 +632,10 @@ class AppController extends ChangeNotifier {
       return CoachBlockV1(
         id: 'unlock_flow_${target.id}',
         type: CoachBlockTypeV1.nextUnlock,
-        title: 'Move this into flow',
+        title: 'Move this around the kit',
         subtitle: null,
         body:
-            '${target.name} holds on one surface. Keep the sticking the same and move the voices around the kit.',
+            'One of your stronger patterns is ready to move around the kit. Keep the sticking the same and change only the voices.',
         itemIds: <String>[target.id],
         ctaLabel: 'Move to Flow',
         ctaAction: CoachActionV1.moveToFlow,
