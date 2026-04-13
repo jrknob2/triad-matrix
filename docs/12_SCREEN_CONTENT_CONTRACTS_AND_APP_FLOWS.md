@@ -399,6 +399,7 @@ Coach answers:
 - 1 to 2 cards
 - one summary-first lead card
 - short evidence lines
+- at most one follow-up action card
 - one primary CTA per card
 - optional secondary `See in Matrix`
 
@@ -415,6 +416,7 @@ Coach answers:
 
 Internal only:
 
+- `Summary`
 - `Getting Started`
 - `Start Here`
 - `Focus`
@@ -437,6 +439,9 @@ Coach structure rule:
 - the first card should read as a progress-aware summary
 - Coach may include one concrete next action beneath that summary
 - Coach should not feel like a stack of drill commands
+- Coach should not open with a pattern-specific command unless the user is in first-light or no-history states
+- when real practice history exists, the lead card should summarize momentum, consistency, or scope before naming a specific pattern
+- when a second card exists, it should be the single clearest next action, not another summary
 
 Preferred visible title shapes:
 
@@ -505,8 +510,8 @@ Hide:
 
 Show:
 
-- `Focus`
-- `Needs Work`
+- one summary lead card
+- one follow-up action card if needed
 
 Rule:
 
@@ -516,9 +521,8 @@ Rule:
 
 Show:
 
-- `Focus`
-- `Needs Work`
-- `Momentum`
+- one summary lead card
+- one follow-up action card if needed
 
 Rule:
 
@@ -529,9 +533,8 @@ Rule:
 
 Show:
 
-- `Focus`
-- `Momentum`
-- `Next Unlock`
+- one summary lead card
+- one follow-up action card if needed
 
 Rule:
 
@@ -541,8 +544,8 @@ Rule:
 
 Show:
 
-- `Momentum`
-- `Next Unlock`
+- one summary lead card
+- one follow-up action card if needed
 
 Rule:
 

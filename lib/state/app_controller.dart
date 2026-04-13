@@ -291,38 +291,197 @@ class AppController extends ChangeNotifier {
       );
     }
 
-    final CoachBlockV1? focus = selectCoachFocus();
-    final CoachBlockV1? needsWork = selectCoachNeedsWork();
-    final CoachBlockV1? momentum = selectCoachMomentum();
-    final CoachBlockV1? nextUnlock = selectCoachNextUnlock();
-
-    if (nextUnlock?.ctaAction == CoachActionV1.moveToFlow && momentum != null) {
-      return CoachBriefingV1(blocks: <CoachBlockV1>[momentum, nextUnlock!]);
-    }
-
-    if (nextUnlock?.ctaAction == CoachActionV1.buildCombo && momentum != null) {
-      return CoachBriefingV1(
-        blocks: <CoachBlockV1>[if (focus != null) focus, momentum, nextUnlock!],
-      );
-    }
-
-    final bool anyStrong = trackedItems.any(
-      (PracticeItemV1 item) =>
-          matrixProgressStateFor(item.id) == MatrixProgressStateV1.strong,
-    );
-    if (!anyStrong && needsWork != null) {
-      return CoachBriefingV1(
-        blocks: <CoachBlockV1>[if (focus != null) focus, needsWork],
-      );
-    }
+    final CoachBlockV1? summary = selectCoachSummary();
+    final CoachBlockV1? nextAction = selectCoachNextAction();
 
     return CoachBriefingV1(
       blocks: <CoachBlockV1>[
-        if (focus != null) focus,
-        if (needsWork != null) needsWork,
-        if (momentum != null) momentum,
-      ].take(3).toList(growable: false),
+        if (summary != null) summary,
+        if (nextAction != null &&
+            nextAction.id != summary?.id &&
+            nextAction.type != CoachBlockTypeV1.summary)
+          nextAction,
+      ],
     );
+  }
+
+  CoachBlockV1? selectCoachSummary() {
+    final List<PracticeItemV1> activeItems = activeWorkItems;
+    final DateTime now = DateTime.now();
+    final DateTime today = DateTime(now.year, now.month, now.day);
+    final DateTime weekStart = today.subtract(const Duration(days: 6));
+    final List<PracticeSessionLogV1> weekSessions = trackedRecentSessions
+        .where(
+          (PracticeSessionLogV1 session) =>
+              !session.endedAt.isBefore(weekStart),
+        )
+        .toList(growable: false);
+    final int practiceDaysThisWeek = _trackedPracticeDayCount(weekSessions);
+    final Duration timeThisWeek = weekSessions.fold<Duration>(
+      Duration.zero,
+      (Duration total, PracticeSessionLogV1 session) =>
+          total + session.duration,
+    );
+    final int needsWorkCount = activeItems
+        .where(
+          (PracticeItemV1 item) =>
+              matrixProgressStateFor(item.id) ==
+              MatrixProgressStateV1.needsWork,
+        )
+        .length;
+    final int strongCount = activeItems
+        .where(
+          (PracticeItemV1 item) =>
+              matrixProgressStateFor(item.id) == MatrixProgressStateV1.strong,
+        )
+        .length;
+    final int flowReadyCount = _flowReadyItems().length;
+    final PracticeItemV1? practiceTarget = activeItems.isEmpty
+        ? null
+        : (activeItems.toList(
+            growable: false,
+          )..sort(_compareByAssessmentNeed)).first;
+
+    if (activeItems.isEmpty) {
+      return CoachBlockV1(
+        id: 'coach_summary_empty_working_on',
+        type: CoachBlockTypeV1.summary,
+        title: 'You have practice logged, but nothing is in Working On.',
+        subtitle: null,
+        body:
+            'Choose one or two patterns and get them back under the hands. Keep the scope tight so the reps stay clear.',
+        itemIds: const <String>[],
+        ctaLabel: 'Open Matrix',
+        ctaAction: CoachActionV1.openMatrix,
+        matrixFilters: const <TriadMatrixFilterV1>{},
+        practiceMode: PracticeModeV1.singleSurface,
+      );
+    }
+
+    final bool stale =
+        lastTrackedSession == null ||
+        now.difference(lastTrackedSession!.endedAt) > const Duration(days: 7);
+    if (stale) {
+      return CoachBlockV1(
+        id: 'coach_summary_stale',
+        type: CoachBlockTypeV1.summary,
+        title: 'You have been away from the work a bit.',
+        subtitle: null,
+        body:
+            'Nothing has been tracked in the last week. Start with one pattern and get the motion relaxed again before you widen the scope.',
+        itemIds: practiceTarget == null
+            ? const <String>[]
+            : <String>[practiceTarget.id],
+        ctaLabel: 'Practice',
+        ctaAction: CoachActionV1.startPractice,
+        matrixFilters: const <TriadMatrixFilterV1>{},
+        practiceMode: PracticeModeV1.singleSurface,
+      );
+    }
+
+    if (activeItems.length > 8) {
+      return CoachBlockV1(
+        id: 'coach_summary_scope_spread',
+        type: CoachBlockTypeV1.summary,
+        title: 'You have a lot in Working On right now.',
+        subtitle: null,
+        body:
+            'You practiced on ${_coachDayCountText(practiceDaysThisWeek)} this week, but ${activeItems.length} active items can spread the reps thin. Keep the session scope tight and stay longer on what is still unsettled.',
+        itemIds: practiceTarget == null
+            ? const <String>[]
+            : <String>[practiceTarget.id],
+        ctaLabel: 'Practice',
+        ctaAction: CoachActionV1.startPractice,
+        matrixFilters: const <TriadMatrixFilterV1>{},
+        practiceMode: PracticeModeV1.singleSurface,
+      );
+    }
+
+    if (needsWorkCount > 0 && practiceDaysThisWeek >= 3) {
+      return CoachBlockV1(
+        id: 'coach_summary_needs_work',
+        type: CoachBlockTypeV1.summary,
+        title:
+            'You are putting time in, but some of the work is still not holding.',
+        subtitle: null,
+        body:
+            'You practiced on ${_coachDayCountText(practiceDaysThisWeek)} this week and logged ${formatDuration(timeThisWeek)}, but $needsWorkCount ${_pluralize('item', needsWorkCount)} still need cleanup. Keep the tempo honest and stay with one pattern until the cycle comes back clean.',
+        itemIds: practiceTarget == null
+            ? const <String>[]
+            : <String>[practiceTarget.id],
+        ctaLabel: 'Practice',
+        ctaAction: CoachActionV1.startPractice,
+        matrixFilters: const <TriadMatrixFilterV1>{},
+        practiceMode: PracticeModeV1.singleSurface,
+      );
+    }
+
+    if (strongCount > 0 && flowReadyCount > 0) {
+      return CoachBlockV1(
+        id: 'coach_summary_progress_ready',
+        type: CoachBlockTypeV1.summary,
+        title: 'You are making good progress on new patterns.',
+        subtitle: null,
+        body:
+            'You practiced on ${_coachDayCountText(practiceDaysThisWeek)} this week, and $strongCount ${_pluralize('item', strongCount)} ${strongCount == 1 ? 'is' : 'are'} holding. Some of that work is ready to build into phrase or flow.',
+        itemIds: practiceTarget == null
+            ? const <String>[]
+            : <String>[practiceTarget.id],
+        ctaLabel: 'Practice',
+        ctaAction: CoachActionV1.startPractice,
+        matrixFilters: const <TriadMatrixFilterV1>{},
+        practiceMode: PracticeModeV1.singleSurface,
+      );
+    }
+
+    if (practiceDaysThisWeek >= 3) {
+      return CoachBlockV1(
+        id: 'coach_summary_regular_reps',
+        type: CoachBlockTypeV1.summary,
+        title: 'You are keeping regular reps on the work.',
+        subtitle: null,
+        body:
+            'You practiced on ${_coachDayCountText(practiceDaysThisWeek)} this week. Keep the sound even, keep the motion relaxed, and do not widen the scope until the current work comes back clean.',
+        itemIds: practiceTarget == null
+            ? const <String>[]
+            : <String>[practiceTarget.id],
+        ctaLabel: 'Practice',
+        ctaAction: CoachActionV1.startPractice,
+        matrixFilters: const <TriadMatrixFilterV1>{},
+        practiceMode: PracticeModeV1.singleSurface,
+      );
+    }
+
+    return CoachBlockV1(
+      id: 'coach_summary_sparse_reps',
+      type: CoachBlockTypeV1.summary,
+      title: 'The work needs more steady reps.',
+      subtitle: null,
+      body:
+          'You practiced on ${_coachDayCountText(practiceDaysThisWeek)} this week. A few shorter return visits will tell you more than one long push.',
+      itemIds: practiceTarget == null
+          ? const <String>[]
+          : <String>[practiceTarget.id],
+      ctaLabel: 'Practice',
+      ctaAction: CoachActionV1.startPractice,
+      matrixFilters: const <TriadMatrixFilterV1>{},
+      practiceMode: PracticeModeV1.singleSurface,
+    );
+  }
+
+  CoachBlockV1? selectCoachNextAction() {
+    if (activeWorkItems.isEmpty) return null;
+
+    final CoachBlockV1? needsWork = selectCoachNeedsWork();
+    if (needsWork != null) return needsWork;
+
+    final CoachBlockV1? nextUnlock = selectCoachNextUnlock();
+    if (nextUnlock != null) return nextUnlock;
+
+    final CoachBlockV1? focus = selectCoachFocus();
+    if (focus != null) return focus;
+
+    return selectCoachMomentum();
   }
 
   CoachBlockV1? selectCoachFocus() {
@@ -331,10 +490,10 @@ class AppController extends ChangeNotifier {
       return CoachBlockV1(
         id: 'focus_first_session',
         type: CoachBlockTypeV1.focus,
-        title: 'Try ${target.name} first',
+        title: 'Start here',
         subtitle: null,
         body:
-            'Play it on one surface first. Keep the sound even and the motion relaxed.',
+            'Begin with ${target.name}. Play it on one surface first. Keep the sound even and the motion relaxed.',
         itemIds: <String>[target.id],
         ctaLabel: 'Practice',
         ctaAction: CoachActionV1.startPractice,
@@ -354,11 +513,11 @@ class AppController extends ChangeNotifier {
       return CoachBlockV1(
         id: 'focus_working_on',
         type: CoachBlockTypeV1.focus,
-        title: 'Spend more time on ${target.name}',
+        title: 'Try this next',
         subtitle: null,
         body: aggregate == null
-            ? 'Stay on it until it comes back around smoothly with no gap.'
-            : _focusBodyForAggregate(aggregate),
+            ? 'Spend a few more minutes on ${target.name}. Stay on it until it comes back around smoothly with no gap.'
+            : '${target.name}: ${_focusBodyForAggregate(aggregate)}',
         itemIds: <String>[target.id],
         ctaLabel: 'Practice',
         ctaAction: CoachActionV1.startPractice,
@@ -375,10 +534,10 @@ class AppController extends ChangeNotifier {
     return CoachBlockV1(
       id: 'focus_balanced_triads',
       type: CoachBlockTypeV1.focus,
-      title: 'Try ${target.name}',
+      title: 'Try this next',
       subtitle: null,
       body:
-          'Put a few clean repetitions on it before you move on to something wider.',
+          'Put a few clean repetitions on ${target.name} before you move on to something wider.',
       itemIds: <String>[target.id],
       ctaLabel: 'Practice',
       ctaAction: CoachActionV1.startPractice,
@@ -407,9 +566,10 @@ class AppController extends ChangeNotifier {
     return CoachBlockV1(
       id: 'needs_work_${target.id}',
       type: CoachBlockTypeV1.needsWork,
-      title: 'Slow ${target.name} down',
+      title: 'Clean this up',
       subtitle: null,
-      body: _needsWorkBodyForAggregate(assessmentAggregateFor(target.id)),
+      body:
+          '${target.name}: ${_needsWorkBodyForAggregate(assessmentAggregateFor(target.id))}',
       itemIds: <String>[target.id],
       ctaLabel: 'Practice',
       ctaAction: CoachActionV1.startPractice,
@@ -444,11 +604,10 @@ class AppController extends ChangeNotifier {
     return CoachBlockV1(
       id: 'momentum_${target.id}',
       type: CoachBlockTypeV1.momentum,
-      title: target.isCombo
-          ? 'Keep ${target.name} moving'
-          : 'Try building from ${target.name}',
+      title: target.isCombo ? 'Move this around the kit' : 'Keep this going',
       subtitle: null,
-      body: _momentumBodyForAggregate(assessmentAggregateFor(target.id)),
+      body:
+          '${target.name}: ${_momentumBodyForAggregate(assessmentAggregateFor(target.id))}',
       itemIds: <String>[target.id],
       ctaLabel: target.isCombo ? 'Move to Flow' : 'Build Phrase',
       ctaAction: target.isCombo
@@ -476,7 +635,7 @@ class AppController extends ChangeNotifier {
       return CoachBlockV1(
         id: 'unlock_flow_${target.id}',
         type: CoachBlockTypeV1.nextUnlock,
-        title: 'You are ready for flow',
+        title: 'Move this into flow',
         subtitle: null,
         body:
             '${target.name} holds on one surface. Keep the sticking the same and move the voices around the kit.',
@@ -509,7 +668,7 @@ class AppController extends ChangeNotifier {
     return CoachBlockV1(
       id: 'unlock_combo_${itemIds.join('_')}',
       type: CoachBlockTypeV1.nextUnlock,
-      title: 'You are ready for a longer phrase',
+      title: 'Build a longer phrase',
       subtitle: null,
       body:
           'Join these and repeat the handoff until the whole phrase comes back around with no gap.',
@@ -560,6 +719,29 @@ class AppController extends ChangeNotifier {
         ? 'the current tempo'
         : '${aggregate.bestStableBpm!.round()} BPM';
     return 'This one is holding at $stableBpm. Keep it in the hands, then build from it while it is still clean.';
+  }
+
+  int _trackedPracticeDayCount(List<PracticeSessionLogV1> sessions) {
+    final Set<DateTime> days = <DateTime>{};
+    for (final PracticeSessionLogV1 session in sessions) {
+      days.add(
+        DateTime(
+          session.endedAt.year,
+          session.endedAt.month,
+          session.endedAt.day,
+        ),
+      );
+    }
+    return days.length;
+  }
+
+  String _coachDayCountText(int dayCount) {
+    if (dayCount <= 0) return '0 days';
+    return '$dayCount ${_pluralize('day', dayCount)}';
+  }
+
+  String _pluralize(String singular, int count) {
+    return count == 1 ? singular : '${singular}s';
   }
 
   List<PracticeItemV1> itemsByFamily(MaterialFamilyV1 family) {

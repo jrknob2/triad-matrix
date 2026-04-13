@@ -184,7 +184,7 @@ class _CoachBlockCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool prominent = block.type == CoachBlockTypeV1.focus;
+    final bool prominent = block.type == CoachBlockTypeV1.summary;
     final ButtonStyle? primaryButtonStyle = prominent
         ? FilledButton.styleFrom(
             backgroundColor: const Color(0xFFFFF4DE),
@@ -238,7 +238,8 @@ class _CoachBlockCard extends StatelessWidget {
                 ),
               ),
             ],
-            if (block.itemIds.isNotEmpty) ...<Widget>[
+            if (block.itemIds.isNotEmpty &&
+                block.type != CoachBlockTypeV1.summary) ...<Widget>[
               const SizedBox(height: 14),
               _CoachPatternStrip(
                 itemIds: block.itemIds,

@@ -65,7 +65,14 @@ enum PatternNoteMarkingV1 { normal, accent, ghost }
 
 enum MatrixProgressStateV1 { notTrained, active, needsWork, strong }
 
-enum CoachBlockTypeV1 { focus, needsWork, momentum, resume, nextUnlock }
+enum CoachBlockTypeV1 {
+  summary,
+  focus,
+  needsWork,
+  momentum,
+  resume,
+  nextUnlock,
+}
 
 enum CoachActionV1 {
   startPractice,
