@@ -1237,6 +1237,7 @@ Rules:
   - discard
   - keep editing
 - the unsaved-changes prompt should use the app's own paper/surface motif, not a default tinted dialog color that feels foreign to the rest of the app
+- all popup dialogs should use the app's own paper/surface motif, border, and button styling instead of default tinted Material dialog treatment
 - screens that are already explicit-save screens must still guard against losing unsaved edits on back navigation
 
 ---

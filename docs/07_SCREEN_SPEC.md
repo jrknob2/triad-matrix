@@ -597,6 +597,7 @@ Practice Item is the detail/edit screen for one piece of material.
 - Practice Item should show one primary notation block
 - the editing UI should avoid rendering one chip per note when the notation itself can serve as the selection surface
 - unsaved-changes prompts should stay visually aligned with the app's own dialog motif rather than default tinted Material styling
+- popup dialogs across the app should stay visually aligned with the app's own dialog motif rather than default tinted Material styling
 - when the item has flow voices, that primary notation block should render as a unified two-row pattern/voice display
 - the `Flow Voices` section should contain editing controls, not a second notation preview
 - edits should not write through immediately while the user is still working on the screen

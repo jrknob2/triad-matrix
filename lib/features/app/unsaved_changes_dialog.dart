@@ -24,12 +24,12 @@ Future<UnsavedChangesDecision?> showUnsavedChangesDialog(
         title: Text(title),
         content: Text(message),
         actions: <Widget>[
-          TextButton(
+          OutlinedButton(
             onPressed: () =>
                 Navigator.of(context).pop(UnsavedChangesDecision.keepEditing),
             child: const Text('Keep Editing'),
           ),
-          TextButton(
+          OutlinedButton(
             onPressed: () =>
                 Navigator.of(context).pop(UnsavedChangesDecision.discard),
             child: const Text('Discard'),

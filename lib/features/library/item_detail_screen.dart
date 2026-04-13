@@ -102,7 +102,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Tap notes to select them, then assign one change.',
+                          'Tap notes to select them, then add a dynamic or voice.',
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(color: const Color(0xFF5B5345)),
                         ),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/practice/practice_domain_v1.dart';
 import '../../features/app/app_formatters.dart';
 import '../../features/app/app_runtime_flags.dart';
+import '../../features/app/drumcabulary_theme.dart';
 import '../../features/app/unsaved_changes_dialog.dart';
 import '../../state/app_controller.dart';
 
@@ -235,12 +236,18 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
+          backgroundColor: DrumcabularyTheme.surface,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+            side: const BorderSide(color: DrumcabularyTheme.line),
+          ),
           title: const Text('Clear App Data'),
           content: const Text(
             'This resets the app to a fresh start. Practice history, working-on items, competency, saved phrases, your patterns, and settings will be cleared. Built-in material stays available.',
           ),
           actions: <Widget>[
-            TextButton(
+            OutlinedButton(
               onPressed: () => Navigator.of(context).pop(false),
               child: const Text('Cancel'),
             ),
