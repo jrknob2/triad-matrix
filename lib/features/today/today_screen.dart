@@ -34,8 +34,7 @@ class TodayScreen extends StatelessWidget {
       animation: controller,
       builder: (BuildContext context, _) {
         final CoachBriefingV1 briefing = controller.buildCoachBriefing();
-        final bool showGettingStarted =
-            !controller.hasLoggedPractice && !controller.hasActiveWork;
+        final bool showGettingStarted = !controller.hasLoggedPractice;
 
         return DrumScreen(
           child: ListView(
@@ -336,102 +335,56 @@ class _GettingStartedCoachCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final List<String> itemIds = controller.recommendedStartingTriadItemIds;
     final bool allAdded = itemIds.every(controller.isDirectRoutineEntry);
-    final ButtonStyle coachButtonStyle =
-        OutlinedButton.styleFrom(
-          foregroundColor: Colors.white,
-          side: const BorderSide(color: Color(0xFFE8F2EF)),
-        ).copyWith(
-          overlayColor: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.pressed)) {
-              return const Color(0x33FFFFFF);
-            }
-            if (states.contains(WidgetState.hovered) ||
-                states.contains(WidgetState.focused)) {
-              return const Color(0x22FFFFFF);
-            }
-            return null;
-          }),
-        );
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
-        gradient: const LinearGradient(
-          colors: <Color>[Color(0xFF133E62), Color(0xFF2C6A6A)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        boxShadow: const <BoxShadow>[
-          BoxShadow(
-            color: Color(0x22000000),
-            blurRadius: 18,
-            offset: Offset(0, 10),
+    return DrumPanel(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const DrumSectionTitle(text: 'Coach'),
+          const SizedBox(height: 10),
+          Text(
+            'Getting Started',
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.w900,
+              height: 1.05,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Start with these four triads. Put them in Working On, then repeat them smoothly with no gap back to the beginning. Or open the Matrix and choose your own.',
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: itemIds
+                .map(
+                  (itemId) => _StartingTriadChip(
+                    controller: controller,
+                    itemId: itemId,
+                  ),
+                )
+                .toList(growable: false),
+          ),
+          const SizedBox(height: 18),
+          DrumActionRow(
+            children: <Widget>[
+              FilledButton(
+                onPressed: onAddToWorkingOn,
+                child: Text(
+                  allAdded ? 'Open Working On' : 'Add to Working On',
+                ),
+              ),
+              OutlinedButton(
+                onPressed: () => onOpenMatrix(),
+                child: const Text('Open the Matrix'),
+              ),
+            ],
           ),
         ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              'Coach',
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: const Color(0xFFD8E8E4),
-                letterSpacing: 1.2,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'Getting Started',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w900,
-                height: 1.05,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Start with these four triads. Put them in Working On, then repeat them smoothly with no gap back to the beginning. Or open the Matrix and choose your own.',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: const Color(0xFFE8F2EF),
-                height: 1.35,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: itemIds
-                  .map(
-                    (itemId) => _StartingTriadChip(
-                      controller: controller,
-                      itemId: itemId,
-                    ),
-                  )
-                  .toList(growable: false),
-            ),
-            const SizedBox(height: 18),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: <Widget>[
-                OutlinedButton(
-                  onPressed: onAddToWorkingOn,
-                  style: coachButtonStyle,
-                  child: Text(
-                    allAdded ? 'Open Working On' : 'Add to Working On',
-                  ),
-                ),
-                OutlinedButton(
-                  onPressed: () => onOpenMatrix(),
-                  style: coachButtonStyle,
-                  child: const Text('Open the Matrix'),
-                ),
-              ],
-            ),
-          ],
-        ),
       ),
     );
   }

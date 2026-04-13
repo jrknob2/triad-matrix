@@ -418,7 +418,6 @@ Internal only:
 
 - `Summary`
 - `Getting Started`
-- `Start Here`
 - `Focus`
 - `Needs Work`
 - `Momentum`
@@ -496,6 +495,9 @@ Preferred visible title shapes:
 Show:
 
 - one starter card
+- recommended starter triads
+- `Add to Working On` or `Open Working On`
+- `Open the Matrix`
 
 Hide:
 
@@ -503,24 +505,15 @@ Hide:
 - momentum
 - next unlock
 
-#### Starter Items Selected, No Sessions
-
-Show:
-
-- one `Start Here` card
-
-Hide:
-
-- momentum
-- progress-like summaries
-
 Rules:
 
-- this state should feel materially different from first light
-- if the recommended starter set has already been added, Coach should reflect that progress explicitly
+- any no-history state should collapse to this same single starter card
+- no separate `Start Here` or `You are ready to start` card should appear before the first logged practice session
+- if the recommended starter set has already been added, keep the same starter card and change only the available action state
 - the card may reference the full starter set, not collapse immediately to one pattern unless the user explicitly narrowed the set
 - beginner-facing starter copy should use `pad` or `snare`
-- the starter CTA should feel like beginning a first session, not a generic `Practice` action
+- the starter actions should help the user either add the starter set or begin from Matrix
+- the starter card should use the shared Coach/app panel motif, not a one-off blue hero treatment
 
 #### Early Struggle
 

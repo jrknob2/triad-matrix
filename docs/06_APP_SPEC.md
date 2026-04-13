@@ -277,7 +277,6 @@ Assessment comes from:
 Coach should build from explicit block types:
 
 - `Getting Started`
-- `Start Here`
 - `Focus`
 - `Needs Work`
 - `Momentum`

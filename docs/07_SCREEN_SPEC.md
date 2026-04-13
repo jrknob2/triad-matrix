@@ -115,35 +115,22 @@ Coach gives a progress-aware summary first, then one concrete next action.
 Condition:
 
 - no meaningful practice history
-- no working-set items selected
+- any no-history startup state
 
 Must show:
 
 - one getting-started card
 - recommended starter triads
-- `Add to Working On`
+- `Add to Working On` or `Open Working On`
 - `Open the Matrix`
 
-#### State B: Working Set Selected, No Sessions Yet
+Must not:
 
-Condition:
+- split no-history Coach into multiple different starter cards
+- collapse the starter state into one arbitrary active pattern
+- show progress-summary language before the first logged practice session
 
-- Focus contains items
-- no logged practice sessions yet
-
-Must show:
-
-- one start-here card
-- clear instruction to begin first session
-- direct CTA to practice current work
-
-Must not say things like:
-
-- `set the reference point`
-- `baseline`
-- `signal`
-
-#### State C: Early Work, Still Unstable
+#### State B: Early Work, Still Unstable
 
 Condition:
 

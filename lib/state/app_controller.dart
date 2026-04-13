@@ -284,11 +284,7 @@ class AppController extends ChangeNotifier {
 
   CoachBriefingV1 buildCoachBriefing() {
     if (!hasLoggedPractice) {
-      return CoachBriefingV1(
-        blocks: activeWorkItems.isEmpty
-            ? const <CoachBlockV1>[]
-            : <CoachBlockV1>[selectCoachFocus()!],
-      );
+      return const CoachBriefingV1(blocks: <CoachBlockV1>[]);
     }
 
     final CoachBlockV1? summary = selectCoachSummary();
@@ -484,40 +480,6 @@ class AppController extends ChangeNotifier {
   }
 
   CoachBlockV1? selectCoachFocus() {
-    if (!hasLoggedPractice && activeWorkItems.isNotEmpty) {
-      final List<String> starterIds = recommendedStartingTriadItemIds;
-      final bool allStarterIdsPresent = starterIds.every(isDirectRoutineEntry);
-      if (allStarterIdsPresent) {
-        return CoachBlockV1(
-          id: 'focus_first_session_starter_set',
-          type: CoachBlockTypeV1.focus,
-          title: 'You are ready to start.',
-          subtitle: null,
-          body:
-              'Start on a pad or snare with these four triads: RRR, LLL, RLL, and LRR. Play them one at a time and keep the sound even.',
-          itemIds: starterIds,
-          ctaLabel: 'Start First Session',
-          ctaAction: CoachActionV1.startPractice,
-          matrixFilters: const <TriadMatrixFilterV1>{},
-          practiceMode: PracticeModeV1.singleSurface,
-        );
-      }
-      final PracticeItemV1 target = activeWorkItems.first;
-      return CoachBlockV1(
-        id: 'focus_first_session',
-        type: CoachBlockTypeV1.focus,
-        title: 'Start with this',
-        subtitle: null,
-        body:
-            'Begin on a pad or snare. Keep the sound even and the motion relaxed.',
-        itemIds: <String>[target.id],
-        ctaLabel: 'Start With This',
-        ctaAction: CoachActionV1.startPractice,
-        matrixFilters: const <TriadMatrixFilterV1>{},
-        practiceMode: PracticeModeV1.singleSurface,
-      );
-    }
-
     if (activeWorkItems.isNotEmpty) {
       final List<PracticeItemV1> candidates = activeWorkItems.toList(
         growable: false,
