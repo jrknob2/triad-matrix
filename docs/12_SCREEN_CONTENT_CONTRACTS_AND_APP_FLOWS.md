@@ -514,6 +514,10 @@ Rules:
 - beginner-facing starter copy should use `pad` or `snare`
 - the starter actions should help the user either add the starter set or begin from Matrix
 - the starter card should use the shared Coach/app panel motif, not a one-off blue hero treatment
+- the starter card body should lead with a brief welcome and simple first-step coaching, not workflow explanation
+- starter copy should not explain `Working On`, loop mechanics, or other app/process details inside the coaching body
+- beginner starter advice should stay simple: repeat each item slowly and evenly with a relaxed posture and grip
+- starter copy may feel encouraging, but it should not drift into generic marketing language
 
 #### Early Struggle
 

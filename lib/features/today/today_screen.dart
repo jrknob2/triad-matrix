@@ -351,7 +351,7 @@ class _GettingStartedCoachCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            'Start with these four triads. Put them in Working On, then repeat them smoothly with no gap back to the beginning. Or open the Matrix and choose your own.',
+            'Welcome. Start with these four triads. Repeat each one slowly and evenly with a relaxed posture and grip.',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
               height: 1.35,
             ),
