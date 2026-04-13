@@ -616,6 +616,8 @@ Rules:
 - if a phrase includes triads that are not ready, Matrix should show inline guidance instead of blocking selection
 - adding material from Matrix must not inject accents, ghosts, or flow voices automatically
 - phrase-building mode defaults to flow-oriented practice actions
+- phrase chips in the editor should size to their phrase content and wrap as compact rows
+- phrase chips must not stretch to the full panel width unless the phrase content actually requires it
 
 #### Action Row
 

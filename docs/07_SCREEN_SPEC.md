@@ -263,6 +263,7 @@ Phrase rule:
 - moving from `Practice Item` into Matrix and back must preserve authored markings and voice assignments unless the user explicitly changes and saves them
 - the phrase panel should show both a readable notation line for the whole phrase and removable chips for exact occurrence editing
 - phrase-building state should not show `Open Item`
+- phrase-editor chips should size to their content and wrap as compact rows instead of stretching across the panel
 
 ### Acceptance Criteria
 

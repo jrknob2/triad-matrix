@@ -44,6 +44,7 @@ class PatternDisplayText extends StatelessWidget {
       children: <Widget>[
         Align(
           alignment: Alignment.center,
+          widthFactor: 1,
           child: RichText(
             textAlign: textAlign,
             maxLines: maxLines,
@@ -65,7 +66,9 @@ class PatternDisplayText extends StatelessWidget {
           ),
         ),
         if (showRepeatIndicator)
-          Center(
+          Align(
+            alignment: Alignment.center,
+            widthFactor: 1,
             child: Padding(
               padding: const EdgeInsets.only(top: 6),
               child: Icon(
