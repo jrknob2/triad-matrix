@@ -4,7 +4,6 @@ import '../../core/practice/practice_domain_v1.dart';
 import '../../state/app_controller.dart';
 import 'app_viewport.dart';
 import '../matrix/matrix_screen.dart';
-import '../library/combination_builder_screen.dart';
 import '../library/item_detail_screen.dart';
 import '../practice/practice_screen.dart';
 import '../practice/practice_session_screen.dart';
@@ -44,18 +43,14 @@ class _AppShellState extends State<AppShell> {
             onOpenMatrix: _openMatrix,
             onOpenFocus: () => setState(() => _currentIndex = 3),
             onOpenItem: _openItemDetail,
-            onPracticeItem: _openPracticeItem,
             onPracticeItemInMode: _openPracticeItemInMode,
-            onBuildComboFromItems: _openCombinationBuilderFromItems,
           ),
           MatrixScreen(
             key: ValueKey<String>('matrix_${widget.controller.resetVersion}'),
             controller: widget.controller,
             request: _matrixRequest,
             onOpenItem: _openItemDetail,
-            onPracticeItem: _openPracticeItem,
-            onPracticeItemInMode: _openPracticeItemInMode,
-            onBuildComboFromItems: _openCombinationBuilderFromItems,
+            onPreviewSelection: _openMatrixPreviewFromSelection,
           ),
           PracticeScreen(
             key: ValueKey<String>('practice_${widget.controller.resetVersion}'),
@@ -64,7 +59,6 @@ class _AppShellState extends State<AppShell> {
             onPracticeWarmup: _openWarmupPractice,
             onStartWorkingOnSession: _openWorkingOnSelectionPractice,
             onOpenMatrix: () => setState(() => _currentIndex = 1),
-            onOpenFocus: () => setState(() => _currentIndex = 3),
           ),
           FocusScreen(
             key: ValueKey<String>('focus_${widget.controller.resetVersion}'),
@@ -207,20 +201,21 @@ class _AppShellState extends State<AppShell> {
     'Progress',
   ];
 
-  void _openMatrix({LearningLaneV1? lane, Set<TriadMatrixFilterV1>? filters}) {
+  void _openMatrix({
+    LearningLaneV1? lane,
+    Set<TriadMatrixFilterV1>? filters,
+    List<String>? selectedItemIds,
+  }) {
     setState(() {
       _matrixRequestVersion++;
       _matrixRequest = MatrixScreenRequest(
         version: _matrixRequestVersion,
         lane: lane,
         filters: filters ?? const <TriadMatrixFilterV1>{},
+        selectedItemIds: selectedItemIds ?? const <String>[],
       );
       _currentIndex = 1;
     });
-  }
-
-  void _openPracticeItem(String itemId) {
-    _openPracticeItemInMode(itemId, PracticeModeV1.singleSurface);
   }
 
   void _openPracticeItemInMode(String itemId, PracticeModeV1 mode) {
@@ -271,6 +266,16 @@ class _AppShellState extends State<AppShell> {
     }
   }
 
+  void _openMatrixPreviewFromSelection(
+    List<String> itemIds,
+    PracticeModeV1 mode,
+  ) {
+    if (itemIds.isEmpty) return;
+    _openPracticeSession(
+      widget.controller.buildMatrixPreviewSession(itemIds, practiceMode: mode),
+    );
+  }
+
   void _openItemDetail(String itemId) {
     _shellNavigatorKey.currentState?.push(
       MaterialPageRoute<void>(
@@ -301,24 +306,11 @@ class _AppShellState extends State<AppShell> {
               editingItemId: itemId,
             ),
             onOpenItem: _openItemDetail,
-            onPracticeItem: _openPracticeItem,
-            onPracticeItemInMode: _openPracticeItemInMode,
-            onBuildComboFromItems: _openCombinationBuilderFromItems,
+            onPreviewSelection: _openMatrixPreviewFromSelection,
             onFinishEditing: (List<String> itemIds) {
               Navigator.of(routeContext).pop(itemIds);
             },
           ),
-        ),
-      ),
-    );
-  }
-
-  void _openCombinationBuilderFromItems(List<String> itemIds) {
-    _shellNavigatorKey.currentState?.push(
-      MaterialPageRoute<void>(
-        builder: (_) => CombinationBuilderScreen(
-          controller: widget.controller,
-          initialItemIds: itemIds,
         ),
       ),
     );

@@ -31,9 +31,7 @@ class MatrixScreen extends StatefulWidget {
   final AppController controller;
   final MatrixScreenRequest? request;
   final ValueChanged<String> onOpenItem;
-  final ValueChanged<String> onPracticeItem;
-  final void Function(String, PracticeModeV1) onPracticeItemInMode;
-  final ValueChanged<List<String>> onBuildComboFromItems;
+  final void Function(List<String>, PracticeModeV1) onPreviewSelection;
   final ValueChanged<List<String>>? onFinishEditing;
 
   const MatrixScreen({
@@ -41,9 +39,7 @@ class MatrixScreen extends StatefulWidget {
     required this.controller,
     required this.request,
     required this.onOpenItem,
-    required this.onPracticeItem,
-    required this.onPracticeItemInMode,
-    required this.onBuildComboFromItems,
+    required this.onPreviewSelection,
     this.onFinishEditing,
   });
 
@@ -282,14 +278,6 @@ class _MatrixScreenState extends State<MatrixScreen> {
             onPressed: _saveSelection,
           ),
         ),
-      if (_selectedItemIds.length == 1 && !_isEditingFromPracticeItem)
-        Padding(
-          padding: const EdgeInsets.only(right: 8),
-          child: DrumActionPill(
-            label: const Text('Open Item'),
-            onPressed: () => widget.onOpenItem(_selectedItemIds.first),
-          ),
-        ),
       Padding(
         padding: const EdgeInsets.only(right: 8),
         child: DrumActionPill(
@@ -422,15 +410,19 @@ class _MatrixScreenState extends State<MatrixScreen> {
   }
 
   void _practiceSelection() {
-    final String? itemId = _selectionActionItemId(createIfMissing: true);
-    if (itemId == null) return;
-    widget.onPracticeItem(itemId);
+    if (_selectedItemIds.isEmpty) return;
+    widget.onPreviewSelection(
+      List<String>.from(_selectedItemIds),
+      PracticeModeV1.singleSurface,
+    );
   }
 
   void _practiceSelectionInFlow() {
-    final String? itemId = _selectionActionItemId(createIfMissing: true);
-    if (itemId == null) return;
-    widget.onPracticeItemInMode(itemId, PracticeModeV1.flow);
+    if (_selectedItemIds.isEmpty) return;
+    widget.onPreviewSelection(
+      List<String>.from(_selectedItemIds),
+      PracticeModeV1.flow,
+    );
   }
 
   Future<void> _addSelectionToWorkingOn() async {
@@ -495,16 +487,6 @@ class _MatrixScreenState extends State<MatrixScreen> {
     if (open == true && mounted) {
       widget.onOpenItem(itemId);
     }
-  }
-
-  String? _selectionActionItemId({bool createIfMissing = false}) {
-    if (_selectedItemIds.isEmpty) return null;
-    if (_selectedItemIds.length == 1) return _selectedItemIds.first;
-    final PracticeCombinationV1? existing = widget.controller
-        .combinationForItemIdsOrNull(_selectedItemIds);
-    if (existing != null) return existing.id;
-    if (!createIfMissing) return null;
-    return widget.controller.createCombination(itemIds: _selectedItemIds).id;
   }
 
   void _applyRequest(MatrixScreenRequest request) {

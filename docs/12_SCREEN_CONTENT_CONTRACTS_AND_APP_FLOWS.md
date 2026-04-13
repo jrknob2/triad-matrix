@@ -191,6 +191,11 @@ Required controls:
 - primary CTA on each Coach block
 - optional `See in Matrix`
 
+Rules:
+
+- if Coach is pointing toward phrase building, it should hand off into `Matrix`, not a separate builder screen
+- that handoff should preload the suggested triad selection when the advice depends on specific triads
+
 ### Flow D: Matrix Discovery And Phrase Building
 
 Goal:
@@ -204,7 +209,7 @@ Path:
 1. `Matrix`
 2. filters / selections
 3. phrase editor
-4. `Practice`, `Add to Working On`, or `Save Phrase`
+4. `Practice`, `Add to Working On`, or `Save`
 
 Screens involved:
 
@@ -217,6 +222,14 @@ Required controls:
 - view/filter controls
 - phrase editor
 - action pills
+
+Rules:
+
+- `Practice` from Matrix is a try-it-now preview flow
+- Matrix preview practice is untracked
+- Matrix preview practice must not silently save the current selection as an item
+- Matrix preview practice must return to `Matrix` when ended
+- Matrix preview practice must not open `Session Summary`
 
 ### Flow E: Active Work Management
 
@@ -610,7 +623,6 @@ Serve:
 
 - direct practice
 - add to Working On
-- open selected item when one triad is selected
 - save phrase when multiple triads are selected
 - clear selection
 
@@ -619,7 +631,6 @@ Rules:
 - with one selected triad:
   - show `Practice`
   - show `Add to Working On`
-  - show `Open Item`
   - do not show `Remove from Working On`
 - with more than one selected triad:
   - show `Practice`
@@ -718,6 +729,7 @@ Optional later:
 - single-item practice should use saved BPM and duration defaults without storing them as authored notation/item data
 - `Warm Up` remains separate because it is a distinct prep mode, not a slice of current work
 - `Repeat a Previous Session` should open a recent-session browser, not silently assume the last session is the right one
+- `Practice` should not contain helper navigation actions that bounce the user sideways into `Focus`
 
 ### Session Setup From `Working On`
 
@@ -891,6 +903,7 @@ Session Summary closes a tracked session and collects limited useful feedback.
 - warmup summary
 - long analytics
 - multiple unrelated CTAs
+- work-management actions like `Add to Working On`
 - session-level metadata that confuses the currently assessed item
 - low-value detail like click state when it does not change the next decision
 - inert buttons with no effect

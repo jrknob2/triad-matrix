@@ -241,14 +241,6 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
             const SizedBox(height: 16),
             DrumActionRow(
               children: <Widget>[
-                if (!widget.controller.isInRoutine(currentItem.id))
-                  FilledButton(
-                    onPressed: () {
-                      widget.controller.toggleRoutineItem(currentItem.id);
-                      setState(() {});
-                    },
-                    child: const Text('Add to Working On'),
-                  ),
                 OutlinedButton(
                   onPressed: () {
                     _skipCurrentItem(session.id, currentItemId);

@@ -18,6 +18,8 @@ enum PracticeItemSourceV1 { builtIn, userDefined, generated }
 
 enum PracticeModeV1 { singleSurface, flow }
 
+enum PracticeSessionEndBehaviorV1 { openSummary, returnToPrevious }
+
 enum DrumVoiceV1 { snare, rackTom, tom2, floorTom, hihat, kick }
 
 enum LearningLaneV1 { control, balance, dynamics, integration, phrasing, flow }
@@ -457,40 +459,49 @@ class PracticeSessionSetupV1 {
   final List<String> practiceItemIds;
   final MaterialFamilyV1 family;
   final PracticeModeV1 practiceMode;
+  final PracticeSessionEndBehaviorV1 endBehavior;
   final int bpm;
   final Map<String, int> itemBpmById;
   final TimerPresetV1 timerPreset;
   final bool clickEnabled;
   final String? routineId;
   final String sourceName;
+  final List<String> ephemeralItemIds;
 
   PracticeSessionSetupV1({
     required this.practiceItemIds,
     required this.family,
     required this.practiceMode,
+    this.endBehavior = PracticeSessionEndBehaviorV1.openSummary,
     required this.bpm,
     Map<String, int>? itemBpmById,
     required this.timerPreset,
     required this.clickEnabled,
     required this.routineId,
     this.sourceName = '',
+    List<String>? ephemeralItemIds,
   }) : itemBpmById = Map<String, int>.unmodifiable(
          itemBpmById ??
              <String, int>{
                for (final String itemId in practiceItemIds) itemId: bpm,
              },
+       ),
+       ephemeralItemIds = List<String>.unmodifiable(
+         ephemeralItemIds ?? const <String>[],
        );
 
   PracticeSessionSetupV1 copyWith({
     List<String>? practiceItemIds,
     MaterialFamilyV1? family,
     PracticeModeV1? practiceMode,
+    PracticeSessionEndBehaviorV1? endBehavior,
     int? bpm,
     Map<String, int>? itemBpmById,
     TimerPresetV1? timerPreset,
     bool? clickEnabled,
     String? routineId,
     String? sourceName,
+    List<String>? ephemeralItemIds,
     bool clearRoutineId = false,
   }) {
     final List<String> nextPracticeItemIds =
@@ -500,6 +511,7 @@ class PracticeSessionSetupV1 {
       practiceItemIds: nextPracticeItemIds,
       family: family ?? this.family,
       practiceMode: practiceMode ?? this.practiceMode,
+      endBehavior: endBehavior ?? this.endBehavior,
       bpm: nextBpm,
       itemBpmById:
           itemBpmById ??
@@ -510,6 +522,7 @@ class PracticeSessionSetupV1 {
       clickEnabled: clickEnabled ?? this.clickEnabled,
       routineId: clearRoutineId ? null : (routineId ?? this.routineId),
       sourceName: sourceName ?? this.sourceName,
+      ephemeralItemIds: ephemeralItemIds ?? this.ephemeralItemIds,
     );
   }
 }

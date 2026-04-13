@@ -13,7 +13,6 @@ class PracticeScreen extends StatefulWidget {
   final VoidCallback onPracticeWarmup;
   final void Function(List<String>, PracticeModeV1) onStartWorkingOnSession;
   final VoidCallback onOpenMatrix;
-  final VoidCallback onOpenFocus;
 
   const PracticeScreen({
     super.key,
@@ -22,7 +21,6 @@ class PracticeScreen extends StatefulWidget {
     required this.onPracticeWarmup,
     required this.onStartWorkingOnSession,
     required this.onOpenMatrix,
-    required this.onOpenFocus,
   });
 
   @override
@@ -171,10 +169,6 @@ class _PracticeScreenState extends State<PracticeScreen> {
                     OutlinedButton(
                       onPressed: widget.onOpenMatrix,
                       child: const Text('Open Matrix'),
-                    ),
-                    OutlinedButton(
-                      onPressed: widget.onOpenFocus,
-                      child: const Text('Open Working On'),
                     ),
                   ],
                 ),
@@ -471,10 +465,6 @@ class _PracticeScreenState extends State<PracticeScreen> {
                           OutlinedButton(
                             onPressed: widget.onOpenMatrix,
                             child: const Text('Open Matrix'),
-                          ),
-                          OutlinedButton(
-                            onPressed: widget.onOpenFocus,
-                            child: const Text('Open Working On'),
                           ),
                         ],
                       ),

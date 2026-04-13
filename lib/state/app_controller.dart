@@ -1716,30 +1716,39 @@ class AppController extends ChangeNotifier {
   PracticeSessionSetupV1 buildSessionForItem(
     String itemId, {
     PracticeModeV1 practiceMode = PracticeModeV1.singleSurface,
+    PracticeSessionEndBehaviorV1 endBehavior =
+        PracticeSessionEndBehaviorV1.openSummary,
     String? routineId,
+    String sourceName = '',
     int? bpm,
     TimerPresetV1? timerPreset,
+    List<String> ephemeralItemIds = const <String>[],
   }) {
     final PracticeItemV1 item = itemById(itemId);
     return PracticeSessionSetupV1(
       practiceItemIds: <String>[itemId],
       family: item.family,
       practiceMode: practiceMode,
+      endBehavior: endBehavior,
       bpm: bpm ?? launchBpmForItem(itemId),
       itemBpmById: <String, int>{itemId: bpm ?? launchBpmForItem(itemId)},
       timerPreset: timerPreset ?? launchTimerPresetForItem(itemId),
       clickEnabled: _profile.clickEnabledByDefault,
       routineId: routineId,
-      sourceName: '',
+      sourceName: sourceName,
+      ephemeralItemIds: ephemeralItemIds,
     );
   }
 
   PracticeSessionSetupV1 buildSessionForWorkingOnSelection(
     List<String> itemIds, {
     PracticeModeV1 practiceMode = PracticeModeV1.singleSurface,
+    PracticeSessionEndBehaviorV1 endBehavior =
+        PracticeSessionEndBehaviorV1.openSummary,
     String sourceName = 'Working On',
     int? bpm,
     TimerPresetV1? timerPreset,
+    List<String> ephemeralItemIds = const <String>[],
   }) {
     final String? singleItemId = itemIds.length == 1 ? itemIds.first : null;
     final Map<String, int> itemBpmById = <String, int>{
@@ -1754,6 +1763,7 @@ class AppController extends ChangeNotifier {
           ? itemById(itemIds.first).family
           : MaterialFamilyV1.combo,
       practiceMode: practiceMode,
+      endBehavior: endBehavior,
       bpm:
           bpm ??
           (singleItemId == null
@@ -1768,6 +1778,7 @@ class AppController extends ChangeNotifier {
       clickEnabled: _profile.clickEnabledByDefault,
       routineId: _routine.id,
       sourceName: sourceName,
+      ephemeralItemIds: ephemeralItemIds,
     );
   }
 
@@ -1778,6 +1789,7 @@ class AppController extends ChangeNotifier {
           .toList(growable: false),
       family: MaterialFamilyV1.warmup,
       practiceMode: PracticeModeV1.singleSurface,
+      endBehavior: PracticeSessionEndBehaviorV1.returnToPrevious,
       bpm: _profile.defaultBpm,
       itemBpmById: <String, int>{
         for (final PracticeItemV1 item in warmupItems)
@@ -1787,6 +1799,37 @@ class AppController extends ChangeNotifier {
       clickEnabled: false,
       routineId: null,
       sourceName: 'Warmup',
+    );
+  }
+
+  PracticeSessionSetupV1 buildMatrixPreviewSession(
+    List<String> itemIds, {
+    required PracticeModeV1 practiceMode,
+  }) {
+    if (itemIds.isEmpty) {
+      throw ArgumentError.value(itemIds, 'itemIds', 'Must not be empty.');
+    }
+    if (itemIds.length == 1) {
+      return buildSessionForItem(
+        itemIds.first,
+        practiceMode: practiceMode,
+        endBehavior: PracticeSessionEndBehaviorV1.returnToPrevious,
+        sourceName: 'Matrix Preview',
+        routineId: null,
+      );
+    }
+
+    final PracticeCombinationV1 combo = createDraftCombinationForEditing(
+      itemIds: itemIds,
+    );
+    final PracticeItemV1 comboItem = itemById(combo.id);
+    return buildSessionForItem(
+      combo.id,
+      practiceMode: practiceMode,
+      endBehavior: PracticeSessionEndBehaviorV1.returnToPrevious,
+      sourceName: 'Matrix Preview',
+      routineId: null,
+      ephemeralItemIds: comboItem.saved ? const <String>[] : <String>[combo.id],
     );
   }
 
@@ -1814,6 +1857,7 @@ class AppController extends ChangeNotifier {
           ? itemById(itemIds.first).family
           : MaterialFamilyV1.combo,
       practiceMode: session.practiceMode,
+      endBehavior: PracticeSessionEndBehaviorV1.openSummary,
       bpm: itemBpmById[itemIds.first] ?? session.bpm,
       itemBpmById: itemBpmById,
       timerPreset: _profile.defaultTimerPreset,

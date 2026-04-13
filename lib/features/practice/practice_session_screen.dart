@@ -55,6 +55,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   bool _completionChimed = false;
   bool _completionStateVisible = false;
   bool _summaryOpenedForCurrentRun = false;
+  bool _ephemeralItemsDiscarded = false;
   Duration _elapsedOffset = Duration.zero;
   late Map<String, int> _itemBpmById;
   late List<String> _practicedItemIds;
@@ -80,6 +81,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
 
   @override
   void dispose() {
+    _discardEphemeralItemsIfNeeded();
     _elapsedTicker?.cancel();
     _beatTicker?.cancel();
     _beatFlashTimer?.cancel();
@@ -189,9 +191,9 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
       foregroundColor: const Color(0xFF211B14),
       side: const BorderSide(color: Color(0xFFFFF4DE)),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
-        fontWeight: FontWeight.w900,
-      ),
+      textStyle: Theme.of(
+        context,
+      ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w900),
     );
     return DrumPanel(
       tone: DrumPanelTone.dark,
@@ -403,6 +405,14 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     if (!_canEndSession) return;
     if (_isWarmup) {
       _resetRunState(clearElapsed: false);
+      _discardEphemeralItemsIfNeeded();
+      Navigator.of(context).pop();
+      return;
+    }
+
+    if (_setup.endBehavior == PracticeSessionEndBehaviorV1.returnToPrevious) {
+      _resetRunState(clearElapsed: false);
+      _discardEphemeralItemsIfNeeded();
       Navigator.of(context).pop();
       return;
     }
@@ -428,6 +438,15 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
         ),
       ),
     );
+  }
+
+  void _discardEphemeralItemsIfNeeded() {
+    if (_ephemeralItemsDiscarded) return;
+    if (_setup.ephemeralItemIds.isEmpty) return;
+    for (final String itemId in _setup.ephemeralItemIds) {
+      widget.controller.discardUnsavedPracticeItem(itemId);
+    }
+    _ephemeralItemsDiscarded = true;
   }
 
   void _changeItem(int nextIndex) {

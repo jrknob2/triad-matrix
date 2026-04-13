@@ -6,16 +6,18 @@ import '../app/drumcabulary_ui.dart';
 import '../practice/widgets/pattern_display_text.dart';
 
 typedef OpenMatrixCallback =
-    void Function({LearningLaneV1? lane, Set<TriadMatrixFilterV1>? filters});
+    void Function({
+      LearningLaneV1? lane,
+      Set<TriadMatrixFilterV1>? filters,
+      List<String>? selectedItemIds,
+    });
 
 class TodayScreen extends StatelessWidget {
   final AppController controller;
   final OpenMatrixCallback onOpenMatrix;
   final VoidCallback onOpenFocus;
   final ValueChanged<String> onOpenItem;
-  final ValueChanged<String> onPracticeItem;
   final void Function(String, PracticeModeV1) onPracticeItemInMode;
-  final ValueChanged<List<String>> onBuildComboFromItems;
 
   const TodayScreen({
     super.key,
@@ -23,9 +25,7 @@ class TodayScreen extends StatelessWidget {
     required this.onOpenMatrix,
     required this.onOpenFocus,
     required this.onOpenItem,
-    required this.onPracticeItem,
     required this.onPracticeItemInMode,
-    required this.onBuildComboFromItems,
   });
 
   @override
@@ -80,11 +80,7 @@ class TodayScreen extends StatelessWidget {
       case CoachActionV1.openMatrix:
         _openMatrixForBlock(block);
       case CoachActionV1.buildCombo:
-        if (block.itemIds.isEmpty) {
-          _openMatrixForBlock(block);
-        } else {
-          onBuildComboFromItems(block.itemIds);
-        }
+        _openMatrixForBlock(block, selectedItemIds: block.itemIds);
       case CoachActionV1.moveToFlow:
         final String? itemId = _blockPracticeItemId(
           block,
@@ -109,8 +105,14 @@ class TodayScreen extends StatelessWidget {
     }
   }
 
-  void _openMatrixForBlock(CoachBlockV1 block) {
-    onOpenMatrix(filters: block.matrixFilters);
+  void _openMatrixForBlock(
+    CoachBlockV1 block, {
+    List<String>? selectedItemIds,
+  }) {
+    onOpenMatrix(
+      filters: block.matrixFilters,
+      selectedItemIds: selectedItemIds,
+    );
   }
 
   bool _blockHasMatrixContext(CoachBlockV1 block) {

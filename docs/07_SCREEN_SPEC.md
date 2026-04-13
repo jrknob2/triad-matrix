@@ -227,8 +227,7 @@ Matrix is the structural map of the triad system and the main phrase-building su
 - `Single Surface`
 - `Flow`
 - `Add to Working On`
-- `Save Phrase`
-- `See Item`
+- `Save`
 - `Clear`
 
 ### Interaction Rule
@@ -254,12 +253,16 @@ Phrase rule:
 - additional triads may be appended freely while building a phrase
 - once more than one triad is selected, Matrix should behave like phrase-building mode and default practice from that selection to Flow
 - if selected phrase material includes triads that are not ready, Matrix should show guidance instead of blocking phrase building
+- Matrix `Practice` should be a try-it-now preview action, not a tracked-session entry
+- Matrix preview practice should be untracked
+- Matrix preview practice should return to Matrix on end and should not open Session Summary
 - `Add to Working On` should open authoring/edit flow, not silently create duplicates or save immediately
 - when Matrix is opened from `Practice Item`, it should reuse Matrix in edit mode instead of routing to a separate builder screen
 - Matrix edit mode must preload the item's current triad sequence on first render
 - Matrix edit mode should replace `Add to Working On` with a return action back to `Working On`
 - moving from `Practice Item` into Matrix and back must preserve authored markings and voice assignments unless the user explicitly changes and saves them
 - the phrase panel should show both a readable notation line for the whole phrase and removable chips for exact occurrence editing
+- phrase-building state should not show `Open Item`
 
 ### Acceptance Criteria
 
@@ -379,6 +382,7 @@ Running transport rules:
 - session player feels like an execution surface, not a config form
 - warmup behaves like temporary prep, not core curriculum
 - the player must not contain an in-session `Warm Up` entry point
+- Practice should not contain helper navigation actions that just open `Focus`
 - back from Session Summary returns to the player
 - back from the player returns to Practice
 - multi-item sessions should preserve item-specific runtime BPM while the player moves between items
@@ -388,6 +392,7 @@ Running transport rules:
 - Session Summary should use explicit per-pattern `Submit` and `Skip`, not implicit auto-save on every selection
 - the player's running transport controls should fit in one row on phone without wrapping
 - Session Summary recommendations should influence the message, not rename the replay action
+- Session Summary should not contain work-management actions like `Add to Working On`
 - player notation on phone must never break inside a marked token
 - player phrase wrapping should break on group boundaries, with the separator staying at the end of the row
 
