@@ -108,6 +108,8 @@ Rules:
 
 - `never seen` is not a valid matrix/product state label
 - `Strong` should be visible in the cell progress color and legend, not repeated as a separate filter
+- with no active Progress filters, the grid should show the full status color map
+- with an active Progress filter, matching cells should become the primary read and non-matches should step back to a neutral treatment
 
 ## Structural Slicers
 
@@ -225,3 +227,4 @@ Persistent decoration rule:
 - selecting a new status replaces the previous status
 - secondary filters may be combined with status filters using `AND`
 - progress filter behavior should feel as explicit and predictable as Traits filter behavior
+- Progress view should show the current filter scope in plain text above the grid

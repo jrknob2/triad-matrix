@@ -656,6 +656,12 @@ Rules:
 - `never seen` is not a valid product state label
 - until `Toolbox` exists, membership-style states should use plain labels like `In Working On`
 - `Strong` is already visible through the matrix progress color and should not also appear as a separate progress filter
+- with no active Progress filters, the grid should show the full progress color map
+- with an active Progress filter, filter match should become the primary visual signal
+- when a Progress filter is active, non-matching cells should step back to a neutral treatment rather than competing equally with matching cells
+- when a status filter is active, only matching cells should retain strong status color
+- when a secondary Progress filter is active, matching cells may retain status color but non-matches should still step back clearly
+- Progress view should show a short active-scope line above the grid, such as `Showing: Needs Work + Recent`
 
 #### Phrase Editor
 

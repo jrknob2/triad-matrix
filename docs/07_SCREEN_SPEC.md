@@ -292,6 +292,7 @@ Phrase rule:
 - Matrix action controls should change meaningfully between single-triad selection and phrase-building selection
 - filter controls should be labeled `Filters` and rendered in a single horizontally scrollable row
 - if a horizontal control row overflows, it should show a small `...` cue beneath it
+- Progress-filtered Matrix states should make the filtered slice more visually dominant than non-matching cells
 
 ---
 

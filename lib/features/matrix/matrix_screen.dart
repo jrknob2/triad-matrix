@@ -89,6 +89,7 @@ class _MatrixScreenState extends State<MatrixScreen> {
     final MatrixSelectionStateV1 matrixSelection = MatrixSelectionStateV1(
       orderedItemIds: _selectedItemIds,
     );
+    final String? progressScopeText = _progressScopeText;
     final List<String> notReadyItemIds = _selectedItemIds
         .where((String itemId) => !widget.controller.isPhraseReady(itemId))
         .toList(growable: false);
@@ -152,6 +153,10 @@ class _MatrixScreenState extends State<MatrixScreen> {
                         DrumHorizontalControlStrip(
                           child: Row(children: _buildFilterPills()),
                         ),
+                        if (progressScopeText != null) ...<Widget>[
+                          const SizedBox(height: 10),
+                          _MatrixScopeLine(text: progressScopeText),
+                        ],
                         const SizedBox(height: 12),
                         matrixGrid,
                       ],
@@ -192,6 +197,10 @@ class _MatrixScreenState extends State<MatrixScreen> {
                 DrumHorizontalControlStrip(
                   child: Row(children: _buildFilterPills()),
                 ),
+                if (progressScopeText != null) ...<Widget>[
+                  const SizedBox(height: 10),
+                  _MatrixScopeLine(text: progressScopeText),
+                ],
                 if (_view == _MatrixPrimaryView.progress) ...<Widget>[
                   const SizedBox(height: 10),
                   const _ProgressLegendCard(),
@@ -228,6 +237,18 @@ class _MatrixScreenState extends State<MatrixScreen> {
     if (_selectedItemIds.isEmpty) return null;
     if (_selectedItemIds.length == 1) return _selectedItemIds.first;
     return widget.controller.combinationForItemIdsOrNull(_selectedItemIds)?.id;
+  }
+
+  String? get _progressScopeText {
+    if (_view != _MatrixPrimaryView.progress || _effectiveFilters.isEmpty) {
+      return null;
+    }
+    final List<String> labels = _viewFilters(_view)
+        .where(_effectiveFilters.contains)
+        .map((TriadMatrixFilterV1 filter) => filter.label)
+        .toList(growable: false);
+    if (labels.isEmpty) return null;
+    return 'Showing: ${labels.join(' + ')}';
   }
 
   List<Widget> _buildFilterPills() {
@@ -630,8 +651,28 @@ class _MatrixScreenState extends State<MatrixScreen> {
           when filter == TriadMatrixFilterV1.leftLead ||
               filter == TriadMatrixFilterV1.endsWithKick =>
         16,
+      _MatrixPrimaryView.progress
+          when filter == TriadMatrixFilterV1.needsWorkStatus =>
+        16,
       _ => 8,
     };
+  }
+}
+
+class _MatrixScopeLine extends StatelessWidget {
+  final String text;
+
+  const _MatrixScopeLine({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+        color: const Color(0xFF6A5E4C),
+        fontWeight: FontWeight.w800,
+      ),
+    );
   }
 }
 
