@@ -625,7 +625,6 @@ Serve:
 
 - direct practice
 - add to Working On
-- save phrase when multiple triads are selected
 - clear selection
 
 Rules:
@@ -638,7 +637,6 @@ Rules:
   - show `Try It Out`
   - route that action to flow practice
   - show `Add to Working On`
-  - show `Save`
   - do not show `Open Item`
   - do not show `Remove from Working On`
 - `Add to Working On` must not silently create or persist a new item
@@ -1096,6 +1094,7 @@ Only if those counts are actually correct for the visible scope.
 
 - rolled-up graphs must visibly communicate status differences, not just technically encode them
 - if a status-mix graph is shown, the status colors must be visually distinct at a glance
+- stacked status graphs must render visible colored segments, not pale empty containers
 - chart geometry should support comparison before decoration
 - prefer flatter bar bases over capsule shapes when the chart is about magnitude comparison
 - graph legends must read as legends, not as extra filters

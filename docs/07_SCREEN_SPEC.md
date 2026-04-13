@@ -227,7 +227,6 @@ Matrix is the structural map of the triad system and the main phrase-building su
 - `Single Surface`
 - `Flow`
 - `Add to Working On`
-- `Save`
 - `Clear`
 
 ### Interaction Rule
@@ -257,6 +256,7 @@ Phrase rule:
 - Matrix preview practice should be untracked
 - Matrix preview practice should return to Matrix on end and should not open Session Summary
 - `Add to Working On` should open authoring/edit flow, not silently create duplicates or save immediately
+- Matrix phrase-building state should not expose a separate `Save` action when `Add to Working On` already hands off into explicit item authoring
 - when Matrix is opened from `Practice Item`, it should reuse Matrix in edit mode instead of routing to a separate builder screen
 - Matrix edit mode must preload the item's current triad sequence on first render
 - Matrix edit mode should replace `Add to Working On` with a return action back to `Working On`
@@ -484,6 +484,7 @@ Progress measures development.
 - show group/category progress
 - show coverage
 - show useful summaries over time
+- if a status-mix graph is shown, it should render as visibly stacked colored segments rather than pale containers
 
 ### Must Not Do
 

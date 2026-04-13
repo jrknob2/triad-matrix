@@ -270,14 +270,6 @@ class _MatrixScreenState extends State<MatrixScreen> {
               : _addSelectionToWorkingOn,
         ),
       ),
-      if (_selectedItemIds.length > 1 && !_isEditingFromPracticeItem)
-        Padding(
-          padding: const EdgeInsets.only(right: 8),
-          child: DrumActionPill(
-            label: const Text('Save'),
-            onPressed: _saveSelection,
-          ),
-        ),
       Padding(
         padding: const EdgeInsets.only(right: 8),
         child: DrumActionPill(
@@ -452,12 +444,6 @@ class _MatrixScreenState extends State<MatrixScreen> {
     final PracticeCombinationV1 draft = widget.controller
         .createDraftCombinationForEditing(itemIds: _selectedItemIds);
     widget.onOpenItem(draft.id);
-  }
-
-  void _saveSelection() {
-    if (_selectedItemIds.length < 2) return;
-    widget.controller.createCombination(itemIds: _selectedItemIds);
-    setState(() {});
   }
 
   Future<void> _showExistingItemPrompt({

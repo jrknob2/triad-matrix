@@ -1408,6 +1408,7 @@ class _StackedStatusBar extends StatelessWidget {
           bottom: Radius.circular(4),
         ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: segments
               .map(
                 (segment) => segment.count == 0
