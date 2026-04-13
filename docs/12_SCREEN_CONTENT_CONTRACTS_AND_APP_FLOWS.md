@@ -447,6 +447,8 @@ Coach structure rule:
 - Coach should read like a progress report first and advice second
 - Coach must not sound like it is listening live unless the app actually has listening capability
 - beginner-facing instruction should prefer `pad` or `snare` instead of `one surface`
+- Coach summary time should read in plain language like `logged 16 hours` or `logged 37 minutes`, rounded down
+- recommendation titles, bodies, and CTA labels should switch cleanly between `this` and `these` based on whether one item or a small set is being recommended
 
 Preferred visible title shapes:
 
@@ -460,6 +462,8 @@ Preferred visible title shapes:
 - `Keep this going`
 - `Clean this up`
 - `Move this around the kit`
+- `Spend more time on this`
+- `Spend more time on these`
 
 ### Forbidden Wording
 
@@ -473,6 +477,7 @@ Preferred visible title shapes:
 - visible category labels that read like framework buckets
 - template-like statements that sound machine-assembled from item names and status flags
 - pseudo-observational phrases that imply the app directly heard the rep when it did not
+- developer-like action phrasing such as `assign one change`
 
 ### Primary Controls
 

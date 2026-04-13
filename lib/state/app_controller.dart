@@ -400,7 +400,7 @@ class AppController extends ChangeNotifier {
         title: 'Keep up the good work.',
         subtitle: null,
         body:
-            'You practiced on ${_coachDayCountText(practiceDaysThisWeek)} this week and logged ${formatDuration(timeThisWeek)}. Slow and steady gets results, so stay with one pattern long enough for it to feel even and relaxed.',
+            'You practiced on ${_coachDayCountText(practiceDaysThisWeek)} this week and logged ${_coachLoggedTimeText(timeThisWeek)}. Slow and steady gets results, so stay with one pattern long enough for it to feel even and relaxed.',
         itemIds: practiceTarget == null
             ? const <String>[]
             : <String>[practiceTarget.id],
@@ -540,15 +540,20 @@ class AppController extends ChangeNotifier {
 
     if (candidates.isEmpty) return null;
 
-    final PracticeItemV1 target = candidates.first;
+    final List<PracticeItemV1> targets = candidates.take(3).toList(
+      growable: false,
+    );
+    final bool plural = targets.length > 1;
     return CoachBlockV1(
-      id: 'needs_work_${target.id}',
+      id: 'needs_work_${targets.map((PracticeItemV1 item) => item.id).join('_')}',
       type: CoachBlockTypeV1.needsWork,
-      title: 'Stay with this one',
+      title: plural ? 'Spend more time on these' : 'Spend more time on this',
       subtitle: null,
-      body: _needsWorkBodyForAggregate(assessmentAggregateFor(target.id)),
-      itemIds: <String>[target.id],
-      ctaLabel: 'Work on This',
+      body: _needsWorkBodyForAggregates(targets),
+      itemIds: targets
+          .map((PracticeItemV1 item) => item.id)
+          .toList(growable: false),
+      ctaLabel: plural ? 'Work on These' : 'Work on This',
       ctaAction: CoachActionV1.startPractice,
       matrixFilters: const <TriadMatrixFilterV1>{
         TriadMatrixFilterV1.needsWorkStatus,
@@ -669,25 +674,11 @@ class AppController extends ChangeNotifier {
     };
   }
 
-  String _needsWorkBodyForAggregate(PracticeAssessmentAggregateV1? aggregate) {
-    if (aggregate == null) {
-      return 'This pattern still needs slower, steadier reps. Back the tempo off and get the cycle even again.';
+  String _needsWorkBodyForAggregates(List<PracticeItemV1> items) {
+    if (items.length <= 1) {
+      return 'Reduce the BPM slightly and focus on evenness. Speed will come naturally as you do this work.';
     }
-
-    final bool continuityNeedsWork = aggregate.continuityScore < 0.55;
-    final bool timeNeedsWork =
-        aggregate.driftScore >= 0.45 || aggregate.jitterScore >= 0.40;
-
-    if (continuityNeedsWork && timeNeedsWork) {
-      return 'This pattern still needs slower, steadier reps. Back the tempo off and make the whole cycle feel even again.';
-    }
-    if (continuityNeedsWork) {
-      return 'This pattern still needs more steady reps. Back the tempo off and make the handoff feel even again.';
-    }
-    if (timeNeedsWork) {
-      return 'This pattern still needs steadier time. Back the tempo off and keep the motion even.';
-    }
-    return 'This pattern still needs more steady reps. Back the tempo off and get the cycle even again.';
+    return 'Reduce the BPM on these patterns slightly and focus on evenness. Speed will come naturally as you do this work.';
   }
 
   String _momentumBodyForAggregate(PracticeAssessmentAggregateV1? aggregate) {
@@ -713,6 +704,16 @@ class AppController extends ChangeNotifier {
       );
     }
     return days.length;
+  }
+
+  String _coachLoggedTimeText(Duration duration) {
+    final int totalMinutes = duration.inMinutes;
+    final int hours = totalMinutes ~/ 60;
+    if (hours >= 1) {
+      return hours == 1 ? '1 hour' : '$hours hours';
+    }
+    final int minutes = totalMinutes;
+    return minutes == 1 ? '1 minute' : '$minutes minutes';
   }
 
   String _coachDayCountText(int dayCount) {
