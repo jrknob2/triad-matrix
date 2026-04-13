@@ -605,6 +605,13 @@ Practice Item is the detail/edit screen for one piece of material.
 - applying a marking or voice assignment should clear the current selection
 - kick notes should not be assignable in this editor flow
 
+### Session Summary Rules
+
+- Session Summary should use self-report first, but it must also account for attempted BPM and pattern complexity
+- a player who is new to the app may still be advanced on the instrument; the recommendation logic must not treat no app history as beginner evidence by default
+- positive self-report on a simple pattern at a strong BPM may produce congratulatory language even with little or no app history
+- BPM-save prompts should not suppress a positive recommendation when the rep itself was strong
+
 ---
 
 ## Mock-State QA Requirement

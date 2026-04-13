@@ -978,6 +978,13 @@ Session Summary closes a tracked session and collects limited useful feedback.
 
 - one summary per tracked session
 - multi-item sessions must allow the user to navigate and assess each item individually inside the same summary flow
+- Session Summary must not assume `new to the app` means `new to the skill`
+- in early or no-history assessment, attempted BPM should carry real weight as a current-skill calibration signal
+- BPM weighting should be scaled by pattern complexity
+- simpler patterns may earn stronger positive recommendation language at higher BPM even without app history
+- strongly positive self-assessment should not fall through to a generic discouraging message only because BPM changed during the session
+- when BPM changed, the recommendation message and the BPM save decision should be treated as separate concerns
+- if self-assessment is mixed but BPM is strong for the pattern type, the message should read as calibration or edge-work, not failure
 - each item in a multi-item session should have its own assessment state for that session
 - Session Summary should only include patterns that were actually practiced in that session
 - assessment choices should stay local to the current rep until the user presses `Submit`

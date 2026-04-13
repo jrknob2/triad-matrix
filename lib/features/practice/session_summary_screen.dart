@@ -83,7 +83,9 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
     final bool bpmAdjusted =
         currentRuntime.startingBpm != currentRuntime.endingBpm;
     final _SessionRecommendation? recommendation = _recommendationFor(
-      needsTempoDecision: bpmAdjusted,
+      item: currentItem,
+      itemId: currentItemId,
+      runtime: currentRuntime,
     );
     final bool canSaveBpm = bpmAdjusted;
     final bool wantsToSaveBpm = _pendingSaveBpmItemIds.contains(currentItemId);
@@ -400,12 +402,23 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
   }
 
   _SessionRecommendation? _recommendationFor({
-    required bool needsTempoDecision,
+    required PracticeItemV1 item,
+    required String itemId,
+    required PracticeSessionItemRuntimeV1 runtime,
   }) {
     final bool incomplete = _control == null || _tension == null;
     if (incomplete) {
       return null;
     }
+
+    final _TempoSignal tempoSignal = _tempoSignalFor(
+      item: item,
+      itemId: itemId,
+      attemptedBpm: runtime.endingBpm,
+    );
+    final bool noAssessmentHistory = widget.controller
+        .assessmentHistoryForItem(itemId)
+        .isEmpty;
 
     final bool slowDown =
         _control == SelfReportControlV1.low ||
@@ -433,23 +446,109 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
       );
     }
 
-    final bool bumpUp =
-        _control == SelfReportControlV1.high &&
-        _tension == SelfReportTensionV1.none &&
-        !needsTempoDecision;
-    if (bumpUp) {
+    if (_control == SelfReportControlV1.high &&
+        _tension == SelfReportTensionV1.none) {
+      if (tempoSignal == _TempoSignal.high) {
+        return _SessionRecommendation(
+          title: 'That rep felt strong',
+          body: _strongTempoBodyFor(
+            item: item,
+            noAssessmentHistory: noAssessmentHistory,
+          ),
+        );
+      }
       return const _SessionRecommendation(
-        title: 'This rep held together',
+        title: 'That rep felt strong',
         body:
-            'The phrase held together. Add a little tempo and make sure the sound stays relaxed.',
+            'You played it cleanly and stayed relaxed. A few more reps like that will put it in the toolbox.',
+      );
+    }
+
+    if (tempoSignal == _TempoSignal.high && noAssessmentHistory) {
+      return const _SessionRecommendation(
+        title: 'You are setting your level',
+        body:
+            'This is a strong tempo for this pattern. Back it off slightly and settle it in, then build from there.',
+      );
+    }
+
+    if (tempoSignal == _TempoSignal.high) {
+      return const _SessionRecommendation(
+        title: 'This rep is close',
+        body:
+            'The tempo is there. Stay here a little longer and let the motion settle before you push it again.',
       );
     }
 
     return const _SessionRecommendation(
-      title: 'This rep still needs a few more passes',
+      title: 'Stay here a little longer',
       body:
-          'This tempo still has work in it. Stay here until the motion and sound come back cleanly.',
+          'Reduce the BPM slightly and focus on evenness. Speed will come naturally as you do this work.',
     );
+  }
+
+  _TempoSignal _tempoSignalFor({
+    required PracticeItemV1 item,
+    required String itemId,
+    required int attemptedBpm,
+  }) {
+    final List<String> tokens = widget.controller.noteTokensFor(itemId);
+    final bool hasKick = widget.controller.hasKick(itemId);
+    final bool hasFlowVoices = widget.controller.hasNonSnareVoice(itemId);
+    final bool singleHandTriad =
+        item.isTriad &&
+        !hasKick &&
+        tokens.length == 3 &&
+        (tokens.every((String token) => token == 'R') ||
+            tokens.every((String token) => token == 'L'));
+    final bool simpleHandTriad = item.isTriad && !hasKick && !item.isCombo;
+
+    if (singleHandTriad) {
+      if (attemptedBpm >= 180) return _TempoSignal.high;
+      if (attemptedBpm >= 150) return _TempoSignal.medium;
+      return _TempoSignal.low;
+    }
+
+    if (simpleHandTriad) {
+      if (attemptedBpm >= 140) return _TempoSignal.high;
+      if (attemptedBpm >= 110) return _TempoSignal.medium;
+      return _TempoSignal.low;
+    }
+
+    if (item.isCombo || hasFlowVoices) {
+      if (attemptedBpm >= 100) return _TempoSignal.high;
+      if (attemptedBpm >= 80) return _TempoSignal.medium;
+      return _TempoSignal.low;
+    }
+
+    if (hasKick) {
+      if (attemptedBpm >= 120) return _TempoSignal.high;
+      if (attemptedBpm >= 95) return _TempoSignal.medium;
+      return _TempoSignal.low;
+    }
+
+    if (attemptedBpm >= 130) return _TempoSignal.high;
+    if (attemptedBpm >= 100) return _TempoSignal.medium;
+    return _TempoSignal.low;
+  }
+
+  String _strongTempoBodyFor({
+    required PracticeItemV1 item,
+    required bool noAssessmentHistory,
+  }) {
+    if (item.isTriad && !item.isCombo && item.name == 'RRR') {
+      return noAssessmentHistory
+          ? 'You played a simple hand triad cleanly at a strong tempo. That gives the app a much better read on where your playing already is.'
+          : 'You played a simple hand triad cleanly at a strong tempo. A little more work and it will be firmly in the toolbox.';
+    }
+    if (item.isTriad && !item.isCombo && item.name == 'LLL') {
+      return noAssessmentHistory
+          ? 'You played a simple hand triad cleanly at a strong tempo. That gives the app a much better read on where your playing already is.'
+          : 'You played a simple hand triad cleanly at a strong tempo. A little more work and it will be firmly in the toolbox.';
+    }
+    return noAssessmentHistory
+        ? 'You played this cleanly and stayed relaxed at a strong tempo. That gives the app a much better read on where your playing already is.'
+        : 'You played this cleanly and stayed relaxed at a strong tempo. A few more reps like that will put it in the toolbox.';
   }
 }
 
@@ -459,6 +558,8 @@ class _SessionRecommendation {
 
   const _SessionRecommendation({required this.title, required this.body});
 }
+
+enum _TempoSignal { low, medium, high }
 
 class _SummaryMetric extends StatelessWidget {
   final String label;
