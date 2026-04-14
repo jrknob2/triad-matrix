@@ -368,8 +368,8 @@ Must do:
 - click playback should use a preloaded low-latency trigger path rather than repeatedly retriggering one shared media player instance
 - when click playback is active, the visual pulse should follow the native metronome beat source rather than an independent Dart beat clock
 - player pulse treatment should stay visually restrained relative to notation and timer
-- player pulse animation duration should scale with BPM and should finish comfortably before the next beat arrives
 - if pulse clarity and pulse decoration conflict, the player should prefer a simple synchronized flash treatment
+- when pulse synchronization is being verified or debugged, the player should use a plain border on/off effect instead of glow or eased animation
 
 #### State C: Warmup Session
 

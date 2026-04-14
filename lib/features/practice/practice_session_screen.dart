@@ -42,8 +42,7 @@ class _SessionTransportState {
   });
 }
 
-class _PracticeSessionScreenState extends State<PracticeSessionScreen>
-    with TickerProviderStateMixin {
+class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   static const String _metronomeAssetPath = 'assets/audio/metronome_beep.wav';
 
   final Stopwatch _stopwatch = Stopwatch();
@@ -235,7 +234,6 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
             beatTokenListenable: _beatPulseToken,
             bpm: _bpm,
             enabled: _pulseEnabled,
-            vsync: this,
           ),
           const SizedBox(height: 18),
           Text(
@@ -661,13 +659,11 @@ class _BeatPulse extends StatefulWidget {
   final ValueListenable<int> beatTokenListenable;
   final int bpm;
   final bool enabled;
-  final TickerProvider vsync;
 
   const _BeatPulse({
     required this.beatTokenListenable,
     required this.bpm,
     required this.enabled,
-    required this.vsync,
   });
 
   @override
@@ -675,16 +671,12 @@ class _BeatPulse extends StatefulWidget {
 }
 
 class _BeatPulseState extends State<_BeatPulse> {
-  late final AnimationController _controller;
+  Timer? _flashOffTimer;
+  bool _flashActive = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: widget.vsync,
-      duration: _pulseDurationFor(widget.bpm),
-      value: 1,
-    );
     widget.beatTokenListenable.addListener(_handleBeatTokenChanged);
   }
 
@@ -695,42 +687,41 @@ class _BeatPulseState extends State<_BeatPulse> {
       oldWidget.beatTokenListenable.removeListener(_handleBeatTokenChanged);
       widget.beatTokenListenable.addListener(_handleBeatTokenChanged);
     }
-    final Duration nextDuration = _pulseDurationFor(widget.bpm);
-    if (_controller.duration != nextDuration) {
-      _controller.duration = nextDuration;
+    if (!widget.enabled && _flashActive) {
+      _flashOffTimer?.cancel();
+      _flashActive = false;
     }
   }
 
   @override
   void dispose() {
+    _flashOffTimer?.cancel();
     widget.beatTokenListenable.removeListener(_handleBeatTokenChanged);
-    _controller.dispose();
     super.dispose();
   }
 
-  Duration _pulseDurationFor(int bpm) {
+  Duration _flashWindowFor(int bpm) {
     final int beatMs = (60000 / bpm).round();
-    return Duration(milliseconds: (beatMs * 0.22).round().clamp(40, 150));
+    return Duration(milliseconds: (beatMs * 0.12).round().clamp(65, 100));
   }
 
   void _handleBeatTokenChanged() {
     if (!mounted || !widget.enabled) return;
-    _controller
-      ..stop()
-      ..forward(from: 0);
+    _flashOffTimer?.cancel();
+    setState(() {
+      _flashActive = true;
+    });
+    _flashOffTimer = Timer(_flashWindowFor(widget.bpm), () {
+      if (!mounted) return;
+      setState(() {
+        _flashActive = false;
+      });
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final double pulse = widget.enabled
-        ? Curves.easeOutCubic.transform(1 - _controller.value)
-        : 0;
-    final Color accent = Color.lerp(
-      const Color(0xFF4A4337),
-      const Color(0xFFFFC08D),
-      pulse,
-    )!;
-    final Color glow = const Color(0x44F2A460).withValues(alpha: pulse);
+    final bool active = widget.enabled && _flashActive;
     return SizedBox(
       width: 170,
       height: 170,
@@ -743,13 +734,9 @@ class _BeatPulseState extends State<_BeatPulse> {
               : const Color(0xFF14100C),
           shape: BoxShape.circle,
           border: Border.all(
-            color: widget.enabled ? accent : const Color(0xFF2A231C),
-            width: 3 + (pulse * 1.2),
+            color: active ? const Color(0xFFFFC08D) : const Color(0xFF4A4337),
+            width: active ? 4 : 3,
           ),
-          boxShadow: <BoxShadow>[
-            if (widget.enabled && pulse > 0)
-              BoxShadow(color: glow, blurRadius: 16, spreadRadius: 1),
-          ],
         ),
         child: Center(
           child: Column(
