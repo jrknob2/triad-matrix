@@ -46,9 +46,17 @@ class _SessionTransportState {
 
 class _PracticeSessionScreenState extends State<PracticeSessionScreen>
     with TickerProviderStateMixin {
+  static const String _metronomeAssetPath = 'assets/audio/metronome_beep.wav';
+  static const int _clickPlayerPoolSize = 4;
+
   final Stopwatch _stopwatch = Stopwatch();
   final Stopwatch _beatClock = Stopwatch();
-  final AudioPlayer _clickPlayer = AudioPlayer();
+  final List<AudioPlayer> _clickPlayers = List<AudioPlayer>.generate(
+    _clickPlayerPoolSize,
+    (_) => AudioPlayer(),
+    growable: false,
+  );
+  final AudioPlayer _completionPlayer = AudioPlayer();
   final ValueNotifier<int> _beatPulseToken = ValueNotifier<int>(0);
   Timer? _elapsedTicker;
   late final Ticker _beatFrameTicker;
@@ -69,6 +77,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
   late PracticeSessionSetupV1 _setup;
   int _currentItemIndex = 0;
   int _lastBeatIndex = -1;
+  int _nextClickPlayerIndex = 0;
 
   @override
   void initState() {
@@ -91,7 +100,10 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
     _elapsedTicker?.cancel();
     _beatFrameTicker.dispose();
     _beatPulseToken.dispose();
-    _clickPlayer.dispose();
+    for (final AudioPlayer player in _clickPlayers) {
+      player.dispose();
+    }
+    _completionPlayer.dispose();
     super.dispose();
   }
 
@@ -660,14 +672,25 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
   Future<void> _configureAudio() async {
     final AudioSession session = await AudioSession.instance;
     await session.configure(const AudioSessionConfiguration.music());
-    await _clickPlayer.setAsset('assets/audio/metronome_beep.wav');
-    await _clickPlayer.setVolume(1.0);
+    for (final AudioPlayer player in _clickPlayers) {
+      await player.setAsset(_metronomeAssetPath);
+      await player.setVolume(1.0);
+      await player.seek(Duration.zero);
+      await player.pause();
+    }
+    await _completionPlayer.setAsset(_metronomeAssetPath);
+    await _completionPlayer.setVolume(1.0);
+    await _completionPlayer.seek(Duration.zero);
+    await _completionPlayer.pause();
   }
 
   Future<void> _triggerClick() async {
     try {
-      await _clickPlayer.seek(Duration.zero);
-      await _clickPlayer.play();
+      final AudioPlayer player = _clickPlayers[_nextClickPlayerIndex];
+      _nextClickPlayerIndex =
+          (_nextClickPlayerIndex + 1) % _clickPlayers.length;
+      await player.seek(Duration.zero);
+      await player.play();
     } catch (_) {
       // Ignore transient playback errors during rapid BPM changes.
     }
@@ -675,11 +698,11 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
 
   Future<void> _triggerCompletionChime() async {
     try {
-      await _clickPlayer.seek(Duration.zero);
-      await _clickPlayer.play();
+      await _completionPlayer.seek(Duration.zero);
+      await _completionPlayer.play();
       await Future<void>.delayed(const Duration(milliseconds: 150));
-      await _clickPlayer.seek(Duration.zero);
-      await _clickPlayer.play();
+      await _completionPlayer.seek(Duration.zero);
+      await _completionPlayer.play();
     } catch (_) {
       // Ignore transient playback errors during completion chime.
     }

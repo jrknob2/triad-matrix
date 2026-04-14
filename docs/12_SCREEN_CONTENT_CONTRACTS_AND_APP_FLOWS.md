@@ -949,6 +949,7 @@ Practice Session is execution only.
 - pulse/click/BPM/timer support the playing, not the screen narrative
 - beat timing should use one monotonic beat clock rather than `Timer.periodic`
 - pulse animation should be local to the pulse widget and should not require rebuilding the whole player on every beat
+- click playback should use a preloaded low-latency one-shot trigger path rather than repeatedly retriggering one media player instance
 - the player must not contain controls that switch the session into a different source type
 - default stopped transport state should present `Play` and `End`
 - running transport state should present `Pause` and `Reset`

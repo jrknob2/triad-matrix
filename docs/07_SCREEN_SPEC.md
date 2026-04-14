@@ -365,6 +365,7 @@ Must do:
 
 - when the timer reaches the target duration, switch to a clear completed visual state without force-ending the session
 - in multi-item sessions, BPM changes should belong to the currently shown item, not the whole session globally
+- click playback should use a preloaded low-latency trigger path rather than repeatedly retriggering one shared media player instance
 
 #### State C: Warmup Session
 
