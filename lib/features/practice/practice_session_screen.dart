@@ -1,16 +1,15 @@
 import 'dart:async';
 
-import 'package:audio_session/audio_session.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:just_audio/just_audio.dart';
 
 import '../../features/app/app_formatters.dart';
 import '../../features/app/app_viewport.dart';
 import '../../features/app/drumcabulary_ui.dart';
 import '../../state/app_controller.dart';
 import '../../core/practice/practice_domain_v1.dart';
+import 'metronome_service.dart';
 import 'widgets/pattern_voice_display.dart';
 import 'session_summary_screen.dart';
 
@@ -47,16 +46,10 @@ class _SessionTransportState {
 class _PracticeSessionScreenState extends State<PracticeSessionScreen>
     with TickerProviderStateMixin {
   static const String _metronomeAssetPath = 'assets/audio/metronome_beep.wav';
-  static const int _clickPlayerPoolSize = 4;
 
   final Stopwatch _stopwatch = Stopwatch();
   final Stopwatch _beatClock = Stopwatch();
-  final List<AudioPlayer> _clickPlayers = List<AudioPlayer>.generate(
-    _clickPlayerPoolSize,
-    (_) => AudioPlayer(),
-    growable: false,
-  );
-  final AudioPlayer _completionPlayer = AudioPlayer();
+  late final PracticeMetronomeService _metronome;
   final ValueNotifier<int> _beatPulseToken = ValueNotifier<int>(0);
   Timer? _elapsedTicker;
   late final Ticker _beatFrameTicker;
@@ -77,7 +70,6 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
   late PracticeSessionSetupV1 _setup;
   int _currentItemIndex = 0;
   int _lastBeatIndex = -1;
-  int _nextClickPlayerIndex = 0;
 
   @override
   void initState() {
@@ -90,8 +82,9 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
         ? false
         : _setup.clickEnabled;
     _pulseEnabled = _setup.family != MaterialFamilyV1.warmup;
+    _metronome = PracticeMetronomeService(assetPath: _metronomeAssetPath);
     _beatFrameTicker = createTicker(_onBeatFrame);
-    _configureAudio();
+    _configureMetronome();
   }
 
   @override
@@ -100,10 +93,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
     _elapsedTicker?.cancel();
     _beatFrameTicker.dispose();
     _beatPulseToken.dispose();
-    for (final AudioPlayer player in _clickPlayers) {
-      player.dispose();
-    }
-    _completionPlayer.dispose();
+    unawaited(_metronome.dispose());
     super.dispose();
   }
 
@@ -413,10 +403,14 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
         _beatClock.stop();
         _elapsedTicker?.cancel();
         _beatFrameTicker.stop();
+        unawaited(_metronome.stop());
       }
     });
     if (shouldStart) {
       _restartBeatTicker();
+      if (_clickEnabled) {
+        unawaited(_metronome.start(bpm: _bpm));
+      }
     }
   }
 
@@ -482,6 +476,9 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
       _bpm = _itemBpmById[_currentItemId] ?? _setup.bpm;
     });
     _restartBeatTicker();
+    if (_running && _clickEnabled) {
+      unawaited(_metronome.updateBpm(bpm: _bpm));
+    }
   }
 
   void _resetRunState({
@@ -501,6 +498,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
     _beatFrameTicker.stop();
     _beatClock.stop();
     _beatClock.reset();
+    unawaited(_metronome.stop());
     _running = false;
     _lastBeatIndex = -1;
     if (clearFlags) {
@@ -634,23 +632,16 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
     if (_pulseEnabled) {
       _pulseBeat();
     }
-    if (_clickEnabled) {
-      _playClick();
-    }
   }
 
   void _pulseBeat() {
     _beatPulseToken.value += 1;
   }
 
-  void _playClick() {
-    unawaited(_triggerClick());
-  }
-
   void _playCompletionChimeOnce() {
     if (_completionChimed) return;
     _completionChimed = true;
-    unawaited(_triggerCompletionChime());
+    unawaited(_metronome.playCompletionChime());
   }
 
   void _updateBpm(int bpm) {
@@ -660,52 +651,25 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
       _itemBpmById[_currentItemId] = nextBpm;
     });
     _restartBeatTicker();
+    if (_running && _clickEnabled) {
+      unawaited(_metronome.updateBpm(bpm: nextBpm));
+    }
   }
 
   void _updateClickEnabled(bool value) {
     setState(() {
       _clickEnabled = value;
     });
-    _restartBeatTicker();
-  }
-
-  Future<void> _configureAudio() async {
-    final AudioSession session = await AudioSession.instance;
-    await session.configure(const AudioSessionConfiguration.music());
-    for (final AudioPlayer player in _clickPlayers) {
-      await player.setAsset(_metronomeAssetPath);
-      await player.setVolume(1.0);
-      await player.seek(Duration.zero);
-      await player.pause();
-    }
-    await _completionPlayer.setAsset(_metronomeAssetPath);
-    await _completionPlayer.setVolume(1.0);
-    await _completionPlayer.seek(Duration.zero);
-    await _completionPlayer.pause();
-  }
-
-  Future<void> _triggerClick() async {
-    try {
-      final AudioPlayer player = _clickPlayers[_nextClickPlayerIndex];
-      _nextClickPlayerIndex =
-          (_nextClickPlayerIndex + 1) % _clickPlayers.length;
-      await player.seek(Duration.zero);
-      await player.play();
-    } catch (_) {
-      // Ignore transient playback errors during rapid BPM changes.
+    if (!_running) return;
+    if (value) {
+      unawaited(_metronome.start(bpm: _bpm));
+    } else {
+      unawaited(_metronome.stop());
     }
   }
 
-  Future<void> _triggerCompletionChime() async {
-    try {
-      await _completionPlayer.seek(Duration.zero);
-      await _completionPlayer.play();
-      await Future<void>.delayed(const Duration(milliseconds: 150));
-      await _completionPlayer.seek(Duration.zero);
-      await _completionPlayer.play();
-    } catch (_) {
-      // Ignore transient playback errors during completion chime.
-    }
+  Future<void> _configureMetronome() async {
+    await _metronome.prepare();
   }
 
   void _markCurrentItemPracticed() {

@@ -9,6 +9,8 @@ class MainFlutterWindow: NSWindow {
     self.setFrame(windowFrame, display: true)
 
     RegisterGeneratedPlugins(registry: flutterViewController)
+    NativeMetronomePlugin.register(
+      with: flutterViewController.registrar(forPlugin: "NativeMetronomePlugin"))
 
     super.awakeFromNib()
   }
