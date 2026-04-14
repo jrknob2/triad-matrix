@@ -666,7 +666,7 @@ class _MatrixScreenState extends State<MatrixScreen> {
 
   String _viewLabel(_MatrixPrimaryView view) {
     return switch (view) {
-      _MatrixPrimaryView.traits => 'Traits',
+      _MatrixPrimaryView.traits => 'Characteristics',
       _MatrixPrimaryView.progress => 'Progress',
     };
   }

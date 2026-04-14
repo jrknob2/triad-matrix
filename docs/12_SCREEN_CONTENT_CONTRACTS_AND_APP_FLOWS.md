@@ -623,7 +623,7 @@ Rules:
 
 - Matrix has one exclusive `View` chooser:
   - `Progress`
-  - `Traits`
+  - `Characteristics`
 - each view exposes only the filters that belong to that view
 - row and column selectors are structural slicers, not part of the main filter bar
 - row and column selectors must look interactive on touch screens
@@ -636,7 +636,7 @@ Rules:
 
 Examples:
 
-- `Traits` view:
+- `Characteristics` view:
   - `Right`
   - `Left`
   - `Hands Only`
