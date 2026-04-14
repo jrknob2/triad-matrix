@@ -26,40 +26,48 @@ class PracticeMetronomeDiagnostics {
   }
 }
 
+@immutable
+class PracticeMetronomePulseState {
+  final bool active;
+  final int beatIndex;
+
+  const PracticeMetronomePulseState({
+    required this.active,
+    required this.beatIndex,
+  });
+}
+
 class PracticeMetronomeService {
   static const MethodChannel _methodChannel = MethodChannel(
     'drumcabulary/metronome',
   );
-  static const EventChannel _beatChannel = EventChannel(
-    'drumcabulary/metronome_beats',
-  );
 
   final String assetPath;
-  final StreamController<int> _beatController =
-      StreamController<int>.broadcast();
   final ValueNotifier<PracticeMetronomeDiagnostics> diagnostics =
       ValueNotifier<PracticeMetronomeDiagnostics>(
         const PracticeMetronomeDiagnostics(
           mode: PracticeMetronomeEngineMode.unknown,
         ),
       );
+  final ValueNotifier<bool> pulseActive = ValueNotifier<bool>(false);
   late final _FallbackMetronomeEngine _fallback;
 
-  StreamSubscription<dynamic>? _nativeBeatSubscription;
   bool _prepared = false;
   bool _usingNative = false;
   bool _running = false;
   bool _clickEnabled = true;
+  bool _pulseEnabled = true;
   int _bpm = 120;
+  Timer? _nativePulsePoller;
+  Timer? _fallbackPulseOffTimer;
+  int _lastNativeBeatIndex = -1;
 
   PracticeMetronomeService({required this.assetPath}) {
     _fallback = _FallbackMetronomeEngine(
       assetPath: assetPath,
-      onBeat: _emitBeat,
+      onBeat: _handleFallbackBeat,
     );
   }
-
-  Stream<int> get beatStream => _beatController.stream;
 
   Future<void> prepare() async {
     if (_prepared) return;
@@ -68,7 +76,6 @@ class PracticeMetronomeService {
         'assetPath': assetPath,
       });
       _usingNative = true;
-      _bindNativeBeatStream();
       _updateDiagnostics(
         mode: PracticeMetronomeEngineMode.native,
         clearIssue: true,
@@ -91,9 +98,14 @@ class PracticeMetronomeService {
     _prepared = true;
   }
 
-  Future<void> start({required int bpm, required bool clickEnabled}) async {
+  Future<void> start({
+    required int bpm,
+    required bool clickEnabled,
+    required bool pulseEnabled,
+  }) async {
     _bpm = bpm;
     _clickEnabled = clickEnabled;
+    _pulseEnabled = pulseEnabled;
     _running = true;
     await prepare();
     if (_usingNative) {
@@ -106,6 +118,7 @@ class PracticeMetronomeService {
           mode: PracticeMetronomeEngineMode.native,
           clearIssue: true,
         );
+        _startNativePulsePollingIfNeeded();
         return;
       } catch (error, stackTrace) {
         _recordIssue(
@@ -122,6 +135,7 @@ class PracticeMetronomeService {
 
   Future<void> stop() async {
     _running = false;
+    _stopPulseTracking();
     if (_usingNative) {
       try {
         await _methodChannel.invokeMethod<void>('stop');
@@ -183,6 +197,27 @@ class PracticeMetronomeService {
     await _fallback.setClickEnabled(value);
   }
 
+  Future<void> setPulseEnabled(bool value) async {
+    _pulseEnabled = value;
+    if (!_running) {
+      _setPulseActive(false);
+      return;
+    }
+    if (_usingNative) {
+      if (value) {
+        _startNativePulsePollingIfNeeded();
+      } else {
+        _stopNativePulsePolling();
+        _setPulseActive(false);
+      }
+      return;
+    }
+    if (!value) {
+      _fallbackPulseOffTimer?.cancel();
+      _setPulseActive(false);
+    }
+  }
+
   Future<void> playCompletionChime() async {
     await prepare();
     if (_usingNative) {
@@ -202,7 +237,7 @@ class PracticeMetronomeService {
   }
 
   Future<void> dispose() async {
-    await _nativeBeatSubscription?.cancel();
+    _stopPulseTracking();
     if (_usingNative) {
       try {
         await _methodChannel.invokeMethod<void>('stop');
@@ -216,33 +251,8 @@ class PracticeMetronomeService {
       }
     }
     await _fallback.dispose();
-    await _beatController.close();
+    pulseActive.dispose();
     diagnostics.dispose();
-  }
-
-  void _bindNativeBeatStream() {
-    _nativeBeatSubscription?.cancel();
-    _nativeBeatSubscription = _beatChannel.receiveBroadcastStream().listen((
-      dynamic event,
-    ) {
-      if (event is int) {
-        _emitBeat(event);
-      } else if (event is num) {
-        _emitBeat(event.toInt());
-      } else if (event is Map<Object?, Object?>) {
-        final Object? beatIndex = event['beatIndex'];
-        if (beatIndex is int) {
-          _emitBeat(beatIndex);
-        } else if (beatIndex is num) {
-          _emitBeat(beatIndex.toInt());
-        }
-      }
-    });
-  }
-
-  void _emitBeat(int beatIndex) {
-    if (_beatController.isClosed) return;
-    _beatController.add(beatIndex);
   }
 
   Future<void> _switchToFallback({bool startImmediately = false}) async {
@@ -254,6 +264,79 @@ class PracticeMetronomeService {
     if (startImmediately && _running) {
       await _fallback.start(bpm: _bpm, clickEnabled: _clickEnabled);
     }
+  }
+
+  void _handleFallbackBeat(int beatIndex) {
+    if (!_pulseEnabled) return;
+    _setPulseActive(true);
+    _fallbackPulseOffTimer?.cancel();
+    _fallbackPulseOffTimer = Timer(_flashWindowFor(_bpm), () {
+      _setPulseActive(false);
+    });
+  }
+
+  Duration _flashWindowFor(int bpm) {
+    final int beatMs = (60000 / bpm).round();
+    return Duration(milliseconds: (beatMs * 0.12).round().clamp(65, 100));
+  }
+
+  void _startNativePulsePollingIfNeeded() {
+    _stopNativePulsePolling();
+    if (!_pulseEnabled || !_running) {
+      _setPulseActive(false);
+      return;
+    }
+    _nativePulsePoller = Timer.periodic(
+      const Duration(milliseconds: 8),
+      (_) => unawaited(_pollNativePulseState()),
+    );
+    unawaited(_pollNativePulseState());
+  }
+
+  void _stopNativePulsePolling() {
+    _nativePulsePoller?.cancel();
+    _nativePulsePoller = null;
+    _lastNativeBeatIndex = -1;
+  }
+
+  void _stopPulseTracking() {
+    _stopNativePulsePolling();
+    _fallbackPulseOffTimer?.cancel();
+    _fallbackPulseOffTimer = null;
+    _setPulseActive(false);
+  }
+
+  Future<void> _pollNativePulseState() async {
+    if (!_usingNative || !_running || !_pulseEnabled) {
+      _setPulseActive(false);
+      return;
+    }
+    try {
+      final Object? raw = await _methodChannel.invokeMethod<Object?>(
+        'pulseState',
+      );
+      if (raw is! Map<Object?, Object?>) return;
+      final Object? activeValue = raw['active'];
+      final Object? beatValue = raw['beatIndex'];
+      final bool active = activeValue == true;
+      final int beatIndex = beatValue is int
+          ? beatValue
+          : (beatValue is num ? beatValue.toInt() : _lastNativeBeatIndex);
+      _lastNativeBeatIndex = beatIndex;
+      _setPulseActive(active);
+    } catch (error, stackTrace) {
+      _recordIssue(
+        'Native pulse-state polling failed.',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      _stopNativePulsePolling();
+    }
+  }
+
+  void _setPulseActive(bool value) {
+    if (pulseActive.value == value) return;
+    pulseActive.value = value;
   }
 
   void _updateDiagnostics({

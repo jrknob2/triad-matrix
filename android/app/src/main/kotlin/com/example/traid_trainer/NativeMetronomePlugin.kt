@@ -7,9 +7,7 @@ import android.media.AudioManager
 import android.media.AudioTrack
 import android.os.Handler
 import android.os.Looper
-import android.os.SystemClock
 import io.flutter.FlutterInjector
-import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import java.nio.ByteBuffer
@@ -19,21 +17,11 @@ import kotlin.math.roundToInt
 
 class NativeMetronomePlugin(
   private val applicationContext: Context
-) : MethodChannel.MethodCallHandler, EventChannel.StreamHandler {
+) : MethodChannel.MethodCallHandler {
   private val engine = AndroidScheduledMetronomeEngine(applicationContext)
-  private var beatSink: EventChannel.EventSink? = null
 
-  init {
-    engine.beatListener = { beatIndex ->
-      Handler(Looper.getMainLooper()).post {
-        beatSink?.success(beatIndex)
-      }
-    }
-  }
-
-  fun register(channel: MethodChannel, beatChannel: EventChannel) {
+  fun register(channel: MethodChannel) {
     channel.setMethodCallHandler(this)
-    beatChannel.setStreamHandler(this)
   }
 
   override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
@@ -69,19 +57,14 @@ class NativeMetronomePlugin(
           engine.playCompletionChime()
           result.success(null)
         }
+        "pulseState" -> {
+          result.success(engine.pulseState())
+        }
         else -> result.notImplemented()
       }
     } catch (error: Exception) {
       result.error("metronome_error", error.message, null)
     }
-  }
-
-  override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
-    beatSink = events
-  }
-
-  override fun onCancel(arguments: Any?) {
-    beatSink = null
   }
 }
 
@@ -95,14 +78,13 @@ private class AndroidScheduledMetronomeEngine(
   private val applicationContext: Context
 ) {
   private val releaseHandler = Handler(Looper.getMainLooper())
-  private val beatHandler = Handler(Looper.getMainLooper())
 
   private var wavData: WavPcmData? = null
   private var loopTrack: AudioTrack? = null
   private var completionTrack: AudioTrack? = null
   private var clickEnabled = true
-  private var beatRunnable: Runnable? = null
-  var beatListener: ((Int) -> Unit)? = null
+  private var beatFrameCount: Int = 0
+  private val flashFraction = 0.12
 
   @Synchronized
   fun prepare(assetPath: String) {
@@ -123,16 +105,16 @@ private class AndroidScheduledMetronomeEngine(
     )
     releaseTrack(loopTrack)
     loopTrack = track
+    beatFrameCount = loopBytes.size / 2
     track.setVolume(if (clickEnabled) 1f else 0f)
     track.play()
-    startBeatLoop(bpm)
   }
 
   @Synchronized
   fun stop() {
-    cancelBeatLoop()
     releaseTrack(loopTrack)
     loopTrack = null
+    beatFrameCount = 0
   }
 
   @Synchronized
@@ -144,6 +126,25 @@ private class AndroidScheduledMetronomeEngine(
   fun setClickEnabled(enabled: Boolean) {
     clickEnabled = enabled
     loopTrack?.setVolume(if (enabled) 1f else 0f)
+  }
+
+  @Synchronized
+  fun pulseState(): Map<String, Any> {
+    val track = loopTrack
+    if (track == null || beatFrameCount <= 0) {
+      return mapOf(
+        "active" to false,
+        "beatIndex" to 0
+      )
+    }
+    val headPosition = track.playbackHeadPosition.toLong() and 0xFFFFFFFFL
+    val currentBeatIndex = (headPosition / beatFrameCount.toLong()).toInt()
+    val frameInBeat = (headPosition % beatFrameCount.toLong()).toInt()
+    val flashFrames = max((beatFrameCount * flashFraction).roundToInt(), 1)
+    return mapOf(
+      "active" to (frameInBeat < flashFrames),
+      "beatIndex" to currentBeatIndex
+    )
   }
 
   @Synchronized
@@ -202,28 +203,6 @@ private class AndroidScheduledMetronomeEngine(
       track.setLoopPoints(0, loopFrameCount, -1)
     }
     return track
-  }
-
-  private fun startBeatLoop(bpm: Int) {
-    cancelBeatLoop()
-    val intervalMs = max((60000.0 / max(30, bpm).toDouble()).roundToInt(), 1)
-    val startAt = SystemClock.uptimeMillis()
-    var beatIndex = 0
-    val runnable = object : Runnable {
-      override fun run() {
-        beatListener?.invoke(beatIndex)
-        beatIndex += 1
-        val nextAt = startAt + beatIndex.toLong() * intervalMs.toLong()
-        beatHandler.postAtTime(this, nextAt)
-      }
-    }
-    beatRunnable = runnable
-    beatHandler.postAtTime(runnable, startAt)
-  }
-
-  private fun cancelBeatLoop() {
-    beatRunnable?.let { beatHandler.removeCallbacks(it) }
-    beatRunnable = null
   }
 
   private fun loadWav(assetPath: String): WavPcmData {

@@ -2,19 +2,13 @@ import AVFoundation
 import Flutter
 import UIKit
 
-final class NativeMetronomePlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
+final class NativeMetronomePlugin: NSObject, FlutterPlugin {
   private let registrar: FlutterPluginRegistrar
   private let engine = AppleScheduledMetronomeEngine()
-  private var beatSink: FlutterEventSink?
 
   init(registrar: FlutterPluginRegistrar) {
     self.registrar = registrar
     super.init()
-    engine.beatListener = { [weak self] beatIndex in
-      DispatchQueue.main.async {
-        self?.beatSink?(beatIndex)
-      }
-    }
   }
 
   static func register(with registrar: FlutterPluginRegistrar) {
@@ -23,10 +17,6 @@ final class NativeMetronomePlugin: NSObject, FlutterPlugin, FlutterStreamHandler
       binaryMessenger: registrar.messenger())
     let instance = NativeMetronomePlugin(registrar: registrar)
     registrar.addMethodCallDelegate(instance, channel: methodChannel)
-    let beatChannel = FlutterEventChannel(
-      name: "drumcabulary/metronome_beats",
-      binaryMessenger: registrar.messenger())
-    beatChannel.setStreamHandler(instance)
   }
 
   func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -68,6 +58,8 @@ final class NativeMetronomePlugin: NSObject, FlutterPlugin, FlutterStreamHandler
       case "playCompletionChime":
         try engine.playCompletionChime()
         result(nil)
+      case "pulseState":
+        result(engine.pulseState)
       default:
         result(FlutterMethodNotImplemented)
       }
@@ -91,16 +83,6 @@ final class NativeMetronomePlugin: NSObject, FlutterPlugin, FlutterStreamHandler
         .appendingPathComponent(assetPath),
     ]
     return candidates.compactMap { $0 }.first(where: { FileManager.default.fileExists(atPath: $0.path) })
-  }
-
-  func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
-    beatSink = events
-    return nil
-  }
-
-  func onCancel(withArguments arguments: Any?) -> FlutterError? {
-    beatSink = nil
-    return nil
   }
 }
 
@@ -129,12 +111,11 @@ private final class AppleScheduledMetronomeEngine {
 
   private var clickBuffer: AVAudioPCMBuffer?
   private var clickFormat: AVAudioFormat?
-  private var beatTimer: DispatchSourceTimer?
   private var clickEnabled = true
   private var isPrepared = false
   private var isRunning = false
-  private var beatIndex = 0
-  var beatListener: ((Int) -> Void)?
+  private var beatFrames = 0
+  private let flashFraction = 0.12
 
   init() {
     audioEngine.attach(clickNode)
@@ -176,16 +157,14 @@ private final class AppleScheduledMetronomeEngine {
       isRunning = true
       self.clickEnabled = clickEnabled
       try scheduleLoop(bpm: bpm)
-      scheduleBeatTimer(bpm: bpm)
     }
   }
 
   func stop() {
     queue.sync {
       isRunning = false
-      beatTimer?.cancel()
-      beatTimer = nil
       clickNode.stop()
+      beatFrames = 0
     }
   }
 
@@ -194,7 +173,6 @@ private final class AppleScheduledMetronomeEngine {
       guard isRunning else { return }
       try ensurePrepared()
       try scheduleLoop(bpm: bpm)
-      scheduleBeatTimer(bpm: bpm)
     }
   }
 
@@ -202,6 +180,30 @@ private final class AppleScheduledMetronomeEngine {
     queue.sync {
       clickEnabled = enabled
       clickNode.volume = enabled ? 1.0 : 0.0
+    }
+  }
+
+  var pulseState: [String: Any] {
+    queue.sync {
+      guard
+        isRunning,
+        beatFrames > 0,
+        let nodeTime = clickNode.lastRenderTime,
+        let playerTime = clickNode.playerTime(forNodeTime: nodeTime)
+      else {
+        return [
+          "active": false,
+          "beatIndex": 0,
+        ]
+      }
+      let sampleTime = max(Int(playerTime.sampleTime), 0)
+      let currentBeatIndex = sampleTime / beatFrames
+      let frameInBeat = sampleTime % beatFrames
+      let flashFrames = max(Int((Double(beatFrames) * flashFraction).rounded()), 1)
+      return [
+        "active": frameInBeat < flashFrames,
+        "beatIndex": currentBeatIndex,
+      ]
     }
   }
 
@@ -239,32 +241,9 @@ private final class AppleScheduledMetronomeEngine {
     let loopBuffer = try buildLoopBuffer(clickBuffer: clickBuffer, bpm: bpm)
     clickNode.stop()
     clickNode.volume = clickEnabled ? 1.0 : 0.0
+    beatFrames = Int(loopBuffer.frameLength)
     clickNode.scheduleBuffer(loopBuffer, at: nil, options: [.loops], completionHandler: nil)
     clickNode.play()
-  }
-
-  private func scheduleBeatTimer(bpm: Int) {
-    beatTimer?.cancel()
-    beatTimer = nil
-    let intervalNs = max(
-      Int((60_000_000_000.0 / Double(max(30, bpm))).rounded()),
-      1
-    )
-    beatIndex = 0
-    let timer = DispatchSource.makeTimerSource(queue: queue)
-    timer.schedule(
-      deadline: .now(),
-      repeating: .nanoseconds(intervalNs),
-      leeway: .microseconds(500)
-    )
-    timer.setEventHandler { [weak self] in
-      guard let self, self.isRunning else { return }
-      let currentBeat = self.beatIndex
-      self.beatIndex += 1
-      self.beatListener?(currentBeat)
-    }
-    beatTimer = timer
-    timer.resume()
   }
 
   private func buildLoopBuffer(clickBuffer: AVAudioPCMBuffer, bpm: Int) throws -> AVAudioPCMBuffer {

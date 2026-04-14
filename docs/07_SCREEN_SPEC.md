@@ -366,7 +366,7 @@ Must do:
 - when the timer reaches the target duration, switch to a clear completed visual state without force-ending the session
 - in multi-item sessions, BPM changes should belong to the currently shown item, not the whole session globally
 - click playback should use a preloaded low-latency trigger path rather than repeatedly retriggering one shared media player instance
-- when click playback is active, the visual pulse should follow the native metronome beat source rather than an independent Dart beat clock
+- when native metronome playback is active, the visual pulse should derive from the native audio playback phase rather than an event-channel beat callback or an independent Dart beat clock
 - player pulse treatment should stay visually restrained relative to notation and timer
 - if pulse clarity and pulse decoration conflict, the player should prefer a simple synchronized flash treatment
 - when pulse synchronization is being verified or debugged, the player should use a plain border on/off effect instead of glow or eased animation

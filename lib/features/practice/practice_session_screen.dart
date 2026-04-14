@@ -47,9 +47,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
 
   final Stopwatch _stopwatch = Stopwatch();
   late final PracticeMetronomeService _metronome;
-  final ValueNotifier<int> _beatPulseToken = ValueNotifier<int>(0);
   Timer? _elapsedTicker;
-  StreamSubscription<int>? _metronomeBeatSubscription;
   bool _running = false;
   bool _targetReached = false;
   bool _warmupComplete = false;
@@ -79,10 +77,6 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
         : _setup.clickEnabled;
     _pulseEnabled = _setup.family != MaterialFamilyV1.warmup;
     _metronome = PracticeMetronomeService(assetPath: _metronomeAssetPath);
-    _metronomeBeatSubscription = _metronome.beatStream.listen((_) {
-      if (!_running || !_pulseEnabled) return;
-      _beatPulseToken.value += 1;
-    });
     _configureMetronome();
   }
 
@@ -90,8 +84,6 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   void dispose() {
     _discardEphemeralItemsIfNeeded();
     _elapsedTicker?.cancel();
-    _metronomeBeatSubscription?.cancel();
-    _beatPulseToken.dispose();
     unawaited(_metronome.dispose());
     super.dispose();
   }
@@ -231,7 +223,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
           ),
           const SizedBox(height: 18),
           _BeatPulse(
-            beatTokenListenable: _beatPulseToken,
+            pulseActiveListenable: _metronome.pulseActive,
             bpm: _bpm,
             enabled: _pulseEnabled,
           ),
@@ -400,7 +392,13 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     });
     if (shouldStart) {
       if (_shouldRunMetronome) {
-        unawaited(_metronome.start(bpm: _bpm, clickEnabled: _clickEnabled));
+        unawaited(
+          _metronome.start(
+            bpm: _bpm,
+            clickEnabled: _clickEnabled,
+            pulseEnabled: _pulseEnabled,
+          ),
+        );
       }
     }
   }
@@ -632,7 +630,13 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
       return;
     }
     if (value) {
-      unawaited(_metronome.start(bpm: _bpm, clickEnabled: true));
+      unawaited(
+        _metronome.start(
+          bpm: _bpm,
+          clickEnabled: true,
+          pulseEnabled: _pulseEnabled,
+        ),
+      );
     } else {
       unawaited(_metronome.setClickEnabled(false));
     }
@@ -647,11 +651,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
       unawaited(_metronome.stop());
       return;
     }
-    if (value) {
-      unawaited(_metronome.start(bpm: _bpm, clickEnabled: _clickEnabled));
-    } else if (_clickEnabled) {
-      unawaited(_metronome.setClickEnabled(true));
-    }
+    unawaited(_metronome.setPulseEnabled(value));
   }
 
   Future<void> _configureMetronome() async {
@@ -669,12 +669,12 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
 }
 
 class _BeatPulse extends StatefulWidget {
-  final ValueListenable<int> beatTokenListenable;
+  final ValueListenable<bool> pulseActiveListenable;
   final int bpm;
   final bool enabled;
 
   const _BeatPulse({
-    required this.beatTokenListenable,
+    required this.pulseActiveListenable,
     required this.bpm,
     required this.enabled,
   });
@@ -684,51 +684,40 @@ class _BeatPulse extends StatefulWidget {
 }
 
 class _BeatPulseState extends State<_BeatPulse> {
-  Timer? _flashOffTimer;
   bool _flashActive = false;
 
   @override
   void initState() {
     super.initState();
-    widget.beatTokenListenable.addListener(_handleBeatTokenChanged);
+    _flashActive = widget.pulseActiveListenable.value;
+    widget.pulseActiveListenable.addListener(_handlePulseStateChanged);
   }
 
   @override
   void didUpdateWidget(covariant _BeatPulse oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.beatTokenListenable != widget.beatTokenListenable) {
-      oldWidget.beatTokenListenable.removeListener(_handleBeatTokenChanged);
-      widget.beatTokenListenable.addListener(_handleBeatTokenChanged);
+    if (oldWidget.pulseActiveListenable != widget.pulseActiveListenable) {
+      oldWidget.pulseActiveListenable.removeListener(_handlePulseStateChanged);
+      _flashActive = widget.pulseActiveListenable.value;
+      widget.pulseActiveListenable.addListener(_handlePulseStateChanged);
     }
     if (!widget.enabled && _flashActive) {
-      _flashOffTimer?.cancel();
       _flashActive = false;
     }
   }
 
   @override
   void dispose() {
-    _flashOffTimer?.cancel();
-    widget.beatTokenListenable.removeListener(_handleBeatTokenChanged);
+    widget.pulseActiveListenable.removeListener(_handlePulseStateChanged);
     super.dispose();
   }
 
-  Duration _flashWindowFor(int bpm) {
-    final int beatMs = (60000 / bpm).round();
-    return Duration(milliseconds: (beatMs * 0.12).round().clamp(65, 100));
-  }
-
-  void _handleBeatTokenChanged() {
-    if (!mounted || !widget.enabled) return;
-    _flashOffTimer?.cancel();
+  void _handlePulseStateChanged() {
+    if (!mounted) return;
+    final bool nextValue = widget.enabled && widget.pulseActiveListenable.value;
+    if (_flashActive == nextValue) return;
     setState(() {
-      _flashActive = true;
-    });
-    _flashOffTimer = Timer(_flashWindowFor(widget.bpm), () {
-      if (!mounted) return;
-      setState(() {
-        _flashActive = false;
-      });
+      _flashActive = nextValue;
     });
   }
 
