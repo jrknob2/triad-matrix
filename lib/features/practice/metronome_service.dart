@@ -5,27 +5,42 @@ import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
 
 class PracticeMetronomeService {
-  static const MethodChannel _channel = MethodChannel('drumcabulary/metronome');
+  static const MethodChannel _methodChannel = MethodChannel(
+    'drumcabulary/metronome',
+  );
+  static const EventChannel _beatChannel = EventChannel(
+    'drumcabulary/metronome_beats',
+  );
 
   final String assetPath;
+  final StreamController<int> _beatController =
+      StreamController<int>.broadcast();
   late final _FallbackMetronomeEngine _fallback;
 
+  StreamSubscription<dynamic>? _nativeBeatSubscription;
   bool _prepared = false;
   bool _usingNative = false;
   bool _running = false;
+  bool _clickEnabled = true;
   int _bpm = 120;
 
   PracticeMetronomeService({required this.assetPath}) {
-    _fallback = _FallbackMetronomeEngine(assetPath: assetPath);
+    _fallback = _FallbackMetronomeEngine(
+      assetPath: assetPath,
+      onBeat: _emitBeat,
+    );
   }
+
+  Stream<int> get beatStream => _beatController.stream;
 
   Future<void> prepare() async {
     if (_prepared) return;
     try {
-      await _channel.invokeMethod<void>('prepare', <String, Object?>{
+      await _methodChannel.invokeMethod<void>('prepare', <String, Object?>{
         'assetPath': assetPath,
       });
       _usingNative = true;
+      _bindNativeBeatStream();
     } on MissingPluginException {
       await _fallback.prepare();
       _usingNative = false;
@@ -36,14 +51,16 @@ class PracticeMetronomeService {
     _prepared = true;
   }
 
-  Future<void> start({required int bpm}) async {
+  Future<void> start({required int bpm, required bool clickEnabled}) async {
     _bpm = bpm;
+    _clickEnabled = clickEnabled;
     _running = true;
     await prepare();
     if (_usingNative) {
       try {
-        await _channel.invokeMethod<void>('start', <String, Object?>{
+        await _methodChannel.invokeMethod<void>('start', <String, Object?>{
           'bpm': bpm,
+          'clickEnabled': clickEnabled,
         });
         return;
       } catch (_) {
@@ -51,14 +68,14 @@ class PracticeMetronomeService {
         return;
       }
     }
-    await _fallback.start(bpm: bpm);
+    await _fallback.start(bpm: bpm, clickEnabled: clickEnabled);
   }
 
   Future<void> stop() async {
     _running = false;
     if (_usingNative) {
       try {
-        await _channel.invokeMethod<void>('stop');
+        await _methodChannel.invokeMethod<void>('stop');
         return;
       } catch (_) {
         await _switchToFallback();
@@ -72,7 +89,7 @@ class PracticeMetronomeService {
     if (!_running) return;
     if (_usingNative) {
       try {
-        await _channel.invokeMethod<void>('setBpm', <String, Object?>{
+        await _methodChannel.invokeMethod<void>('setBpm', <String, Object?>{
           'bpm': bpm,
         });
         return;
@@ -84,11 +101,29 @@ class PracticeMetronomeService {
     await _fallback.updateBpm(bpm: bpm);
   }
 
+  Future<void> setClickEnabled(bool value) async {
+    _clickEnabled = value;
+    if (!_running) return;
+    if (_usingNative) {
+      try {
+        await _methodChannel.invokeMethod<void>(
+          'setClickEnabled',
+          <String, Object?>{'enabled': value},
+        );
+        return;
+      } catch (_) {
+        await _switchToFallback(startImmediately: true);
+        return;
+      }
+    }
+    await _fallback.setClickEnabled(value);
+  }
+
   Future<void> playCompletionChime() async {
     await prepare();
     if (_usingNative) {
       try {
-        await _channel.invokeMethod<void>('playCompletionChime');
+        await _methodChannel.invokeMethod<void>('playCompletionChime');
         return;
       } catch (_) {
         await _switchToFallback();
@@ -98,14 +133,41 @@ class PracticeMetronomeService {
   }
 
   Future<void> dispose() async {
+    await _nativeBeatSubscription?.cancel();
     if (_usingNative) {
       try {
-        await _channel.invokeMethod<void>('stop');
+        await _methodChannel.invokeMethod<void>('stop');
       } catch (_) {
         // Ignore native teardown errors during dispose.
       }
     }
     await _fallback.dispose();
+    await _beatController.close();
+  }
+
+  void _bindNativeBeatStream() {
+    _nativeBeatSubscription?.cancel();
+    _nativeBeatSubscription = _beatChannel.receiveBroadcastStream().listen((
+      dynamic event,
+    ) {
+      if (event is int) {
+        _emitBeat(event);
+      } else if (event is num) {
+        _emitBeat(event.toInt());
+      } else if (event is Map<Object?, Object?>) {
+        final Object? beatIndex = event['beatIndex'];
+        if (beatIndex is int) {
+          _emitBeat(beatIndex);
+        } else if (beatIndex is num) {
+          _emitBeat(beatIndex.toInt());
+        }
+      }
+    });
+  }
+
+  void _emitBeat(int beatIndex) {
+    if (_beatController.isClosed) return;
+    _beatController.add(beatIndex);
   }
 
   Future<void> _switchToFallback({bool startImmediately = false}) async {
@@ -114,7 +176,7 @@ class PracticeMetronomeService {
     }
     _usingNative = false;
     if (startImmediately && _running) {
-      await _fallback.start(bpm: _bpm);
+      await _fallback.start(bpm: _bpm, clickEnabled: _clickEnabled);
     }
   }
 }
@@ -123,6 +185,7 @@ class _FallbackMetronomeEngine {
   static const int _clickPlayerPoolSize = 4;
 
   final String assetPath;
+  final void Function(int beatIndex) onBeat;
   final List<AudioPlayer> _clickPlayers = List<AudioPlayer>.generate(
     _clickPlayerPoolSize,
     (_) => AudioPlayer(),
@@ -131,10 +194,12 @@ class _FallbackMetronomeEngine {
   final AudioPlayer _completionPlayer = AudioPlayer();
 
   bool prepared = false;
+  bool _clickEnabled = true;
   int _nextClickPlayerIndex = 0;
+  int _beatIndex = 0;
   Timer? _beatTimer;
 
-  _FallbackMetronomeEngine({required this.assetPath});
+  _FallbackMetronomeEngine({required this.assetPath, required this.onBeat});
 
   Future<void> prepare() async {
     if (prepared) return;
@@ -153,13 +218,16 @@ class _FallbackMetronomeEngine {
     prepared = true;
   }
 
-  Future<void> start({required int bpm}) async {
+  Future<void> start({required int bpm, required bool clickEnabled}) async {
     await prepare();
+    _clickEnabled = clickEnabled;
     _beatTimer?.cancel();
+    _beatIndex = 0;
     final int intervalMs = (60000 / bpm).round().clamp(120, 2000);
-    await _triggerClick();
+    _emitBeat();
     _beatTimer = Timer.periodic(Duration(milliseconds: intervalMs), (_) {
-      unawaited(_triggerClick());
+      _beatIndex += 1;
+      _emitBeat();
     });
   }
 
@@ -172,7 +240,17 @@ class _FallbackMetronomeEngine {
   }
 
   Future<void> updateBpm({required int bpm}) async {
-    await start(bpm: bpm);
+    await start(bpm: bpm, clickEnabled: _clickEnabled);
+  }
+
+  Future<void> setClickEnabled(bool value) async {
+    _clickEnabled = value;
+    if (!value) {
+      for (final AudioPlayer player in _clickPlayers) {
+        await player.pause();
+        await player.seek(Duration.zero);
+      }
+    }
   }
 
   Future<void> playCompletionChime() async {
@@ -193,6 +271,13 @@ class _FallbackMetronomeEngine {
       await player.dispose();
     }
     await _completionPlayer.dispose();
+  }
+
+  void _emitBeat() {
+    onBeat(_beatIndex);
+    if (_clickEnabled) {
+      unawaited(_triggerClick());
+    }
   }
 
   Future<void> _triggerClick() async {

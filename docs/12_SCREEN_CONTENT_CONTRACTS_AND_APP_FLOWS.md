@@ -947,8 +947,10 @@ Practice Session is execution only.
 - prev/next appears only for multi-item sources
 - notation is the primary visual signal
 - pulse/click/BPM/timer support the playing, not the screen narrative
-- beat timing should use one monotonic beat clock rather than `Timer.periodic`
+- the metronome engine should be the source of truth for beat phase when click playback is active
+- pulse timing should follow native metronome beat events rather than an independent Dart beat clock when the metronome is running
 - pulse animation should be local to the pulse widget and should not require rebuilding the whole player on every beat
+- pulse animation should stay restrained and should not visually overpower the notation or timer
 - click playback should use a preloaded low-latency one-shot trigger path rather than repeatedly retriggering one media player instance
 - the player must not contain controls that switch the session into a different source type
 - default stopped transport state should present `Play` and `End`

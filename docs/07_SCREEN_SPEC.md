@@ -366,6 +366,8 @@ Must do:
 - when the timer reaches the target duration, switch to a clear completed visual state without force-ending the session
 - in multi-item sessions, BPM changes should belong to the currently shown item, not the whole session globally
 - click playback should use a preloaded low-latency trigger path rather than repeatedly retriggering one shared media player instance
+- when click playback is active, the visual pulse should follow the native metronome beat source rather than an independent Dart beat clock
+- player pulse treatment should stay visually restrained relative to notation and timer
 
 #### State C: Warmup Session
 
@@ -393,6 +395,7 @@ Running transport rules:
 - `End` remains the session-exit control for normal tracked sessions
 - `End` stays disabled until the session has actually started and has session data
 - transport buttons shown together should share the same visual weight and size
+- action buttons shown together in shared rows should use the same vertical size whenever their labels allow it
 
 ### Acceptance Criteria
 

@@ -829,9 +829,10 @@ class _WorkingOnSessionSetup extends StatelessWidget {
                   onPressed: onClearSelection,
                 ),
                 if (selectedCount > 0)
-                  FilledButton(
+                  DrumActionPill(
+                    prominent: true,
                     onPressed: onStart,
-                    child: Text(
+                    label: Text(
                       selectedCount == 1
                           ? 'Practice 1 Item'
                           : 'Practice $selectedCount Items',

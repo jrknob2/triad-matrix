@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 
 import '../../features/app/app_formatters.dart';
 import '../../features/app/app_viewport.dart';
@@ -48,11 +47,10 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
   static const String _metronomeAssetPath = 'assets/audio/metronome_beep.wav';
 
   final Stopwatch _stopwatch = Stopwatch();
-  final Stopwatch _beatClock = Stopwatch();
   late final PracticeMetronomeService _metronome;
   final ValueNotifier<int> _beatPulseToken = ValueNotifier<int>(0);
   Timer? _elapsedTicker;
-  late final Ticker _beatFrameTicker;
+  StreamSubscription<int>? _metronomeBeatSubscription;
   bool _running = false;
   bool _targetReached = false;
   bool _warmupComplete = false;
@@ -69,7 +67,6 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
   late bool _clickEnabled;
   late PracticeSessionSetupV1 _setup;
   int _currentItemIndex = 0;
-  int _lastBeatIndex = -1;
 
   @override
   void initState() {
@@ -83,7 +80,10 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
         : _setup.clickEnabled;
     _pulseEnabled = _setup.family != MaterialFamilyV1.warmup;
     _metronome = PracticeMetronomeService(assetPath: _metronomeAssetPath);
-    _beatFrameTicker = createTicker(_onBeatFrame);
+    _metronomeBeatSubscription = _metronome.beatStream.listen((_) {
+      if (!_running || !_pulseEnabled) return;
+      _beatPulseToken.value += 1;
+    });
     _configureMetronome();
   }
 
@@ -91,7 +91,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
   void dispose() {
     _discardEphemeralItemsIfNeeded();
     _elapsedTicker?.cancel();
-    _beatFrameTicker.dispose();
+    _metronomeBeatSubscription?.cancel();
     _beatPulseToken.dispose();
     unawaited(_metronome.dispose());
     super.dispose();
@@ -360,11 +360,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
             contentPadding: EdgeInsets.zero,
             title: const Text('Pulse'),
             value: _pulseEnabled,
-            onChanged: (bool value) {
-              setState(() {
-                _pulseEnabled = value;
-              });
-            },
+            onChanged: _updatePulseEnabled,
           ),
         ],
       ),
@@ -400,16 +396,13 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
       } else {
         _running = false;
         _stopwatch.stop();
-        _beatClock.stop();
         _elapsedTicker?.cancel();
-        _beatFrameTicker.stop();
         unawaited(_metronome.stop());
       }
     });
     if (shouldStart) {
-      _restartBeatTicker();
-      if (_clickEnabled) {
-        unawaited(_metronome.start(bpm: _bpm));
+      if (_shouldRunMetronome) {
+        unawaited(_metronome.start(bpm: _bpm, clickEnabled: _clickEnabled));
       }
     }
   }
@@ -475,8 +468,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
       _currentItemIndex = nextIndex;
       _bpm = _itemBpmById[_currentItemId] ?? _setup.bpm;
     });
-    _restartBeatTicker();
-    if (_running && _clickEnabled) {
+    if (_running && _shouldRunMetronome) {
       unawaited(_metronome.updateBpm(bpm: _bpm));
     }
   }
@@ -495,12 +487,8 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
       _lastWarmupAutoIndex = null;
     }
     _elapsedTicker?.cancel();
-    _beatFrameTicker.stop();
-    _beatClock.stop();
-    _beatClock.reset();
     unawaited(_metronome.stop());
     _running = false;
-    _lastBeatIndex = -1;
     if (clearFlags) {
       _targetReached = false;
       _warmupComplete = false;
@@ -606,38 +594,6 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
     }
   }
 
-  void _restartBeatTicker() {
-    if (!_running) return;
-    _beatFrameTicker.stop();
-    _beatClock
-      ..stop()
-      ..reset()
-      ..start();
-    _lastBeatIndex = -1;
-    _handleBeat();
-    _lastBeatIndex = 0;
-    _beatFrameTicker.start();
-  }
-
-  void _onBeatFrame(Duration _) {
-    if (!_running || !_beatFrameTicker.isActive) return;
-    final int microsPerBeat = (60000000 / _bpm).round().clamp(1, 2000000);
-    final int beatIndex = _beatClock.elapsedMicroseconds ~/ microsPerBeat;
-    if (beatIndex <= _lastBeatIndex) return;
-    _lastBeatIndex = beatIndex;
-    _handleBeat();
-  }
-
-  void _handleBeat() {
-    if (_pulseEnabled) {
-      _pulseBeat();
-    }
-  }
-
-  void _pulseBeat() {
-    _beatPulseToken.value += 1;
-  }
-
   void _playCompletionChimeOnce() {
     if (_completionChimed) return;
     _completionChimed = true;
@@ -650,8 +606,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
       _bpm = nextBpm;
       _itemBpmById[_currentItemId] = nextBpm;
     });
-    _restartBeatTicker();
-    if (_running && _clickEnabled) {
+    if (_running && _shouldRunMetronome) {
       unawaited(_metronome.updateBpm(bpm: nextBpm));
     }
   }
@@ -661,16 +616,38 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
       _clickEnabled = value;
     });
     if (!_running) return;
-    if (value) {
-      unawaited(_metronome.start(bpm: _bpm));
-    } else {
+    if (!_shouldRunMetronome) {
       unawaited(_metronome.stop());
+      return;
+    }
+    if (value) {
+      unawaited(_metronome.start(bpm: _bpm, clickEnabled: true));
+    } else {
+      unawaited(_metronome.setClickEnabled(false));
+    }
+  }
+
+  void _updatePulseEnabled(bool value) {
+    setState(() {
+      _pulseEnabled = value;
+    });
+    if (!_running) return;
+    if (!_shouldRunMetronome) {
+      unawaited(_metronome.stop());
+      return;
+    }
+    if (value) {
+      unawaited(_metronome.start(bpm: _bpm, clickEnabled: _clickEnabled));
+    } else if (_clickEnabled) {
+      unawaited(_metronome.setClickEnabled(true));
     }
   }
 
   Future<void> _configureMetronome() async {
     await _metronome.prepare();
   }
+
+  bool get _shouldRunMetronome => _clickEnabled || _pulseEnabled;
 
   void _markCurrentItemPracticed() {
     if (_isWarmup) return;
@@ -746,85 +723,81 @@ class _BeatPulseState extends State<_BeatPulse> {
     final double pulse = widget.enabled
         ? Curves.easeOutCubic.transform(1 - _controller.value)
         : 0;
-    final bool beatLit = widget.enabled && pulse > 0.03;
     return SizedBox(
-      width: 230,
-      height: 230,
+      width: 190,
+      height: 190,
       child: Stack(
         alignment: Alignment.center,
         children: <Widget>[
           _PulseRing(
-            active: beatLit,
-            size: 112 + (114 * pulse),
-            opacity: 0.48 * pulse,
-            width: 4,
+            active: widget.enabled,
+            size: 116 + (40 * pulse),
+            opacity: 0.24 * pulse,
+            width: 3,
+            duration: Duration.zero,
+            color: const Color(0xFFFFD3AA),
+          ),
+          _PulseRing(
+            active: widget.enabled,
+            size: 108 + (22 * pulse),
+            opacity: 0.16 * pulse,
+            width: 2,
             duration: Duration.zero,
             color: const Color(0xFFFFC08D),
           ),
-          _PulseRing(
-            active: beatLit,
-            size: 104 + (80 * pulse),
-            opacity: 0.58 * pulse,
-            width: 5,
-            duration: Duration.zero,
-            color: const Color(0xFFF05A28),
-          ),
-          _PulseRing(
-            active: beatLit,
-            size: 96 + (54 * pulse),
-            opacity: 0.70 * pulse,
-            width: 6,
-            duration: Duration.zero,
-            color: const Color(0xFFFFE2B5),
-          ),
           Container(
-            width: 116 + (30 * pulse),
-            height: 116 + (30 * pulse),
+            width: 116 + (10 * pulse),
+            height: 116 + (10 * pulse),
             decoration: BoxDecoration(
-              color: beatLit
-                  ? const Color(0xFFF05A28)
-                  : widget.enabled
+              color: widget.enabled
                   ? const Color(0xFF1F1A14)
                   : const Color(0xFF14100C),
               shape: BoxShape.circle,
               border: Border.all(
-                color: beatLit
-                    ? const Color(0xFFFFC08D)
-                    : widget.enabled
-                    ? const Color(0xFF3A3329)
+                color: widget.enabled
+                    ? const Color(0xFF4A4337)
                     : const Color(0xFF2A231C),
-                width: beatLit ? 5 : 3,
+                width: 3 + pulse,
               ),
               boxShadow: <BoxShadow>[
-                if (beatLit)
-                  const BoxShadow(
-                    color: Color(0x88F05A28),
-                    blurRadius: 42,
-                    spreadRadius: 9,
+                if (widget.enabled && pulse > 0)
+                  BoxShadow(
+                    color: const Color(0x33F2A460).withValues(alpha: pulse),
+                    blurRadius: 18,
+                    spreadRadius: 1,
                   ),
               ],
             ),
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  Text(
-                    '${widget.bpm}',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      color: const Color(0xFFFFF4DE),
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -0.8,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: widget.enabled
+                    ? const Color(0xFF1F1A14)
+                    : const Color(0xFF14100C),
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    Text(
+                      '${widget.bpm}',
+                      style: Theme.of(context).textTheme.headlineMedium
+                          ?.copyWith(
+                            color: const Color(0xFFFFF4DE),
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.8,
+                          ),
                     ),
-                  ),
-                  Text(
-                    widget.enabled ? 'BPM' : 'PULSE OFF',
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: const Color(0xFFFFF4DE),
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.2,
+                    Text(
+                      widget.enabled ? 'BPM' : 'PULSE OFF',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: const Color(0xFFFFF4DE),
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.2,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
