@@ -952,6 +952,7 @@ Practice Session is execution only.
 - pulse animation should be local to the pulse widget and should not require rebuilding the whole player on every beat
 - pulse animation should stay restrained and should not visually overpower the notation or timer
 - pulse animation duration must scale with BPM and should complete comfortably before the next beat
+- if pulse timing clarity is at risk, prefer a simple synchronized flash over decorative expanding-band animation
 - click playback should use a preloaded low-latency one-shot trigger path rather than repeatedly retriggering one media player instance
 - the player must not contain controls that switch the session into a different source type
 - default stopped transport state should present `Play` and `End`

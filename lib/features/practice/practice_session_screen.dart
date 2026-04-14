@@ -725,85 +725,55 @@ class _BeatPulseState extends State<_BeatPulse> {
     final double pulse = widget.enabled
         ? Curves.easeOutCubic.transform(1 - _controller.value)
         : 0;
+    final Color accent = Color.lerp(
+      const Color(0xFF4A4337),
+      const Color(0xFFFFC08D),
+      pulse,
+    )!;
+    final Color glow = const Color(0x44F2A460).withValues(alpha: pulse);
     return SizedBox(
-      width: 190,
-      height: 190,
-      child: Stack(
-        alignment: Alignment.center,
-        children: <Widget>[
-          _PulseRing(
-            active: widget.enabled,
-            size: 116 + (40 * pulse),
-            opacity: 0.24 * pulse,
-            width: 3,
-            duration: Duration.zero,
-            color: const Color(0xFFFFD3AA),
+      width: 170,
+      height: 170,
+      child: Container(
+        width: 112,
+        height: 112,
+        decoration: BoxDecoration(
+          color: widget.enabled
+              ? const Color(0xFF1F1A14)
+              : const Color(0xFF14100C),
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: widget.enabled ? accent : const Color(0xFF2A231C),
+            width: 3 + (pulse * 1.2),
           ),
-          _PulseRing(
-            active: widget.enabled,
-            size: 108 + (22 * pulse),
-            opacity: 0.16 * pulse,
-            width: 2,
-            duration: Duration.zero,
-            color: const Color(0xFFFFC08D),
-          ),
-          Container(
-            width: 116 + (10 * pulse),
-            height: 116 + (10 * pulse),
-            decoration: BoxDecoration(
-              color: widget.enabled
-                  ? const Color(0xFF1F1A14)
-                  : const Color(0xFF14100C),
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: widget.enabled
-                    ? const Color(0xFF4A4337)
-                    : const Color(0xFF2A231C),
-                width: 3 + pulse,
-              ),
-              boxShadow: <BoxShadow>[
-                if (widget.enabled && pulse > 0)
-                  BoxShadow(
-                    color: const Color(0x33F2A460).withValues(alpha: pulse),
-                    blurRadius: 18,
-                    spreadRadius: 1,
-                  ),
-              ],
-            ),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: widget.enabled
-                    ? const Color(0xFF1F1A14)
-                    : const Color(0xFF14100C),
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: <Widget>[
-                    Text(
-                      '${widget.bpm}',
-                      style: Theme.of(context).textTheme.headlineMedium
-                          ?.copyWith(
-                            color: const Color(0xFFFFF4DE),
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -0.8,
-                          ),
-                    ),
-                    Text(
-                      widget.enabled ? 'BPM' : 'PULSE OFF',
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: const Color(0xFFFFF4DE),
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                  ],
+          boxShadow: <BoxShadow>[
+            if (widget.enabled && pulse > 0)
+              BoxShadow(color: glow, blurRadius: 16, spreadRadius: 1),
+          ],
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Text(
+                '${widget.bpm}',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  color: const Color(0xFFFFF4DE),
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.8,
                 ),
               ),
-            ),
+              Text(
+                widget.enabled ? 'BPM' : 'PULSE OFF',
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: const Color(0xFFFFF4DE),
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -954,46 +924,6 @@ class _SessionStepper extends StatelessWidget {
           icon: const Icon(Icons.chevron_right),
         ),
       ],
-    );
-  }
-}
-
-class _PulseRing extends StatelessWidget {
-  final bool active;
-  final double size;
-  final double opacity;
-  final Duration duration;
-  final double width;
-  final Color color;
-
-  const _PulseRing({
-    required this.active,
-    required this.size,
-    required this.opacity,
-    required this.duration,
-    required this.width,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedOpacity(
-      duration: duration,
-      curve: Curves.easeOut,
-      opacity: opacity,
-      child: AnimatedContainer(
-        duration: duration,
-        curve: Curves.easeOutCubic,
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: active ? color : Colors.transparent,
-            width: width,
-          ),
-        ),
-      ),
     );
   }
 }

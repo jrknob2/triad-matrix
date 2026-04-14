@@ -369,6 +369,7 @@ Must do:
 - when click playback is active, the visual pulse should follow the native metronome beat source rather than an independent Dart beat clock
 - player pulse treatment should stay visually restrained relative to notation and timer
 - player pulse animation duration should scale with BPM and should finish comfortably before the next beat arrives
+- if pulse clarity and pulse decoration conflict, the player should prefer a simple synchronized flash treatment
 
 #### State C: Warmup Session
 
