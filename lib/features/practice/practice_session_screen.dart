@@ -1,7 +1,9 @@
 import 'dart:async';
 
 import 'package:audio_session/audio_session.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:just_audio/just_audio.dart';
 
 import '../../features/app/app_formatters.dart';
@@ -42,14 +44,15 @@ class _SessionTransportState {
   });
 }
 
-class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
+class _PracticeSessionScreenState extends State<PracticeSessionScreen>
+    with TickerProviderStateMixin {
   final Stopwatch _stopwatch = Stopwatch();
+  final Stopwatch _beatClock = Stopwatch();
   final AudioPlayer _clickPlayer = AudioPlayer();
+  final ValueNotifier<int> _beatPulseToken = ValueNotifier<int>(0);
   Timer? _elapsedTicker;
-  Timer? _beatTicker;
-  Timer? _beatFlashTimer;
+  late final Ticker _beatFrameTicker;
   bool _running = false;
-  bool _beatLit = false;
   bool _targetReached = false;
   bool _warmupComplete = false;
   bool _completionChimed = false;
@@ -65,6 +68,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   late bool _clickEnabled;
   late PracticeSessionSetupV1 _setup;
   int _currentItemIndex = 0;
+  int _lastBeatIndex = -1;
 
   @override
   void initState() {
@@ -77,6 +81,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
         ? false
         : _setup.clickEnabled;
     _pulseEnabled = _setup.family != MaterialFamilyV1.warmup;
+    _beatFrameTicker = createTicker(_onBeatFrame);
     _configureAudio();
   }
 
@@ -84,8 +89,8 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   void dispose() {
     _discardEphemeralItemsIfNeeded();
     _elapsedTicker?.cancel();
-    _beatTicker?.cancel();
-    _beatFlashTimer?.cancel();
+    _beatFrameTicker.dispose();
+    _beatPulseToken.dispose();
     _clickPlayer.dispose();
     super.dispose();
   }
@@ -224,7 +229,12 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
             voices: voices,
           ),
           const SizedBox(height: 18),
-          _BeatPulse(beatLit: _beatLit, bpm: _bpm, enabled: _pulseEnabled),
+          _BeatPulse(
+            beatTokenListenable: _beatPulseToken,
+            bpm: _bpm,
+            enabled: _pulseEnabled,
+            vsync: this,
+          ),
           const SizedBox(height: 18),
           Text(
             transport.timerText,
@@ -351,9 +361,6 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
             onChanged: (bool value) {
               setState(() {
                 _pulseEnabled = value;
-                if (!value) {
-                  _beatLit = false;
-                }
               });
             },
           ),
@@ -391,10 +398,9 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
       } else {
         _running = false;
         _stopwatch.stop();
+        _beatClock.stop();
         _elapsedTicker?.cancel();
-        _beatTicker?.cancel();
-        _beatFlashTimer?.cancel();
-        _beatLit = false;
+        _beatFrameTicker.stop();
       }
     });
     if (shouldStart) {
@@ -480,10 +486,11 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
       _lastWarmupAutoIndex = null;
     }
     _elapsedTicker?.cancel();
-    _beatTicker?.cancel();
-    _beatFlashTimer?.cancel();
+    _beatFrameTicker.stop();
+    _beatClock.stop();
+    _beatClock.reset();
     _running = false;
-    _beatLit = false;
+    _lastBeatIndex = -1;
     if (clearFlags) {
       _targetReached = false;
       _warmupComplete = false;
@@ -590,14 +597,25 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   }
 
   void _restartBeatTicker() {
-    _beatTicker?.cancel();
     if (!_running) return;
-
-    final int intervalMs = (60000 / _bpm).round().clamp(120, 2000);
+    _beatFrameTicker.stop();
+    _beatClock
+      ..stop()
+      ..reset()
+      ..start();
+    _lastBeatIndex = -1;
     _handleBeat();
-    _beatTicker = Timer.periodic(Duration(milliseconds: intervalMs), (_) {
-      _handleBeat();
-    });
+    _lastBeatIndex = 0;
+    _beatFrameTicker.start();
+  }
+
+  void _onBeatFrame(Duration _) {
+    if (!_running || !_beatFrameTicker.isActive) return;
+    final int microsPerBeat = (60000000 / _bpm).round().clamp(1, 2000000);
+    final int beatIndex = _beatClock.elapsedMicroseconds ~/ microsPerBeat;
+    if (beatIndex <= _lastBeatIndex) return;
+    _lastBeatIndex = beatIndex;
+    _handleBeat();
   }
 
   void _handleBeat() {
@@ -610,12 +628,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   }
 
   void _pulseBeat() {
-    if (!mounted) return;
-    _beatFlashTimer?.cancel();
-    setState(() => _beatLit = true);
-    _beatFlashTimer = Timer(const Duration(milliseconds: 170), () {
-      if (mounted) setState(() => _beatLit = false);
-    });
+    _beatPulseToken.value += 1;
   }
 
   void _playClick() {
@@ -680,19 +693,73 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   }
 }
 
-class _BeatPulse extends StatelessWidget {
-  final bool beatLit;
+class _BeatPulse extends StatefulWidget {
+  final ValueListenable<int> beatTokenListenable;
   final int bpm;
   final bool enabled;
+  final TickerProvider vsync;
 
   const _BeatPulse({
-    required this.beatLit,
+    required this.beatTokenListenable,
     required this.bpm,
     required this.enabled,
+    required this.vsync,
   });
 
   @override
+  State<_BeatPulse> createState() => _BeatPulseState();
+}
+
+class _BeatPulseState extends State<_BeatPulse> {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: widget.vsync,
+      duration: _pulseDurationFor(widget.bpm),
+      value: 1,
+    );
+    widget.beatTokenListenable.addListener(_handleBeatTokenChanged);
+  }
+
+  @override
+  void didUpdateWidget(covariant _BeatPulse oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.beatTokenListenable != widget.beatTokenListenable) {
+      oldWidget.beatTokenListenable.removeListener(_handleBeatTokenChanged);
+      widget.beatTokenListenable.addListener(_handleBeatTokenChanged);
+    }
+    final Duration nextDuration = _pulseDurationFor(widget.bpm);
+    if (_controller.duration != nextDuration) {
+      _controller.duration = nextDuration;
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.beatTokenListenable.removeListener(_handleBeatTokenChanged);
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Duration _pulseDurationFor(int bpm) {
+    final int beatMs = (60000 / bpm).round();
+    return Duration(milliseconds: (beatMs * 0.58).round().clamp(120, 240));
+  }
+
+  void _handleBeatTokenChanged() {
+    if (!mounted || !widget.enabled) return;
+    _controller.forward(from: 0);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final double pulse = widget.enabled
+        ? Curves.easeOutCubic.transform(1 - _controller.value)
+        : 0;
+    final bool beatLit = widget.enabled && pulse > 0.03;
     return SizedBox(
       width: 230,
       height: 230,
@@ -701,44 +768,42 @@ class _BeatPulse extends StatelessWidget {
         children: <Widget>[
           _PulseRing(
             active: beatLit,
-            size: beatLit ? 226 : 112,
-            opacity: beatLit ? 0.48 : 0,
+            size: 112 + (114 * pulse),
+            opacity: 0.48 * pulse,
             width: 4,
-            duration: const Duration(milliseconds: 360),
+            duration: Duration.zero,
             color: const Color(0xFFFFC08D),
           ),
           _PulseRing(
             active: beatLit,
-            size: beatLit ? 184 : 104,
-            opacity: beatLit ? 0.58 : 0,
+            size: 104 + (80 * pulse),
+            opacity: 0.58 * pulse,
             width: 5,
-            duration: const Duration(milliseconds: 250),
+            duration: Duration.zero,
             color: const Color(0xFFF05A28),
           ),
           _PulseRing(
             active: beatLit,
-            size: beatLit ? 150 : 96,
-            opacity: beatLit ? 0.70 : 0,
+            size: 96 + (54 * pulse),
+            opacity: 0.70 * pulse,
             width: 6,
-            duration: const Duration(milliseconds: 170),
+            duration: Duration.zero,
             color: const Color(0xFFFFE2B5),
           ),
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            curve: Curves.easeOutCubic,
-            width: beatLit ? 146 : 116,
-            height: beatLit ? 146 : 116,
+          Container(
+            width: 116 + (30 * pulse),
+            height: 116 + (30 * pulse),
             decoration: BoxDecoration(
               color: beatLit
                   ? const Color(0xFFF05A28)
-                  : enabled
+                  : widget.enabled
                   ? const Color(0xFF1F1A14)
                   : const Color(0xFF14100C),
               shape: BoxShape.circle,
               border: Border.all(
                 color: beatLit
                     ? const Color(0xFFFFC08D)
-                    : enabled
+                    : widget.enabled
                     ? const Color(0xFF3A3329)
                     : const Color(0xFF2A231C),
                 width: beatLit ? 5 : 3,
@@ -757,7 +822,7 @@ class _BeatPulse extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
                   Text(
-                    '$bpm',
+                    '${widget.bpm}',
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       color: const Color(0xFFFFF4DE),
                       fontWeight: FontWeight.w900,
@@ -765,7 +830,7 @@ class _BeatPulse extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    enabled ? 'BPM' : 'PULSE OFF',
+                    widget.enabled ? 'BPM' : 'PULSE OFF',
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
                       color: const Color(0xFFFFF4DE),
                       fontWeight: FontWeight.w900,
