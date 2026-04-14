@@ -108,8 +108,11 @@ Rules:
 
 - `never seen` is not a valid matrix/product state label
 - `Strong` should be visible in the cell progress color and legend, not repeated as a separate filter
+- generic Matrix entry should default to `Progress`
+- when Working On is not empty, `In Working On` should be the default Progress filter
 - with no active Progress filters, the grid should show the full status color map
 - with an active Progress filter, matching cells should become the primary read and non-matches should step back to a neutral treatment
+- progress color should only appear in `Progress` view
 
 ## Structural Slicers
 

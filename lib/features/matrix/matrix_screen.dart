@@ -10,7 +10,7 @@ import '../practice/widgets/pattern_display_text.dart';
 import '../practice/widgets/pattern_sequence_editor.dart';
 import 'widgets/triad_matrix_grid.dart';
 
-enum _MatrixPrimaryView { traits, progress }
+enum _MatrixPrimaryView { progress, traits }
 
 class MatrixScreenRequest {
   final int version;
@@ -51,7 +51,7 @@ class MatrixScreen extends StatefulWidget {
 }
 
 class _MatrixScreenState extends State<MatrixScreen> {
-  _MatrixPrimaryView _view = _MatrixPrimaryView.traits;
+  _MatrixPrimaryView _view = _MatrixPrimaryView.progress;
   final Set<TriadMatrixFilterV1> _filters = <TriadMatrixFilterV1>{};
   final Set<String> _selectedRows = <String>{};
   final Set<String> _selectedColumns = <String>{};
@@ -65,6 +65,8 @@ class _MatrixScreenState extends State<MatrixScreen> {
     if (request != null) {
       _appliedRequestVersion = request.version;
       _applyRequest(request);
+    } else {
+      _applyDefaultState(notify: false);
     }
   }
 
@@ -98,6 +100,7 @@ class _MatrixScreenState extends State<MatrixScreen> {
       controller: widget.controller,
       filters: matrixFilters,
       selection: matrixSelection,
+      showProgressColors: _view == _MatrixPrimaryView.progress,
       onToggleRow: _toggleRow,
       onToggleColumn: _toggleColumn,
       onTapItem: _toggleItemSelection,
@@ -249,6 +252,13 @@ class _MatrixScreenState extends State<MatrixScreen> {
         .toList(growable: false);
     if (labels.isEmpty) return null;
     return 'Showing: ${labels.join(' + ')}';
+  }
+
+  Set<TriadMatrixFilterV1> get _defaultProgressFilters {
+    if (widget.controller.hasActiveWork) {
+      return <TriadMatrixFilterV1>{TriadMatrixFilterV1.inRoutine};
+    }
+    return const <TriadMatrixFilterV1>{};
   }
 
   List<Widget> _buildFilterPills() {
@@ -515,6 +525,10 @@ class _MatrixScreenState extends State<MatrixScreen> {
   }
 
   void _applyRequest(MatrixScreenRequest request) {
+    if (_shouldUseDefaultProgressState(request)) {
+      _applyDefaultState();
+      return;
+    }
     setState(() {
       _view = _viewForRequest(request);
       _filters
@@ -526,6 +540,32 @@ class _MatrixScreenState extends State<MatrixScreen> {
         ..clear()
         ..addAll(request.selectedItemIds);
     });
+  }
+
+  void _applyDefaultState({bool notify = true}) {
+    void apply() {
+      _view = _MatrixPrimaryView.progress;
+      _filters
+        ..clear()
+        ..addAll(_defaultProgressFilters);
+      _selectedRows.clear();
+      _selectedColumns.clear();
+      _selectedItemIds.clear();
+    }
+
+    if (notify) {
+      setState(apply);
+    } else {
+      apply();
+    }
+  }
+
+  bool _shouldUseDefaultProgressState(MatrixScreenRequest request) {
+    return request.lane == null &&
+        request.filters.isEmpty &&
+        request.selectedItemIds.isEmpty &&
+        request.editingItemId == null &&
+        !request.prefersSaveToWorkingOn;
   }
 
   Set<TriadMatrixFilterV1> _normalizedIncomingFilters(
@@ -614,10 +654,10 @@ class _MatrixScreenState extends State<MatrixScreen> {
         TriadMatrixFilterV1.doubles,
       ],
       _MatrixPrimaryView.progress => const <TriadMatrixFilterV1>[
+        TriadMatrixFilterV1.inRoutine,
         TriadMatrixFilterV1.notTrained,
         TriadMatrixFilterV1.activeStatus,
         TriadMatrixFilterV1.needsWorkStatus,
-        TriadMatrixFilterV1.inRoutine,
         TriadMatrixFilterV1.inPhrases,
         TriadMatrixFilterV1.recent,
       ],
@@ -652,7 +692,8 @@ class _MatrixScreenState extends State<MatrixScreen> {
               filter == TriadMatrixFilterV1.endsWithKick =>
         16,
       _MatrixPrimaryView.progress
-          when filter == TriadMatrixFilterV1.needsWorkStatus =>
+          when filter == TriadMatrixFilterV1.inRoutine ||
+              filter == TriadMatrixFilterV1.needsWorkStatus =>
         16,
       _ => 8,
     };

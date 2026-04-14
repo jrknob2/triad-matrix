@@ -105,7 +105,8 @@ class DrumHorizontalControlStrip extends StatefulWidget {
 
 class _DrumHorizontalControlStripState extends State<DrumHorizontalControlStrip> {
   late final ScrollController _controller;
-  bool _hasOverflow = false;
+  int _pageCount = 1;
+  int _currentPage = 0;
 
   @override
   void initState() {
@@ -130,10 +131,21 @@ class _DrumHorizontalControlStripState extends State<DrumHorizontalControlStrip>
 
   void _updateOverflow() {
     if (!mounted || !_controller.hasClients) return;
-    final bool nextHasOverflow = _controller.position.maxScrollExtent > 0;
-    if (nextHasOverflow == _hasOverflow) return;
+    final double viewportWidth = _controller.position.viewportDimension;
+    if (viewportWidth <= 0) return;
+    final double contentWidth =
+        _controller.position.maxScrollExtent + viewportWidth;
+    final int nextPageCount = (contentWidth / viewportWidth).ceil().clamp(
+      1,
+      1000,
+    );
+    final int nextCurrentPage = (_controller.offset / viewportWidth)
+        .round()
+        .clamp(0, nextPageCount - 1);
+    if (nextPageCount == _pageCount && nextCurrentPage == _currentPage) return;
     setState(() {
-      _hasOverflow = nextHasOverflow;
+      _pageCount = nextPageCount;
+      _currentPage = nextCurrentPage;
     });
   }
 
@@ -148,18 +160,29 @@ class _DrumHorizontalControlStripState extends State<DrumHorizontalControlStrip>
           scrollDirection: Axis.horizontal,
           child: widget.child,
         ),
-        if (_hasOverflow)
+        if (_pageCount > 1)
           Padding(
             padding: EdgeInsets.only(top: widget.indicatorTopPadding),
-            child: Center(
-              child: Text(
-                '...',
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: DrumcabularyTheme.mutedInk,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.2,
-                ),
-              ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List<Widget>.generate(_pageCount, (int index) {
+                final bool active = index == _currentPage;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 3),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    curve: Curves.easeOut,
+                    width: active ? 16 : 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: active
+                          ? DrumcabularyTheme.ink
+                          : DrumcabularyTheme.line,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                );
+              }),
             ),
           ),
       ],

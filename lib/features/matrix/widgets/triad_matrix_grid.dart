@@ -8,6 +8,7 @@ class TriadMatrixGrid extends StatelessWidget {
   final AppController controller;
   final MatrixFiltersV1 filters;
   final MatrixSelectionStateV1 selection;
+  final bool showProgressColors;
   final ValueChanged<String> onToggleRow;
   final ValueChanged<String> onToggleColumn;
   final ValueChanged<String> onTapItem;
@@ -17,6 +18,7 @@ class TriadMatrixGrid extends StatelessWidget {
     required this.controller,
     required this.filters,
     required this.selection,
+    required this.showProgressColors,
     required this.onToggleRow,
     required this.onToggleColumn,
     required this.onTapItem,
@@ -77,6 +79,7 @@ class TriadMatrixGrid extends StatelessWidget {
                         cell: cell,
                         filters: filters,
                         selection: selection,
+                        showProgressColors: showProgressColors,
                         onTapItem: onTapItem,
                       ),
                     ),
@@ -133,6 +136,7 @@ class _TriadCellButton extends StatelessWidget {
   final TriadMatrixCell cell;
   final MatrixFiltersV1 filters;
   final MatrixSelectionStateV1 selection;
+  final bool showProgressColors;
   final ValueChanged<String> onTapItem;
 
   const _TriadCellButton({
@@ -140,6 +144,7 @@ class _TriadCellButton extends StatelessWidget {
     required this.cell,
     required this.filters,
     required this.selection,
+    required this.showProgressColors,
     required this.onTapItem,
   });
 
@@ -191,12 +196,14 @@ class _TriadCellButton extends StatelessWidget {
     final bool hasActiveProgressFilter = filters.filters.any(
       _progressFilterSet.contains,
     );
-    Color backgroundColor = switch (visualState.progress) {
-      MatrixProgressStateV1.notTrained => const Color(0xFFFFFFFF),
-      MatrixProgressStateV1.active => const Color(0xFFD9E9F7),
-      MatrixProgressStateV1.needsWork => const Color(0xFFF0B2AA),
-      MatrixProgressStateV1.strong => const Color(0xFFDDEDDD),
-    };
+    Color backgroundColor = showProgressColors
+        ? switch (visualState.progress) {
+            MatrixProgressStateV1.notTrained => const Color(0xFFFFFFFF),
+            MatrixProgressStateV1.active => const Color(0xFFD9E9F7),
+            MatrixProgressStateV1.needsWork => const Color(0xFFF0B2AA),
+            MatrixProgressStateV1.strong => const Color(0xFFDDEDDD),
+          }
+        : const Color(0xFFFFFCF7);
     Color borderColor = const Color(0x22000000);
     double borderWidth = 1;
     Color textColor = Colors.black;

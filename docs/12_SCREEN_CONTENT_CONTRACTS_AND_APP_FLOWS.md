@@ -81,7 +81,9 @@ Filter row rule:
 - any UI surface that exposes filters should label that section `Filters`
 - filter pills should live in one horizontally scrollable row
 - do not wrap filter pills into multiple lines
-- if a horizontal control row extends off-screen, show a small `...` overflow cue beneath it so the user knows there is more to swipe to
+- if a horizontal control row extends off-screen, show a standard page-position dot indicator beneath it so the user knows there is more to swipe to
+- the number of dots should reflect the number of viewport-width pages in that control strip
+- the current page should be visually distinct from the other dots
 
 ## Control Affordance Rule
 
@@ -620,8 +622,8 @@ Serve:
 Rules:
 
 - Matrix has one exclusive `View` chooser:
-  - `Traits`
   - `Progress`
+  - `Traits`
 - each view exposes only the filters that belong to that view
 - row and column selectors are structural slicers, not part of the main filter bar
 - row and column selectors must look interactive on touch screens
@@ -656,12 +658,15 @@ Rules:
 - `never seen` is not a valid product state label
 - until `Toolbox` exists, membership-style states should use plain labels like `In Working On`
 - `Strong` is already visible through the matrix progress color and should not also appear as a separate progress filter
+- generic Matrix entry should default to `Progress`
+- generic Matrix entry should default to `In Working On` when Working On is not empty
 - with no active Progress filters, the grid should show the full progress color map
 - with an active Progress filter, filter match should become the primary visual signal
 - when a Progress filter is active, non-matching cells should step back to a neutral treatment rather than competing equally with matching cells
 - when a status filter is active, only matching cells should retain strong status color
 - when a secondary Progress filter is active, matching cells may retain status color but non-matches should still step back clearly
 - Progress view should show a short active-scope line above the grid, such as `Showing: Needs Work + Recent`
+- progress coloring belongs to `Progress` view only
 
 #### Phrase Editor
 
