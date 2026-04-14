@@ -11,7 +11,9 @@ final class NativeMetronomePlugin: NSObject, FlutterPlugin, FlutterStreamHandler
     self.registrar = registrar
     super.init()
     engine.beatListener = { [weak self] beatIndex in
-      self?.beatSink?(beatIndex)
+      DispatchQueue.main.async {
+        self?.beatSink?(beatIndex)
+      }
     }
   }
 

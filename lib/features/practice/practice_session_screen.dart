@@ -710,12 +710,14 @@ class _BeatPulseState extends State<_BeatPulse> {
 
   Duration _pulseDurationFor(int bpm) {
     final int beatMs = (60000 / bpm).round();
-    return Duration(milliseconds: (beatMs * 0.58).round().clamp(120, 240));
+    return Duration(milliseconds: (beatMs * 0.22).round().clamp(40, 150));
   }
 
   void _handleBeatTokenChanged() {
     if (!mounted || !widget.enabled) return;
-    _controller.forward(from: 0);
+    _controller
+      ..stop()
+      ..forward(from: 0);
   }
 
   @override
