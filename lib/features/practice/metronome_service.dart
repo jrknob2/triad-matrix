@@ -59,7 +59,7 @@ class PracticeMetronomeService {
   bool _pulseEnabled = true;
   int _bpm = 120;
   Timer? _nativePulsePoller;
-  Timer? _fallbackPulseOffTimer;
+  Timer? _pulseOffTimer;
   int _lastNativeBeatIndex = -1;
 
   PracticeMetronomeService({required this.assetPath}) {
@@ -213,7 +213,7 @@ class PracticeMetronomeService {
       return;
     }
     if (!value) {
-      _fallbackPulseOffTimer?.cancel();
+      _pulseOffTimer?.cancel();
       _setPulseActive(false);
     }
   }
@@ -268,16 +268,12 @@ class PracticeMetronomeService {
 
   void _handleFallbackBeat(int beatIndex) {
     if (!_pulseEnabled) return;
-    _setPulseActive(true);
-    _fallbackPulseOffTimer?.cancel();
-    _fallbackPulseOffTimer = Timer(_flashWindowFor(_bpm), () {
-      _setPulseActive(false);
-    });
+    _triggerPulseFlash();
   }
 
   Duration _flashWindowFor(int bpm) {
     final int beatMs = (60000 / bpm).round();
-    return Duration(milliseconds: (beatMs * 0.12).round().clamp(65, 100));
+    return Duration(milliseconds: (beatMs * 0.18).round().clamp(75, 110));
   }
 
   void _startNativePulsePollingIfNeeded() {
@@ -301,8 +297,8 @@ class PracticeMetronomeService {
 
   void _stopPulseTracking() {
     _stopNativePulsePolling();
-    _fallbackPulseOffTimer?.cancel();
-    _fallbackPulseOffTimer = null;
+    _pulseOffTimer?.cancel();
+    _pulseOffTimer = null;
     _setPulseActive(false);
   }
 
@@ -318,12 +314,22 @@ class PracticeMetronomeService {
       if (raw is! Map<Object?, Object?>) return;
       final Object? activeValue = raw['active'];
       final Object? beatValue = raw['beatIndex'];
-      final bool active = activeValue == true;
       final int beatIndex = beatValue is int
           ? beatValue
           : (beatValue is num ? beatValue.toInt() : _lastNativeBeatIndex);
-      _lastNativeBeatIndex = beatIndex;
-      _setPulseActive(active);
+      final bool active = activeValue == true;
+      if (beatIndex != _lastNativeBeatIndex && beatIndex >= 0) {
+        _lastNativeBeatIndex = beatIndex;
+        _triggerPulseFlash();
+        return;
+      }
+      if (!active && pulseActive.value) {
+        // Keep the visual pulse latched locally for a short readable window.
+        return;
+      }
+      if (!active) {
+        _setPulseActive(false);
+      }
     } catch (error, stackTrace) {
       _recordIssue(
         'Native pulse-state polling failed.',
@@ -337,6 +343,14 @@ class PracticeMetronomeService {
   void _setPulseActive(bool value) {
     if (pulseActive.value == value) return;
     pulseActive.value = value;
+  }
+
+  void _triggerPulseFlash() {
+    _setPulseActive(true);
+    _pulseOffTimer?.cancel();
+    _pulseOffTimer = Timer(_flashWindowFor(_bpm), () {
+      _setPulseActive(false);
+    });
   }
 
   void _updateDiagnostics({

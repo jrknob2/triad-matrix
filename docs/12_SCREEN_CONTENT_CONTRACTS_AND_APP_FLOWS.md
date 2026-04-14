@@ -949,6 +949,7 @@ Practice Session is execution only.
 - pulse/click/BPM/timer support the playing, not the screen narrative
 - the metronome engine should be the source of truth for beat phase when click playback is active
 - pulse timing should derive from the native audio playback phase when the native metronome is running, not from a separate beat-event timer or an independent Dart beat clock
+- once native beat onset is detected, the visual pulse may stay on briefly for readability, but beat onset itself must still come from the native playback phase
 - pulse animation should be local to the pulse widget and should not require rebuilding the whole player on every beat
 - pulse animation should stay restrained and should not visually overpower the notation or timer
 - if pulse timing clarity is at risk, prefer a simple synchronized flash over decorative animation
