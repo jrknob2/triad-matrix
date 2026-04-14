@@ -722,43 +722,102 @@ class _BeatPulseState extends State<_BeatPulse> {
   @override
   Widget build(BuildContext context) {
     final bool active = widget.enabled && _flashActive;
+    const Color ringBase = Color(0xFF4A4337);
+    const Color ringAccent = Color(0xFFFFC08D);
     return SizedBox(
       width: 170,
       height: 170,
-      child: Container(
-        width: 112,
-        height: 112,
-        decoration: BoxDecoration(
-          color: widget.enabled
-              ? const Color(0xFF1F1A14)
-              : const Color(0xFF14100C),
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: active ? const Color(0xFFFFC08D) : const Color(0xFF4A4337),
-            width: active ? 4 : 3,
+      child: Stack(
+        alignment: Alignment.center,
+        children: <Widget>[
+          if (widget.enabled)
+            _PulseRing(
+              diameter: 150,
+              color: active
+                  ? ringAccent.withValues(alpha: 0.20)
+                  : ringBase.withValues(alpha: 0.18),
+              width: 1.5,
+            ),
+          if (widget.enabled)
+            _PulseRing(
+              diameter: 136,
+              color: active
+                  ? ringAccent.withValues(alpha: 0.32)
+                  : ringBase.withValues(alpha: 0.24),
+              width: 1.8,
+            ),
+          if (widget.enabled)
+            _PulseRing(
+              diameter: 122,
+              color: active
+                  ? ringAccent.withValues(alpha: 0.46)
+                  : ringBase.withValues(alpha: 0.30),
+              width: 2.0,
+            ),
+          Container(
+            width: 112,
+            height: 112,
+            decoration: BoxDecoration(
+              color: widget.enabled
+                  ? const Color(0xFF1F1A14)
+                  : const Color(0xFF14100C),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: active ? ringAccent : ringBase,
+                width: active ? 4 : 3,
+              ),
+            ),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  Text(
+                    '${widget.bpm}',
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      color: const Color(0xFFFFF4DE),
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.8,
+                    ),
+                  ),
+                  Text(
+                    widget.enabled ? 'BPM' : 'PULSE OFF',
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: const Color(0xFFFFF4DE),
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              Text(
-                '${widget.bpm}',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  color: const Color(0xFFFFF4DE),
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -0.8,
-                ),
-              ),
-              Text(
-                widget.enabled ? 'BPM' : 'PULSE OFF',
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: const Color(0xFFFFF4DE),
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.2,
-                ),
-              ),
-            ],
+        ],
+      ),
+    );
+  }
+}
+
+class _PulseRing extends StatelessWidget {
+  final double diameter;
+  final Color color;
+  final double width;
+
+  const _PulseRing({
+    required this.diameter,
+    required this.color,
+    required this.width,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: SizedBox(
+        width: diameter,
+        height: diameter,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: color, width: width),
           ),
         ),
       ),

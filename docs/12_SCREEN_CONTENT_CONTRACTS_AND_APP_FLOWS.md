@@ -953,6 +953,7 @@ Practice Session is execution only.
 - pulse animation should stay restrained and should not visually overpower the notation or timer
 - if pulse timing clarity is at risk, prefer a simple synchronized flash over decorative animation
 - when pulse synchronization is under verification, use a plain border on/off effect rather than glow, easing, or expanding-band treatments
+- once synchronization is solid, the pulse may add a few static concentric rings inside the main circle during the flash window, but those rings must be driven by the same on/off beat state rather than their own animation timeline
 - click playback should use a preloaded low-latency one-shot trigger path rather than repeatedly retriggering one media player instance
 - the player must not contain controls that switch the session into a different source type
 - default stopped transport state should present `Play` and `End`

@@ -370,6 +370,7 @@ Must do:
 - player pulse treatment should stay visually restrained relative to notation and timer
 - if pulse clarity and pulse decoration conflict, the player should prefer a simple synchronized flash treatment
 - when pulse synchronization is being verified or debugged, the player should use a plain border on/off effect instead of glow or eased animation
+- once synchronization is proven stable, the player may add a small number of static concentric rings during the flash state, but they must follow the same on/off beat state instead of introducing a separate animation path
 
 #### State C: Warmup Session
 
