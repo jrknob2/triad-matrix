@@ -4,7 +4,6 @@ import '../../core/practice/practice_domain_v1.dart';
 import '../../features/app/app_formatters.dart';
 import '../../features/app/drumcabulary_ui.dart';
 import '../../state/app_controller.dart';
-import 'practice_session_screen.dart';
 import 'widgets/pattern_display_text.dart';
 import 'widgets/pattern_voice_display.dart';
 
@@ -259,16 +258,11 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                 ),
                 OutlinedButton(
                   onPressed: () {
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute<void>(
-                        builder: (_) => PracticeSessionScreen(
-                          controller: widget.controller,
-                          setup: widget.controller.buildSessionForItem(
-                            currentItem.id,
-                            practiceMode: session.practiceMode,
-                            bpm: currentRuntime.endingBpm,
-                          ),
-                        ),
+                    Navigator.of(context).pop(
+                      widget.controller.buildSessionForItem(
+                        currentItem.id,
+                        practiceMode: session.practiceMode,
+                        bpm: currentRuntime.endingBpm,
                       ),
                     );
                   },

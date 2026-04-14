@@ -45,23 +45,30 @@ class AppStateRecord {
   String assessmentAggregatesJson = '[]';
 }
 
-class AppStateStore {
-  AppStateStore._(this._isar);
-
-  static const String _dbName = 'triad_trainer';
-  final Isar _isar;
-
+abstract class AppStateStore {
   static Future<AppStateStore> open() async {
     final dir = await getApplicationSupportDirectory();
     final isar = await Isar.open(
       <CollectionSchema<dynamic>>[AppStateRecordSchema],
       directory: dir.path,
-      name: _dbName,
+      name: IsarAppStateStore.dbName,
       inspector: false,
     );
-    return AppStateStore._(isar);
+    return IsarAppStateStore._(isar);
   }
 
+  Future<AppStateSnapshotData?> load();
+
+  Future<void> save(AppStateSnapshotData snapshot);
+}
+
+class IsarAppStateStore implements AppStateStore {
+  IsarAppStateStore._(this._isar);
+
+  static const String dbName = 'triad_trainer';
+  final Isar _isar;
+
+  @override
   Future<AppStateSnapshotData?> load() async {
     final AppStateRecord? record = await _isar.appStateRecords.get(0);
     if (record == null) return null;
@@ -130,6 +137,7 @@ class AppStateStore {
     );
   }
 
+  @override
   Future<void> save(AppStateSnapshotData snapshot) async {
     final AppStateRecord record = AppStateRecord()
       ..id = 0

@@ -433,12 +433,25 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
           : _practicedItemIds.first,
     );
     _summaryOpenedForCurrentRun = true;
+    unawaited(_openSessionSummary(session.id));
+  }
 
-    Navigator.of(context).push(
+  Future<void> _openSessionSummary(String sessionId) async {
+    final PracticeSessionSetupV1? replaySetup = await Navigator.of(context)
+        .push<PracticeSessionSetupV1>(
+          MaterialPageRoute<PracticeSessionSetupV1>(
+            builder: (_) => SessionSummaryScreen(
+              controller: widget.controller,
+              sessionId: sessionId,
+            ),
+          ),
+        );
+    if (!mounted || replaySetup == null) return;
+    Navigator.of(context).pushReplacement(
       MaterialPageRoute<void>(
-        builder: (_) => SessionSummaryScreen(
+        builder: (_) => PracticeSessionScreen(
           controller: widget.controller,
-          sessionId: session.id,
+          setup: replaySetup,
         ),
       ),
     );

@@ -1,8 +1,30 @@
 import 'dart:async';
 
 import 'package:audio_session/audio_session.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
+
+enum PracticeMetronomeEngineMode { unknown, native, fallback }
+
+@immutable
+class PracticeMetronomeDiagnostics {
+  final PracticeMetronomeEngineMode mode;
+  final String? lastIssue;
+
+  const PracticeMetronomeDiagnostics({required this.mode, this.lastIssue});
+
+  PracticeMetronomeDiagnostics copyWith({
+    PracticeMetronomeEngineMode? mode,
+    String? lastIssue,
+    bool clearIssue = false,
+  }) {
+    return PracticeMetronomeDiagnostics(
+      mode: mode ?? this.mode,
+      lastIssue: clearIssue ? null : (lastIssue ?? this.lastIssue),
+    );
+  }
+}
 
 class PracticeMetronomeService {
   static const MethodChannel _methodChannel = MethodChannel(
@@ -15,6 +37,12 @@ class PracticeMetronomeService {
   final String assetPath;
   final StreamController<int> _beatController =
       StreamController<int>.broadcast();
+  final ValueNotifier<PracticeMetronomeDiagnostics> diagnostics =
+      ValueNotifier<PracticeMetronomeDiagnostics>(
+        const PracticeMetronomeDiagnostics(
+          mode: PracticeMetronomeEngineMode.unknown,
+        ),
+      );
   late final _FallbackMetronomeEngine _fallback;
 
   StreamSubscription<dynamic>? _nativeBeatSubscription;
@@ -41,12 +69,24 @@ class PracticeMetronomeService {
       });
       _usingNative = true;
       _bindNativeBeatStream();
+      _updateDiagnostics(
+        mode: PracticeMetronomeEngineMode.native,
+        clearIssue: true,
+      );
     } on MissingPluginException {
       await _fallback.prepare();
       _usingNative = false;
-    } catch (_) {
+      _recordIssue('Native metronome plugin missing. Using fallback engine.');
+      _updateDiagnostics(mode: PracticeMetronomeEngineMode.fallback);
+    } catch (error, stackTrace) {
       await _fallback.prepare();
       _usingNative = false;
+      _recordIssue(
+        'Native metronome prepare failed. Using fallback engine.',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      _updateDiagnostics(mode: PracticeMetronomeEngineMode.fallback);
     }
     _prepared = true;
   }
@@ -62,8 +102,17 @@ class PracticeMetronomeService {
           'bpm': bpm,
           'clickEnabled': clickEnabled,
         });
+        _updateDiagnostics(
+          mode: PracticeMetronomeEngineMode.native,
+          clearIssue: true,
+        );
         return;
-      } catch (_) {
+      } catch (error, stackTrace) {
+        _recordIssue(
+          'Native metronome start failed. Switching to fallback engine.',
+          error: error,
+          stackTrace: stackTrace,
+        );
         await _switchToFallback(startImmediately: true);
         return;
       }
@@ -77,7 +126,12 @@ class PracticeMetronomeService {
       try {
         await _methodChannel.invokeMethod<void>('stop');
         return;
-      } catch (_) {
+      } catch (error, stackTrace) {
+        _recordIssue(
+          'Native metronome stop failed. Switching to fallback engine.',
+          error: error,
+          stackTrace: stackTrace,
+        );
         await _switchToFallback();
       }
     }
@@ -93,7 +147,12 @@ class PracticeMetronomeService {
           'bpm': bpm,
         });
         return;
-      } catch (_) {
+      } catch (error, stackTrace) {
+        _recordIssue(
+          'Native metronome BPM update failed. Switching to fallback engine.',
+          error: error,
+          stackTrace: stackTrace,
+        );
         await _switchToFallback(startImmediately: true);
         return;
       }
@@ -111,7 +170,12 @@ class PracticeMetronomeService {
           <String, Object?>{'enabled': value},
         );
         return;
-      } catch (_) {
+      } catch (error, stackTrace) {
+        _recordIssue(
+          'Native metronome click toggle failed. Switching to fallback engine.',
+          error: error,
+          stackTrace: stackTrace,
+        );
         await _switchToFallback(startImmediately: true);
         return;
       }
@@ -125,7 +189,12 @@ class PracticeMetronomeService {
       try {
         await _methodChannel.invokeMethod<void>('playCompletionChime');
         return;
-      } catch (_) {
+      } catch (error, stackTrace) {
+        _recordIssue(
+          'Native completion chime failed. Switching to fallback engine.',
+          error: error,
+          stackTrace: stackTrace,
+        );
         await _switchToFallback();
       }
     }
@@ -137,12 +206,18 @@ class PracticeMetronomeService {
     if (_usingNative) {
       try {
         await _methodChannel.invokeMethod<void>('stop');
-      } catch (_) {
+      } catch (error, stackTrace) {
+        _recordIssue(
+          'Native metronome dispose stop failed.',
+          error: error,
+          stackTrace: stackTrace,
+        );
         // Ignore native teardown errors during dispose.
       }
     }
     await _fallback.dispose();
     await _beatController.close();
+    diagnostics.dispose();
   }
 
   void _bindNativeBeatStream() {
@@ -175,8 +250,34 @@ class PracticeMetronomeService {
       await _fallback.prepare();
     }
     _usingNative = false;
+    _updateDiagnostics(mode: PracticeMetronomeEngineMode.fallback);
     if (startImmediately && _running) {
       await _fallback.start(bpm: _bpm, clickEnabled: _clickEnabled);
+    }
+  }
+
+  void _updateDiagnostics({
+    required PracticeMetronomeEngineMode mode,
+    String? lastIssue,
+    bool clearIssue = false,
+  }) {
+    diagnostics.value = diagnostics.value.copyWith(
+      mode: mode,
+      lastIssue: lastIssue,
+      clearIssue: clearIssue,
+    );
+  }
+
+  void _recordIssue(String message, {Object? error, StackTrace? stackTrace}) {
+    _updateDiagnostics(lastIssue: message, mode: diagnostics.value.mode);
+    if (kDebugMode) {
+      debugPrint(message);
+      if (error != null) {
+        debugPrint('Metronome error: $error');
+      }
+      if (stackTrace != null) {
+        debugPrintStack(stackTrace: stackTrace);
+      }
     }
   }
 }

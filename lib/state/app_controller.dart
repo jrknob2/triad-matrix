@@ -22,6 +22,13 @@ class AppController extends ChangeNotifier {
     return controller;
   }
 
+  @visibleForTesting
+  static Future<AppController> createForTesting(AppStateStore store) async {
+    final AppController controller = AppController._(store);
+    await controller._restorePersistedState();
+    return controller;
+  }
+
   late UserProfileV1 _profile;
   late List<PracticeItemV1> _items;
   late List<PracticeCombinationV1> _combinations;
@@ -34,6 +41,9 @@ class AppController extends ChangeNotifier {
   int _resetVersion = 0;
   AppMockScenarioV1? _activeMockScenario;
   _ControllerRuntimeSnapshot? _liveStateBeforeMock;
+  Future<void> _persistFuture = Future<void>.value();
+  bool _persistQueued = false;
+  bool _persistLoopScheduled = false;
 
   UserProfileV1 get profile => _profile;
   List<PracticeItemV1> get items => List<PracticeItemV1>.unmodifiable(
@@ -98,7 +108,7 @@ class AppController extends ChangeNotifier {
     if (bumpResetVersion) {
       _resetVersion += 1;
     }
-    unawaited(_persistState());
+    _schedulePersist();
     notifyListeners();
   }
 
@@ -131,33 +141,61 @@ class AppController extends ChangeNotifier {
     return <PracticeItemV1>[...filteredItems, ...missingBuiltIns];
   }
 
-  Future<void> _persistState() async {
-    if (isMockScenarioActive) return;
+  AppStateSnapshotData _snapshotForPersistence() {
     final List<PracticeItemV1> persistedItems = _items
         .where((PracticeItemV1 item) => !item.isWarmup && item.saved)
         .toList(growable: false);
-    await _store.save(
-      AppStateSnapshotData(
-        profile: _profile,
-        items: persistedItems,
-        combinations: _combinations
-            .where(
-              (PracticeCombinationV1 combo) =>
-                  itemByIdOrNull(combo.id)?.saved ?? false,
-            )
-            .toList(growable: false),
-        routine: _routine,
-        sessions: _sessions,
-        launchPreferences: _launchPreferencesByItemId.values.toList(
-          growable: false,
-        ),
-        competencyRecords: _competencyByItemId.values.toList(growable: false),
-        assessmentResults: _assessmentResults,
-        assessmentAggregates: _assessmentAggregateByItemId.values.toList(
-          growable: false,
-        ),
+    return AppStateSnapshotData(
+      profile: _profile,
+      items: persistedItems,
+      combinations: _combinations
+          .where(
+            (PracticeCombinationV1 combo) =>
+                itemByIdOrNull(combo.id)?.saved ?? false,
+          )
+          .toList(growable: false),
+      routine: _routine,
+      sessions: _sessions,
+      launchPreferences: _launchPreferencesByItemId.values.toList(
+        growable: false,
+      ),
+      competencyRecords: _competencyByItemId.values.toList(growable: false),
+      assessmentResults: _assessmentResults,
+      assessmentAggregates: _assessmentAggregateByItemId.values.toList(
+        growable: false,
       ),
     );
+  }
+
+  void _schedulePersist() {
+    if (isMockScenarioActive) return;
+    _persistQueued = true;
+    if (_persistLoopScheduled) return;
+    _persistLoopScheduled = true;
+    _persistFuture = _persistFuture
+        .catchError((Object _, StackTrace __) {})
+        .then((_) async {
+          while (_persistQueued && !isMockScenarioActive) {
+            _persistQueued = false;
+            await _store.save(_snapshotForPersistence());
+          }
+        })
+        .catchError((Object error, StackTrace stackTrace) {
+          if (kDebugMode) {
+            debugPrint('Persistence error: $error\n$stackTrace');
+          }
+        })
+        .whenComplete(() {
+          _persistLoopScheduled = false;
+          if (_persistQueued && !isMockScenarioActive) {
+            _schedulePersist();
+          }
+        });
+  }
+
+  @visibleForTesting
+  Future<void> flushPersistence() async {
+    await _persistFuture;
   }
 
   String get weakHandLabel =>
@@ -519,9 +557,7 @@ class AppController extends ChangeNotifier {
       itemIds: <String>[target.id],
       ctaLabel: 'Work on This',
       ctaAction: CoachActionV1.startPractice,
-      matrixFilters: const <TriadMatrixFilterV1>{
-        TriadMatrixFilterV1.inRoutine,
-      },
+      matrixFilters: const <TriadMatrixFilterV1>{TriadMatrixFilterV1.inRoutine},
       practiceMode: PracticeModeV1.singleSurface,
     );
   }
@@ -540,9 +576,9 @@ class AppController extends ChangeNotifier {
 
     if (candidates.isEmpty) return null;
 
-    final List<PracticeItemV1> targets = candidates.take(3).toList(
-      growable: false,
-    );
+    final List<PracticeItemV1> targets = candidates
+        .take(3)
+        .toList(growable: false);
     final bool plural = targets.length > 1;
     return CoachBlockV1(
       id: 'needs_work_${targets.map((PracticeItemV1 item) => item.id).join('_')}',
@@ -1649,39 +1685,6 @@ class AppController extends ChangeNotifier {
     _notifyChanged();
   }
 
-  PracticeItemV1 createCustomPattern({
-    required String sticking,
-    List<String> tags = const <String>[],
-  }) {
-    final String trimmedSticking = sticking.trim();
-    final String canonicalName = _canonicalPatternName(trimmedSticking);
-    final String signature = _patternSignature(trimmedSticking);
-
-    for (final PracticeItemV1 item in _items) {
-      if (item.isCustom && _patternSignature(item.sticking) == signature) {
-        return item;
-      }
-    }
-
-    final PracticeItemV1 item = PracticeItemV1(
-      id: 'custom_${signature.toLowerCase()}',
-      family: MaterialFamilyV1.custom,
-      name: canonicalName,
-      sticking: canonicalName,
-      noteCount: _estimateNoteCount(trimmedSticking),
-      accentedNoteIndices: const <int>[],
-      ghostNoteIndices: const <int>[],
-      voiceAssignments: const <DrumVoiceV1>[],
-      source: PracticeItemSourceV1.userDefined,
-      tags: tags.where((tag) => tag.trim().isNotEmpty).toList(growable: false),
-      saved: true,
-    );
-
-    _items = <PracticeItemV1>[..._items, _sanitizedItem(item)];
-    _notifyChanged();
-    return item;
-  }
-
   PracticeCombinationV1 createCombination({required List<String> itemIds}) {
     final String id = 'combo_${itemIds.join('_')}';
     final String comboName = comboDisplayName(itemIds);
@@ -2606,24 +2609,6 @@ class AppController extends ChangeNotifier {
       ghostNoteIndices: ghosted,
       voiceAssignments: voices,
     );
-  }
-
-  String _patternSignature(String sticking) {
-    return sticking.toUpperCase().replaceAll(RegExp(r'[^RLK]'), '');
-  }
-
-  String _canonicalPatternName(String sticking) {
-    final String signature = _patternSignature(sticking);
-    if (signature.isEmpty) return sticking.trim().toUpperCase();
-    return signature.split('').join(' ');
-  }
-
-  int _estimateNoteCount(String sticking) {
-    final List<String> tokens = sticking
-        .split(RegExp(r'\s+'))
-        .where((token) => token.trim().isNotEmpty)
-        .toList(growable: false);
-    return tokens.isEmpty ? sticking.length : tokens.length;
   }
 
   DrumVoiceV1 _defaultVoiceForToken(String token) {
