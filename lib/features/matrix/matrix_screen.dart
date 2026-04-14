@@ -111,7 +111,7 @@ class _MatrixScreenState extends State<MatrixScreen> {
       selectedItemIds: _selectedItemIds,
       onRemoveAt: _removeSelectedAt,
       actionPills: _buildActionPills(),
-      showProgressLegend: _view == _MatrixPrimaryView.progress,
+      showProgressLegend: isTablet && _view == _MatrixPrimaryView.progress,
       warningMessage: _selectedItemIds.length > 1 && notReadyItemIds.isNotEmpty
           ? 'Some of these triads are not ready yet. You can save the phrase now, but it may be better to work on them more first.'
           : null,
@@ -206,7 +206,7 @@ class _MatrixScreenState extends State<MatrixScreen> {
                 ],
                 if (_view == _MatrixPrimaryView.progress) ...<Widget>[
                   const SizedBox(height: 10),
-                  const _ProgressLegendCard(),
+                  if (_selectedItemIds.isEmpty) const _ProgressLegendCard(),
                 ],
                 if (_selectedItemIds.isNotEmpty) ...<Widget>[
                   const SizedBox(height: 10),
@@ -783,9 +783,7 @@ class _MatrixPhrasePanel extends StatelessWidget {
                   onRemoveAt: onRemoveAt,
                 ),
                 const SizedBox(height: 10),
-                DrumHorizontalControlStrip(
-                  child: Row(children: actionPills),
-                ),
+                DrumHorizontalControlStrip(child: Row(children: actionPills)),
                 if (warningMessage != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 10),

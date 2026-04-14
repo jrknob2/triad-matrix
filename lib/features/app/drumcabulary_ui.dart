@@ -103,7 +103,8 @@ class DrumHorizontalControlStrip extends StatefulWidget {
       _DrumHorizontalControlStripState();
 }
 
-class _DrumHorizontalControlStripState extends State<DrumHorizontalControlStrip> {
+class _DrumHorizontalControlStripState
+    extends State<DrumHorizontalControlStrip> {
   late final ScrollController _controller;
   int _pageCount = 1;
   int _currentPage = 0;
@@ -133,15 +134,17 @@ class _DrumHorizontalControlStripState extends State<DrumHorizontalControlStrip>
     if (!mounted || !_controller.hasClients) return;
     final double viewportWidth = _controller.position.viewportDimension;
     if (viewportWidth <= 0) return;
-    final double contentWidth =
-        _controller.position.maxScrollExtent + viewportWidth;
+    final double maxScrollExtent = _controller.position.maxScrollExtent;
+    final double contentWidth = maxScrollExtent + viewportWidth;
     final int nextPageCount = (contentWidth / viewportWidth).ceil().clamp(
       1,
       1000,
     );
-    final int nextCurrentPage = (_controller.offset / viewportWidth)
-        .round()
-        .clamp(0, nextPageCount - 1);
+    final int nextCurrentPage = maxScrollExtent <= 0
+        ? 0
+        : ((_controller.offset / maxScrollExtent) * (nextPageCount - 1))
+              .round()
+              .clamp(0, nextPageCount - 1);
     if (nextPageCount == _pageCount && nextCurrentPage == _currentPage) return;
     setState(() {
       _pageCount = nextPageCount;

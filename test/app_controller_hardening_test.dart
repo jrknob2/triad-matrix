@@ -86,5 +86,56 @@ void main() {
         );
       },
     );
+
+    test(
+      'saving an authored built-in triad creates or reuses a distinct saved variant',
+      () async {
+        final FakeAppStateStore store = FakeAppStateStore();
+        final AppController controller = await AppController.createForTesting(
+          store,
+        );
+        final String baseItemId =
+            controller.recommendedStartingTriadItemIds.first;
+        final int initialSavedCount = controller.items
+            .where((PracticeItemV1 item) => item.saved)
+            .length;
+
+        final String firstVariantId = controller.savePracticeItemEdits(
+          itemId: baseItemId,
+          accentedNoteIndices: const <int>[0],
+          ghostNoteIndices: const <int>[],
+          voiceAssignments: const <DrumVoiceV1>[],
+          competency: CompetencyLevelV1.learning,
+          saveToWorkingOn: true,
+        );
+
+        expect(firstVariantId, isNot(baseItemId));
+        expect(
+          controller.itemById(firstVariantId).source,
+          PracticeItemSourceV1.userDefined,
+        );
+        expect(
+          controller.itemById(firstVariantId).accentedNoteIndices,
+          const <int>[0],
+        );
+        expect(controller.isDirectRoutineEntry(firstVariantId), isTrue);
+        expect(controller.itemById(baseItemId).accentedNoteIndices, isEmpty);
+
+        final String reusedVariantId = controller.savePracticeItemEdits(
+          itemId: baseItemId,
+          accentedNoteIndices: const <int>[0],
+          ghostNoteIndices: const <int>[],
+          voiceAssignments: const <DrumVoiceV1>[],
+          competency: CompetencyLevelV1.learning,
+          saveToWorkingOn: true,
+        );
+
+        expect(reusedVariantId, firstVariantId);
+        expect(
+          controller.items.where((PracticeItemV1 item) => item.saved).length,
+          initialSavedCount + 1,
+        );
+      },
+    );
   });
 }

@@ -458,7 +458,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       bpm: _sessionBpm,
       timerPreset: _timerPreset,
     );
-    widget.controller.savePracticeItemEdits(
+    final String savedItemId = widget.controller.savePracticeItemEdits(
       itemId: widget.itemId,
       accentedNoteIndices: _accentedNoteIndices,
       ghostNoteIndices: _ghostNoteIndices,
@@ -466,13 +466,36 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       competency: _competency,
       saveToWorkingOn: saveToWorkingOn,
     );
+    if (savedItemId != widget.itemId) {
+      widget.controller.rememberLaunchPreferencesForItem(
+        itemId: savedItemId,
+        bpm: _sessionBpm,
+        timerPreset: _timerPreset,
+      );
+    }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          saveToWorkingOn ? 'Saved to Working On.' : 'Changes saved.',
+          saveToWorkingOn
+              ? 'Saved to Working On.'
+              : savedItemId == widget.itemId
+              ? 'Changes saved.'
+              : 'Saved as a separate item.',
         ),
       ),
     );
+    if (savedItemId != widget.itemId && mounted) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(
+          builder: (BuildContext context) => ItemDetailScreen(
+            controller: widget.controller,
+            itemId: savedItemId,
+            onPracticeItemInMode: widget.onPracticeItemInMode,
+            onOpenInMatrix: widget.onOpenInMatrix,
+          ),
+        ),
+      );
+    }
   }
 
   Future<bool> _handleUnsavedExit() async {

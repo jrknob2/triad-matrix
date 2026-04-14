@@ -292,8 +292,10 @@ Phrase rule:
 - Matrix action controls should change meaningfully between single-triad selection and phrase-building selection
 - filter controls should be labeled `Filters` and rendered in a single horizontally scrollable row
 - if a horizontal control row overflows, it should show a standard page-position dot indicator beneath it
+- the dot indicator should reflect the real number of horizontal viewport pages, and the last dot must become active before the user reaches the far-right edge
 - Progress-filtered Matrix states should make the filtered slice more visually dominant than non-matching cells
 - Matrix should default to `Progress` for generic entry, with `In Working On` selected when that pool exists
+- the Matrix progress legend should appear once per state, not repeat when the phrase panel is open
 
 ---
 

@@ -667,6 +667,8 @@ Rules:
 - when a secondary Progress filter is active, matching cells may retain status color but non-matches should still step back clearly
 - Progress view should show a short active-scope line above the grid, such as `Showing: Needs Work + Recent`
 - progress coloring belongs to `Progress` view only
+- the progress legend should appear only once in a given Matrix state, even when the phrase panel is open
+- horizontal page indicators must reflect the real count of viewport pages, and the last dot must become active before the user reaches the hard end of the strip
 
 #### Phrase Editor
 
@@ -711,7 +713,11 @@ Rules:
   - do not show `Open Item`
   - do not show `Remove from Working On`
 - `Add to Working On` must not silently create or persist a new item
-- for an existing item or saved phrase, `Add to Working On` should prompt the user to open that item instead of creating a duplicate
+- base sticking alone is not the unique identity of saved work
+- distinct authored variants of the same sticking may coexist in `Working On`
+- the unique identity of a saved authored variant is its pattern plus authored accents, ghosts, and voices
+- exact authored duplicates should resolve to the existing saved item instead of creating another copy
+- for an existing item or saved phrase, `Add to Working On` should prompt the user to open that item instead of creating a duplicate of the same authored item
 - for a new phrase, `Add to Working On` should open `Practice Item` as a draft authoring handoff
 - when Matrix is entered from `Focus -> New`, the primary action should read `Save to Working On` and carry the strongest visual emphasis
 - that entry should feel like authoring a new item, not like generic browsing with a secondary add action
