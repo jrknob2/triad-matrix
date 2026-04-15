@@ -748,12 +748,18 @@ class _MatrixPhrasePanel extends StatelessWidget {
         );
     final bool isEditingAuthoredItem = editingItemId != null;
     final bool showPhraseVoices = phraseReadout.showVoices;
+    final List<MatrixPhraseReadoutDataV1> phraseSegmentReadouts = controller
+        .matrixPhraseSegmentReadoutsForSelection(
+          selectedItemIds: selectedItemIds,
+          editingItemId: editingItemId,
+        );
 
     final Widget phraseSequenceEditor = PatternSequenceEditor(
       controller: controller,
       itemIds: selectedItemIds,
       onRemoveAt: onRemoveAt,
-      showVoiceRows: !isEditingAuthoredItem,
+      showVoiceRows: null,
+      readouts: isEditingAuthoredItem ? phraseSegmentReadouts : null,
     );
 
     return Column(

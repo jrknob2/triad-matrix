@@ -15,6 +15,7 @@ class PatternVoiceDisplay extends StatelessWidget {
   final bool showRepeatIndicator;
   final bool scrollable;
   final bool showPatternRow;
+  final bool showDynamics;
   final bool showVoiceRow;
   final bool wrap;
 
@@ -26,11 +27,12 @@ class PatternVoiceDisplay extends StatelessWidget {
     this.patternStyle,
     this.voiceStyle,
     this.cellWidth = 46,
-    this.ghostOpacity = 0.72,
+    this.ghostOpacity = 0.62,
     this.grouping = PatternGroupingV1.none,
     this.showRepeatIndicator = false,
     this.scrollable = true,
     this.showPatternRow = true,
+    this.showDynamics = true,
     this.showVoiceRow = true,
     this.wrap = false,
   }) : assert(tokens.length == markings.length),
@@ -142,8 +144,11 @@ class PatternVoiceDisplay extends StatelessWidget {
               chunk: chunk,
               separators: separators,
               separatorWidth: separatorWidth,
-              noteCellFor: (int index) =>
-                  _patternText(tokens[index], markings[index], patternStyle),
+              noteCellFor: (int index) => _patternText(
+                tokens[index],
+                showDynamics ? markings[index] : PatternNoteMarkingV1.normal,
+                patternStyle,
+              ),
               separatorStyle: patternStyle,
             ),
           ),
@@ -274,30 +279,46 @@ class PatternVoiceDisplay extends StatelessWidget {
     PatternNoteMarkingV1 marking,
     TextStyle baseStyle,
   ) {
-    return FittedBox(
-      fit: BoxFit.scaleDown,
-      child: RichText(
-        textAlign: TextAlign.center,
-        softWrap: false,
-        maxLines: 1,
-        overflow: TextOverflow.visible,
-        text: TextSpan(
-          style: baseStyle,
-          children: switch (marking) {
-            PatternNoteMarkingV1.normal => <InlineSpan>[
-              TextSpan(text: token, style: baseStyle),
-            ],
-            PatternNoteMarkingV1.accent => <InlineSpan>[
-              TextSpan(text: '^', style: baseStyle),
-              TextSpan(text: token, style: baseStyle),
-            ],
-            PatternNoteMarkingV1.ghost => <InlineSpan>[
-              TextSpan(text: '(', style: _ghostParenStyle(baseStyle)),
-              TextSpan(text: token, style: baseStyle),
-              TextSpan(text: ')', style: _ghostParenStyle(baseStyle)),
-            ],
-          },
-        ),
+    final double fontSize = baseStyle.fontSize ?? 18;
+    return SizedBox(
+      width: cellWidth,
+      height: fontSize * 1.45,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
+        children: <Widget>[
+          Center(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                token,
+                textAlign: TextAlign.center,
+                softWrap: false,
+                maxLines: 1,
+                style: baseStyle,
+              ),
+            ),
+          ),
+          if (marking == PatternNoteMarkingV1.accent)
+            Positioned(
+              top: -fontSize * 0.18,
+              child: Text(
+                '^',
+                textAlign: TextAlign.center,
+                style: baseStyle.copyWith(fontSize: fontSize * 0.72),
+              ),
+            ),
+          if (marking == PatternNoteMarkingV1.ghost) ...<Widget>[
+            Align(
+              alignment: const Alignment(-0.55, 0),
+              child: Text('(', style: _ghostParenStyle(baseStyle)),
+            ),
+            Align(
+              alignment: const Alignment(0.55, 0),
+              child: Text(')', style: _ghostParenStyle(baseStyle)),
+            ),
+          ],
+        ],
       ),
     );
   }

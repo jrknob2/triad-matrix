@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/practice/practice_domain_v1.dart';
 import '../../../state/app_controller.dart';
+import 'pattern_voice_display.dart';
 import 'pattern_readout.dart';
 
 class PatternSequenceEditor extends StatelessWidget {
@@ -9,6 +11,7 @@ class PatternSequenceEditor extends StatelessWidget {
   final ValueChanged<int>? onRemoveAt;
   final EdgeInsetsGeometry chipPadding;
   final bool? showVoiceRows;
+  final List<MatrixPhraseReadoutDataV1>? readouts;
 
   const PatternSequenceEditor({
     super.key,
@@ -17,6 +20,7 @@ class PatternSequenceEditor extends StatelessWidget {
     this.onRemoveAt,
     this.chipPadding = const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
     this.showVoiceRows,
+    this.readouts,
   });
 
   @override
@@ -27,24 +31,49 @@ class PatternSequenceEditor extends StatelessWidget {
       runSpacing: 8,
       children: List<Widget>.generate(itemIds.length, (int index) {
         final String itemId = itemIds[index];
+        final MatrixPhraseReadoutDataV1? readout =
+            readouts != null && index < readouts!.length
+            ? readouts![index]
+            : null;
         return InputChip(
           padding: chipPadding,
-          label: PatternReadout(
-            controller: controller,
-            itemId: itemId,
-            patternStyle: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w900,
-              letterSpacing: -0.4,
-            ),
-            voiceStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF6A5E4C),
-            ),
-            scrollable: false,
-            wrap: false,
-            cellWidth: 22,
-            showVoiceRow: showVoiceRows,
-          ),
+          label: readout == null
+              ? PatternReadout(
+                  controller: controller,
+                  itemId: itemId,
+                  patternStyle: Theme.of(context).textTheme.titleMedium
+                      ?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.4,
+                      ),
+                  voiceStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF6A5E4C),
+                  ),
+                  scrollable: false,
+                  wrap: false,
+                  cellWidth: 22,
+                  showVoiceRow: showVoiceRows,
+                )
+              : PatternVoiceDisplay(
+                  tokens: readout.tokens,
+                  markings: readout.markings,
+                  voices: readout.voices,
+                  grouping: PatternGroupingV1.none,
+                  patternStyle: Theme.of(context).textTheme.titleMedium
+                      ?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.4,
+                      ),
+                  voiceStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF6A5E4C),
+                  ),
+                  scrollable: false,
+                  wrap: false,
+                  cellWidth: 22,
+                  showVoiceRow: showVoiceRows ?? readout.showVoices,
+                ),
           onDeleted: onRemoveAt == null ? null : () => onRemoveAt!(index),
         );
       }),

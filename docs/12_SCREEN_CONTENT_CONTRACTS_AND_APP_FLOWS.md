@@ -53,6 +53,7 @@ Notation rule:
 
 - the app should use one canonical notation renderer everywhere notation is shown
 - screens may wrap that renderer for selection or editing, but they should not fork the visual notation language
+- the canonical renderer must support independent display options for authored dynamics and authored voices
 - notation readouts should be center-justified everywhere by default
 - if a notation surface also wraps, each wrapped line group should remain visually centered
 - left alignment for notation needs an explicit exception, not ad hoc local styling
@@ -60,6 +61,8 @@ Notation rule:
 - marked tokens like `^R` and `(R)` must remain visually intact as one unit
 - ghost notation should keep the note letter at normal size and weight; only the parentheses should step back visually
 - if a pattern has authored dynamics or authored voices, that authored state should render consistently everywhere the pattern is shown
+- screens that need a compact structural view, such as the Matrix grid, may suppress dynamics and voices while still using the canonical renderer
+- suppressing dynamics or voices is a display choice only; it must not mutate or discard authored item data
 - when grouped phrase notation wraps, the group separator should stay at the end of the row it belongs to
 - long player phrases may wrap on phone, but that wrapping must occur on practical group boundaries rather than by raw character position
 
@@ -697,6 +700,8 @@ Rules:
 - progress coloring belongs to `Progress` view only
 - the progress legend should appear only once in a given Matrix state, even when the phrase panel is open
 - horizontal page indicators must reflect the real count of viewport pages, and the last dot must become active before the user reaches the hard end of the strip
+- Matrix grid cells should render as structural cells only; they must not show authored dynamics or voice rows
+- Matrix phrase panels and sequence chips may show authored dynamics and voices because they represent the selected phrase, not the structural grid
 
 #### Phrase Editor
 
@@ -1291,6 +1296,7 @@ Practice Item lets the user inspect and edit one item cleanly.
 - `Open in Matrix` must reuse the Matrix screen in an item-edit context when the material can be expressed as a triad or triad phrase
 - in that context, Matrix should preload the current sequence from the authored item draft, preserve the authored item state through the round trip, and replace `Add to Working On` with a return action back to `Working On`
 - `Open in Matrix` must treat the current `Practice Item` draft as authoritative; it must not render the phrase from global child-triad state if that would scramble or replace authored markings or voices
+- unsaved phrase drafts may still reopen Matrix for structure edits; `Open in Matrix` should not be disabled solely because the item has not been saved to `Working On` yet
 - adding a triad in Matrix should append a new segment with that triad's default/authored template data, while existing segments retain their current authored markings and voices
 - removing a triad in Matrix should remove that occurrence and its attached authored segment data
 - when Matrix editing expands a single triad into a phrase, returning should continue in `Practice Item` on the resulting phrase item instead of silently keeping the old single-triad item

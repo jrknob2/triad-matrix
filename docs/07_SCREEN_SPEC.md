@@ -250,6 +250,8 @@ The grid shows membership.
 The phrase notation readout shows the whole phrase.  
 The phrase editor shows exact ordered occurrences.
 
+Matrix grid cells are structural cells. They should use the shared notation renderer, but suppress authored dynamics and voice rows. Phrase readouts and phrase-editor chips may show those authored layers because they represent the selected phrase rather than the grid catalog.
+
 If an item appears anywhere in the phrase, its matrix cell is selected.  
 Exact removal happens in the phrase editor, not inside the cell.
 
@@ -623,6 +625,7 @@ Practice Item is the detail/edit screen for one piece of material.
 - when Matrix editing expands a single triad into a phrase, returning should continue on the resulting phrase item instead of dropping the added triads
 - `Practice Item` owns authored item editing; `Matrix` only edits phrase structure when launched from this screen
 - `Open in Matrix` must hand off the current item draft rather than asking Matrix to infer authored state from child triad records
+- `Open in Matrix` should remain available for unsaved phrase drafts that can be represented as triad sequences
 - when Matrix returns, Practice Item should continue on the same authored item draft when possible, or on the resulting replacement phrase item when the structure changed from one triad to a phrase
 
 ### Session Summary Rules

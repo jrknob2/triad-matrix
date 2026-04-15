@@ -14,6 +14,7 @@ class PatternReadout extends StatelessWidget {
   final bool scrollable;
   final bool wrap;
   final double cellWidth;
+  final bool showDynamics;
   final bool? showVoiceRow;
   final bool showPatternRow;
 
@@ -28,6 +29,7 @@ class PatternReadout extends StatelessWidget {
     this.scrollable = true,
     this.wrap = false,
     this.cellWidth = 46,
+    this.showDynamics = true,
     this.showVoiceRow,
     this.showPatternRow = true,
   });
@@ -45,6 +47,7 @@ class PatternReadout extends StatelessWidget {
       showRepeatIndicator: showRepeatIndicator,
       scrollable: scrollable,
       showPatternRow: showPatternRow,
+      showDynamics: showDynamics,
       showVoiceRow: showVoiceRow ?? controller.hasNonSnareVoice(itemId),
       wrap: wrap,
     );

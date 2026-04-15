@@ -166,7 +166,7 @@ class _TriadCellButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         onTap: visualState.inScope ? () => onTapItem(itemId) : null,
         child: Ink(
-          height: controller.hasNonSnareVoice(itemId) ? 72 : 56,
+          height: 56,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
             color: style.backgroundColor,
@@ -192,6 +192,8 @@ class _TriadCellButton extends StatelessWidget {
               scrollable: false,
               wrap: false,
               cellWidth: 16,
+              showDynamics: false,
+              showVoiceRow: false,
             ),
           ),
         ),

@@ -1117,6 +1117,36 @@ class AppController extends ChangeNotifier {
     );
   }
 
+  List<MatrixPhraseReadoutDataV1> matrixPhraseSegmentReadoutsForSelection({
+    required List<String> selectedItemIds,
+    String? editingItemId,
+  }) {
+    if (selectedItemIds.isEmpty) return const <MatrixPhraseReadoutDataV1>[];
+    final PracticeItemV1? editingItem = editingItemId == null
+        ? null
+        : itemByIdOrNull(editingItemId);
+    if (editingItem != null) {
+      return _matrixPhraseSegmentReadoutsFromAuthoredItem(
+        sourceItem: _sanitizedItem(editingItem),
+        selectedItemIds: selectedItemIds,
+      );
+    }
+    return selectedItemIds
+        .map((String itemId) {
+          final PracticeItemV1? item = itemByIdOrNull(itemId);
+          if (item == null) return MatrixPhraseReadoutDataV1.empty;
+          final List<String> tokens = noteTokensFor(itemId);
+          final List<DrumVoiceV1> voices = noteVoicesFor(itemId);
+          return MatrixPhraseReadoutDataV1(
+            tokens: tokens,
+            markings: noteMarkingsFor(itemId),
+            voices: voices,
+            showVoices: _hasReadoutFlowVoices(tokens: tokens, voices: voices),
+          );
+        })
+        .toList(growable: false);
+  }
+
   bool hasNonSnareVoice(String itemId) {
     return _hasAuthoredFlowVoices(_sanitizedItem(itemById(itemId)));
   }
@@ -1450,6 +1480,31 @@ class AppController extends ChangeNotifier {
     required PracticeItemV1 sourceItem,
     required List<String> selectedItemIds,
   }) {
+    final List<MatrixPhraseReadoutDataV1> segments =
+        _matrixPhraseSegmentReadoutsFromAuthoredItem(
+          sourceItem: sourceItem,
+          selectedItemIds: selectedItemIds,
+        );
+    final List<String> tokens = <String>[];
+    final List<PatternNoteMarkingV1> markings = <PatternNoteMarkingV1>[];
+    final List<DrumVoiceV1> voices = <DrumVoiceV1>[];
+    for (final MatrixPhraseReadoutDataV1 segment in segments) {
+      tokens.addAll(segment.tokens);
+      markings.addAll(segment.markings);
+      voices.addAll(segment.voices);
+    }
+    return MatrixPhraseReadoutDataV1(
+      tokens: List<String>.unmodifiable(tokens),
+      markings: List<PatternNoteMarkingV1>.unmodifiable(markings),
+      voices: List<DrumVoiceV1>.unmodifiable(voices),
+      showVoices: _hasReadoutFlowVoices(tokens: tokens, voices: voices),
+    );
+  }
+
+  List<MatrixPhraseReadoutDataV1> _matrixPhraseSegmentReadoutsFromAuthoredItem({
+    required PracticeItemV1 sourceItem,
+    required List<String> selectedItemIds,
+  }) {
     final List<String> sourceItemIds = sourceItem.isCombo
         ? combinationById(sourceItem.id).itemIds
         : <String>[sourceItem.id];
@@ -1458,9 +1513,8 @@ class AppController extends ChangeNotifier {
           itemIds: sourceItemIds,
           sourceItem: sourceItem,
         );
-    final List<String> tokens = <String>[];
-    final List<PatternNoteMarkingV1> markings = <PatternNoteMarkingV1>[];
-    final List<DrumVoiceV1> voices = <DrumVoiceV1>[];
+    final List<MatrixPhraseReadoutDataV1> readouts =
+        <MatrixPhraseReadoutDataV1>[];
 
     for (final String nextItemId in selectedItemIds) {
       final PracticeItemV1? nextItemOrNull = itemByIdOrNull(nextItemId);
@@ -1470,30 +1524,46 @@ class AppController extends ChangeNotifier {
         (_CombinationItemSegment segment) =>
             !segment.used && segment.itemId == nextItemId,
       );
-      tokens.addAll(_normalizedTokensForItem(nextItem));
+      final List<String> segmentTokens = _normalizedTokensForItem(nextItem);
       if (segmentIndex >= 0) {
         final _CombinationItemSegment segment = previousSegments[segmentIndex];
         segment.used = true;
-        markings.addAll(
-          _markingsForNoteCount(
-            noteCount: nextItem.noteCount,
-            accentedNoteIndices: segment.accentedNoteIndices,
-            ghostNoteIndices: segment.ghostNoteIndices,
+        final List<PatternNoteMarkingV1> segmentMarkings =
+            _markingsForNoteCount(
+              noteCount: nextItem.noteCount,
+              accentedNoteIndices: segment.accentedNoteIndices,
+              ghostNoteIndices: segment.ghostNoteIndices,
+            );
+        readouts.add(
+          MatrixPhraseReadoutDataV1(
+            tokens: List<String>.unmodifiable(segmentTokens),
+            markings: List<PatternNoteMarkingV1>.unmodifiable(segmentMarkings),
+            voices: List<DrumVoiceV1>.unmodifiable(segment.voiceAssignments),
+            showVoices: _hasReadoutFlowVoices(
+              tokens: segmentTokens,
+              voices: segment.voiceAssignments,
+            ),
           ),
         );
-        voices.addAll(segment.voiceAssignments);
       } else {
-        markings.addAll(noteMarkingsFor(nextItemId));
-        voices.addAll(_effectiveVoicesForItem(nextItem));
+        final List<DrumVoiceV1> segmentVoices = _effectiveVoicesForItem(
+          nextItem,
+        );
+        readouts.add(
+          MatrixPhraseReadoutDataV1(
+            tokens: List<String>.unmodifiable(segmentTokens),
+            markings: noteMarkingsFor(nextItemId),
+            voices: List<DrumVoiceV1>.unmodifiable(segmentVoices),
+            showVoices: _hasReadoutFlowVoices(
+              tokens: segmentTokens,
+              voices: segmentVoices,
+            ),
+          ),
+        );
       }
     }
 
-    return MatrixPhraseReadoutDataV1(
-      tokens: List<String>.unmodifiable(tokens),
-      markings: List<PatternNoteMarkingV1>.unmodifiable(markings),
-      voices: List<DrumVoiceV1>.unmodifiable(voices),
-      showVoices: _hasReadoutFlowVoices(tokens: tokens, voices: voices),
-    );
+    return readouts;
   }
 
   List<PatternNoteMarkingV1> _markingsForNoteCount({

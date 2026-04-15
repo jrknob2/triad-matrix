@@ -201,7 +201,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                 ),
                 const SizedBox(height: 8),
                 OutlinedButton(
-                  onPressed: isDraftItem || !supportsMatrixEditing
+                  onPressed: !supportsMatrixEditing
                       ? null
                       : () async {
                           final String currentItemId = hasUnsavedChanges
@@ -649,18 +649,8 @@ class _SelectableNotationCell extends StatelessWidget {
                 tokens: <String>[token],
                 markings: <PatternNoteMarkingV1>[marking],
                 voices: <DrumVoiceV1>[voice],
-                patternStyle: enabled
-                    ? patternStyle
-                    : patternStyle.copyWith(
-                        color: (patternStyle.color ?? const Color(0xFF101010))
-                            .withValues(alpha: 0.45),
-                      ),
-                voiceStyle: enabled
-                    ? voiceStyle
-                    : voiceStyle.copyWith(
-                        color: (voiceStyle.color ?? const Color(0xFF5B5345))
-                            .withValues(alpha: 0.45),
-                      ),
+                patternStyle: patternStyle,
+                voiceStyle: voiceStyle,
                 cellWidth: 32,
                 scrollable: false,
                 wrap: false,
