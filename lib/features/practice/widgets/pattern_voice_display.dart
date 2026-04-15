@@ -134,6 +134,9 @@ class PatternVoiceDisplay extends StatelessWidget {
     required TextStyle patternStyle,
     required TextStyle voiceStyle,
   }) {
+    final double patternCellHeight = (patternStyle.fontSize ?? 18) * 1.35;
+    final double voiceCellHeight = (voiceStyle.fontSize ?? 12) * 1.25;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: <Widget>[
@@ -144,6 +147,7 @@ class PatternVoiceDisplay extends StatelessWidget {
               chunk: chunk,
               separators: separators,
               separatorWidth: separatorWidth,
+              cellHeight: patternCellHeight,
               noteCellFor: (int index) => _patternText(
                 tokens[index],
                 showDynamics ? markings[index] : PatternNoteMarkingV1.normal,
@@ -160,6 +164,7 @@ class PatternVoiceDisplay extends StatelessWidget {
               chunk: chunk,
               separators: separators,
               separatorWidth: separatorWidth,
+              cellHeight: voiceCellHeight,
               noteCellFor: (int index) => Text(
                 voices[index].shortLabel,
                 textAlign: TextAlign.center,
@@ -254,16 +259,22 @@ class PatternVoiceDisplay extends StatelessWidget {
     required _PatternVoiceChunk chunk,
     required List<String> separators,
     required double separatorWidth,
+    required double cellHeight,
     required Widget Function(int index) noteCellFor,
     required TextStyle separatorStyle,
     bool showSeparatorText = true,
   }) {
     return <Widget>[
       for (int index = chunk.start; index < chunk.end; index++) ...<Widget>[
-        _PatternVoiceCell(width: cellWidth, child: noteCellFor(index)),
+        _PatternVoiceCell(
+          width: cellWidth,
+          height: cellHeight,
+          child: noteCellFor(index),
+        ),
         if (separators[index].isNotEmpty)
           _PatternVoiceCell(
             width: separatorWidth,
+            height: cellHeight,
             child: Text(
               showSeparatorText ? separators[index] : '',
               textAlign: TextAlign.center,
@@ -282,40 +293,54 @@ class PatternVoiceDisplay extends StatelessWidget {
     final double fontSize = baseStyle.fontSize ?? 18;
     return SizedBox(
       width: cellWidth,
-      height: fontSize * 1.45,
+      height: fontSize * 1.35,
       child: Stack(
+        fit: StackFit.expand,
         clipBehavior: Clip.none,
         alignment: Alignment.center,
         children: <Widget>[
-          Center(
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                token,
-                textAlign: TextAlign.center,
-                softWrap: false,
-                maxLines: 1,
-                style: baseStyle,
-              ),
-            ),
+          Text(
+            token,
+            textAlign: TextAlign.center,
+            softWrap: false,
+            maxLines: 1,
+            overflow: TextOverflow.visible,
+            style: baseStyle,
           ),
           if (marking == PatternNoteMarkingV1.accent)
-            Positioned(
-              top: -fontSize * 0.18,
+            Align(
+              alignment: const Alignment(-0.62, 0),
               child: Text(
                 '^',
                 textAlign: TextAlign.center,
-                style: baseStyle.copyWith(fontSize: fontSize * 0.72),
+                softWrap: false,
+                maxLines: 1,
+                overflow: TextOverflow.visible,
+                style: baseStyle,
               ),
             ),
           if (marking == PatternNoteMarkingV1.ghost) ...<Widget>[
             Align(
-              alignment: const Alignment(-0.55, 0),
-              child: Text('(', style: _ghostParenStyle(baseStyle)),
+              alignment: const Alignment(-0.58, 0),
+              child: Text(
+                '(',
+                textAlign: TextAlign.center,
+                softWrap: false,
+                maxLines: 1,
+                overflow: TextOverflow.visible,
+                style: _ghostParenStyle(baseStyle),
+              ),
             ),
             Align(
-              alignment: const Alignment(0.55, 0),
-              child: Text(')', style: _ghostParenStyle(baseStyle)),
+              alignment: const Alignment(0.58, 0),
+              child: Text(
+                ')',
+                textAlign: TextAlign.center,
+                softWrap: false,
+                maxLines: 1,
+                overflow: TextOverflow.visible,
+                style: _ghostParenStyle(baseStyle),
+              ),
             ),
           ],
         ],
@@ -331,14 +356,20 @@ class PatternVoiceDisplay extends StatelessWidget {
 
 class _PatternVoiceCell extends StatelessWidget {
   final double width;
+  final double height;
   final Widget child;
 
-  const _PatternVoiceCell({required this.width, required this.child});
+  const _PatternVoiceCell({
+    required this.width,
+    required this.height,
+    required this.child,
+  });
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: width,
+      height: height,
       child: Center(child: child),
     );
   }

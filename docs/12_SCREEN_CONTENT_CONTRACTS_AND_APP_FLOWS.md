@@ -59,7 +59,14 @@ Notation rule:
 - left alignment for notation needs an explicit exception, not ad hoc local styling
 - notation may wrap only between note cells or documented group boundaries, never inside a marked token
 - marked tokens like `^R` and `(R)` must remain visually intact as one unit
+- `R`, `L`, and `K` are the anchor glyphs and must always render at the exact same size within a notation readout
+- the note glyph must remain horizontally centered in its note cell regardless of accents, ghosts, voices, or phrase separators
+- all non-accent notation characters should align to the same note-row centerline
+- `^` is the only notation character allowed to sit off the note-cell center; it decorates the note without moving or resizing the note glyph
 - ghost notation should keep the note letter at normal size and weight; only the parentheses should step back visually
+- dynamics are part of the pattern token presentation; accent marks should render beside the note, not over the note
+- voice rows should align to the same note-cell centers as the pattern row, without changing the pattern token rendering
+- phrase separators like `-` belong to the notes row and must align with that row's centerline, not visually drift between the notes row and the voice row
 - if a pattern has authored dynamics or authored voices, that authored state should render consistently everywhere the pattern is shown
 - screens that need a compact structural view, such as the Matrix grid, may suppress dynamics and voices while still using the canonical renderer
 - suppressing dynamics or voices is a display choice only; it must not mutate or discard authored item data
