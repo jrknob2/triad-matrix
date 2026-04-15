@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/pattern/triad_matrix.dart';
 import '../../../core/practice/practice_domain_v1.dart';
 import '../../../state/app_controller.dart';
+import '../../practice/widgets/pattern_readout.dart';
 
 class TriadMatrixGrid extends StatelessWidget {
   final AppController controller;
@@ -165,7 +166,7 @@ class _TriadCellButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         onTap: visualState.inScope ? () => onTapItem(itemId) : null,
         child: Ink(
-          height: 56,
+          height: controller.hasNonSnareVoice(itemId) ? 72 : 56,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
             color: style.backgroundColor,
@@ -175,13 +176,22 @@ class _TriadCellButton extends StatelessWidget {
             ),
           ),
           child: Center(
-            child: Text(
-              cell.id,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            child: PatternReadout(
+              controller: controller,
+              itemId: itemId,
+              grouping: PatternGroupingV1.none,
+              patternStyle: Theme.of(context).textTheme.titleMedium?.copyWith(
                 color: style.textColor,
                 fontWeight: FontWeight.w900,
                 letterSpacing: 0.1,
               ),
+              voiceStyle: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: style.textColor.withValues(alpha: 0.78),
+                fontWeight: FontWeight.w800,
+              ),
+              scrollable: false,
+              wrap: false,
+              cellWidth: 16,
             ),
           ),
         ),

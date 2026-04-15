@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../state/app_controller.dart';
-import 'pattern_display_text.dart';
+import 'pattern_readout.dart';
 
 class PatternSequenceEditor extends StatelessWidget {
   final AppController controller;
@@ -27,14 +27,20 @@ class PatternSequenceEditor extends StatelessWidget {
         final String itemId = itemIds[index];
         return InputChip(
           padding: chipPadding,
-          label: PatternDisplayText(
-            tokens: controller.noteTokensFor(itemId),
-            markings: controller.noteMarkingsFor(itemId),
-            grouping: controller.displayGroupingFor(itemId),
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+          label: PatternReadout(
+            controller: controller,
+            itemId: itemId,
+            patternStyle: Theme.of(context).textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w900,
               letterSpacing: -0.4,
             ),
+            voiceStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF6A5E4C),
+            ),
+            scrollable: false,
+            wrap: false,
+            cellWidth: 22,
           ),
           onDeleted: onRemoveAt == null ? null : () => onRemoveAt!(index),
         );

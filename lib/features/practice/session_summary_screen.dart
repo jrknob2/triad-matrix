@@ -4,8 +4,7 @@ import '../../core/practice/practice_domain_v1.dart';
 import '../../features/app/app_formatters.dart';
 import '../../features/app/drumcabulary_ui.dart';
 import '../../state/app_controller.dart';
-import 'widgets/pattern_display_text.dart';
-import 'widgets/pattern_voice_display.dart';
+import 'widgets/pattern_readout.dart';
 
 class SessionSummaryScreen extends StatefulWidget {
   final AppController controller;
@@ -113,38 +112,19 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                     ),
                     const SizedBox(height: 12),
                   ],
-                  if (session.practiceMode == PracticeModeV1.flow)
-                    PatternVoiceDisplay(
-                      tokens: widget.controller.noteTokensFor(currentItemId),
-                      markings: widget.controller.noteMarkingsFor(
-                        currentItemId,
-                      ),
-                      voices: widget.controller.noteVoicesFor(currentItemId),
-                      grouping: widget.controller.displayGroupingFor(
-                        currentItemId,
-                      ),
-                      patternStyle: Theme.of(context).textTheme.headlineMedium
-                          ?.copyWith(
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -0.8,
-                          ),
-                      voiceStyle: Theme.of(context).textTheme.titleMedium,
-                    )
-                  else
-                    PatternDisplayText(
-                      tokens: widget.controller.noteTokensFor(currentItemId),
-                      markings: widget.controller.noteMarkingsFor(
-                        currentItemId,
-                      ),
-                      grouping: widget.controller.displayGroupingFor(
-                        currentItemId,
-                      ),
-                      style: Theme.of(context).textTheme.headlineMedium
-                          ?.copyWith(
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -0.8,
-                          ),
-                    ),
+                  PatternReadout(
+                    controller: widget.controller,
+                    itemId: currentItemId,
+                    patternStyle: Theme.of(context).textTheme.headlineMedium
+                        ?.copyWith(
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.8,
+                        ),
+                    voiceStyle: Theme.of(context).textTheme.titleMedium,
+                    scrollable: false,
+                    wrap: true,
+                    cellWidth: 28,
+                  ),
                   const SizedBox(height: 12),
                   _SummaryMetric(
                     label: 'Duration',

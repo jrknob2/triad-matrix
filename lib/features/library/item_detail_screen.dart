@@ -7,6 +7,7 @@ import '../../features/app/drumcabulary_ui.dart';
 import '../../features/app/unsaved_changes_dialog.dart';
 import '../../state/app_controller.dart';
 import '../practice/widgets/session_setup_controls.dart';
+import '../practice/widgets/pattern_voice_display.dart';
 
 class ItemDetailScreen extends StatefulWidget {
   final AppController controller;
@@ -644,57 +645,28 @@ class _SelectableNotationCell extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              RichText(
-                textAlign: TextAlign.center,
-                softWrap: false,
-                text: TextSpan(
-                  style: patternStyle,
-                  children: switch (marking) {
-                    PatternNoteMarkingV1.normal => <InlineSpan>[
-                      TextSpan(
-                        text: token,
-                        style: enabled
-                            ? patternStyle
-                            : patternStyle.copyWith(
-                                color:
-                                    (patternStyle.color ??
-                                            const Color(0xFF101010))
-                                        .withValues(alpha: 0.45),
-                              ),
+              PatternVoiceDisplay(
+                tokens: <String>[token],
+                markings: <PatternNoteMarkingV1>[marking],
+                voices: <DrumVoiceV1>[voice],
+                patternStyle: enabled
+                    ? patternStyle
+                    : patternStyle.copyWith(
+                        color: (patternStyle.color ?? const Color(0xFF101010))
+                            .withValues(alpha: 0.45),
                       ),
-                    ],
-                    PatternNoteMarkingV1.accent => <InlineSpan>[
-                      TextSpan(text: '^', style: patternStyle),
-                      TextSpan(text: token, style: patternStyle),
-                    ],
-                    PatternNoteMarkingV1.ghost => <InlineSpan>[
-                      TextSpan(
-                        text: '(',
-                        style: patternStyle.copyWith(
-                          color: (patternStyle.color ?? const Color(0xFF101010))
-                              .withValues(alpha: 0.72),
-                        ),
+                voiceStyle: enabled
+                    ? voiceStyle
+                    : voiceStyle.copyWith(
+                        color: (voiceStyle.color ?? const Color(0xFF5B5345))
+                            .withValues(alpha: 0.45),
                       ),
-                      TextSpan(text: token, style: patternStyle),
-                      TextSpan(
-                        text: ')',
-                        style: patternStyle.copyWith(
-                          color: (patternStyle.color ?? const Color(0xFF101010))
-                              .withValues(alpha: 0.72),
-                        ),
-                      ),
-                    ],
-                  },
-                ),
+                cellWidth: 32,
+                scrollable: false,
+                wrap: false,
+                grouping: PatternGroupingV1.none,
+                showVoiceRow: showVoice,
               ),
-              if (showVoice) ...<Widget>[
-                const SizedBox(height: 2),
-                Text(
-                  voice.shortLabel,
-                  style: voiceStyle,
-                  textAlign: TextAlign.center,
-                ),
-              ],
             ],
           ),
         ),

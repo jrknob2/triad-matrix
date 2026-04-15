@@ -5,8 +5,7 @@ import '../../features/app/app_formatters.dart';
 import '../../features/app/drumcabulary_theme.dart';
 import '../../features/app/drumcabulary_ui.dart';
 import '../../state/app_controller.dart';
-import '../practice/widgets/pattern_display_text.dart';
-import '../practice/widgets/pattern_voice_display.dart';
+import '../practice/widgets/pattern_readout.dart';
 import '../practice/widgets/practice_item_summary_block.dart';
 
 enum _FocusViewFilter { all, singleSurface, flow }
@@ -216,10 +215,6 @@ class _FocusScreenState extends State<FocusScreen> {
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
-        final List<String> tokens = widget.controller.noteTokensFor(item.id);
-        final List<PatternNoteMarkingV1> markings = widget.controller
-            .noteMarkingsFor(item.id);
-        final bool showVoices = widget.controller.hasNonSnareVoice(item.id);
         return AlertDialog(
           backgroundColor: DrumcabularyTheme.surface,
           surfaceTintColor: Colors.transparent,
@@ -237,27 +232,17 @@ class _FocusScreenState extends State<FocusScreen> {
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 14),
-              PatternDisplayText(
-                tokens: tokens,
-                markings: markings,
-                grouping: widget.controller.displayGroupingFor(item.id),
-                style: Theme.of(
+              PatternReadout(
+                controller: widget.controller,
+                itemId: item.id,
+                patternStyle: Theme.of(
                   context,
                 ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+                voiceStyle: Theme.of(context).textTheme.bodySmall,
+                scrollable: false,
+                wrap: true,
+                cellWidth: 24,
               ),
-              if (showVoices) ...<Widget>[
-                const SizedBox(height: 8),
-                PatternVoiceDisplay(
-                  tokens: tokens,
-                  markings: markings,
-                  voices: widget.controller.noteVoicesFor(item.id),
-                  grouping: widget.controller.displayGroupingFor(item.id),
-                  patternStyle: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w900),
-                  voiceStyle: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
             ],
           ),
           actions: <Widget>[

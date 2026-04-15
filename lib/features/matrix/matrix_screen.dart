@@ -6,7 +6,7 @@ import '../../features/app/drumcabulary_theme.dart';
 import '../../features/app/drumcabulary_ui.dart';
 import '../app/app_viewport.dart';
 import '../../state/app_controller.dart';
-import '../practice/widgets/pattern_display_text.dart';
+import '../practice/widgets/pattern_voice_display.dart';
 import '../practice/widgets/pattern_sequence_editor.dart';
 import 'widgets/triad_matrix_grid.dart';
 
@@ -742,6 +742,12 @@ class _MatrixPhrasePanel extends StatelessWidget {
     final List<PatternNoteMarkingV1> phraseMarkings = selectedItemIds
         .expand(controller.noteMarkingsFor)
         .toList(growable: false);
+    final List<DrumVoiceV1> phraseVoices = selectedItemIds
+        .expand(controller.noteVoicesFor)
+        .toList(growable: false);
+    final bool showPhraseVoices = selectedItemIds.any(
+      controller.hasNonSnareVoice,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -767,13 +773,23 @@ class _MatrixPhrasePanel extends StatelessWidget {
                   ),
                 )
               else ...<Widget>[
-                PatternDisplayText(
+                PatternVoiceDisplay(
                   tokens: phraseTokens,
                   markings: phraseMarkings,
+                  voices: phraseVoices,
                   grouping: PatternGroupingV1.triads,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -0.4,
+                  scrollable: false,
+                  wrap: true,
+                  showVoiceRow: showPhraseVoices,
+                  cellWidth: 28,
+                  patternStyle: Theme.of(context).textTheme.titleLarge
+                      ?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.4,
+                      ),
+                  voiceStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: const Color(0xFF6A5E4C),
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 10),

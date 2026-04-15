@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/practice/practice_domain_v1.dart';
 import '../../state/app_controller.dart';
 import '../app/drumcabulary_ui.dart';
-import '../practice/widgets/pattern_display_text.dart';
+import '../practice/widgets/pattern_readout.dart';
 
 typedef OpenMatrixCallback =
     void Function({
@@ -304,13 +304,21 @@ class _CoachPatternStrip extends StatelessWidget {
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: const Color(0xFFD8C8B0)),
                 ),
-                child: PatternDisplayText(
-                  tokens: controller.noteTokensFor(itemId),
-                  markings: controller.noteMarkingsFor(itemId),
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -0.5,
+                child: PatternReadout(
+                  controller: controller,
+                  itemId: itemId,
+                  patternStyle: Theme.of(context).textTheme.titleMedium
+                      ?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.5,
+                      ),
+                  voiceStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF6A5E4C),
                   ),
+                  scrollable: false,
+                  wrap: false,
+                  cellWidth: 22,
                 ),
               ),
             ),
@@ -352,9 +360,9 @@ class _GettingStartedCoachCard extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             'Drumcabulary helps you build the control, flow, and confidence to move around the kit with ease. Start with these four triads. Repeat each one slowly and evenly with a relaxed posture and grip. Take your time. Clean reps build real progress.',
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              height: 1.35,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyLarge?.copyWith(height: 1.35),
           ),
           const SizedBox(height: 16),
           Wrap(
@@ -374,9 +382,7 @@ class _GettingStartedCoachCard extends StatelessWidget {
             children: <Widget>[
               FilledButton(
                 onPressed: onAddToWorkingOn,
-                child: Text(
-                  allAdded ? 'Open Working On' : 'Add to Working On',
-                ),
+                child: Text(allAdded ? 'Open Working On' : 'Add to Working On'),
               ),
               OutlinedButton(
                 onPressed: () => onOpenMatrix(),
