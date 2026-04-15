@@ -10,13 +10,13 @@ class StartupSplashScreen extends StatelessWidget {
       body: SafeArea(
         child: LayoutBuilder(
           builder: (BuildContext context, BoxConstraints constraints) {
-            final double iconWidth = (constraints.maxWidth * 0.76).clamp(
-              280.0,
-              520.0,
+            final double iconWidth = (constraints.maxWidth * 0.86).clamp(
+              320.0,
+              620.0,
             );
             return Center(
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(8),
                 child: Image(
                   image: const AssetImage('assets/icons/app_icon_splash.png'),
                   width: iconWidth,
