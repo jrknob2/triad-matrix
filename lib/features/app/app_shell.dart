@@ -284,7 +284,6 @@ class _AppShellState extends State<AppShell> {
         builder: (_) => ItemDetailScreen(
           controller: widget.controller,
           itemId: itemId,
-          onPracticeItemInMode: _openPracticeItemInMode,
           onOpenInMatrix: _openMatrixForItemEdit,
         ),
       ),

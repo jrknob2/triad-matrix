@@ -11,14 +11,12 @@ import '../practice/widgets/session_setup_controls.dart';
 class ItemDetailScreen extends StatefulWidget {
   final AppController controller;
   final String itemId;
-  final void Function(String, PracticeModeV1) onPracticeItemInMode;
   final Future<List<String>?> Function(String) onOpenInMatrix;
 
   const ItemDetailScreen({
     super.key,
     required this.controller,
     required this.itemId,
-    required this.onPracticeItemInMode,
     required this.onOpenInMatrix,
   });
 
@@ -30,7 +28,6 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   late List<int> _accentedNoteIndices;
   late List<int> _ghostNoteIndices;
   late List<DrumVoiceV1> _voiceAssignments;
-  late CompetencyLevelV1 _competency;
   late int _sessionBpm;
   late TimerPresetV1 _timerPreset;
   late Set<int> _selectedNoteIndices;
@@ -150,72 +147,6 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
-                DrumPanel(
-                  child: Padding(
-                    padding: EdgeInsets.zero,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Row(
-                          children: <Widget>[
-                            Expanded(
-                              child: Text(
-                                'Competency',
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                            ),
-                            PopupMenuButton<CompetencyLevelV1>(
-                              onSelected: (CompetencyLevelV1 next) {
-                                setState(() => _competency = next);
-                              },
-                              itemBuilder: (BuildContext context) =>
-                                  CompetencyLevelV1.values
-                                      .map(
-                                        (CompetencyLevelV1 level) =>
-                                            PopupMenuItem<CompetencyLevelV1>(
-                                              value: level,
-                                              child: Text(level.label),
-                                            ),
-                                      )
-                                      .toList(growable: false),
-                              child: DrumTag(
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: <Widget>[
-                                    Text(
-                                      _competency.label,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .labelLarge
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.w900,
-                                          ),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    const Icon(Icons.expand_more, size: 18),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 14),
-                        Text(
-                          widget.controller.competencyGuidanceFor(
-                            item.id,
-                            _competency,
-                          ),
-                          style: Theme.of(context).textTheme.bodyLarge
-                              ?.copyWith(
-                                color: const Color(0xFF5B5345),
-                                height: 1.35,
-                              ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
                 const SizedBox(height: 12),
                 DrumPanel(
                   child: SessionSetupControls(
@@ -268,68 +199,29 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                FilledButton.tonal(
-                  onPressed: isDraftItem
-                      ? null
-                      : () async {
-                          if (hasUnsavedChanges) _saveDraft();
-                          widget.controller.rememberLaunchPreferencesForItem(
-                            itemId: item.id,
-                            bpm: _sessionBpm,
-                            timerPreset: _timerPreset,
-                          );
-                          widget.onPracticeItemInMode(
-                            item.id,
-                            PracticeModeV1.singleSurface,
-                          );
-                        },
-                  child: const Text('Practice on One Surface'),
-                ),
-                const SizedBox(height: 8),
-                FilledButton.tonal(
-                  onPressed: isDraftItem || !flowCapable
-                      ? null
-                      : () async {
-                          if (hasUnsavedChanges) _saveDraft();
-                          widget.controller.rememberLaunchPreferencesForItem(
-                            itemId: item.id,
-                            bpm: _sessionBpm,
-                            timerPreset: _timerPreset,
-                          );
-                          widget.onPracticeItemInMode(
-                            item.id,
-                            PracticeModeV1.flow,
-                          );
-                        },
-                  child: const Text('Practice in Flow'),
-                ),
-                const SizedBox(height: 8),
                 OutlinedButton(
                   onPressed: isDraftItem || !supportsMatrixEditing
                       ? null
                       : () async {
-                          if (hasUnsavedChanges) {
-                            _saveDraft();
-                          }
+                          final String currentItemId = hasUnsavedChanges
+                              ? _saveDraft(navigateToSavedVariant: false)
+                              : item.id;
                           final List<String>? selection = await widget
-                              .onOpenInMatrix(item.id);
+                              .onOpenInMatrix(currentItemId);
                           if (!mounted ||
                               selection == null ||
-                              !item.isCombo ||
                               listEquals(
                                 selection,
                                 widget.controller.matrixSelectionItemIdsForItem(
-                                  item.id,
+                                  currentItemId,
                                 ),
                               )) {
                             return;
                           }
-                          widget.controller.updateCombinationSelection(
-                            comboId: item.id,
-                            itemIds: selection,
+                          _applyMatrixSelectionResult(
+                            originalItemId: currentItemId,
+                            selection: selection,
                           );
-                          _loadDraftFromController();
-                          setState(() {});
                         },
                   child: const Text('Open in Matrix'),
                 ),
@@ -365,7 +257,6 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     _voiceAssignments = List<DrumVoiceV1>.from(
       widget.controller.noteVoicesFor(item.id),
     );
-    _competency = widget.controller.competencyFor(item.id);
     _sessionBpm = widget.controller.launchBpmForItem(item.id);
     _timerPreset = widget.controller.launchTimerPresetForItem(item.id);
     _selectedNoteIndices = <int>{};
@@ -452,12 +343,14 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
           widget.controller.noteVoicesFor(item.id),
           _voiceAssignments,
         ) ||
-        widget.controller.competencyFor(item.id) != _competency ||
         widget.controller.launchBpmForItem(item.id) != _sessionBpm ||
         widget.controller.launchTimerPresetForItem(item.id) != _timerPreset;
   }
 
-  void _saveDraft({bool saveToWorkingOn = false}) {
+  String _saveDraft({
+    bool saveToWorkingOn = false,
+    bool navigateToSavedVariant = true,
+  }) {
     widget.controller.rememberLaunchPreferencesForItem(
       itemId: widget.itemId,
       bpm: _sessionBpm,
@@ -468,7 +361,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       accentedNoteIndices: _accentedNoteIndices,
       ghostNoteIndices: _ghostNoteIndices,
       voiceAssignments: _voiceAssignments,
-      competency: _competency,
+      competency: widget.controller.competencyFor(widget.itemId),
       saveToWorkingOn: saveToWorkingOn,
     );
     if (savedItemId != widget.itemId) {
@@ -489,18 +382,72 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         ),
       ),
     );
-    if (savedItemId != widget.itemId && mounted) {
+    if (navigateToSavedVariant && savedItemId != widget.itemId && mounted) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(
           builder: (BuildContext context) => ItemDetailScreen(
             controller: widget.controller,
             itemId: savedItemId,
-            onPracticeItemInMode: widget.onPracticeItemInMode,
             onOpenInMatrix: widget.onOpenInMatrix,
           ),
         ),
       );
     }
+    return savedItemId;
+  }
+
+  void _applyMatrixSelectionResult({
+    required String originalItemId,
+    required List<String> selection,
+  }) {
+    final PracticeItemV1 sourceItem = widget.controller.itemById(
+      originalItemId,
+    );
+    if (sourceItem.isCombo) {
+      widget.controller.updateCombinationSelection(
+        comboId: originalItemId,
+        itemIds: selection,
+      );
+      _loadDraftFromController();
+      setState(() {});
+      return;
+    }
+
+    if (selection.length == 1) {
+      final String selectedItemId = selection.first;
+      if (selectedItemId == originalItemId) {
+        _loadDraftFromController();
+        setState(() {});
+        return;
+      }
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(
+          builder: (BuildContext context) => ItemDetailScreen(
+            controller: widget.controller,
+            itemId: selectedItemId,
+            onOpenInMatrix: widget.onOpenInMatrix,
+          ),
+        ),
+      );
+      return;
+    }
+
+    final PracticeCombinationV1 combo = widget.controller
+        .createDraftCombinationForEditing(itemIds: selection);
+    widget.controller.rememberLaunchPreferencesForItem(
+      itemId: combo.id,
+      bpm: _sessionBpm,
+      timerPreset: _timerPreset,
+    );
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute<void>(
+        builder: (BuildContext context) => ItemDetailScreen(
+          controller: widget.controller,
+          itemId: combo.id,
+          onOpenInMatrix: widget.onOpenInMatrix,
+        ),
+      ),
+    );
   }
 
   Future<bool> _handleUnsavedExit() async {

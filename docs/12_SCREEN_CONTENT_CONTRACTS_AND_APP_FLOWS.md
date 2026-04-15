@@ -1216,13 +1216,10 @@ Practice Item lets the user inspect and edit one item cleanly.
 ### Allowed Content
 
 - pattern display
-- assessment/competency summary
+- concise work summary
 - accent/ghost controls
 - flow voice controls
-- `Practice on One Surface`
-- `Practice in Flow` when the item has authored off-snare voices on non-kick notes
 - session setup controls for BPM and duration
-- practice CTA
 - open in matrix CTA
 
 ### Forbidden Content
@@ -1239,9 +1236,8 @@ Practice Item lets the user inspect and edit one item cleanly.
 - selection and assignment are separate actions
 - `Accents & Ghosts` assigns the marking for the selected note set
 - `Flow Voices` assigns the voice for the selected note set
-- session setup controls belong here for single-item practice
+- practice default controls may live here even though session launch happens elsewhere
 - last BPM and duration for a single item should be remembered outside the authored item data
-- practice CTA launches the chosen mode
 - accents, ghosts, and flow voice assignments are user-authored edit layers
 - base material enters the app plain unless the user has explicitly edited it
 - no voice assignments and all-default voices must collapse to the same single-surface state
@@ -1260,6 +1256,8 @@ Practice Item lets the user inspect and edit one item cleanly.
 - if the user adds a built-in item to `Working On` while it has unsaved authored accents, ghosts, or voices, that action should save or reuse a distinct authored variant instead of adding the plain built-in item
 - `Open in Matrix` must reuse the Matrix screen in an item-edit context when the material can be expressed as a triad or triad phrase
 - in that context, Matrix should preload the current sequence, preserve the authored item state through the round trip, and replace `Add to Working On` with a return action back to `Working On`
+- when Matrix editing expands a single triad into a phrase, returning should continue in `Practice Item` on the resulting phrase item instead of silently keeping the old single-triad item
+- `Practice Item` should not offer direct practice-launch buttons when that pulls the screen away from its editing job
 
 ---
 

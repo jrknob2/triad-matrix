@@ -578,12 +578,10 @@ Practice Item is the detail/edit screen for one piece of material.
 ### Must Do
 
 - show the pattern clearly
-- show competency/assessment summary
+- show concise work history / settings context where it helps
 - allow accent/ghost editing
 - allow flow voice assignment
-- allow session BPM and duration setup before launch
-- allow launch into `Single Surface`
-- allow launch into `Flow` only when the item has authored off-snare voices on non-kick notes
+- allow per-item BPM and duration defaults
 - allow opening that item in Matrix
 - use explicit save for edits
 - warn before leaving with unsaved changes
@@ -600,8 +598,7 @@ Practice Item is the detail/edit screen for one piece of material.
 - controls under it are clearly for editing the item, not playing it
 - accent/ghost controls act on the current selected note set
 - voice controls act on the current selected note set
-- session setup values should feel like launch defaults, not authored pattern data
-- `Flow` should read as derived capability from voice assignments, not a user-declared item mode
+- practice defaults should feel like saved setup values, not authored pattern data
 - no voice assignments and all-default voices should be treated as the same single-surface state
 - default kick placement on `K` should not make an item read as Flow
 - list filters may still expose `Single Surface` and `Flow` as derived item states
@@ -617,6 +614,8 @@ Practice Item is the detail/edit screen for one piece of material.
 - selection should toggle on tap so the user can add and remove notes from the current selected set
 - applying a marking or voice assignment should clear the current selection
 - kick notes should not be assignable in this editor flow
+- `Practice Item` should stay authoring-focused and should not contain direct practice-launch buttons
+- when Matrix editing expands a single triad into a phrase, returning should continue on the resulting phrase item instead of dropping the added triads
 
 ### Session Summary Rules
 
