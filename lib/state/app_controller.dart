@@ -1282,25 +1282,45 @@ class AppController extends ChangeNotifier {
     final PracticeItemV1 existingItem = itemById(comboId);
     if (!existingItem.isCombo) return;
 
+    final PracticeCombinationV1 existingCombo = combinationById(comboId);
     final String comboName = comboDisplayName(itemIds);
     final int noteCount = itemIds.fold<int>(
       0,
       (int sum, String itemId) => sum + itemById(itemId).noteCount,
     );
-    final List<DrumVoiceV1> previousVoices = noteVoicesFor(comboId);
-    final List<DrumVoiceV1> fallbackVoices = <DrumVoiceV1>[];
-    for (final String entryId in itemIds) {
-      fallbackVoices.addAll(
-        _effectiveVoicesForItem(_sanitizedItem(itemById(entryId))),
+    final List<_CombinationItemSegment> previousSegments =
+        _combinationItemSegments(
+          itemIds: existingCombo.itemIds,
+          sourceItem: existingItem,
+        );
+    final List<int> nextAccents = <int>[];
+    final List<int> nextGhosts = <int>[];
+    final List<DrumVoiceV1> nextVoices = <DrumVoiceV1>[];
+    int offset = 0;
+    for (final String nextItemId in itemIds) {
+      final PracticeItemV1 nextItem = itemById(nextItemId);
+      final int itemNoteCount = nextItem.noteCount;
+      final int segmentIndex = previousSegments.indexWhere(
+        (_CombinationItemSegment segment) =>
+            !segment.used && segment.itemId == nextItemId,
       );
+      if (segmentIndex >= 0) {
+        final _CombinationItemSegment segment = previousSegments[segmentIndex];
+        segment.used = true;
+        nextAccents.addAll(
+          segment.accentedNoteIndices.map((int index) => index + offset),
+        );
+        nextGhosts.addAll(
+          segment.ghostNoteIndices.map((int index) => index + offset),
+        );
+        nextVoices.addAll(segment.voiceAssignments);
+      } else {
+        nextAccents.addAll(nextItem.accentedNoteIndices.map((i) => i + offset));
+        nextGhosts.addAll(nextItem.ghostNoteIndices.map((i) => i + offset));
+        nextVoices.addAll(_effectiveVoicesForItem(_sanitizedItem(nextItem)));
+      }
+      offset += itemNoteCount;
     }
-    final List<DrumVoiceV1> nextVoices = List<DrumVoiceV1>.generate(
-      noteCount,
-      (int index) => index < previousVoices.length
-          ? previousVoices[index]
-          : fallbackVoices[index],
-      growable: false,
-    );
 
     _combinations = _combinations
         .map((PracticeCombinationV1 combo) {
@@ -1320,12 +1340,8 @@ class AppController extends ChangeNotifier {
               name: comboName,
               sticking: comboName,
               noteCount: noteCount,
-              accentedNoteIndices: item.accentedNoteIndices
-                  .where((int index) => index < noteCount)
-                  .toList(growable: false),
-              ghostNoteIndices: item.ghostNoteIndices
-                  .where((int index) => index < noteCount)
-                  .toList(growable: false),
+              accentedNoteIndices: nextAccents,
+              ghostNoteIndices: nextGhosts,
               voiceAssignments: nextVoices,
             ),
           );
@@ -1333,6 +1349,45 @@ class AppController extends ChangeNotifier {
         .toList(growable: false);
 
     _notifyChanged();
+  }
+
+  List<_CombinationItemSegment> _combinationItemSegments({
+    required List<String> itemIds,
+    required PracticeItemV1 sourceItem,
+  }) {
+    final List<DrumVoiceV1> sourceVoices = noteVoicesFor(sourceItem.id);
+    final Set<int> sourceAccents = sourceItem.accentedNoteIndices.toSet();
+    final Set<int> sourceGhosts = sourceItem.ghostNoteIndices.toSet();
+    final List<_CombinationItemSegment> segments = <_CombinationItemSegment>[];
+    int offset = 0;
+    for (final String itemId in itemIds) {
+      final int itemNoteCount = itemById(itemId).noteCount;
+      segments.add(
+        _CombinationItemSegment(
+          itemId: itemId,
+          accentedNoteIndices: sourceAccents
+              .where(
+                (int index) =>
+                    index >= offset && index < offset + itemNoteCount,
+              )
+              .map((int index) => index - offset)
+              .toList(growable: false),
+          ghostNoteIndices: sourceGhosts
+              .where(
+                (int index) =>
+                    index >= offset && index < offset + itemNoteCount,
+              )
+              .map((int index) => index - offset)
+              .toList(growable: false),
+          voiceAssignments: sourceVoices.sublist(
+            offset,
+            offset + itemNoteCount,
+          ),
+        ),
+      );
+      offset += itemNoteCount;
+    }
+    return segments;
   }
 
   bool combinationContainsItem({
@@ -3604,6 +3659,21 @@ class _ControllerRuntimeSnapshot {
     required this.assessmentResults,
     required this.assessmentAggregateByItemId,
     required this.competencyByItemId,
+  });
+}
+
+class _CombinationItemSegment {
+  final String itemId;
+  final List<int> accentedNoteIndices;
+  final List<int> ghostNoteIndices;
+  final List<DrumVoiceV1> voiceAssignments;
+  bool used = false;
+
+  _CombinationItemSegment({
+    required this.itemId,
+    required this.accentedNoteIndices,
+    required this.ghostNoteIndices,
+    required this.voiceAssignments,
   });
 }
 

@@ -56,6 +56,7 @@ Notation rule:
 - left alignment for notation needs an explicit exception, not ad hoc local styling
 - notation may wrap only between note cells or documented group boundaries, never inside a marked token
 - marked tokens like `^R` and `(R)` must remain visually intact as one unit
+- ghost notation should keep the note letter at normal size and weight; only the parentheses should step back visually
 - when grouped phrase notation wraps, the group separator should stay at the end of the row it belongs to
 - long player phrases may wrap on phone, but that wrapping must occur on practical group boundaries rather than by raw character position
 
@@ -687,6 +688,7 @@ Rules:
 - grid reflects membership only
 - additional triads may be added freely while building a phrase
 - if a phrase includes triads that are not ready, Matrix should show inline guidance instead of blocking selection
+- that guidance should explain readiness in relation to building a longer phrase, not as an undefined generic gate
 - adding material from Matrix must not inject accents, ghosts, or flow voices automatically
 - phrase-building mode defaults to flow-oriented practice actions
 - phrase chips in the editor should size to their phrase content and wrap as compact rows

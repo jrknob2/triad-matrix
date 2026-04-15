@@ -668,16 +668,21 @@ class _SelectableNotationCell extends StatelessWidget {
                       TextSpan(text: token, style: patternStyle),
                     ],
                     PatternNoteMarkingV1.ghost => <InlineSpan>[
-                      TextSpan(text: '(', style: patternStyle),
                       TextSpan(
-                        text: token,
+                        text: '(',
                         style: patternStyle.copyWith(
-                          fontSize: (patternStyle.fontSize ?? 28) * 0.84,
                           color: (patternStyle.color ?? const Color(0xFF101010))
                               .withValues(alpha: 0.72),
                         ),
                       ),
-                      TextSpan(text: ')', style: patternStyle),
+                      TextSpan(text: token, style: patternStyle),
+                      TextSpan(
+                        text: ')',
+                        style: patternStyle.copyWith(
+                          color: (patternStyle.color ?? const Color(0xFF101010))
+                              .withValues(alpha: 0.72),
+                        ),
+                      ),
                     ],
                   },
                 ),

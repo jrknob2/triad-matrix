@@ -113,7 +113,7 @@ class _MatrixScreenState extends State<MatrixScreen> {
       actionPills: _buildActionPills(),
       showProgressLegend: isTablet && _view == _MatrixPrimaryView.progress,
       warningMessage: _selectedItemIds.length > 1 && notReadyItemIds.isNotEmpty
-          ? 'Some of these triads are not ready yet. You can save the phrase now, but it may be better to work on them more first.'
+          ? 'Some of these triads are still early in your work. You can save this phrase now, but it may be better to keep practicing those triads on their own before building them into a longer phrase.'
           : null,
     );
 
