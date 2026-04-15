@@ -109,6 +109,9 @@ class _MatrixScreenState extends State<MatrixScreen> {
     final Widget phrasePanel = _MatrixPhrasePanel(
       controller: widget.controller,
       selectedItemIds: _selectedItemIds,
+      editingItemId: _isEditingFromPracticeItem
+          ? widget.request?.editingItemId
+          : null,
       onRemoveAt: _removeSelectedAt,
       actionPills: _buildActionPills(),
       showProgressLegend: isTablet && _view == _MatrixPrimaryView.progress,
@@ -720,6 +723,7 @@ class _MatrixScopeLine extends StatelessWidget {
 class _MatrixPhrasePanel extends StatelessWidget {
   final AppController controller;
   final List<String> selectedItemIds;
+  final String? editingItemId;
   final ValueChanged<int> onRemoveAt;
   final List<Widget> actionPills;
   final bool showProgressLegend;
@@ -728,6 +732,7 @@ class _MatrixPhrasePanel extends StatelessWidget {
   const _MatrixPhrasePanel({
     required this.controller,
     required this.selectedItemIds,
+    required this.editingItemId,
     required this.onRemoveAt,
     required this.actionPills,
     required this.showProgressLegend,
@@ -736,17 +741,19 @@ class _MatrixPhrasePanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List<String> phraseTokens = selectedItemIds
-        .expand(controller.noteTokensFor)
-        .toList(growable: false);
-    final List<PatternNoteMarkingV1> phraseMarkings = selectedItemIds
-        .expand(controller.noteMarkingsFor)
-        .toList(growable: false);
-    final List<DrumVoiceV1> phraseVoices = selectedItemIds
-        .expand(controller.noteVoicesFor)
-        .toList(growable: false);
-    final bool showPhraseVoices = selectedItemIds.any(
-      controller.hasNonSnareVoice,
+    final MatrixPhraseReadoutDataV1 phraseReadout = controller
+        .matrixPhraseReadoutForSelection(
+          selectedItemIds: selectedItemIds,
+          editingItemId: editingItemId,
+        );
+    final bool isEditingAuthoredItem = editingItemId != null;
+    final bool showPhraseVoices = phraseReadout.showVoices;
+
+    final Widget phraseSequenceEditor = PatternSequenceEditor(
+      controller: controller,
+      itemIds: selectedItemIds,
+      onRemoveAt: onRemoveAt,
+      showVoiceRows: !isEditingAuthoredItem,
     );
 
     return Column(
@@ -774,9 +781,9 @@ class _MatrixPhrasePanel extends StatelessWidget {
                 )
               else ...<Widget>[
                 PatternVoiceDisplay(
-                  tokens: phraseTokens,
-                  markings: phraseMarkings,
-                  voices: phraseVoices,
+                  tokens: phraseReadout.tokens,
+                  markings: phraseReadout.markings,
+                  voices: phraseReadout.voices,
                   grouping: PatternGroupingV1.triads,
                   scrollable: false,
                   wrap: true,
@@ -793,11 +800,7 @@ class _MatrixPhrasePanel extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 10),
-                PatternSequenceEditor(
-                  controller: controller,
-                  itemIds: selectedItemIds,
-                  onRemoveAt: onRemoveAt,
-                ),
+                phraseSequenceEditor,
                 const SizedBox(height: 10),
                 DrumHorizontalControlStrip(child: Row(children: actionPills)),
                 if (warningMessage != null)

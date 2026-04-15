@@ -137,5 +137,38 @@ void main() {
         );
       },
     );
+
+    test(
+      'matrix edit readout uses the authored phrase instead of child triad voices',
+      () async {
+        final FakeAppStateStore store = FakeAppStateStore();
+        final AppController controller = await AppController.createForTesting(
+          store,
+        );
+
+        controller.setMockScenario(AppMockScenarioV1.flowReady);
+
+        const String comboId = 'combo_rll_lrr_rlr';
+        final List<String> itemIds = controller.matrixSelectionItemIdsForItem(
+          comboId,
+        );
+
+        final MatrixPhraseReadoutDataV1 genericReadout = controller
+            .matrixPhraseReadoutForSelection(selectedItemIds: itemIds);
+        final MatrixPhraseReadoutDataV1 editingReadout = controller
+            .matrixPhraseReadoutForSelection(
+              selectedItemIds: itemIds,
+              editingItemId: comboId,
+            );
+
+        expect(genericReadout.showVoices, isTrue);
+        expect(editingReadout.showVoices, isFalse);
+        expect(
+          editingReadout.voices,
+          List<DrumVoiceV1>.filled(9, DrumVoiceV1.snare),
+        );
+        expect(editingReadout.tokens.join(), 'RLLLRRRLR');
+      },
+    );
   });
 }

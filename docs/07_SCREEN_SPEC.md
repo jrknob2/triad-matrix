@@ -274,8 +274,13 @@ Phrase rule:
 - Matrix phrase-building state should not expose a separate `Save` action when `Add to Working On` already hands off into explicit item authoring
 - when Matrix is opened from `Practice Item`, it should reuse Matrix in edit mode instead of routing to a separate builder screen
 - Matrix edit mode must preload the item's current triad sequence on first render
+- Matrix edit mode must treat the current `Practice Item` draft as the source of truth for phrase readout, accents, ghosts, and voices
+- Matrix edit mode may use child triads as templates for newly added segments, but it must not rebuild the existing phrase from child-triad records
 - Matrix edit mode should replace `Add to Working On` with a return action back to `Working On`
 - moving from `Practice Item` into Matrix and back must preserve authored markings and voice assignments unless the user explicitly changes and saves them
+- unchanged phrase occurrences should keep their authored segment data through the Matrix round trip
+- newly added phrase occurrences should start with the added triad's default/authored template data
+- removed phrase occurrences should remove that segment's authored data
 - the phrase panel should show both a readable notation line for the whole phrase and removable chips for exact occurrence editing
 - phrase-building state should not show `Open Item`
 - phrase-editor chips should size to their content and wrap as compact rows instead of stretching across the panel
@@ -616,6 +621,9 @@ Practice Item is the detail/edit screen for one piece of material.
 - kick notes should not be assignable in this editor flow
 - `Practice Item` should stay authoring-focused and should not contain direct practice-launch buttons
 - when Matrix editing expands a single triad into a phrase, returning should continue on the resulting phrase item instead of dropping the added triads
+- `Practice Item` owns authored item editing; `Matrix` only edits phrase structure when launched from this screen
+- `Open in Matrix` must hand off the current item draft rather than asking Matrix to infer authored state from child triad records
+- when Matrix returns, Practice Item should continue on the same authored item draft when possible, or on the resulting replacement phrase item when the structure changed from one triad to a phrase
 
 ### Session Summary Rules
 

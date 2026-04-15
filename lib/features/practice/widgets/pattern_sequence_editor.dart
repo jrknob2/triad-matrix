@@ -8,6 +8,7 @@ class PatternSequenceEditor extends StatelessWidget {
   final List<String> itemIds;
   final ValueChanged<int>? onRemoveAt;
   final EdgeInsetsGeometry chipPadding;
+  final bool? showVoiceRows;
 
   const PatternSequenceEditor({
     super.key,
@@ -15,6 +16,7 @@ class PatternSequenceEditor extends StatelessWidget {
     required this.itemIds,
     this.onRemoveAt,
     this.chipPadding = const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+    this.showVoiceRows,
   });
 
   @override
@@ -41,6 +43,7 @@ class PatternSequenceEditor extends StatelessWidget {
             scrollable: false,
             wrap: false,
             cellWidth: 22,
+            showVoiceRow: showVoiceRows,
           ),
           onDeleted: onRemoveAt == null ? null : () => onRemoveAt!(index),
         );

@@ -8,6 +8,28 @@ import '../features/app/app_formatters.dart';
 import '../features/app/app_runtime_flags.dart';
 import 'persistence/app_state_store.dart';
 
+@immutable
+class MatrixPhraseReadoutDataV1 {
+  final List<String> tokens;
+  final List<PatternNoteMarkingV1> markings;
+  final List<DrumVoiceV1> voices;
+  final bool showVoices;
+
+  const MatrixPhraseReadoutDataV1({
+    required this.tokens,
+    required this.markings,
+    required this.voices,
+    required this.showVoices,
+  });
+
+  static const MatrixPhraseReadoutDataV1 empty = MatrixPhraseReadoutDataV1(
+    tokens: <String>[],
+    markings: <PatternNoteMarkingV1>[],
+    voices: <DrumVoiceV1>[],
+    showVoices: false,
+  );
+}
+
 class AppController extends ChangeNotifier {
   AppController._(this._store) {
     _initializeFirstLightState();
@@ -1061,6 +1083,40 @@ class AppController extends ChangeNotifier {
     return List<DrumVoiceV1>.unmodifiable(_effectiveVoicesForItem(item));
   }
 
+  MatrixPhraseReadoutDataV1 matrixPhraseReadoutForSelection({
+    required List<String> selectedItemIds,
+    String? editingItemId,
+  }) {
+    if (selectedItemIds.isEmpty) return MatrixPhraseReadoutDataV1.empty;
+
+    final PracticeItemV1? editingItem = editingItemId == null
+        ? null
+        : itemByIdOrNull(editingItemId);
+    if (editingItem != null) {
+      return _matrixPhraseReadoutFromAuthoredItem(
+        sourceItem: _sanitizedItem(editingItem),
+        selectedItemIds: selectedItemIds,
+      );
+    }
+
+    final List<String> tokens = <String>[];
+    final List<PatternNoteMarkingV1> markings = <PatternNoteMarkingV1>[];
+    final List<DrumVoiceV1> voices = <DrumVoiceV1>[];
+    for (final String itemId in selectedItemIds) {
+      final PracticeItemV1? item = itemByIdOrNull(itemId);
+      if (item == null) continue;
+      tokens.addAll(noteTokensFor(itemId));
+      markings.addAll(noteMarkingsFor(itemId));
+      voices.addAll(noteVoicesFor(itemId));
+    }
+    return MatrixPhraseReadoutDataV1(
+      tokens: List<String>.unmodifiable(tokens),
+      markings: List<PatternNoteMarkingV1>.unmodifiable(markings),
+      voices: List<DrumVoiceV1>.unmodifiable(voices),
+      showVoices: _hasReadoutFlowVoices(tokens: tokens, voices: voices),
+    );
+  }
+
   bool hasNonSnareVoice(String itemId) {
     return _hasAuthoredFlowVoices(_sanitizedItem(itemById(itemId)));
   }
@@ -1388,6 +1444,85 @@ class AppController extends ChangeNotifier {
       offset += itemNoteCount;
     }
     return segments;
+  }
+
+  MatrixPhraseReadoutDataV1 _matrixPhraseReadoutFromAuthoredItem({
+    required PracticeItemV1 sourceItem,
+    required List<String> selectedItemIds,
+  }) {
+    final List<String> sourceItemIds = sourceItem.isCombo
+        ? combinationById(sourceItem.id).itemIds
+        : <String>[sourceItem.id];
+    final List<_CombinationItemSegment> previousSegments =
+        _combinationItemSegments(
+          itemIds: sourceItemIds,
+          sourceItem: sourceItem,
+        );
+    final List<String> tokens = <String>[];
+    final List<PatternNoteMarkingV1> markings = <PatternNoteMarkingV1>[];
+    final List<DrumVoiceV1> voices = <DrumVoiceV1>[];
+
+    for (final String nextItemId in selectedItemIds) {
+      final PracticeItemV1? nextItemOrNull = itemByIdOrNull(nextItemId);
+      if (nextItemOrNull == null) continue;
+      final PracticeItemV1 nextItem = _sanitizedItem(nextItemOrNull);
+      final int segmentIndex = previousSegments.indexWhere(
+        (_CombinationItemSegment segment) =>
+            !segment.used && segment.itemId == nextItemId,
+      );
+      tokens.addAll(_normalizedTokensForItem(nextItem));
+      if (segmentIndex >= 0) {
+        final _CombinationItemSegment segment = previousSegments[segmentIndex];
+        segment.used = true;
+        markings.addAll(
+          _markingsForNoteCount(
+            noteCount: nextItem.noteCount,
+            accentedNoteIndices: segment.accentedNoteIndices,
+            ghostNoteIndices: segment.ghostNoteIndices,
+          ),
+        );
+        voices.addAll(segment.voiceAssignments);
+      } else {
+        markings.addAll(noteMarkingsFor(nextItemId));
+        voices.addAll(_effectiveVoicesForItem(nextItem));
+      }
+    }
+
+    return MatrixPhraseReadoutDataV1(
+      tokens: List<String>.unmodifiable(tokens),
+      markings: List<PatternNoteMarkingV1>.unmodifiable(markings),
+      voices: List<DrumVoiceV1>.unmodifiable(voices),
+      showVoices: _hasReadoutFlowVoices(tokens: tokens, voices: voices),
+    );
+  }
+
+  List<PatternNoteMarkingV1> _markingsForNoteCount({
+    required int noteCount,
+    required List<int> accentedNoteIndices,
+    required List<int> ghostNoteIndices,
+  }) {
+    final Set<int> accents = accentedNoteIndices.toSet();
+    final Set<int> ghosts = ghostNoteIndices.toSet();
+    return List<PatternNoteMarkingV1>.generate(noteCount, (int index) {
+      if (ghosts.contains(index)) return PatternNoteMarkingV1.ghost;
+      if (accents.contains(index)) return PatternNoteMarkingV1.accent;
+      return PatternNoteMarkingV1.normal;
+    });
+  }
+
+  bool _hasReadoutFlowVoices({
+    required List<String> tokens,
+    required List<DrumVoiceV1> voices,
+  }) {
+    for (
+      int index = 0;
+      index < tokens.length && index < voices.length;
+      index++
+    ) {
+      if (tokens[index] == 'K') continue;
+      if (voices[index] != DrumVoiceV1.snare) return true;
+    }
+    return false;
   }
 
   bool combinationContainsItem({

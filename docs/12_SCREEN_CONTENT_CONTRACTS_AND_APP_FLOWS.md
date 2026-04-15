@@ -63,6 +63,28 @@ Notation rule:
 - when grouped phrase notation wraps, the group separator should stay at the end of the row it belongs to
 - long player phrases may wrap on phone, but that wrapping must occur on practical group boundaries rather than by raw character position
 
+Pattern editing source-of-truth rule:
+
+- a saved pattern, triad variant, or phrase is one authored item
+- the authored item owns its complete edit state:
+  - triad sequence / phrase structure
+  - accents
+  - ghosts
+  - voices
+  - practice defaults
+- once triads are saved as part of a phrase item, the phrase item's authored state is the source of truth for that phrase
+- child triad records may be used as templates for newly added material, but they must not overwrite or reinterpret the saved phrase item's existing authored accents, ghosts, or voices
+- editing may be split across screens, but the draft must be shared:
+  - `Practice Item` owns item authoring and orchestration edits
+  - `Matrix` owns structure edits when entered from `Practice Item`
+  - both screens must operate on the same authored item draft, not on separately recomposed data
+- when Matrix edits the structure of an existing authored item:
+  - unchanged triad occurrences keep their authored dynamics and voices
+  - removed triad occurrences lose their segment data
+  - newly added triads start from their own authored/default template data
+  - the visible Matrix phrase readout must render the current item draft, not the current global state of the child triad records
+- after a structure edit, returning to `Practice Item` should continue editing the same authored item when possible, or the resulting replacement phrase item when a single triad has become a phrase
+
 ## Layout Rule
 
 Use horizontal space before adding more vertical stacking.
@@ -248,7 +270,7 @@ Path:
 1. `Matrix`
 2. filters / selections
 3. phrase editor
-4. `Practice`, `Add to Working On`, or `Save`
+4. `Try It Out` or `Add to Working On`
 
 Screens involved:
 
@@ -264,11 +286,12 @@ Required controls:
 
 Rules:
 
-- `Practice` from Matrix is a try-it-now preview flow
+- `Try It Out` from Matrix is a try-it-now preview flow
 - Matrix preview practice is untracked
 - Matrix preview practice must not silently save the current selection as an item
 - Matrix preview practice must return to `Matrix` when ended
 - Matrix preview practice must not open `Session Summary`
+- Matrix phrase-building state must not expose a separate `Save` action when `Add to Working On` already hands off into explicit item authoring
 
 ### Flow E: Active Work Management
 
@@ -336,9 +359,9 @@ Goal:
 
 Path:
 
-1. `Practice Item` or `Matrix`
-2. adjust voice assignments if needed
-3. `Practice in Flow` when the item has authored off-snare voices on non-kick notes
+1. `Matrix` for phrase structure if needed
+2. `Practice Item` for authored voices if needed
+3. `Practice` session setup from `Working On`
 4. `Practice Session`
 
 Screens involved:
@@ -350,13 +373,14 @@ Screens involved:
 Required controls:
 
 - voice assignment editor in Practice Item
-- `Practice in Flow` CTA
+- `Flow`-derived filters or metadata where they help session selection
 
 Rules:
 
 - `Flow` is a derived practice capability, not a user-declared item type
 - an item is considered `Flow` only when it has user-authored off-snare voices on non-kick notes
 - no voice assignments and all-default voices are the same single-surface state
+- flow preparation does not add direct `Practice in Flow` buttons to `Practice Item`; session launch belongs to `Practice`
 - default kick placement on `K` does not make an item `Flow`
 - `Single Surface` is the universal baseline practice mode, not an item classification
 - free-built phrases remain allowed in v1
@@ -696,6 +720,9 @@ Rules:
 - phrase-building mode defaults to flow-oriented practice actions
 - phrase chips in the editor should size to their phrase content and wrap as compact rows
 - phrase chips must not stretch to the full panel width unless the phrase content actually requires it
+- in generic phrase-building mode, Matrix may compose the phrase readout from selected triad items
+- in item-edit mode from `Practice Item`, Matrix must render and edit the current authored item draft as the source of truth
+- item-edit Matrix must not rebuild the phrase display from child triad records when doing so would change existing authored accents, ghosts, or voices
 
 #### Action Row
 
@@ -726,6 +753,7 @@ Rules:
 - for a new phrase, `Add to Working On` should open `Practice Item` as a draft authoring handoff
 - when Matrix is entered from `Focus -> New`, the primary action should read `Save to Working On` and carry the strongest visual emphasis
 - that entry should feel like authoring a new item, not like generic browsing with a secondary add action
+- when Matrix is entered from `Practice Item`, the primary return action should return the updated structure to the same editing flow instead of adding, saving, or opening a separate item
 
 ### Matrix States
 
@@ -1261,7 +1289,10 @@ Practice Item lets the user inspect and edit one item cleanly.
 - navigating away with unsaved item changes should prompt the user to save, discard, or keep editing
 - if the user adds a built-in item to `Working On` while it has unsaved authored accents, ghosts, or voices, that action should save or reuse a distinct authored variant instead of adding the plain built-in item
 - `Open in Matrix` must reuse the Matrix screen in an item-edit context when the material can be expressed as a triad or triad phrase
-- in that context, Matrix should preload the current sequence, preserve the authored item state through the round trip, and replace `Add to Working On` with a return action back to `Working On`
+- in that context, Matrix should preload the current sequence from the authored item draft, preserve the authored item state through the round trip, and replace `Add to Working On` with a return action back to `Working On`
+- `Open in Matrix` must treat the current `Practice Item` draft as authoritative; it must not render the phrase from global child-triad state if that would scramble or replace authored markings or voices
+- adding a triad in Matrix should append a new segment with that triad's default/authored template data, while existing segments retain their current authored markings and voices
+- removing a triad in Matrix should remove that occurrence and its attached authored segment data
 - when Matrix editing expands a single triad into a phrase, returning should continue in `Practice Item` on the resulting phrase item instead of silently keeping the old single-triad item
 - `Practice Item` should not offer direct practice-launch buttons when that pulls the screen away from its editing job
 
