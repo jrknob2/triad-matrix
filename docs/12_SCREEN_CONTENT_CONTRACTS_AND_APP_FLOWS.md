@@ -1257,6 +1257,7 @@ Practice Item lets the user inspect and edit one item cleanly.
 - Matrix selection and phrase building must not inject authored markings automatically
 - item edits should live in a local draft until the user explicitly saves them
 - navigating away with unsaved item changes should prompt the user to save, discard, or keep editing
+- if the user adds a built-in item to `Working On` while it has unsaved authored accents, ghosts, or voices, that action should save or reuse a distinct authored variant instead of adding the plain built-in item
 - `Open in Matrix` must reuse the Matrix screen in an item-edit context when the material can be expressed as a triad or triad phrase
 - in that context, Matrix should preload the current sequence, preserve the authored item state through the round trip, and replace `Add to Working On` with a return action back to `Working On`
 

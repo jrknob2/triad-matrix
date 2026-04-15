@@ -336,8 +336,13 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                 if (!isDraftItem) ...<Widget>[
                   const SizedBox(height: 8),
                   OutlinedButton(
-                    onPressed: () =>
-                        widget.controller.toggleRoutineItem(item.id),
+                    onPressed: () {
+                      if (hasUnsavedChanges) {
+                        _saveDraft(saveToWorkingOn: true);
+                        return;
+                      }
+                      widget.controller.toggleRoutineItem(item.id);
+                    },
                     child: Text(
                       widget.controller.isDirectRoutineEntry(item.id)
                           ? 'Remove from Working On'
