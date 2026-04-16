@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -229,6 +230,8 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
             pulseActiveListenable: _metronome.pulseActive,
             bpm: _bpm,
             enabled: _pulseEnabled,
+            progress: _sessionProgressFraction(transport),
+            target: transport.target,
           ),
           const SizedBox(height: 18),
           Text(
@@ -583,6 +586,15 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     );
   }
 
+  double _sessionProgressFraction(_SessionTransportState transport) {
+    final Duration? target = transport.target;
+    if (target == null || target.inMilliseconds <= 0) return 0.0;
+    return (transport.elapsed.inMilliseconds / target.inMilliseconds).clamp(
+      0.0,
+      1.0,
+    );
+  }
+
   void _startElapsedTicker() {
     _elapsedTicker?.cancel();
     _elapsedTicker = Timer.periodic(const Duration(milliseconds: 250), (_) {
@@ -745,11 +757,15 @@ class _BeatPulse extends StatefulWidget {
   final ValueListenable<bool> pulseActiveListenable;
   final int bpm;
   final bool enabled;
+  final double progress;
+  final Duration? target;
 
   const _BeatPulse({
     required this.pulseActiveListenable,
     required this.bpm,
     required this.enabled,
+    required this.progress,
+    required this.target,
   });
 
   @override
@@ -825,36 +841,23 @@ class _BeatPulseState extends State<_BeatPulse> {
   Widget build(BuildContext context) {
     final bool active = widget.enabled && _flashActive;
     const Color ringBase = Color(0xFF4A4337);
-    const Color ringAccent = Color(0xFFFFC08D);
     return SizedBox(
-      width: 170,
-      height: 170,
+      width: 196,
+      height: 196,
       child: Stack(
         alignment: Alignment.center,
         children: <Widget>[
           if (widget.enabled)
-            _PulseRing(
-              diameter: 150,
-              color: active
-                  ? ringAccent.withValues(alpha: 0.20)
-                  : ringBase.withValues(alpha: 0.18),
-              width: 1.5,
-            ),
-          if (widget.enabled)
-            _PulseRing(
-              diameter: 136,
-              color: active
-                  ? ringAccent.withValues(alpha: 0.32)
-                  : ringBase.withValues(alpha: 0.24),
-              width: 1.8,
-            ),
-          if (widget.enabled)
-            _PulseRing(
-              diameter: 122,
-              color: active
-                  ? ringAccent.withValues(alpha: 0.46)
-                  : ringBase.withValues(alpha: 0.30),
-              width: 2.0,
+            SizedBox(
+              width: 176,
+              height: 176,
+              child: CustomPaint(
+                painter: _TickRingPainter(
+                  progress: widget.progress,
+                  flashActive: active,
+                  target: widget.target,
+                ),
+              ),
             ),
           Container(
             width: 112,
@@ -865,8 +868,10 @@ class _BeatPulseState extends State<_BeatPulse> {
                   : const Color(0xFF14100C),
               shape: BoxShape.circle,
               border: Border.all(
-                color: active ? ringAccent : ringBase,
-                width: active ? 4 : 3,
+                color: active
+                    ? const Color(0x44FFE0BB)
+                    : ringBase.withValues(alpha: 0.65),
+                width: 1.4,
               ),
             ),
             child: Center(
@@ -899,31 +904,102 @@ class _BeatPulseState extends State<_BeatPulse> {
   }
 }
 
-class _PulseRing extends StatelessWidget {
-  final double diameter;
-  final Color color;
-  final double width;
+class _TickRingPainter extends CustomPainter {
+  final double progress;
+  final bool flashActive;
+  final Duration? target;
 
-  const _PulseRing({
-    required this.diameter,
-    required this.color,
-    required this.width,
+  const _TickRingPainter({
+    required this.progress,
+    required this.flashActive,
+    required this.target,
   });
 
+  static const double _sweep = math.pi * 1.70;
+  static const double _startAngle = math.pi * 0.64;
+  static const int _minorTicksPerMajor = 4;
+
   @override
-  Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: SizedBox(
-        width: diameter,
-        height: diameter,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: color, width: width),
-          ),
-        ),
-      ),
-    );
+  void paint(Canvas canvas, Size size) {
+    final Offset center = size.center(Offset.zero);
+    final double radius = math.min(size.width, size.height) / 2 - 8;
+    final double progressClamped = progress.clamp(0.0, 1.0);
+    final Paint paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    final int majorTickCount = _majorTickCount();
+    final int totalTickCount = majorTickCount * _minorTicksPerMajor;
+
+    for (int index = 0; index < totalTickCount; index++) {
+      final bool majorTick = index % _minorTicksPerMajor == 0;
+      final double tickT = totalTickCount == 1
+          ? 1.0
+          : index / (totalTickCount - 1);
+      final double angle = _startAngle + (tickT * _sweep);
+      final double completedThreshold = (index + 1) / totalTickCount;
+      final bool completed = completedThreshold <= progressClamped;
+      final Color tickColor = completed
+          ? _progressColor(tickT, flashActive)
+          : _inactiveColor(flashActive);
+      final double tickLength = majorTick ? 16 : 9;
+      paint
+        ..color = tickColor
+        ..strokeWidth = majorTick ? 3.0 : 2.0;
+
+      final Offset outer = Offset(
+        center.dx + math.cos(angle) * radius,
+        center.dy + math.sin(angle) * radius,
+      );
+      final Offset inner = Offset(
+        center.dx + math.cos(angle) * (radius - tickLength),
+        center.dy + math.sin(angle) * (radius - tickLength),
+      );
+      canvas.drawLine(inner, outer, paint);
+      if (completed && flashActive) {
+        paint
+          ..color = tickColor.withValues(alpha: 0.22)
+          ..strokeWidth = majorTick ? 5.0 : 3.4;
+        canvas.drawLine(inner, outer, paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _TickRingPainter oldDelegate) {
+    return oldDelegate.progress != progress ||
+        oldDelegate.flashActive != flashActive ||
+        oldDelegate.target != target;
+  }
+
+  Color _inactiveColor(bool active) {
+    return active ? const Color(0x4AD7C3A9) : const Color(0x2E6B5A47);
+  }
+
+  Color _progressColor(double t, bool active) {
+    const Color green = Color(0xFF92C766);
+    const Color lime = Color(0xFFB8CF6B);
+    const Color gold = Color(0xFFE2BE73);
+    const Color orange = Color(0xFFF0AA69);
+    final Color base = t < 0.42
+        ? Color.lerp(green, lime, t / 0.42)!
+        : t < 0.74
+        ? Color.lerp(lime, gold, (t - 0.42) / 0.32)!
+        : Color.lerp(gold, orange, (t - 0.74) / 0.26)!;
+    return active ? _brighten(base, 0.06) : base;
+  }
+
+  int _majorTickCount() {
+    final int? minutes = target?.inMinutes;
+    if (minutes == null || minutes <= 0) return 10;
+    return minutes.clamp(4, 20);
+  }
+
+  Color _brighten(Color color, double amount) {
+    final HSLColor hsl = HSLColor.fromColor(color);
+    return hsl
+        .withLightness((hsl.lightness + amount).clamp(0.0, 1.0))
+        .toColor();
   }
 }
 
