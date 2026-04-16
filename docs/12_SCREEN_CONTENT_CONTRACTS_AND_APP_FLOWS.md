@@ -705,7 +705,7 @@ Rules:
 - when a secondary Progress filter is active, matching cells may retain status color but non-matches should still step back clearly
 - Progress view should show a short active-scope line above the grid, such as `Showing: Needs Work + Recent`
 - progress coloring belongs to `Progress` view only
-- the progress legend should appear only once in a given Matrix state, even when the phrase panel is open
+- the progress legend should appear only once in a given Matrix state and should render after the grid, not before the grid or inside the phrase panel
 - horizontal page indicators must reflect the real count of viewport pages, and the last dot must become active before the user reaches the hard end of the strip
 - Matrix grid cells should render as structural cells only; they must not show authored dynamics or voice rows
 - Matrix phrase panels and sequence chips may show authored dynamics and voices because they represent the selected phrase, not the structural grid
@@ -878,6 +878,10 @@ Rules:
 - if the current action selects every item in the visible filtered slice, the label should be `Select All`
 - selection actions like `Select All` and `Clear` are not filters and should live in their own labeled `Actions` row
 - when the player has already selected one or more items, the start-practice action should appear in that same `Actions` row instead of sitting as a separate bottom button
+- `From Working On` should not expose a `Mode` toggle such as `One Surface / Flow`
+- session display mode should be derived from the selected items:
+  - if every selected item has authored flow voices, launch with the flow voice row visible
+  - otherwise use the baseline single-surface display
 - when recent active rotation grows beyond that, the app may advise shrinking the core rotation, but must not hard-block it
 - long visible item lists should default to 5 rows and use `Show More` for the rest
 - per-pattern BPM and duration do not belong on this list-based setup surface
@@ -1151,6 +1155,7 @@ Must not show:
 - any `Flow` filter on this screen must be derived from authored off-snare voices on non-kick notes
 - `Single Surface` may appear as a derived list filter and must mean the item has no authored off-snare voices on non-kick notes
 - do not present `Single Surface / Flow` as an authored item mode toggle; they are derived list states
+- per-item play controls should use a neutral `Practice` label/tooltip and derive voice display from the item data rather than exposing `Practice on One Surface`
 - removing an item from this screen should confirm first and show the item's notation in the confirmation
 
 ---

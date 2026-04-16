@@ -493,6 +493,8 @@ Optional:
 - edit
 - remove
 
+Per-item play should read as `Practice`, not as `Practice on One Surface`; voice display is derived from authored item data.
+
 ### Acceptance Criteria
 
 - Focus should read as CRUD for current work
@@ -623,6 +625,11 @@ Practice Item is the detail/edit screen for one piece of material.
 - kick notes should not be assignable in this editor flow
 - `Practice Item` should stay authoring-focused and should not contain direct practice-launch buttons
 - when Matrix editing expands a single triad into a phrase, returning should continue on the resulting phrase item instead of dropping the added triads
+
+Practice screen session setup:
+
+- `From Working On` should not expose a `Mode` toggle like `One Surface / Flow`
+- flow display is derived from selected authored voice assignments, not chosen as a visible setup mode
 - `Practice Item` owns authored item editing; `Matrix` only edits phrase structure when launched from this screen
 - `Open in Matrix` must hand off the current item draft rather than asking Matrix to infer authored state from child triad records
 - `Open in Matrix` should remain available for unsaved phrase drafts that can be represented as triad sequences

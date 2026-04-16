@@ -36,7 +36,6 @@ class _PracticeScreenState extends State<PracticeScreen> {
   late final TextEditingController _previousSessionSearchController;
   Set<String> _selectedItemIds = <String>{};
   Set<WorkingOnSessionFilterV1> _filters = <WorkingOnSessionFilterV1>{};
-  PracticeModeV1 _practiceMode = PracticeModeV1.singleSurface;
 
   @override
   void initState() {
@@ -81,13 +80,11 @@ class _PracticeScreenState extends State<PracticeScreen> {
         final Set<String> visibleIds = visibleItems
             .map((PracticeItemV1 item) => item.id)
             .toSet();
-        final bool canFlowSelection =
-            selectedItemIds.isNotEmpty &&
-            selectedItemIds.every(widget.controller.hasNonSnareVoice);
         final PracticeModeV1 effectivePracticeMode =
-            _practiceMode == PracticeModeV1.flow && !canFlowSelection
-            ? PracticeModeV1.singleSurface
-            : _practiceMode;
+            selectedItemIds.isNotEmpty &&
+                selectedItemIds.every(widget.controller.hasNonSnareVoice)
+            ? PracticeModeV1.flow
+            : PracticeModeV1.singleSurface;
         final bool canStart = selectedItemIds.isNotEmpty;
         final bool broadRotation = workingOn.length > 8;
 
@@ -201,8 +198,6 @@ class _PracticeScreenState extends State<PracticeScreen> {
                 visibleItems: visibleItems,
                 selectedItemIds: selectedItemIds,
                 filters: _filters,
-                practiceMode: effectivePracticeMode,
-                canFlowSelection: canFlowSelection,
                 broadRotation: broadRotation,
                 onToggleFilter: (WorkingOnSessionFilterV1 filter) {
                   setState(() {
@@ -239,12 +234,6 @@ class _PracticeScreenState extends State<PracticeScreen> {
                     : () => setState(() {
                         _selectedItemIds = <String>{};
                       }),
-                onSetPracticeMode: (PracticeModeV1 mode) {
-                  if (mode == PracticeModeV1.flow && !canFlowSelection) {
-                    return;
-                  }
-                  setState(() => _practiceMode = mode);
-                },
                 onStart: canStart
                     ? () => widget.onStartWorkingOnSession(
                         selectedItemIds,
@@ -392,8 +381,6 @@ class _PracticeScreenState extends State<PracticeScreen> {
                         visibleItems: visibleItems,
                         selectedItemIds: selectedItemIds,
                         filters: _filters,
-                        practiceMode: effectivePracticeMode,
-                        canFlowSelection: canFlowSelection,
                         broadRotation: broadRotation,
                         onToggleFilter: (WorkingOnSessionFilterV1 filter) {
                           setState(() {
@@ -434,13 +421,6 @@ class _PracticeScreenState extends State<PracticeScreen> {
                             : () => setState(() {
                                 _selectedItemIds = <String>{};
                               }),
-                        onSetPracticeMode: (PracticeModeV1 mode) {
-                          if (mode == PracticeModeV1.flow &&
-                              !canFlowSelection) {
-                            return;
-                          }
-                          setState(() => _practiceMode = mode);
-                        },
                         onStart: canStart
                             ? () => widget.onStartWorkingOnSession(
                                 selectedItemIds,
@@ -741,15 +721,12 @@ class _WorkingOnSessionSetup extends StatelessWidget {
   final int visibleItemCount;
   final List<String> selectedItemIds;
   final Set<WorkingOnSessionFilterV1> filters;
-  final PracticeModeV1 practiceMode;
-  final bool canFlowSelection;
   final bool broadRotation;
   final ValueChanged<WorkingOnSessionFilterV1> onToggleFilter;
   final ValueChanged<String> onToggleItem;
   final VoidCallback? onSelectVisible;
   final VoidCallback? onShowMore;
   final VoidCallback? onClearSelection;
-  final ValueChanged<PracticeModeV1> onSetPracticeMode;
   final VoidCallback? onStart;
 
   const _WorkingOnSessionSetup({
@@ -758,15 +735,12 @@ class _WorkingOnSessionSetup extends StatelessWidget {
     required this.visibleItemCount,
     required this.selectedItemIds,
     required this.filters,
-    required this.practiceMode,
-    required this.canFlowSelection,
     required this.broadRotation,
     required this.onToggleFilter,
     required this.onToggleItem,
     required this.onSelectVisible,
     required this.onShowMore,
     required this.onClearSelection,
-    required this.onSetPracticeMode,
     required this.onStart,
   });
 
@@ -858,35 +832,6 @@ class _WorkingOnSessionSetup extends StatelessWidget {
                   color: const Color(0xFF6B6150),
                   fontWeight: FontWeight.w700,
                 ),
-              ),
-            ],
-            const SizedBox(height: 14),
-            const DrumEyebrow(text: 'Mode'),
-            const SizedBox(height: 8),
-            DrumActionRow(
-              children: <Widget>[
-                DrumSelectablePill(
-                  label: const Text('One Surface'),
-                  selected: practiceMode == PracticeModeV1.singleSurface,
-                  onPressed: () =>
-                      onSetPracticeMode(PracticeModeV1.singleSurface),
-                ),
-                DrumSelectablePill(
-                  label: const Text('Flow'),
-                  selected: practiceMode == PracticeModeV1.flow,
-                  onPressed: canFlowSelection
-                      ? () => onSetPracticeMode(PracticeModeV1.flow)
-                      : null,
-                ),
-              ],
-            ),
-            if (!canFlowSelection) ...<Widget>[
-              const SizedBox(height: 8),
-              Text(
-                'Flow needs voice-assigned items.',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: const Color(0xFF6A5E4C)),
               ),
             ],
             const SizedBox(height: 14),

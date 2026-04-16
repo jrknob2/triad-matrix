@@ -356,11 +356,15 @@ class _FocusItemCard extends StatelessWidget {
             spacing: 2,
             children: <Widget>[
               IconButton(
-                tooltip: 'Practice on One Surface',
+                tooltip: 'Practice',
                 visualDensity: VisualDensity.compact,
                 icon: const Icon(Icons.play_arrow_rounded),
-                onPressed: () =>
-                    onPracticeItemInMode(item.id, PracticeModeV1.singleSurface),
+                onPressed: () => onPracticeItemInMode(
+                  item.id,
+                  controller.hasNonSnareVoice(item.id)
+                      ? PracticeModeV1.flow
+                      : PracticeModeV1.singleSurface,
+                ),
               ),
               IconButton(
                 tooltip: 'Edit',

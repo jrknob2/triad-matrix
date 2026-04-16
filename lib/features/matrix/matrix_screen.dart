@@ -114,7 +114,6 @@ class _MatrixScreenState extends State<MatrixScreen> {
           : null,
       onRemoveAt: _removeSelectedAt,
       actionPills: _buildActionPills(),
-      showProgressLegend: isTablet && _view == _MatrixPrimaryView.progress,
       warningMessage: _selectedItemIds.length > 1 && notReadyItemIds.isNotEmpty
           ? 'Some of these triads are still early in your work. You can save this phrase now, but it may be better to keep practicing those triads on their own before building them into a longer phrase.'
           : null,
@@ -165,6 +164,10 @@ class _MatrixScreenState extends State<MatrixScreen> {
                         ],
                         const SizedBox(height: 12),
                         matrixGrid,
+                        if (_view == _MatrixPrimaryView.progress) ...<Widget>[
+                          const SizedBox(height: 10),
+                          const _ProgressLegendCard(),
+                        ],
                       ],
                     ),
                   ),
@@ -207,16 +210,16 @@ class _MatrixScreenState extends State<MatrixScreen> {
                   const SizedBox(height: 10),
                   _MatrixScopeLine(text: progressScopeText),
                 ],
-                if (_view == _MatrixPrimaryView.progress) ...<Widget>[
-                  const SizedBox(height: 10),
-                  if (_selectedItemIds.isEmpty) const _ProgressLegendCard(),
-                ],
                 if (_selectedItemIds.isNotEmpty) ...<Widget>[
                   const SizedBox(height: 10),
                   phrasePanel,
                 ],
                 const SizedBox(height: 12),
                 matrixGrid,
+                if (_view == _MatrixPrimaryView.progress) ...<Widget>[
+                  const SizedBox(height: 10),
+                  const _ProgressLegendCard(),
+                ],
               ],
             ),
     );
@@ -726,7 +729,6 @@ class _MatrixPhrasePanel extends StatelessWidget {
   final String? editingItemId;
   final ValueChanged<int> onRemoveAt;
   final List<Widget> actionPills;
-  final bool showProgressLegend;
   final String? warningMessage;
 
   const _MatrixPhrasePanel({
@@ -735,7 +737,6 @@ class _MatrixPhrasePanel extends StatelessWidget {
     required this.editingItemId,
     required this.onRemoveAt,
     required this.actionPills,
-    required this.showProgressLegend,
     required this.warningMessage,
   });
 
@@ -765,10 +766,6 @@ class _MatrixPhrasePanel extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        if (showProgressLegend) ...<Widget>[
-          const _ProgressLegendCard(),
-          const SizedBox(height: 10),
-        ],
         DrumPanel(
           tone: DrumPanelTone.warm,
           padding: const EdgeInsets.all(14),
