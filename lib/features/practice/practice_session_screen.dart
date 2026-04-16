@@ -854,10 +854,15 @@ class _BeatPulseState extends State<_BeatPulse> {
               child: CustomPaint(
                 painter: _TickRingPainter(
                   progress: widget.progress,
-                  flashActive: active,
                   target: widget.target,
                 ),
               ),
+            ),
+          if (widget.enabled)
+            _PulseGaugeRing(
+              diameter: 138,
+              color: active ? const Color(0xFFFFC08D) : const Color(0xFF5A4A39),
+              width: active ? 5.5 : 4.0,
             ),
           Container(
             width: 112,
@@ -868,10 +873,8 @@ class _BeatPulseState extends State<_BeatPulse> {
                   : const Color(0xFF14100C),
               shape: BoxShape.circle,
               border: Border.all(
-                color: active
-                    ? const Color(0x44FFE0BB)
-                    : ringBase.withValues(alpha: 0.65),
-                width: 1.4,
+                color: ringBase.withValues(alpha: 0.5),
+                width: 1.1,
               ),
             ),
             child: Center(
@@ -906,14 +909,9 @@ class _BeatPulseState extends State<_BeatPulse> {
 
 class _TickRingPainter extends CustomPainter {
   final double progress;
-  final bool flashActive;
   final Duration? target;
 
-  const _TickRingPainter({
-    required this.progress,
-    required this.flashActive,
-    required this.target,
-  });
+  const _TickRingPainter({required this.progress, required this.target});
 
   static const double _sweep = math.pi * 1.70;
   static const double _startAngle = math.pi * 0.64;
@@ -940,12 +938,12 @@ class _TickRingPainter extends CustomPainter {
       final double completedThreshold = (index + 1) / totalTickCount;
       final bool completed = completedThreshold <= progressClamped;
       final Color tickColor = completed
-          ? _progressColor(tickT, flashActive)
-          : _inactiveColor(flashActive);
+          ? _progressColor(tickT)
+          : _inactiveColor();
       final double tickLength = majorTick ? 16 : 9;
       paint
         ..color = tickColor
-        ..strokeWidth = majorTick ? 3.0 : 2.0;
+        ..strokeWidth = majorTick ? 3.6 : 2.4;
 
       final Offset outer = Offset(
         center.dx + math.cos(angle) * radius,
@@ -956,37 +954,29 @@ class _TickRingPainter extends CustomPainter {
         center.dy + math.sin(angle) * (radius - tickLength),
       );
       canvas.drawLine(inner, outer, paint);
-      if (completed && flashActive) {
-        paint
-          ..color = tickColor.withValues(alpha: 0.22)
-          ..strokeWidth = majorTick ? 5.0 : 3.4;
-        canvas.drawLine(inner, outer, paint);
-      }
     }
   }
 
   @override
   bool shouldRepaint(covariant _TickRingPainter oldDelegate) {
-    return oldDelegate.progress != progress ||
-        oldDelegate.flashActive != flashActive ||
-        oldDelegate.target != target;
+    return oldDelegate.progress != progress || oldDelegate.target != target;
   }
 
-  Color _inactiveColor(bool active) {
-    return active ? const Color(0x4AD7C3A9) : const Color(0x2E6B5A47);
+  Color _inactiveColor() {
+    return const Color(0x5A7A6A58);
   }
 
-  Color _progressColor(double t, bool active) {
-    const Color green = Color(0xFF92C766);
-    const Color lime = Color(0xFFB8CF6B);
-    const Color gold = Color(0xFFE2BE73);
-    const Color orange = Color(0xFFF0AA69);
+  Color _progressColor(double t) {
+    const Color green = Color(0xFFA1D46E);
+    const Color lime = Color(0xFFC9D873);
+    const Color gold = Color(0xFFF0C57D);
+    const Color orange = Color(0xFFF6AE72);
     final Color base = t < 0.42
         ? Color.lerp(green, lime, t / 0.42)!
         : t < 0.74
         ? Color.lerp(lime, gold, (t - 0.42) / 0.32)!
         : Color.lerp(gold, orange, (t - 0.74) / 0.26)!;
-    return active ? _brighten(base, 0.06) : base;
+    return base;
   }
 
   int _majorTickCount() {
@@ -994,12 +984,33 @@ class _TickRingPainter extends CustomPainter {
     if (minutes == null || minutes <= 0) return 10;
     return minutes.clamp(4, 20);
   }
+}
 
-  Color _brighten(Color color, double amount) {
-    final HSLColor hsl = HSLColor.fromColor(color);
-    return hsl
-        .withLightness((hsl.lightness + amount).clamp(0.0, 1.0))
-        .toColor();
+class _PulseGaugeRing extends StatelessWidget {
+  final double diameter;
+  final Color color;
+  final double width;
+
+  const _PulseGaugeRing({
+    required this.diameter,
+    required this.color,
+    required this.width,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: SizedBox(
+        width: diameter,
+        height: diameter,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: color, width: width),
+          ),
+        ),
+      ),
+    );
   }
 }
 
