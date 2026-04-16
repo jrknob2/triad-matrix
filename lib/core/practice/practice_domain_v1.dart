@@ -441,22 +441,34 @@ class PracticeSessionItemRuntimeV1 {
   final String practiceItemId;
   final int startingBpm;
   final int endingBpm;
+  final Duration activeDuration;
+  final int earnedReps;
+  final int claimedReps;
 
   const PracticeSessionItemRuntimeV1({
     required this.practiceItemId,
     required this.startingBpm,
     required this.endingBpm,
+    this.activeDuration = Duration.zero,
+    this.earnedReps = 0,
+    this.claimedReps = 0,
   });
 
   PracticeSessionItemRuntimeV1 copyWith({
     String? practiceItemId,
     int? startingBpm,
     int? endingBpm,
+    Duration? activeDuration,
+    int? earnedReps,
+    int? claimedReps,
   }) {
     return PracticeSessionItemRuntimeV1(
       practiceItemId: practiceItemId ?? this.practiceItemId,
       startingBpm: startingBpm ?? this.startingBpm,
       endingBpm: endingBpm ?? this.endingBpm,
+      activeDuration: activeDuration ?? this.activeDuration,
+      earnedReps: earnedReps ?? this.earnedReps,
+      claimedReps: claimedReps ?? this.claimedReps,
     );
   }
 }
@@ -547,6 +559,8 @@ class PracticeSessionLogV1 {
   final int startingBpm;
   final int bpm;
   final List<PracticeSessionItemRuntimeV1> itemRuntimes;
+  final int earnedReps;
+  final int claimedReps;
   final bool clickEnabled;
   final String? routineId;
   final ReflectionRatingV1? reflection;
@@ -564,6 +578,8 @@ class PracticeSessionLogV1 {
     int? startingBpm,
     required this.bpm,
     List<PracticeSessionItemRuntimeV1>? itemRuntimes,
+    int? earnedReps,
+    int? claimedReps,
     required this.clickEnabled,
     required this.routineId,
     required this.reflection,
@@ -580,7 +596,41 @@ class PracticeSessionLogV1 {
                    ),
                  )
                  .toList(growable: false),
-       );
+       ),
+       earnedReps =
+           earnedReps ??
+           (itemRuntimes ??
+                   practiceItemIds
+                       .map(
+                         (String itemId) => PracticeSessionItemRuntimeV1(
+                           practiceItemId: itemId,
+                           startingBpm: startingBpm ?? bpm,
+                           endingBpm: bpm,
+                         ),
+                       )
+                       .toList(growable: false))
+               .fold<int>(
+                 0,
+                 (int sum, PracticeSessionItemRuntimeV1 runtime) =>
+                     sum + runtime.earnedReps,
+               ),
+       claimedReps =
+           claimedReps ??
+           (itemRuntimes ??
+                   practiceItemIds
+                       .map(
+                         (String itemId) => PracticeSessionItemRuntimeV1(
+                           practiceItemId: itemId,
+                           startingBpm: startingBpm ?? bpm,
+                           endingBpm: bpm,
+                         ),
+                       )
+                       .toList(growable: false))
+               .fold<int>(
+                 0,
+                 (int sum, PracticeSessionItemRuntimeV1 runtime) =>
+                     sum + runtime.claimedReps,
+               );
 
   PracticeSessionLogV1 copyWith({
     String? id,
@@ -595,6 +645,8 @@ class PracticeSessionLogV1 {
     int? startingBpm,
     int? bpm,
     List<PracticeSessionItemRuntimeV1>? itemRuntimes,
+    int? earnedReps,
+    int? claimedReps,
     bool? clickEnabled,
     String? routineId,
     bool clearRoutineId = false,
@@ -616,6 +668,8 @@ class PracticeSessionLogV1 {
       startingBpm: startingBpm ?? this.startingBpm,
       bpm: bpm ?? this.bpm,
       itemRuntimes: itemRuntimes ?? this.itemRuntimes,
+      earnedReps: earnedReps ?? this.earnedReps,
+      claimedReps: claimedReps ?? this.claimedReps,
       clickEnabled: clickEnabled ?? this.clickEnabled,
       routineId: clearRoutineId ? null : (routineId ?? this.routineId),
       reflection: clearReflection ? null : (reflection ?? this.reflection),

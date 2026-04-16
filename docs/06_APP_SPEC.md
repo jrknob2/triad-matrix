@@ -272,6 +272,13 @@ Assessment comes from:
 - manual session check
 - later, onset/audio data
 
+Clarifications:
+
+- Session Summary remains the main assessment surface in MVP
+- a future `Claim Your Work` layer extends assessment rather than replacing self-report
+- rep credit may function both as motivational feedback and as a progress/data input
+- MVP earned-rep rule starts at `1 rep = 60 seconds` of active tracked practice time
+
 ### 6. Coach Blocks
 
 Coach should build from explicit block types:

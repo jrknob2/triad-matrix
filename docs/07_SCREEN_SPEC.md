@@ -340,6 +340,8 @@ Must show:
 
 Must support:
 
+- guided-default emphasis inside the existing Practice setup flow
+- manual/custom session slicing without introducing a separate user-facing advanced-mode split
 - `From Working On` inside `Choose Patterns to Practice`
 - exact item selection for a session
 - derived session-scope filters based on actual item properties and progress state
@@ -366,6 +368,8 @@ Must show:
 - player panel
 - notation
 - pulse / click / BPM / timer
+- integrated BPM core display with tick-ring treatment when the full player treatment is active
+- passive `+N Reps` earned-work display for tracked sessions
 - prev/next when source contains multiple items
 - `Play`
 - `End`
@@ -377,6 +381,11 @@ Must do:
 - click playback should use a preloaded low-latency trigger path rather than repeatedly retriggering one shared media player instance
 - when native metronome playback is active, the visual pulse should derive from the native audio playback phase rather than an event-channel beat callback or an independent Dart beat clock
 - after native beat onset is detected, the player may hold the visual pulse briefly for readability, but the beat onset itself must still come from the native playback phase
+- any tick-ring or segmented pulse treatment must still be driven by that same synchronized beat state, not by a separate animation clock
+- session-progress color in the player may move from neutral through warm toward green as the session advances
+- session-progress color in the player communicates completion progress, not rep quality
+- earned reps should advance from active tracked practice time at `1 rep = 60 seconds`
+- warmup and Matrix preview practice do not earn reps
 - player pulse treatment should stay visually restrained relative to notation and timer
 - if pulse clarity and pulse decoration conflict, the player should prefer a simple synchronized flash treatment
 - when pulse synchronization is being verified or debugged, the player should use a plain border on/off effect instead of glow or eased animation
@@ -413,6 +422,7 @@ Running transport rules:
 ### Acceptance Criteria
 
 - user can reach practice directly from nav
+- the current Practice setup flow remains intact while still supporting a stronger guided-default experience
 - the app should distinguish between a broad `Working On` pool and a smaller session slice
 - `From Working On` should not exist as a separate top-level card
 - `Repeat a Previous Session` should not assume the most recent session is always the intended one
@@ -428,6 +438,9 @@ Running transport rules:
 - Session Summary should open on the first practiced pattern, not the last viewed pattern
 - when a pattern's BPM changed during the session, Session Summary should present one BPM save choice for that pattern
 - Session Summary should use explicit per-pattern `Submit` and `Skip`, not implicit auto-save on every selection
+- Session Summary should remain the main assessment surface even if a later `Claim Your Work` layer is added
+- rep credit may operate as both motivational feedback and claimed-work data for progress logic
+- Session Summary may ask the student whether to keep earned reps before final submission
 - the player's running transport controls should fit in one row on phone without wrapping
 - Session Summary recommendations should influence the message, not rename the replay action
 - Session Summary should not contain work-management actions like `Add to Working On`

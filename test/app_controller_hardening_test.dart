@@ -170,5 +170,42 @@ void main() {
         expect(editingReadout.tokens.join(), 'RLLLRRRLR');
       },
     );
+
+    test(
+      'completeSession stores earned reps from active tracked time',
+      () async {
+        final FakeAppStateStore store = FakeAppStateStore();
+        final AppController controller = await AppController.createForTesting(
+          store,
+        );
+        final List<String> itemIds = controller.recommendedStartingTriadItemIds
+            .take(2)
+            .toList(growable: false);
+        final PracticeSessionSetupV1 setup = controller
+            .buildSessionForItem(itemIds.first)
+            .copyWith(practiceItemIds: itemIds);
+
+        final PracticeSessionLogV1 session = controller.completeSession(
+          setup,
+          const Duration(minutes: 3),
+          practicedItemIds: itemIds,
+          activeDurationByItemId: <String, Duration>{
+            itemIds.first: const Duration(minutes: 2, seconds: 30),
+            itemIds.last: const Duration(seconds: 50),
+          },
+        );
+
+        expect(session.earnedReps, 2);
+        expect(session.claimedReps, 0);
+        expect(
+          controller.sessionItemRuntimeFor(session, itemIds.first)?.earnedReps,
+          2,
+        );
+        expect(
+          controller.sessionItemRuntimeFor(session, itemIds.last)?.earnedReps,
+          0,
+        );
+      },
+    );
   });
 }

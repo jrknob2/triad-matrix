@@ -134,6 +134,8 @@ Rules:
 - the user should not have to tap to discover whether a label is actionable
 - passive labels, scope labels, legends, and other non-interactive markers must not use button-like containers or button-like affordances
 - non-interactive labels should read as labels immediately, not as tappable pills or chips
+- passive displays such as credit, earned reps, scope, legend, and status must remain visually distinct from action buttons even when they share rounded shapes
+- if passive informational surfaces use pill-like containers, they must step back through tone, border, contrast, and icon treatment so they cannot be mistaken for tappable controls
 - button sizing should stay proportional to the surrounding UI and shared control system
 - one screen should not introduce oversized buttons that visually dominate the app without a specific contract reason
 
@@ -231,6 +233,8 @@ Rules:
 - `From Working On` belongs inside `Choose Patterns to Practice`, not as a separate top-level reason to use Practice
 - `Working On` may be broader than one day's session
 - session setup is where the player narrows that broader pool into today's slice
+- the current Practice setup flow remains valid; experience-layer work should make it feel more guided, not replace it with a different top-level flow
+- guided default behavior belongs inside the existing Practice setup flow
 - `Repeat a Previous Session` should browse recent sessions, not only repeat the single most recent one
 - previous-session rows must show enough session content to be recognizable, including the patterns practiced
 - low-value metadata like practice mode should not appear there unless it changes a real choice
@@ -848,6 +852,9 @@ Optional later:
 - this screen must exist as a primary tab
 - each entry option must clearly indicate what session source it uses
 - this screen should reduce choice friction, not add setup friction
+- `Guided` should be the default emphasis inside Practice, not a replacement for Practice setup
+- the player may still manually narrow or customize the session inside the current setup flow
+- this does not create a separate user-facing `Advanced Mode` unless a later contract explicitly adds one
 - `Choose Patterns to Practice` is the entry into normal tracked practice
 - `From Working On` belongs inside `Choose Patterns to Practice`, not as a separate peer card
 - single-item practice should use saved BPM and duration defaults without storing them as authored notation/item data
@@ -953,6 +960,7 @@ Practice Session is execution only.
 - repeat marker
 - timer
 - BPM
+- BPM tick ring
 - click toggle
 - pulse toggle
 - play/pause
@@ -973,6 +981,24 @@ Practice Session is execution only.
 2. notation block
 3. pulse / click / BPM / timer transport
 4. end control
+
+### Player Display Rules
+
+- the player should read like an execution instrument, not a settings form
+- BPM should sit inside an integrated circular display when the full player treatment is shown
+- the pulse display may use a tick-ring treatment around the BPM core display
+- tick-ring treatment should represent session progress, not a separate beat engine
+- session-progress color may move from neutral through warm toward green as the session advances
+- session-progress color should communicate completion progress, not rep quality
+- decorative player visuals must remain subordinate to synchronization and readability
+- if tick-ring treatment and synchronization conflict, the player must keep the simpler synchronized behavior and reduce decoration
+- session credit or rep credit may appear in the player as a passive display surface, not as a transport action
+- earned reps in the player should be a passive display, not a button
+- MVP earned-rep rule: `1 rep = 60 seconds` of active tracked practice time
+- earned reps should update as tracked active time crosses each 60-second threshold
+- paused time does not earn reps
+- warmup and Matrix `Try It Out` preview sessions do not earn reps
+- multi-item tracked sessions may earn reps across the session, but rep credit should only be claimable for patterns that were actually practiced
 
 ### Warmup Mode Rules
 
@@ -1010,6 +1036,7 @@ Practice Session is execution only.
 - if pulse timing clarity is at risk, prefer a simple synchronized flash over decorative animation
 - when pulse synchronization is under verification, use a plain border on/off effect rather than glow, easing, or expanding-band treatments
 - once synchronization is solid, the pulse may add a few static concentric rings inside the main circle during the flash window, but those rings must be driven by the same on/off beat state rather than their own animation timeline
+- any tick-ring or segmented pulse treatment must still be driven by the same synchronized beat state rather than a separate animation clock
 - click playback should use a preloaded low-latency one-shot trigger path rather than repeatedly retriggering one media player instance
 - the player must not contain controls that switch the session into a different source type
 - default stopped transport state should present `Play` and `End`
@@ -1059,6 +1086,13 @@ Session Summary closes a tracked session and collects limited useful feedback.
 
 - one summary per tracked session
 - multi-item sessions must allow the user to navigate and assess each item individually inside the same summary flow
+- Session Summary remains the main assessment surface
+- `Claim Your Work` is an extension of assessment, not a replacement for existing self-report assessment
+- rep credit may serve both as motivational feedback and as claimed-work data that feeds the app's progress logic
+- a rep-credit/claim layer must not silently remove or overwrite the existing self-report assessment layer unless a later contract explicitly replaces it
+- earned reps should be presented as claimed work, not inferred mastery
+- Session Summary may ask whether the student wants to keep the earned reps from the session or current practiced item
+- earned-rep claim should stay local until `Submit`, so the player can still change their mind before finalizing that assessment
 - Session Summary must not assume `new to the app` means `new to the skill`
 - in early or no-history assessment, attempted BPM should carry real weight as a current-skill calibration signal
 - BPM weighting should be scaled by pattern complexity

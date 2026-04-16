@@ -313,6 +313,8 @@ class IsarAppStateStore implements AppStateStore {
       'itemRuntimes': session.itemRuntimes
           .map(_practiceSessionItemRuntimeToMap)
           .toList(growable: false),
+      'earnedReps': session.earnedReps,
+      'claimedReps': session.claimedReps,
       'clickEnabled': session.clickEnabled,
       'routineId': session.routineId,
       'reflection': session.reflection?.name,
@@ -340,6 +342,8 @@ class IsarAppStateStore implements AppStateStore {
                 ),
               )
               .toList(growable: false),
+      earnedReps: (map['earnedReps'] as int?) ?? 0,
+      claimedReps: (map['claimedReps'] as int?) ?? 0,
       clickEnabled: map['clickEnabled'] as bool,
       routineId: map['routineId'] as String?,
       reflection: map['reflection'] == null
@@ -366,6 +370,9 @@ class IsarAppStateStore implements AppStateStore {
       'practiceItemId': runtime.practiceItemId,
       'startingBpm': runtime.startingBpm,
       'endingBpm': runtime.endingBpm,
+      'activeDurationMs': runtime.activeDuration.inMilliseconds,
+      'earnedReps': runtime.earnedReps,
+      'claimedReps': runtime.claimedReps,
     };
   }
 
@@ -376,6 +383,11 @@ class IsarAppStateStore implements AppStateStore {
       practiceItemId: map['practiceItemId'] as String,
       startingBpm: map['startingBpm'] as int,
       endingBpm: map['endingBpm'] as int,
+      activeDuration: Duration(
+        milliseconds: (map['activeDurationMs'] as int?) ?? 0,
+      ),
+      earnedReps: (map['earnedReps'] as int?) ?? 0,
+      claimedReps: (map['claimedReps'] as int?) ?? 0,
     );
   }
 

@@ -2325,6 +2325,7 @@ class AppController extends ChangeNotifier {
     PracticeSessionSetupV1 setup,
     Duration duration, {
     List<String>? practicedItemIds,
+    Map<String, Duration>? activeDurationByItemId,
     Map<String, int>? endingBpmByItemId,
     int? endingBpm,
     String? assessmentItemId,
@@ -2344,15 +2345,29 @@ class AppController extends ChangeNotifier {
           for (final String itemId in resolvedPracticedItemIds)
             itemId: endingBpm ?? setup.itemBpmById[itemId] ?? setup.bpm,
         };
+    final Map<String, Duration> resolvedActiveDurationByItemId =
+        activeDurationByItemId ??
+        <String, Duration>{
+          for (final String itemId in resolvedPracticedItemIds)
+            itemId: resolvedPracticedItemIds.length == 1
+                ? duration
+                : Duration.zero,
+        };
     final List<PracticeSessionItemRuntimeV1> itemRuntimes =
         resolvedPracticedItemIds
-            .map(
-              (String itemId) => PracticeSessionItemRuntimeV1(
+            .map((String itemId) {
+              final Duration activeDuration =
+                  resolvedActiveDurationByItemId[itemId] ?? Duration.zero;
+              final int earnedReps = activeDuration.inSeconds ~/ 60;
+              return PracticeSessionItemRuntimeV1(
                 practiceItemId: itemId,
                 startingBpm: setup.itemBpmById[itemId] ?? setup.bpm,
                 endingBpm: resolvedEndingBpmByItemId[itemId] ?? setup.bpm,
-              ),
-            )
+                activeDuration: activeDuration,
+                earnedReps: earnedReps,
+                claimedReps: 0,
+              );
+            })
             .toList(growable: false);
     final String? resolvedAssessmentItemId =
         assessmentItemId ??
@@ -2377,6 +2392,12 @@ class AppController extends ChangeNotifier {
                 endingBpm ??
                 setup.bpm),
       itemRuntimes: itemRuntimes,
+      earnedReps: itemRuntimes.fold<int>(
+        0,
+        (int sum, PracticeSessionItemRuntimeV1 runtime) =>
+            sum + runtime.earnedReps,
+      ),
+      claimedReps: 0,
       clickEnabled: setup.clickEnabled,
       routineId: setup.routineId,
       reflection: reflection,
@@ -2394,6 +2415,41 @@ class AppController extends ChangeNotifier {
     }
     _notifyChanged();
     return session;
+  }
+
+  void updateSessionEarnedRepsClaim({
+    required String sessionId,
+    required String itemId,
+    required bool keepEarnedReps,
+  }) {
+    _sessions = _sessions
+        .map((PracticeSessionLogV1 session) {
+          if (session.id != sessionId) return session;
+          final List<PracticeSessionItemRuntimeV1> nextRuntimes = session
+              .itemRuntimes
+              .map((PracticeSessionItemRuntimeV1 runtime) {
+                if (runtime.practiceItemId != itemId) return runtime;
+                return runtime.copyWith(
+                  claimedReps: keepEarnedReps ? runtime.earnedReps : 0,
+                );
+              })
+              .toList(growable: false);
+          return session.copyWith(
+            itemRuntimes: nextRuntimes,
+            earnedReps: nextRuntimes.fold<int>(
+              0,
+              (int sum, PracticeSessionItemRuntimeV1 runtime) =>
+                  sum + runtime.earnedReps,
+            ),
+            claimedReps: nextRuntimes.fold<int>(
+              0,
+              (int sum, PracticeSessionItemRuntimeV1 runtime) =>
+                  sum + runtime.claimedReps,
+            ),
+          );
+        })
+        .toList(growable: false);
+    _notifyChanged();
   }
 
   void updateSessionAssessment({

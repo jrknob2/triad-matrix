@@ -58,11 +58,13 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   Duration _elapsedOffset = Duration.zero;
   int? _lastWarmupAutoIndex;
   late Map<String, int> _itemBpmById;
+  late Map<String, Duration> _itemActiveDurationById;
   late List<String> _practicedItemIds;
   late bool _pulseEnabled;
   late int _bpm;
   late bool _clickEnabled;
   late PracticeSessionSetupV1 _setup;
+  Duration? _currentItemSegmentStartElapsed;
   int _currentItemIndex = 0;
 
   @override
@@ -70,6 +72,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     super.initState();
     _setup = widget.setup;
     _itemBpmById = Map<String, int>.from(_setup.itemBpmById);
+    _itemActiveDurationById = <String, Duration>{};
     _practicedItemIds = <String>[];
     _bpm = _itemBpmById[_currentItemId] ?? _setup.bpm;
     _clickEnabled = _setup.family == MaterialFamilyV1.warmup
@@ -238,6 +241,10 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
               fontWeight: FontWeight.w900,
             ),
           ),
+          if (_showsEarnedReps) ...<Widget>[
+            const SizedBox(height: 12),
+            _EarnedRepsDisplay(reps: _totalEarnedReps),
+          ],
           if (transport.statusText != null) ...<Widget>[
             const SizedBox(height: 8),
             Text(
@@ -382,8 +389,10 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
         _running = true;
         _stopwatch.start();
         _markCurrentItemPracticed();
+        _currentItemSegmentStartElapsed = _elapsed;
         _startElapsedTicker();
       } else {
+        _accumulateCurrentItemActiveTime();
         _running = false;
         _stopwatch.stop();
         _elapsedTicker?.cancel();
@@ -425,6 +434,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
       _setup.copyWith(clickEnabled: _clickEnabled),
       _elapsed,
       practicedItemIds: _practicedItemIds,
+      activeDurationByItemId: _resolvedActiveDurationsForCompletedSession(),
       endingBpmByItemId: _itemBpmById,
       assessmentItemId: _practicedItemIds.isEmpty
           ? _currentItemId
@@ -473,9 +483,15 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
       });
       return;
     }
+    if (_running) {
+      _accumulateCurrentItemActiveTime();
+    }
     setState(() {
       _currentItemIndex = nextIndex;
       _bpm = _itemBpmById[_currentItemId] ?? _setup.bpm;
+      if (_running) {
+        _currentItemSegmentStartElapsed = _elapsed;
+      }
     });
     if (_running && _shouldRunMetronome) {
       unawaited(_metronome.updateBpm(bpm: _bpm));
@@ -488,12 +504,14 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     bool clearPracticedItems = false,
   }) {
     if (_running) {
+      _accumulateCurrentItemActiveTime();
       _stopwatch.stop();
     }
     if (clearElapsed) {
       _elapsedOffset = Duration.zero;
       _stopwatch.reset();
       _lastWarmupAutoIndex = null;
+      _currentItemSegmentStartElapsed = null;
     }
     _elapsedTicker?.cancel();
     unawaited(_metronome.stop());
@@ -506,6 +524,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     }
     if (clearPracticedItems) {
       _practicedItemIds = <String>[];
+      _itemActiveDurationById = <String, Duration>{};
     }
   }
 
@@ -529,6 +548,10 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
 
   bool get _isWarmup => _setup.family == MaterialFamilyV1.warmup;
 
+  bool get _showsEarnedReps =>
+      !_isWarmup &&
+      _setup.endBehavior == PracticeSessionEndBehaviorV1.openSummary;
+
   String get _currentItemId => _setup.practiceItemIds[_currentItemIndex];
 
   Duration get _elapsed => _elapsedOffset + _stopwatch.elapsed;
@@ -536,6 +559,12 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   bool get _hasSessionData => _elapsed.inMilliseconds > 0;
 
   bool get _canEndSession => _hasSessionData && !_summaryOpenedForCurrentRun;
+
+  int get _totalEarnedReps {
+    return _setup.practiceItemIds.fold<int>(0, (int sum, String itemId) {
+      return sum + (_activeDurationForItem(itemId).inSeconds ~/ 60);
+    });
+  }
 
   _SessionTransportState get _transportState {
     final Duration? target = _targetDuration();
@@ -666,6 +695,50 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     if (_practicedItemIds.contains(itemId)) return;
     _practicedItemIds = <String>[..._practicedItemIds, itemId];
   }
+
+  Duration _activeDurationForItem(String itemId) {
+    Duration total = _itemActiveDurationById[itemId] ?? Duration.zero;
+    if (_running &&
+        itemId == _currentItemId &&
+        _currentItemSegmentStartElapsed != null) {
+      final Duration liveDelta = _elapsed - _currentItemSegmentStartElapsed!;
+      if (!liveDelta.isNegative) {
+        total += liveDelta;
+      }
+    }
+    return total;
+  }
+
+  void _accumulateCurrentItemActiveTime() {
+    if (_isWarmup || !_running || _currentItemSegmentStartElapsed == null) {
+      return;
+    }
+    final Duration liveDelta = _elapsed - _currentItemSegmentStartElapsed!;
+    if (liveDelta.isNegative || liveDelta == Duration.zero) {
+      _currentItemSegmentStartElapsed = _elapsed;
+      return;
+    }
+    final String itemId = _currentItemId;
+    _itemActiveDurationById = <String, Duration>{
+      ..._itemActiveDurationById,
+      itemId: (_itemActiveDurationById[itemId] ?? Duration.zero) + liveDelta,
+    };
+    _currentItemSegmentStartElapsed = _elapsed;
+  }
+
+  Map<String, Duration> _resolvedActiveDurationsForCompletedSession() {
+    final Map<String, Duration> durations = <String, Duration>{
+      ..._itemActiveDurationById,
+    };
+    if (_running && !_isWarmup && _currentItemSegmentStartElapsed != null) {
+      final Duration liveDelta = _elapsed - _currentItemSegmentStartElapsed!;
+      if (!liveDelta.isNegative && liveDelta > Duration.zero) {
+        durations[_currentItemId] =
+            (durations[_currentItemId] ?? Duration.zero) + liveDelta;
+      }
+    }
+    return durations;
+  }
 }
 
 class _BeatPulse extends StatefulWidget {
@@ -681,6 +754,33 @@ class _BeatPulse extends StatefulWidget {
 
   @override
   State<_BeatPulse> createState() => _BeatPulseState();
+}
+
+class _EarnedRepsDisplay extends StatelessWidget {
+  final int reps;
+
+  const _EarnedRepsDisplay({required this.reps});
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: const Color(0x22FFF4DE),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0x44FFF4DE)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        child: Text(
+          '+$reps Reps',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: const Color(0xFFFFE7C9),
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _BeatPulseState extends State<_BeatPulse> {

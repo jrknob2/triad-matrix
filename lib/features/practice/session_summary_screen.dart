@@ -24,6 +24,7 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
   SelfReportControlV1? _control;
   SelfReportTensionV1? _tension;
   final Set<String> _pendingSaveBpmItemIds = <String>{};
+  final Set<String> _pendingKeepEarnedRepItemIds = <String>{};
   final Set<String> _submittedItemIds = <String>{};
   final Set<String> _skippedItemIds = <String>{};
   late int _currentItemIndex;
@@ -87,6 +88,10 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
     );
     final bool canSaveBpm = bpmAdjusted;
     final bool wantsToSaveBpm = _pendingSaveBpmItemIds.contains(currentItemId);
+    final bool canKeepEarnedReps = currentRuntime.earnedReps > 0;
+    final bool wantsToKeepEarnedReps = _pendingKeepEarnedRepItemIds.contains(
+      currentItemId,
+    );
 
     return Scaffold(
       appBar: AppBar(title: const Text('Session Summary')),
@@ -216,6 +221,54 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                       ),
                     ),
                   ],
+                  if (canKeepEarnedReps) ...<Widget>[
+                    const SizedBox(height: 16),
+                    DrumPanel(
+                      tone: DrumPanelTone.green,
+                      padding: const EdgeInsets.all(14),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          const Icon(Icons.add_task_rounded, size: 20),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Text(
+                                  'Keep Earned Reps',
+                                  style: Theme.of(context).textTheme.titleSmall
+                                      ?.copyWith(fontWeight: FontWeight.w900),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Keep ${currentRuntime.earnedReps} earned ${currentRuntime.earnedReps == 1 ? 'rep' : 'reps'} from this session?',
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Checkbox(
+                            value: wantsToKeepEarnedReps,
+                            onChanged: (bool? value) {
+                              setState(() {
+                                if (value == true) {
+                                  _pendingKeepEarnedRepItemIds.add(
+                                    currentItemId,
+                                  );
+                                } else {
+                                  _pendingKeepEarnedRepItemIds.remove(
+                                    currentItemId,
+                                  );
+                                }
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -281,6 +334,17 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
     _control = result?.selfReportControl;
     _tension = result?.selfReportTension;
     _pendingSaveBpmItemIds.remove(itemId);
+    final PracticeSessionLogV1? session = widget.controller.sessionById(
+      sessionId,
+    );
+    final PracticeSessionItemRuntimeV1? runtime = session == null
+        ? null
+        : widget.controller.sessionItemRuntimeFor(session, itemId);
+    if ((runtime?.claimedReps ?? 0) > 0) {
+      _pendingKeepEarnedRepItemIds.add(itemId);
+    } else {
+      _pendingKeepEarnedRepItemIds.remove(itemId);
+    }
   }
 
   void _saveAssessment(String sessionId, String itemId) {
@@ -308,16 +372,27 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
         );
       }
     }
+    widget.controller.updateSessionEarnedRepsClaim(
+      sessionId: sessionId,
+      itemId: itemId,
+      keepEarnedReps: _pendingKeepEarnedRepItemIds.contains(itemId),
+    );
     _saveAssessment(sessionId, itemId);
     setState(() {
       _submittedItemIds.add(itemId);
       _skippedItemIds.remove(itemId);
       _pendingSaveBpmItemIds.remove(itemId);
+      _pendingKeepEarnedRepItemIds.remove(itemId);
     });
     _advanceOrClose(sessionId, itemId);
   }
 
   void _skipCurrentItem(String sessionId, String itemId) {
+    widget.controller.updateSessionEarnedRepsClaim(
+      sessionId: sessionId,
+      itemId: itemId,
+      keepEarnedReps: false,
+    );
     widget.controller.updateSessionAssessment(
       sessionId: sessionId,
       itemId: itemId,
@@ -331,6 +406,7 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
       _submittedItemIds.remove(itemId);
       _skippedItemIds.add(itemId);
       _pendingSaveBpmItemIds.remove(itemId);
+      _pendingKeepEarnedRepItemIds.remove(itemId);
     });
     _advanceOrClose(sessionId, itemId);
   }
