@@ -267,47 +267,78 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
-              SizedBox(
-                height: 48,
-                width: 108,
-                child: FilledButton.icon(
-                  style: primaryTransportStyle,
-                  onPressed: _toggleRunning,
-                  icon: Icon(_running ? Icons.pause : Icons.play_arrow),
-                  label: Text(_running ? 'Pause' : 'Play'),
-                ),
-              ),
-              const SizedBox(width: 10),
-              if (!isWarmup && _running) ...<Widget>[
+              if (_running) ...<Widget>[
                 SizedBox(
                   height: 48,
                   width: 108,
-                  child: OutlinedButton.icon(
-                    onPressed: _resetCurrentSessionRun,
-                    style: secondaryTransportStyle,
-                    icon: const Icon(Icons.restart_alt),
-                    label: const Text('Reset'),
+                  child: FilledButton.icon(
+                    style: primaryTransportStyle,
+                    onPressed: _toggleRunning,
+                    icon: const Icon(Icons.pause),
+                    label: const Text('Pause'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                if (!isWarmup)
+                  SizedBox(
+                    height: 48,
+                    width: 108,
+                    child: OutlinedButton.icon(
+                      onPressed: _resetCurrentSessionRun,
+                      style: secondaryTransportStyle,
+                      icon: const Icon(Icons.restart_alt),
+                      label: const Text('Reset'),
+                    ),
+                  ),
+                if (isWarmup)
+                  SizedBox(
+                    height: 48,
+                    width: 108,
+                    child: OutlinedButton(
+                      onPressed: _endSession,
+                      style: secondaryTransportStyle,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          const Icon(Icons.stop_rounded, size: 18),
+                          const SizedBox(width: 8),
+                          const Text('End'),
+                        ],
+                      ),
+                    ),
+                  ),
+              ] else ...<Widget>[
+                SizedBox(
+                  height: 48,
+                  width: 108,
+                  child: FilledButton.icon(
+                    style: primaryTransportStyle,
+                    onPressed: _toggleRunning,
+                    icon: const Icon(Icons.play_arrow),
+                    label: const Text('Play'),
                   ),
                 ),
                 const SizedBox(width: 10),
               ],
-              SizedBox(
-                height: 48,
-                width: 108,
-                child: OutlinedButton(
-                  onPressed: canEndSession ? _endSession : null,
-                  style: secondaryTransportStyle,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      const Icon(Icons.stop_rounded, size: 18),
-                      const SizedBox(width: 8),
-                      const Text('End'),
-                    ],
+              if (!_running || isWarmup)
+                SizedBox(
+                  height: 48,
+                  width: 108,
+                  child: OutlinedButton(
+                    onPressed: canEndSession ? _endSession : null,
+                    style: secondaryTransportStyle,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        const Icon(Icons.stop_rounded, size: 18),
+                        const SizedBox(width: 8),
+                        const Text('End'),
+                      ],
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
         ],
@@ -684,7 +715,13 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
         ),
       );
     } else {
-      unawaited(_metronome.setClickEnabled(false));
+      unawaited(
+        _metronome.start(
+          bpm: _bpm,
+          clickEnabled: false,
+          pulseEnabled: _pulseEnabled,
+        ),
+      );
     }
   }
 
@@ -786,19 +823,12 @@ class _EarnedRepsDisplay extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: const Color(0xFFF05A28),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFF7B788), width: 1.2),
-        boxShadow: const <BoxShadow>[
-          BoxShadow(
-            color: Color(0x2AF05A28),
-            blurRadius: 12,
-            offset: Offset(0, 4),
-          ),
-        ],
+        color: const Color(0xFF7C3E1F),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0xFFB86B3F), width: 1.0),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
@@ -809,7 +839,7 @@ class _EarnedRepsDisplay extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Text(
-              '+$reps Reps',
+              '$reps Reps',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 color: const Color(0xFFFFF4DE),
                 fontWeight: FontWeight.w900,
@@ -896,8 +926,10 @@ class _BeatPulseState extends State<_BeatPulse> {
                   : const Color(0xFF14100C),
               shape: BoxShape.circle,
               border: Border.all(
-                color: ringBase.withValues(alpha: 0.5),
-                width: 1.1,
+                color: active
+                    ? const Color(0xFFFFC08D).withValues(alpha: 0.78)
+                    : ringBase.withValues(alpha: 0.5),
+                width: active ? 1.9 : 1.1,
               ),
             ),
             child: Center(
@@ -950,7 +982,7 @@ class _TickRingPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round;
 
     final int majorTickCount = _majorTickCount();
-    final int totalTickCount = majorTickCount * _minorTicksPerMajor;
+    final int totalTickCount = (majorTickCount * _minorTicksPerMajor) + 1;
 
     for (int index = 0; index < totalTickCount; index++) {
       final bool majorTick = index % _minorTicksPerMajor == 0;
@@ -958,15 +990,18 @@ class _TickRingPainter extends CustomPainter {
           ? 1.0
           : index / (totalTickCount - 1);
       final double angle = _startAngle + (tickT * _sweep);
-      final double completedThreshold = (index + 1) / totalTickCount;
-      final bool completed = completedThreshold <= progressClamped;
+      final bool completed = progressClamped >= 1.0
+          ? true
+          : index == 0
+          ? progressClamped > 0
+          : tickT <= progressClamped;
       final Color tickColor = completed
           ? _progressColor(tickT)
           : _inactiveColor();
-      final double tickLength = majorTick ? 20 : 8;
+      final double tickLength = majorTick ? 11 : 8;
       paint
         ..color = tickColor
-        ..strokeWidth = majorTick ? 4.8 : 1.9;
+        ..strokeWidth = majorTick ? 5.8 : 1.9;
 
       final Offset outer = Offset(
         center.dx + math.cos(angle) * radius,

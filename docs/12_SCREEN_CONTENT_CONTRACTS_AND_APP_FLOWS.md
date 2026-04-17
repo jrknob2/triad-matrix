@@ -995,6 +995,7 @@ Practice Session is execution only.
 - tick-ring treatment should represent session progress, not a separate beat engine
 - session-progress color may move from neutral through warm toward green as the session advances
 - session-progress color should communicate completion progress, not rep quality
+- when the outer gauge uses major and minor ticks, the visual distinction should come mainly from thickness and weight rather than much longer major marks
 - decorative player visuals must remain subordinate to synchronization and readability
 - if tick-ring treatment and synchronization conflict, the player must keep the simpler synchronized behavior and reduce decoration
 - session credit or rep credit may appear in the player as a passive display surface, not as a transport action
@@ -1046,6 +1047,7 @@ Practice Session is execution only.
 - the player must not contain controls that switch the session into a different source type
 - default stopped transport state should present `Play` and `End`
 - running transport state should present `Pause` and `Reset`
+- for normal tracked sessions, `End` should not appear alongside `Pause` and `Reset` in the running transport row
 - `End` should stay disabled until the session has actually started and session data exists
 - transport buttons shown together should use the same height and visual weight
 - peer transport buttons shown together should use consistent icon treatment

@@ -385,6 +385,7 @@ Must do:
 - any tick-ring or segmented pulse treatment must still be driven by that same synchronized beat state, not by a separate animation clock
 - session-progress color in the player may move from neutral through warm toward green as the session advances
 - session-progress color in the player communicates completion progress, not rep quality
+- when the outer gauge uses major and minor ticks, the hierarchy should read primarily through thickness and weight, not by making the major ticks much longer than the minor ticks
 - earned reps should advance from active tracked practice time at `1 rep = 60 seconds`
 - warmup and Matrix preview practice do not earn reps
 - player pulse treatment should stay visually restrained relative to notation and timer
@@ -416,6 +417,7 @@ Running transport rules:
 
 - while running, primary transport controls are `Pause` and `Reset`
 - `End` remains the session-exit control for normal tracked sessions
+- in normal tracked sessions, `End` should not appear in the same running transport row as `Pause` and `Reset`
 - `End` stays disabled until the session has actually started and has session data
 - transport buttons shown together should share the same visual weight and size
 - action buttons shown together in shared rows should use the same vertical size whenever their labels allow it
