@@ -187,13 +187,13 @@ Path:
 
 1. `Coach`
 2. `Add to Working On` or `Open Matrix`
-3. `Focus` or `Matrix`
+3. `Library` or `Matrix`
 4. `Practice`
 
 Screens involved:
 
 - Coach
-- Focus
+- Library
 - Matrix
 - Practice
 
@@ -201,7 +201,7 @@ Required controls:
 
 - Coach starter CTA
 - Matrix open CTA
-- Focus item play CTA
+- Library item play CTA
 - Practice direct-entry CTA
 
 ### Flow B: Direct Practice Start
@@ -1142,11 +1142,11 @@ Early-exit rule:
 
 ---
 
-## 6. Focus
+## 6. Library
 
 ### Screen Job
 
-Focus is the current working set.
+Library is the current working set and searchable working library.
 
 ### Allowed Content
 
@@ -1179,7 +1179,7 @@ Focus is the current working set.
 
 Must show:
 
-- what Focus is for
+- what Library is for
 - where items come from
 
 Must not show:
@@ -1187,10 +1187,10 @@ Must not show:
 - fake stats
 - long philosophy copy
 
-### Focus Rules
+### Library Rules
 
 - `Working On` may be broader than today's session scope
-- Focus must not imply that every item in the list should be practiced in one sitting
+- Library must not imply that every item in the list should be practiced in one sitting
 - `Working On` is for active development
 - `Maintain` is a separate bucket for refresh and retention of already-strong material
 - Practice session setup is where the player chooses today's slice

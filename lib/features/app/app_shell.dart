@@ -123,9 +123,9 @@ class _AppShellState extends State<AppShell> {
                       label: Text('Practice'),
                     ),
                     NavigationRailDestination(
-                      icon: Icon(Icons.backpack_outlined),
-                      selectedIcon: Icon(Icons.backpack),
-                      label: Text('Focus'),
+                      icon: Icon(Icons.music_note_outlined),
+                      selectedIcon: Icon(Icons.music_note),
+                      label: Text('Library'),
                     ),
                     NavigationRailDestination(
                       icon: Icon(Icons.bar_chart_outlined),
@@ -176,9 +176,9 @@ class _AppShellState extends State<AppShell> {
                   label: 'Practice',
                 ),
                 NavigationDestination(
-                  icon: Icon(Icons.backpack_outlined),
-                  selectedIcon: Icon(Icons.backpack),
-                  label: 'Focus',
+                  icon: Icon(Icons.music_note_outlined),
+                  selectedIcon: Icon(Icons.music_note),
+                  label: 'Library',
                 ),
                 NavigationDestination(
                   icon: Icon(Icons.bar_chart_outlined),
@@ -197,7 +197,7 @@ class _AppShellState extends State<AppShell> {
     'Coach',
     'Triad Matrix',
     'Practice',
-    'Working On',
+    'Library',
     'Progress',
   ];
 

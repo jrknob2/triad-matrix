@@ -46,7 +46,7 @@ V1 uses five primary tabs:
 1. `Coach`
 2. `Matrix`
 3. `Practice`
-4. `Focus`
+4. `Library`
 5. `Progress`
 
 Secondary routes:
@@ -149,22 +149,22 @@ Practice is not responsible for:
 - progress explanation
 - long-form item management
 
-### Focus
+### Library
 
 Purpose:
 
-- manage the active working set
+- manage the working library and active working set
 
-Focus is responsible for:
+Library is responsible for:
 
 - showing what the player is working on now
 - add/remove
 - simple edit/open
 - launch practice
 
-On iPad, Focus should use the available width for denser row composition and clearer separation of search, filters, and list controls.
+On iPad, Library should use the available width for denser row composition and clearer separation of search, filters, and list controls.
 
-Focus is not responsible for:
+Library is not responsible for:
 
 - coaching
 - progress analysis

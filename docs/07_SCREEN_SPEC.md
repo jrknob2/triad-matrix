@@ -35,7 +35,7 @@ V1 uses a persistent shell with five primary tabs:
 1. `Coach`
 2. `Matrix`
 3. `Practice`
-4. `Focus`
+4. `Library`
 5. `Progress`
 
 Secondary routes:
@@ -460,11 +460,11 @@ Running transport rules:
 
 ---
 
-## 4. Focus
+## 4. Library
 
 ### Purpose
 
-Focus is the current working set.
+Library is the current working set and searchable working library.
 
 ### Must Do
 
@@ -488,7 +488,7 @@ Focus is the current working set.
 
 Must show:
 
-- what Focus is for
+- what Library is for
 - how to add items
 
 #### State B: Active Working Set
@@ -521,9 +521,9 @@ Per-item play should read as `Practice`, not as `Practice on One Surface`; voice
 
 ### Acceptance Criteria
 
-- Focus should read as CRUD for current work
-- Focus should feel like the broad active pool, not today's forced checklist
-- search must help the player find and add practice items quickly without turning Focus into a second Matrix
+- Library should read as CRUD for current work plus quick access to the broader working library
+- Library should feel like the broad active pool, not today's forced checklist
+- search must help the player find and add practice items quickly without turning Library into a second Matrix
 - filter state must always have a clear way back to `All`
 - the user should never wonder whether an item is “saved”, “mastered”, or “current”
 - the screen should not duplicate its own title with a second visible `Working On` heading
