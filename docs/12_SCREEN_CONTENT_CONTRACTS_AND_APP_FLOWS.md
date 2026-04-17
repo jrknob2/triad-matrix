@@ -997,6 +997,7 @@ Practice Session is execution only.
 - when `Pause` is pressed, the same transition should reverse smoothly back to the default session layout
 - it is acceptable for focus mode to use a distinct running layout as long as the transition feels continuous and the default stopped layout is left intact
 - focus-mode transition timing should stay subtle and fast, around `180–250ms`, with no bouncy or playful motion
+- focus-mode transitions should read as regions sliding and settling into place, not as a flip, pop, or abrupt subtree swap
 - pattern, gauge, and timer should keep their visual anchor during the transition and must not jump abruptly
 - the gauge may grow slightly in focus mode, but it should still feel anchored inside the same player card
 - on phone, the light BPM/settings card is a secondary utility region that sits beneath the player card, not across it

@@ -161,51 +161,13 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                             ),
                           ],
                         )
-                      : AnimatedSwitcher(
-                          duration: _focusTransitionDuration,
-                          switchInCurve: Curves.easeInOut,
-                          switchOutCurve: Curves.easeInOut,
-                          transitionBuilder:
-                              (Widget child, Animation<double> animation) {
-                                final Animation<Offset> offset = Tween<Offset>(
-                                  begin: const Offset(0, 0.02),
-                                  end: Offset.zero,
-                                ).animate(animation);
-                                return FadeTransition(
-                                  opacity: animation,
-                                  child: SlideTransition(
-                                    position: offset,
-                                    child: child,
-                                  ),
-                                );
-                              },
-                          child: focusMode
-                              ? LayoutBuilder(
-                                  key: const ValueKey<String>('focus_layout'),
-                                  builder:
-                                      (
-                                        BuildContext context,
-                                        BoxConstraints constraints,
-                                      ) {
-                                        return Align(
-                                          alignment: Alignment.topCenter,
-                                          child: _buildPlayerPanel(
-                                            context,
-                                            isWarmup: isWarmup,
-                                            currentItemId: currentItemId,
-                                            markings: markings,
-                                            tokens: tokens,
-                                            transport: transport,
-                                            voices: voices,
-                                            focusMode: true,
-                                            availableWidth:
-                                                constraints.maxWidth,
-                                          ),
-                                        );
-                                      },
-                                )
-                              : ListView(
-                                  key: const ValueKey<String>('default_layout'),
+                      : LayoutBuilder(
+                          builder:
+                              (
+                                BuildContext context,
+                                BoxConstraints constraints,
+                              ) {
+                                final Widget defaultLayout = ListView(
                                   padding: EdgeInsets.zero,
                                   children: <Widget>[
                                     _buildPlayerPanel(
@@ -221,7 +183,59 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                                     const SizedBox(height: 16),
                                     _buildSessionControlsPanel(context),
                                   ],
-                                ),
+                                );
+                                final Widget focusLayout = Align(
+                                  alignment: Alignment.topCenter,
+                                  child: _buildPlayerPanel(
+                                    context,
+                                    isWarmup: isWarmup,
+                                    currentItemId: currentItemId,
+                                    markings: markings,
+                                    tokens: tokens,
+                                    transport: transport,
+                                    voices: voices,
+                                    focusMode: true,
+                                    availableWidth: constraints.maxWidth,
+                                  ),
+                                );
+                                return Stack(
+                                  fit: StackFit.expand,
+                                  children: <Widget>[
+                                    IgnorePointer(
+                                      ignoring: focusMode,
+                                      child: AnimatedSlide(
+                                        duration: _focusTransitionDuration,
+                                        curve: Curves.easeInOutCubic,
+                                        offset: focusMode
+                                            ? const Offset(0, -0.025)
+                                            : Offset.zero,
+                                        child: AnimatedOpacity(
+                                          duration: _focusTransitionDuration,
+                                          curve: Curves.easeInOut,
+                                          opacity: focusMode ? 0 : 1,
+                                          child: defaultLayout,
+                                        ),
+                                      ),
+                                    ),
+                                    IgnorePointer(
+                                      ignoring: !focusMode,
+                                      child: AnimatedSlide(
+                                        duration: _focusTransitionDuration,
+                                        curve: Curves.easeInOutCubic,
+                                        offset: focusMode
+                                            ? Offset.zero
+                                            : const Offset(0, 0.03),
+                                        child: AnimatedOpacity(
+                                          duration: _focusTransitionDuration,
+                                          curve: Curves.easeInOut,
+                                          opacity: focusMode ? 1 : 0,
+                                          child: focusLayout,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
                         ),
                 ),
               ],
