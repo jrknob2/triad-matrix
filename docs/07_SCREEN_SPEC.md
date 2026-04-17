@@ -378,19 +378,20 @@ Must show:
 
 Must do:
 
-- when the timer reaches the target duration, switch to a clear completed visual state without force-ending the session
+- reaching the target duration should cue the cycle boundary without force-ending the session
 - in multi-item sessions, BPM changes should belong to the currently shown item, not the whole session globally
 - in multi-item tracked sessions, the target duration applies per current pattern, not once across the entire slice
 - in multi-item tracked sessions, each current pattern should use its own saved launch duration when available
-- when the current pattern reaches its target duration, the player should chime and auto-forward into the next pattern if one remains
-- when the final pattern reaches its target duration, the player should still chime and enter the completed visual state without force-ending the session
+- in single-pattern tracked practice, reaching the target duration should chime and restart the gauge cycle while total elapsed time keeps running
+- in multi-item tracked practice, reaching the current pattern's target duration should chime and auto-forward into the next pattern
+- after the final pattern reaches its target duration, the player should chime, wrap back to the first pattern, and continue running with total elapsed time preserved
 - click playback should use a preloaded low-latency trigger path rather than repeatedly retriggering one shared media player instance
 - when native metronome playback is active, the visual pulse should derive from the native audio playback phase rather than an event-channel beat callback or an independent Dart beat clock
 - after native beat onset is detected, the player may hold the visual pulse briefly for readability, but the beat onset itself must still come from the native playback phase
 - any tick-ring or segmented pulse treatment must still be driven by that same synchronized beat state, not by a separate animation clock
 - completed gauge ticks in the player should use one green progression color as the session advances
 - inactive gauge ticks in the player should remain neutral
-- gauge tick color in the player communicates completion progress, not rep quality
+- gauge tick color in the player communicates cycle completion progress, not rep quality
 - when the outer gauge uses major and minor ticks, the hierarchy should read primarily through thickness and weight, not by making the major ticks much longer than the minor ticks
 - earned reps should advance from active tracked practice time at `1 rep = 60 seconds`
 - warmup and Matrix preview practice do not earn reps

@@ -993,10 +993,10 @@ Practice Session is execution only.
 - the player should read like an execution instrument, not a settings form
 - BPM should sit inside an integrated circular display when the full player treatment is shown
 - the pulse display may use a tick-ring treatment around the BPM core display
-- tick-ring treatment should represent session progress, not a separate beat engine
+- tick-ring treatment should represent cycle progress, not a separate beat engine
 - completed gauge ticks should use one green progression color as the session advances
 - inactive gauge ticks should remain neutral
-- gauge tick color should communicate completion progress, not rep quality
+- gauge tick color should communicate cycle completion progress, not rep quality
 - when the outer gauge uses major and minor ticks, the visual distinction should come mainly from thickness and weight rather than much longer major marks
 - decorative player visuals must remain subordinate to synchronization and readability
 - if tick-ring treatment and synchronization conflict, the player must keep the simpler synchronized behavior and reduce decoration
@@ -1021,14 +1021,14 @@ Practice Session is execution only.
 ### Normal Session Rules
 
 - target reached may cue, but not force-end
-- when the timer reaches the target duration, the player should enter a clear completed visual state
 - reaching target duration must not silently stop the session
 - `End` leads to summary
 - in multi-item sessions, BPM is per-item runtime state
 - in multi-item tracked sessions, the target duration applies per current pattern rather than once across the whole slice
-- when the current pattern reaches its target duration, the player should chime and automatically move to the next pattern if one remains
+- in single-pattern tracked practice, reaching the target duration should chime and restart the gauge cycle while total elapsed time keeps running
+- in multi-item tracked practice, reaching the current pattern's target duration should chime and automatically move to the next pattern
 - when auto-forward moves to the next pattern, the player should stay running and carry straight into that next pattern's timing state
-- when the final pattern reaches its target duration, the player should still chime and enter the completed visual state without force-ending the session
+- after the final pattern reaches its target duration, the player should chime, wrap back to the first pattern, and continue running with total elapsed time preserved
 - in multi-item tracked practice, each current pattern should use its own saved launch duration when available rather than one shared slice-wide timer preset
 - changing BPM during a multi-item session must apply to the currently shown item only
 - when the player moves between items, the item's current runtime BPM must be restored

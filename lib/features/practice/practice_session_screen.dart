@@ -50,14 +50,13 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   late final PracticeMetronomeService _metronome;
   Timer? _elapsedTicker;
   bool _running = false;
-  bool _targetReached = false;
   bool _warmupComplete = false;
   bool _completionChimed = false;
-  bool _completionStateVisible = false;
   bool _summaryOpenedForCurrentRun = false;
   bool _ephemeralItemsDiscarded = false;
   Duration _elapsedOffset = Duration.zero;
   int? _lastWarmupAutoIndex;
+  int _lastSinglePatternCompletedCycle = 0;
   late Map<String, int> _itemBpmById;
   late Map<String, Duration> _itemActiveDurationById;
   late List<String> _practicedItemIds;
@@ -243,9 +242,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
             transport.timerText,
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               fontFamily: 'Courier',
-              color: _warmupComplete || _targetReached
-                  ? const Color(0xFFFFC08D)
-                  : const Color(0xFFFFF4DE),
+              color: const Color(0xFFFFF4DE),
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -420,11 +417,8 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
           _stopwatch.reset();
           _currentItemIndex = 0;
           _warmupComplete = false;
-          _targetReached = false;
           _completionChimed = false;
-          _completionStateVisible = false;
         }
-        _completionStateVisible = false;
         _running = true;
         _stopwatch.start();
         _markCurrentItemPracticed();
@@ -561,10 +555,9 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     unawaited(_metronome.stop());
     _running = false;
     if (clearFlags) {
-      _targetReached = false;
       _warmupComplete = false;
       _completionChimed = false;
-      _completionStateVisible = false;
+      _lastSinglePatternCompletedCycle = 0;
     }
     if (clearPracticedItems) {
       _practicedItemIds = <String>[];
@@ -620,31 +613,39 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
 
   _SessionTransportState get _transportState {
     final Duration? target = _targetDuration();
-    final Duration displayElapsed = _usesPerItemTargetTiming
-        ? _activeDurationForItem(_currentItemId)
-        : _elapsed;
+    final Duration displayElapsed = _elapsed;
     final String timerText = target == null
         ? formatDuration(displayElapsed)
         : '${formatDuration(displayElapsed)} / ${formatDuration(target)}';
-    final String? statusText = _warmupComplete
-        ? 'Warmup complete'
-        : (_completionStateVisible ? 'Target reached' : null);
+    final String? statusText = _warmupComplete ? 'Warmup complete' : null;
     return _SessionTransportState(
       elapsed: displayElapsed,
       target: target,
       timerText: timerText,
       statusText: statusText,
-      completed: _completionStateVisible || _warmupComplete,
+      completed: _warmupComplete,
     );
   }
 
   double _sessionProgressFraction(_SessionTransportState transport) {
     final Duration? target = transport.target;
     if (target == null || target.inMilliseconds <= 0) return 0.0;
-    return (transport.elapsed.inMilliseconds / target.inMilliseconds).clamp(
-      0.0,
-      1.0,
-    );
+    return (_cycleElapsedForTarget(target).inMilliseconds /
+            target.inMilliseconds)
+        .clamp(0.0, 1.0);
+  }
+
+  Duration _cycleElapsedForTarget(Duration target) {
+    if (_isWarmup) return _elapsed;
+    if (_usesPerItemTargetTiming) {
+      if (_currentItemSegmentStartElapsed == null) return Duration.zero;
+      final Duration cycleElapsed = _elapsed - _currentItemSegmentStartElapsed!;
+      return cycleElapsed.isNegative ? Duration.zero : cycleElapsed;
+    }
+    final int targetMs = target.inMilliseconds;
+    if (targetMs <= 0) return _elapsed;
+    final int cycleMs = _elapsed.inMilliseconds % targetMs;
+    return Duration(milliseconds: cycleMs);
   }
 
   void _startElapsedTicker() {
@@ -678,7 +679,6 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     final int totalSeconds = itemCount * 60;
     if (_running && elapsedSeconds >= totalSeconds) {
       _warmupComplete = true;
-      _targetReached = true;
       _playCompletionChimeOnce();
       _resetRunState(clearElapsed: false);
     }
@@ -687,22 +687,21 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   void _syncPracticeTargetProgress() {
     final Duration? target = _targetDuration();
     if (target == null) return;
-    final Duration currentItemElapsed = _activeDurationForItem(_currentItemId);
-    if (currentItemElapsed < target) return;
-    final bool isLastItem =
-        _currentItemIndex >= _setup.practiceItemIds.length - 1;
-    if (!isLastItem) {
+    if (_usesPerItemTargetTiming) {
+      final Duration cycleElapsed = _cycleElapsedForTarget(target);
+      if (cycleElapsed < target) return;
       _playTargetReachedChime();
-      _changeItem(_currentItemIndex + 1);
-      _targetReached = false;
-      _completionStateVisible = false;
-      _completionChimed = false;
+      final int nextIndex =
+          (_currentItemIndex + 1) % _setup.practiceItemIds.length;
+      _changeItem(nextIndex);
       return;
     }
-    if (!_targetReached) {
-      _targetReached = true;
-      _completionStateVisible = true;
-      _playCompletionChimeOnce();
+    final int targetMs = target.inMilliseconds;
+    if (targetMs <= 0) return;
+    final int completedCycles = _elapsed.inMilliseconds ~/ targetMs;
+    if (completedCycles > _lastSinglePatternCompletedCycle) {
+      _lastSinglePatternCompletedCycle = completedCycles;
+      _playTargetReachedChime();
     }
   }
 
@@ -925,15 +924,15 @@ class _BeatPulseState extends State<_BeatPulse> {
     final bool active = widget.enabled && _flashActive;
     const Color ringBase = Color(0xFF4A4337);
     return SizedBox(
-      width: 196,
-      height: 196,
+      width: 228,
+      height: 228,
       child: Stack(
         alignment: Alignment.center,
         children: <Widget>[
           if (widget.enabled)
             SizedBox(
-              width: 188,
-              height: 188,
+              width: 220,
+              height: 220,
               child: CustomPaint(
                 painter: _TickRingPainter(
                   progress: widget.progress,
@@ -943,13 +942,13 @@ class _BeatPulseState extends State<_BeatPulse> {
             ),
           if (widget.enabled)
             _PulseGaugeRing(
-              diameter: 130,
+              diameter: 154,
               color: active ? const Color(0xFFFFC08D) : const Color(0xFF5A4A39),
               width: active ? 5.5 : 4.0,
             ),
           Container(
-            width: 112,
-            height: 112,
+            width: 126,
+            height: 126,
             decoration: BoxDecoration(
               color: widget.enabled
                   ? const Color(0xFF1F1A14)
@@ -1158,7 +1157,7 @@ class _PlayerNotation extends StatelessWidget {
                 markings: markings,
                 voices: voices,
                 grouping: grouping,
-                showRepeatIndicator: true,
+                showRepeatIndicator: false,
                 scrollable: false,
                 wrap: true,
                 cellWidth: tokens.length >= 24 ? 34 : (isWarmup ? 44 : 42),
@@ -1174,7 +1173,7 @@ class _PlayerNotation extends StatelessWidget {
                   growable: false,
                 ),
                 grouping: grouping,
-                showRepeatIndicator: true,
+                showRepeatIndicator: false,
                 scrollable: false,
                 showPatternRow: true,
                 showVoiceRow: false,
