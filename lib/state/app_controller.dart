@@ -3980,6 +3980,15 @@ class _MockScenarioBuilder {
           ),
     ];
     routine = routine.copyWith(entries: nextEntries);
+    for (final String itemId in itemIds) {
+      final PracticeLaunchPreferenceV1? existingPreference =
+          launchPreferencesByItemId[itemId];
+      launchPreferencesByItemId[itemId] = PracticeLaunchPreferenceV1(
+        practiceItemId: itemId,
+        bpm: existingPreference?.bpm ?? profile.defaultBpm,
+        timerPreset: TimerPresetV1.minutes2,
+      );
+    }
   }
 
   void setCompetency(String itemId, CompetencyLevelV1 level) {

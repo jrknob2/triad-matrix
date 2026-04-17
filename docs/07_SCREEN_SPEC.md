@@ -378,10 +378,10 @@ Must show:
 
 Must do:
 
-- treat focus mode as an animated expansion of the existing player layout rather than a separate screen or abrupt layout swap
+- preserve the established stopped Practice Session layout exactly; focus mode should apply only while the player is running
 - when `Play` is pressed, collapse/fade the session header and phone bottom nav while the player region expands into the reclaimed space
 - when `Pause` is pressed, reverse the same transition smoothly
-- use a single layout tree with animated height, padding, opacity, and spacing values so the player content preserves orientation during the transition
+- a distinct running focus layout is acceptable as long as the transition remains continuous and the stopped layout is not redesigned
 - keep focus-mode motion subtle and fast, roughly `180–250ms`, with no bouncy motion
 - on phone, the BPM/settings card should remain a clearly secondary utility card below the player rather than visually covering it
 - the settings card must not obscure the gauge, timer, earned-reps display, or transport controls
