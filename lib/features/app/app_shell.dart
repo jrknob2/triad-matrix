@@ -22,11 +22,13 @@ class AppShell extends StatefulWidget {
 }
 
 class _AppShellState extends State<AppShell> {
+  static const Duration _focusTransitionDuration = Duration(milliseconds: 220);
   int _currentIndex = 0;
   int _matrixRequestVersion = 0;
   MatrixScreenRequest? _matrixRequest;
   final GlobalKey<NavigatorState> _shellNavigatorKey =
       GlobalKey<NavigatorState>();
+  bool _practiceSessionChromeCollapsed = false;
 
   @override
   Widget build(BuildContext context) {
@@ -141,51 +143,68 @@ class _AppShellState extends State<AppShell> {
           );
         }
 
+        final double navHeight =
+            80 + MediaQuery.paddingOf(context).bottom.toDouble();
         return Scaffold(
           body: shellContent,
-          bottomNavigationBar: DecoratedBox(
-            decoration: const BoxDecoration(
-              color: Color(0xFFE8DDD0),
-              border: Border(top: BorderSide(color: Color(0x22000000))),
-              boxShadow: <BoxShadow>[
-                BoxShadow(
-                  color: Color(0x12000000),
-                  blurRadius: 18,
-                  offset: Offset(0, -4),
+          bottomNavigationBar: ClipRect(
+            child: AnimatedContainer(
+              duration: _focusTransitionDuration,
+              curve: Curves.easeInOut,
+              height: _practiceSessionChromeCollapsed ? 0 : navHeight,
+              child: AnimatedOpacity(
+                duration: _focusTransitionDuration,
+                curve: Curves.easeInOut,
+                opacity: _practiceSessionChromeCollapsed ? 0 : 1,
+                child: IgnorePointer(
+                  ignoring: _practiceSessionChromeCollapsed,
+                  child: DecoratedBox(
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFE8DDD0),
+                      border: Border(top: BorderSide(color: Color(0x22000000))),
+                      boxShadow: <BoxShadow>[
+                        BoxShadow(
+                          color: Color(0x12000000),
+                          blurRadius: 18,
+                          offset: Offset(0, -4),
+                        ),
+                      ],
+                    ),
+                    child: NavigationBar(
+                      backgroundColor: const Color(0xFFE8DDD0),
+                      selectedIndex: _currentIndex,
+                      onDestinationSelected: _selectTab,
+                      destinations: const <NavigationDestination>[
+                        NavigationDestination(
+                          icon: Icon(Icons.wb_sunny_outlined),
+                          selectedIcon: Icon(Icons.wb_sunny),
+                          label: 'Coach',
+                        ),
+                        NavigationDestination(
+                          icon: Icon(Icons.grid_view_outlined),
+                          selectedIcon: Icon(Icons.grid_view_rounded),
+                          label: 'Matrix',
+                        ),
+                        NavigationDestination(
+                          icon: Icon(Icons.play_circle_outline_rounded),
+                          selectedIcon: Icon(Icons.play_circle_rounded),
+                          label: 'Practice',
+                        ),
+                        NavigationDestination(
+                          icon: Icon(Icons.music_note_outlined),
+                          selectedIcon: Icon(Icons.music_note),
+                          label: 'Library',
+                        ),
+                        NavigationDestination(
+                          icon: Icon(Icons.bar_chart_outlined),
+                          selectedIcon: Icon(Icons.bar_chart),
+                          label: 'Progress',
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ],
-            ),
-            child: NavigationBar(
-              backgroundColor: const Color(0xFFE8DDD0),
-              selectedIndex: _currentIndex,
-              onDestinationSelected: _selectTab,
-              destinations: const <NavigationDestination>[
-                NavigationDestination(
-                  icon: Icon(Icons.wb_sunny_outlined),
-                  selectedIcon: Icon(Icons.wb_sunny),
-                  label: 'Coach',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.grid_view_outlined),
-                  selectedIcon: Icon(Icons.grid_view_rounded),
-                  label: 'Matrix',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.play_circle_outline_rounded),
-                  selectedIcon: Icon(Icons.play_circle_rounded),
-                  label: 'Practice',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.music_note_outlined),
-                  selectedIcon: Icon(Icons.music_note),
-                  label: 'Library',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.bar_chart_outlined),
-                  selectedIcon: Icon(Icons.bar_chart),
-                  label: 'Progress',
-                ),
-              ],
+              ),
             ),
           ),
         );
@@ -252,13 +271,26 @@ class _AppShellState extends State<AppShell> {
 
   void _selectTab(int index) {
     _shellNavigatorKey.currentState?.popUntil((route) => route.isFirst);
-    setState(() => _currentIndex = index);
+    setState(() {
+      _currentIndex = index;
+      _practiceSessionChromeCollapsed = false;
+    });
+  }
+
+  void _setPracticeSessionChromeCollapsed(bool collapsed) {
+    if (!mounted || _practiceSessionChromeCollapsed == collapsed) return;
+    setState(() {
+      _practiceSessionChromeCollapsed = collapsed;
+    });
   }
 
   void _openPracticeSession(PracticeSessionSetupV1 setup) {
     final Route<void> route = MaterialPageRoute<void>(
-      builder: (_) =>
-          PracticeSessionScreen(controller: widget.controller, setup: setup),
+      builder: (_) => PracticeSessionScreen(
+        controller: widget.controller,
+        setup: setup,
+        onFocusModeChanged: _setPracticeSessionChromeCollapsed,
+      ),
       fullscreenDialog: AppViewport.isTablet(context),
     );
     if (AppViewport.isTablet(context)) {

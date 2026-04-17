@@ -16,11 +16,13 @@ import 'session_summary_screen.dart';
 class PracticeSessionScreen extends StatefulWidget {
   final AppController controller;
   final PracticeSessionSetupV1 setup;
+  final ValueChanged<bool>? onFocusModeChanged;
 
   const PracticeSessionScreen({
     super.key,
     required this.controller,
     required this.setup,
+    this.onFocusModeChanged,
   });
 
   @override
@@ -45,6 +47,7 @@ class _SessionTransportState {
 
 class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   static const String _metronomeAssetPath = 'assets/audio/metronome_beep.wav';
+  static const Duration _focusTransitionDuration = Duration(milliseconds: 220);
 
   final Stopwatch _stopwatch = Stopwatch();
   late final PracticeMetronomeService _metronome;
@@ -85,6 +88,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
 
   @override
   void dispose() {
+    widget.onFocusModeChanged?.call(false);
     _discardEphemeralItemsIfNeeded();
     _elapsedTicker?.cancel();
     unawaited(_metronome.dispose());
@@ -95,6 +99,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   Widget build(BuildContext context) {
     final bool isTablet = AppViewport.isTablet(context);
     final bool isWarmup = _isWarmup;
+    final bool focusMode = _running;
     final String currentItemId = _currentItemId;
     final List<String> tokens = widget.controller.noteTokensFor(currentItemId);
     final List<PatternNoteMarkingV1> markings = widget.controller
@@ -105,53 +110,137 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     final _SessionTransportState transport = _transportState;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(isWarmup ? 'Warmup Session' : 'Practice Session'),
-      ),
       body: DrumScreen(
         warm: false,
-        child: isTablet
-            ? Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Expanded(
-                      flex: 5,
-                      child: _buildPlayerPanel(
-                        context,
-                        isWarmup: isWarmup,
-                        currentItemId: currentItemId,
-                        markings: markings,
-                        tokens: tokens,
-                        transport: transport,
-                        voices: voices,
-                      ),
-                    ),
-                    const SizedBox(width: AppViewport.splitPaneGap),
-                    SizedBox(
-                      width: 360,
-                      child: _buildSessionControlsPanel(context),
-                    ),
-                  ],
+        child: SafeArea(
+          child: AnimatedPadding(
+            duration: _focusTransitionDuration,
+            curve: Curves.easeInOut,
+            padding: EdgeInsets.fromLTRB(16, focusMode ? 8 : 12, 16, 16),
+            child: Column(
+              children: <Widget>[
+                _buildAnimatedHeader(context, isWarmup: isWarmup),
+                AnimatedContainer(
+                  duration: _focusTransitionDuration,
+                  curve: Curves.easeInOut,
+                  height: focusMode ? 8 : 12,
                 ),
-              )
-            : ListView(
-                padding: const EdgeInsets.all(16),
-                children: <Widget>[
-                  _buildPlayerPanel(
-                    context,
-                    isWarmup: isWarmup,
-                    currentItemId: currentItemId,
-                    markings: markings,
-                    tokens: tokens,
-                    transport: transport,
-                    voices: voices,
+                Expanded(
+                  child: isTablet
+                      ? Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Expanded(
+                              flex: 5,
+                              child: _buildPlayerPanel(
+                                context,
+                                isWarmup: isWarmup,
+                                currentItemId: currentItemId,
+                                markings: markings,
+                                tokens: tokens,
+                                transport: transport,
+                                voices: voices,
+                                focusMode: focusMode,
+                              ),
+                            ),
+                            AnimatedContainer(
+                              duration: _focusTransitionDuration,
+                              curve: Curves.easeInOut,
+                              width: AppViewport.splitPaneGap,
+                            ),
+                            SizedBox(
+                              width: 360,
+                              child: _buildSessionControlsPanel(context),
+                            ),
+                          ],
+                        )
+                      : LayoutBuilder(
+                          builder:
+                              (
+                                BuildContext context,
+                                BoxConstraints constraints,
+                              ) {
+                                return SingleChildScrollView(
+                                  physics: const BouncingScrollPhysics(),
+                                  child: ConstrainedBox(
+                                    constraints: BoxConstraints(
+                                      minHeight: constraints.maxHeight,
+                                    ),
+                                    child: Column(
+                                      children: <Widget>[
+                                        Align(
+                                          alignment: Alignment.topCenter,
+                                          child: _buildPlayerPanel(
+                                            context,
+                                            isWarmup: isWarmup,
+                                            currentItemId: currentItemId,
+                                            markings: markings,
+                                            tokens: tokens,
+                                            transport: transport,
+                                            voices: voices,
+                                            focusMode: focusMode,
+                                          ),
+                                        ),
+                                        AnimatedContainer(
+                                          duration: _focusTransitionDuration,
+                                          curve: Curves.easeInOut,
+                                          height: focusMode ? 20 : 24,
+                                        ),
+                                        Align(
+                                          alignment: Alignment.topCenter,
+                                          child: _buildSessionControlsPanel(
+                                            context,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                        ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAnimatedHeader(BuildContext context, {required bool isWarmup}) {
+    final bool hidden = _running;
+    return ClipRect(
+      child: AnimatedContainer(
+        duration: _focusTransitionDuration,
+        curve: Curves.easeInOut,
+        height: hidden ? 0 : 52,
+        child: AnimatedOpacity(
+          duration: _focusTransitionDuration,
+          curve: Curves.easeInOut,
+          opacity: hidden ? 0 : 1,
+          child: IgnorePointer(
+            ignoring: hidden,
+            child: Row(
+              children: <Widget>[
+                IconButton(
+                  onPressed: () => Navigator.of(context).maybePop(),
+                  icon: const Icon(Icons.arrow_back_rounded),
+                  tooltip: 'Back',
+                ),
+                Expanded(
+                  child: Text(
+                    isWarmup ? 'Warmup Session' : 'Practice Session',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
-                  const SizedBox(height: 16),
-                  _buildSessionControlsPanel(context),
-                ],
-              ),
+                ),
+                const SizedBox(width: 48),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -164,8 +253,12 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     required List<String> tokens,
     required _SessionTransportState transport,
     required List<DrumVoiceV1> voices,
+    required bool focusMode,
   }) {
     final bool canEndSession = _canEndSession;
+    final double panelGap = focusMode ? 22 : 18;
+    final double panelPadding = focusMode ? 24 : 20;
+    final double gaugeSize = focusMode ? 244 : 228;
     final ButtonStyle secondaryTransportStyle = ButtonStyle(
       minimumSize: const WidgetStatePropertyAll<Size>(Size(116, 48)),
       maximumSize: const WidgetStatePropertyAll<Size>(Size(116, 48)),
@@ -204,95 +297,155 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     );
     return DrumPanel(
       tone: DrumPanelTone.dark,
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        children: <Widget>[
-          if (_setup.practiceItemIds.length > 1) ...<Widget>[
-            _SessionStepper(
-              currentIndex: _currentItemIndex,
-              itemCount: _setup.practiceItemIds.length,
-              onPrevious: _currentItemIndex == 0
-                  ? null
-                  : () => _changeItem(_currentItemIndex - 1),
-              onNext: _currentItemIndex == _setup.practiceItemIds.length - 1
-                  ? null
-                  : () => _changeItem(_currentItemIndex + 1),
-              dark: true,
+      padding: EdgeInsets.zero,
+      child: AnimatedPadding(
+        duration: _focusTransitionDuration,
+        curve: Curves.easeInOut,
+        padding: EdgeInsets.all(panelPadding),
+        child: Column(
+          children: <Widget>[
+            if (_setup.practiceItemIds.length > 1) ...<Widget>[
+              _SessionStepper(
+                currentIndex: _currentItemIndex,
+                itemCount: _setup.practiceItemIds.length,
+                onPrevious: _currentItemIndex == 0
+                    ? null
+                    : () => _changeItem(_currentItemIndex - 1),
+                onNext: _currentItemIndex == _setup.practiceItemIds.length - 1
+                    ? null
+                    : () => _changeItem(_currentItemIndex + 1),
+                dark: true,
+              ),
+              AnimatedContainer(
+                duration: _focusTransitionDuration,
+                curve: Curves.easeInOut,
+                height: focusMode ? 18 : 16,
+              ),
+            ],
+            _PlayerNotation(
+              setup: _setup,
+              isWarmup: isWarmup,
+              grouping: widget.controller.displayGroupingFor(currentItemId),
+              tokens: tokens,
+              markings: markings,
+              voices: voices,
             ),
-            const SizedBox(height: 16),
-          ],
-          _PlayerNotation(
-            setup: _setup,
-            isWarmup: isWarmup,
-            grouping: widget.controller.displayGroupingFor(currentItemId),
-            tokens: tokens,
-            markings: markings,
-            voices: voices,
-          ),
-          const SizedBox(height: 18),
-          _BeatPulse(
-            pulseActiveListenable: _metronome.pulseActive,
-            bpm: _bpm,
-            enabled: _pulseEnabled,
-            progress: _sessionProgressFraction(transport),
-            target: transport.target,
-          ),
-          const SizedBox(height: 18),
-          Text(
-            transport.timerText,
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontFamily: 'Courier',
-              color: const Color(0xFFFFF4DE),
-              fontWeight: FontWeight.w900,
+            AnimatedContainer(
+              duration: _focusTransitionDuration,
+              curve: Curves.easeInOut,
+              height: panelGap,
             ),
-          ),
-          if (_showsEarnedReps) ...<Widget>[
-            const SizedBox(height: 12),
-            _EarnedRepsDisplay(reps: _totalEarnedReps),
-          ],
-          if (transport.statusText != null) ...<Widget>[
-            const SizedBox(height: 8),
+            _BeatPulse(
+              pulseActiveListenable: _metronome.pulseActive,
+              bpm: _bpm,
+              enabled: _pulseEnabled,
+              progress: _sessionProgressFraction(transport),
+              target: transport.target,
+              size: gaugeSize,
+            ),
+            AnimatedContainer(
+              duration: _focusTransitionDuration,
+              curve: Curves.easeInOut,
+              height: panelGap,
+            ),
             Text(
-              transport.statusText!,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: const Color(0xFFFFC08D),
+              transport.timerText,
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                fontFamily: 'Courier',
+                color: const Color(0xFFFFF4DE),
                 fontWeight: FontWeight.w900,
               ),
             ),
-          ],
-          const SizedBox(height: 18),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              if (_running) ...<Widget>[
-                SizedBox(
-                  height: 48,
-                  width: 108,
-                  child: FilledButton.icon(
-                    style: primaryTransportStyle,
-                    onPressed: _toggleRunning,
-                    icon: const Icon(Icons.pause),
-                    label: const Text('Pause'),
-                  ),
+            if (_showsEarnedReps) ...<Widget>[
+              AnimatedContainer(
+                duration: _focusTransitionDuration,
+                curve: Curves.easeInOut,
+                height: focusMode ? 14 : 12,
+              ),
+              _EarnedRepsDisplay(reps: _totalEarnedReps),
+            ],
+            if (transport.statusText != null) ...<Widget>[
+              AnimatedContainer(
+                duration: _focusTransitionDuration,
+                curve: Curves.easeInOut,
+                height: 8,
+              ),
+              Text(
+                transport.statusText!,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: const Color(0xFFFFC08D),
+                  fontWeight: FontWeight.w900,
                 ),
-                const SizedBox(width: 10),
-                if (!isWarmup)
+              ),
+            ],
+            AnimatedContainer(
+              duration: _focusTransitionDuration,
+              curve: Curves.easeInOut,
+              height: panelGap,
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                if (_running) ...<Widget>[
                   SizedBox(
                     height: 48,
                     width: 108,
-                    child: OutlinedButton.icon(
-                      onPressed: _resetCurrentSessionRun,
-                      style: secondaryTransportStyle,
-                      icon: const Icon(Icons.restart_alt),
-                      label: const Text('Reset'),
+                    child: FilledButton.icon(
+                      style: primaryTransportStyle,
+                      onPressed: _toggleRunning,
+                      icon: const Icon(Icons.pause),
+                      label: const Text('Pause'),
                     ),
                   ),
-                if (isWarmup)
+                  const SizedBox(width: 10),
+                  if (!isWarmup)
+                    SizedBox(
+                      height: 48,
+                      width: 108,
+                      child: OutlinedButton.icon(
+                        onPressed: _resetCurrentSessionRun,
+                        style: secondaryTransportStyle,
+                        icon: const Icon(Icons.restart_alt),
+                        label: const Text('Reset'),
+                      ),
+                    ),
+                  if (isWarmup)
+                    SizedBox(
+                      height: 48,
+                      width: 108,
+                      child: OutlinedButton(
+                        onPressed: _endSession,
+                        style: secondaryTransportStyle,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            const Icon(Icons.stop_rounded, size: 18),
+                            const SizedBox(width: 8),
+                            const Text('End'),
+                          ],
+                        ),
+                      ),
+                    ),
+                ] else ...<Widget>[
+                  SizedBox(
+                    height: 48,
+                    width: 108,
+                    child: FilledButton.icon(
+                      style: primaryTransportStyle,
+                      onPressed: _toggleRunning,
+                      icon: const Icon(Icons.play_arrow),
+                      label: const Text('Play'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                ],
+                if (!_running || isWarmup)
                   SizedBox(
                     height: 48,
                     width: 108,
                     child: OutlinedButton(
-                      onPressed: _endSession,
+                      onPressed: canEndSession ? _endSession : null,
                       style: secondaryTransportStyle,
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -305,46 +458,17 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                       ),
                     ),
                   ),
-              ] else ...<Widget>[
-                SizedBox(
-                  height: 48,
-                  width: 108,
-                  child: FilledButton.icon(
-                    style: primaryTransportStyle,
-                    onPressed: _toggleRunning,
-                    icon: const Icon(Icons.play_arrow),
-                    label: const Text('Play'),
-                  ),
-                ),
-                const SizedBox(width: 10),
               ],
-              if (!_running || isWarmup)
-                SizedBox(
-                  height: 48,
-                  width: 108,
-                  child: OutlinedButton(
-                    onPressed: canEndSession ? _endSession : null,
-                    style: secondaryTransportStyle,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        const Icon(Icons.stop_rounded, size: 18),
-                        const SizedBox(width: 8),
-                        const Text('End'),
-                      ],
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildSessionControlsPanel(BuildContext context) {
     return DrumPanel(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
       child: Column(
         children: <Widget>[
           Row(
@@ -432,6 +556,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
         unawaited(_metronome.stop());
       }
     });
+    widget.onFocusModeChanged?.call(shouldStart);
     if (shouldStart) {
       if (_shouldRunMetronome) {
         unawaited(
@@ -498,6 +623,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
         builder: (_) => PracticeSessionScreen(
           controller: widget.controller,
           setup: replaySetup,
+          onFocusModeChanged: widget.onFocusModeChanged,
         ),
       ),
     );
@@ -563,6 +689,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
       _practicedItemIds = <String>[];
       _itemActiveDurationById = <String, Duration>{};
     }
+    widget.onFocusModeChanged?.call(false);
   }
 
   void _resetCurrentSessionRun() {
@@ -830,6 +957,7 @@ class _BeatPulse extends StatefulWidget {
   final bool enabled;
   final double progress;
   final Duration? target;
+  final double size;
 
   const _BeatPulse({
     required this.pulseActiveListenable,
@@ -837,6 +965,7 @@ class _BeatPulse extends StatefulWidget {
     required this.enabled,
     required this.progress,
     required this.target,
+    required this.size,
   });
 
   @override
@@ -923,16 +1052,22 @@ class _BeatPulseState extends State<_BeatPulse> {
   Widget build(BuildContext context) {
     final bool active = widget.enabled && _flashActive;
     const Color ringBase = Color(0xFF4A4337);
-    return SizedBox(
-      width: 228,
-      height: 228,
+    final double gaugeDiameter = widget.size;
+    final double tickDiameter = gaugeDiameter - 8;
+    final double pulseDiameter = gaugeDiameter - 74;
+    final double bpmCoreDiameter = gaugeDiameter - 102;
+    return AnimatedContainer(
+      duration: _PracticeSessionScreenState._focusTransitionDuration,
+      curve: Curves.easeInOut,
+      width: gaugeDiameter,
+      height: gaugeDiameter,
       child: Stack(
         alignment: Alignment.center,
         children: <Widget>[
           if (widget.enabled)
             SizedBox(
-              width: 220,
-              height: 220,
+              width: tickDiameter,
+              height: tickDiameter,
               child: CustomPaint(
                 painter: _TickRingPainter(
                   progress: widget.progress,
@@ -942,13 +1077,13 @@ class _BeatPulseState extends State<_BeatPulse> {
             ),
           if (widget.enabled)
             _PulseGaugeRing(
-              diameter: 154,
+              diameter: pulseDiameter,
               color: active ? const Color(0xFFF05A28) : const Color(0xFF5A4A39),
               width: active ? 5.5 : 4.0,
             ),
           Container(
-            width: 126,
-            height: 126,
+            width: bpmCoreDiameter,
+            height: bpmCoreDiameter,
             decoration: BoxDecoration(
               color: widget.enabled
                   ? const Color(0xFF1F1A14)

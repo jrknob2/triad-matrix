@@ -991,6 +991,16 @@ Practice Session is execution only.
 ### Player Display Rules
 
 - the player should read like an execution instrument, not a settings form
+- focus mode must be an animated expansion of the existing Practice Session layout, not a hard screen switch or alternate layout tree
+- when `Play` is pressed, the session header and phone bottom nav should fade/collapse out while the player region expands into the reclaimed space
+- when `Pause` is pressed, the same transition should reverse smoothly back to the default session layout
+- focus-mode motion should use one continuous layout with animated height, padding, opacity, and spacing values rather than replacing the full screen subtree
+- focus-mode transition timing should stay subtle and fast, around `180–250ms`, with no bouncy or playful motion
+- pattern, gauge, and timer should keep their visual anchor during the transition and must not jump abruptly
+- the gauge may grow slightly in focus mode, but it should still feel anchored inside the same player card
+- on phone, the light BPM/settings card is a secondary utility region that sits beneath the player card, not across it
+- the settings card must not visually bisect the gauge or obscure timer, earned-rep display, or transport controls
+- if there is any overlap between player and settings regions, it must be subtle and must never block the lower player stack
 - BPM should sit inside an integrated circular display when the full player treatment is shown
 - the pulse display may use a tick-ring treatment around the BPM core display
 - tick-ring treatment should represent cycle progress, not a separate beat engine

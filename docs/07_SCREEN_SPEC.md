@@ -378,6 +378,13 @@ Must show:
 
 Must do:
 
+- treat focus mode as an animated expansion of the existing player layout rather than a separate screen or abrupt layout swap
+- when `Play` is pressed, collapse/fade the session header and phone bottom nav while the player region expands into the reclaimed space
+- when `Pause` is pressed, reverse the same transition smoothly
+- use a single layout tree with animated height, padding, opacity, and spacing values so the player content preserves orientation during the transition
+- keep focus-mode motion subtle and fast, roughly `180–250ms`, with no bouncy motion
+- on phone, the BPM/settings card should remain a clearly secondary utility card below the player rather than visually covering it
+- the settings card must not obscure the gauge, timer, earned-reps display, or transport controls
 - reaching the target duration should cue the cycle boundary without force-ending the session
 - in multi-item sessions, BPM changes should belong to the currently shown item, not the whole session globally
 - in multi-item tracked sessions, the target duration applies per current pattern, not once across the entire slice
