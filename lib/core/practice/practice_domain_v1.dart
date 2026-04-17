@@ -28,7 +28,7 @@ enum CompetencyLevelV1 { notStarted, learning, comfortable, reliable, musical }
 
 enum ReflectionRatingV1 { easy, okay, hard }
 
-enum TimerPresetV1 { none, minutes5, minutes10, minutes20, minutes30 }
+enum TimerPresetV1 { none, minutes2, minutes5, minutes10, minutes20, minutes30 }
 
 enum TriadMatrixFilterV1 {
   inRoutine,

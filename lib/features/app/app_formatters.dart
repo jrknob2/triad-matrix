@@ -25,6 +25,7 @@ String formatShortDate(DateTime value) {
 Duration? timerPresetToDuration(TimerPresetV1 preset) {
   return switch (preset) {
     TimerPresetV1.none => null,
+    TimerPresetV1.minutes2 => const Duration(minutes: 2),
     TimerPresetV1.minutes5 => const Duration(minutes: 5),
     TimerPresetV1.minutes10 => const Duration(minutes: 10),
     TimerPresetV1.minutes20 => const Duration(minutes: 20),
@@ -55,6 +56,7 @@ extension CompetencyLabel on CompetencyLevelV1 {
 extension TimerPresetLabel on TimerPresetV1 {
   String get label => switch (this) {
     TimerPresetV1.none => 'None',
+    TimerPresetV1.minutes2 => '2 Minutes',
     TimerPresetV1.minutes5 => '5 Minutes',
     TimerPresetV1.minutes10 => '10 Minutes',
     TimerPresetV1.minutes20 => '20 Minutes',
