@@ -883,9 +883,9 @@ class _BeatPulseState extends State<_BeatPulse> {
             ),
           if (widget.enabled)
             _PulseGaugeRing(
-              diameter: 124,
+              diameter: 130,
               color: active ? const Color(0xFFFFC08D) : const Color(0xFF5A4A39),
-              width: active ? 5.8 : 4.2,
+              width: active ? 5.5 : 4.0,
             ),
           Container(
             width: 112,
@@ -963,10 +963,10 @@ class _TickRingPainter extends CustomPainter {
       final Color tickColor = completed
           ? _progressColor(tickT)
           : _inactiveColor();
-      final double tickLength = majorTick ? 23 : 8;
+      final double tickLength = majorTick ? 20 : 8;
       paint
         ..color = tickColor
-        ..strokeWidth = majorTick ? 5.4 : 1.8;
+        ..strokeWidth = majorTick ? 4.8 : 1.9;
 
       final Offset outer = Offset(
         center.dx + math.cos(angle) * radius,
