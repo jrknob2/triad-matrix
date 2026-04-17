@@ -355,6 +355,7 @@ Must support:
 - list rows in `Practice` and `Working On` should follow the same shared formatting rules unless an explicit exception is documented
 - selection actions like `Select All` and `Clear` should be separated from `Filters` under an `Actions` label
 - when one or more items are selected, the start-practice action should appear in that same `Actions` row
+- selected items should load into the player in the same order they were selected
 - if the current action selects every item in the visible filtered slice, the label should be `Select All`, not `Select Visible`
 - if a direct-entry source is not available yet, its launch tile should explain why and offer the next valid action instead of appearing as a dead disabled card
 

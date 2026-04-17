@@ -34,7 +34,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
   int _visibleWorkingOnItemCount = 5;
   String _previousSessionQuery = '';
   late final TextEditingController _previousSessionSearchController;
-  Set<String> _selectedItemIds = <String>{};
+  List<String> _selectedItemIds = <String>[];
   Set<WorkingOnSessionFilterV1> _filters = <WorkingOnSessionFilterV1>{};
 
   @override
@@ -91,14 +91,11 @@ class _PracticeScreenState extends State<PracticeScreen> {
         final List<String> workingOnIds = workingOn
             .map((PracticeItemV1 item) => item.id)
             .toList(growable: false);
-        final List<String> selectedItemIds = workingOnIds
-            .where(_selectedItemIds.contains)
+        final List<String> selectedItemIds = _selectedItemIds
+            .where(workingOnIds.contains)
             .toList(growable: false);
         final List<PracticeItemV1> visibleItems = widget.controller
             .activeWorkItemsForSessionFilters(_filters);
-        final Set<String> visibleIds = visibleItems
-            .map((PracticeItemV1 item) => item.id)
-            .toSet();
         final PracticeModeV1 effectivePracticeMode =
             selectedItemIds.isNotEmpty &&
                 selectedItemIds.every(widget.controller.hasNonSnareVoice)
@@ -222,20 +219,21 @@ class _PracticeScreenState extends State<PracticeScreen> {
                 onToggleItem: (String itemId) {
                   setState(() {
                     if (_selectedItemIds.contains(itemId)) {
-                      _selectedItemIds = <String>{..._selectedItemIds}
+                      _selectedItemIds = <String>[..._selectedItemIds]
                         ..remove(itemId);
                     } else {
-                      _selectedItemIds = <String>{..._selectedItemIds, itemId};
+                      _selectedItemIds = <String>[..._selectedItemIds, itemId];
                     }
                   });
                 },
                 onSelectVisible: visibleItems.isEmpty
                     ? null
                     : () => setState(() {
-                        _selectedItemIds = <String>{
+                        _selectedItemIds = <String>[
                           ..._selectedItemIds,
-                          ...visibleIds,
-                        };
+                          for (final PracticeItemV1 item in visibleItems)
+                            if (!_selectedItemIds.contains(item.id)) item.id,
+                        ];
                       }),
                 visibleItemCount: _visibleWorkingOnItemCount,
                 onShowMore: visibleItems.length > _visibleWorkingOnItemCount
@@ -246,7 +244,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
                 onClearSelection: _selectedItemIds.isEmpty
                     ? null
                     : () => setState(() {
-                        _selectedItemIds = <String>{};
+                        _selectedItemIds = <String>[];
                       }),
                 onStart: canStart
                     ? () => widget.onStartWorkingOnSession(
@@ -405,23 +403,26 @@ class _PracticeScreenState extends State<PracticeScreen> {
                         onToggleItem: (String itemId) {
                           setState(() {
                             if (_selectedItemIds.contains(itemId)) {
-                              _selectedItemIds = <String>{..._selectedItemIds}
+                              _selectedItemIds = <String>[..._selectedItemIds]
                                 ..remove(itemId);
                             } else {
-                              _selectedItemIds = <String>{
+                              _selectedItemIds = <String>[
                                 ..._selectedItemIds,
                                 itemId,
-                              };
+                              ];
                             }
                           });
                         },
                         onSelectVisible: visibleItems.isEmpty
                             ? null
                             : () => setState(() {
-                                _selectedItemIds = <String>{
+                                _selectedItemIds = <String>[
                                   ..._selectedItemIds,
-                                  ...visibleIds,
-                                };
+                                  for (final PracticeItemV1 item
+                                      in visibleItems)
+                                    if (!_selectedItemIds.contains(item.id))
+                                      item.id,
+                                ];
                               }),
                         visibleItemCount: _visibleWorkingOnItemCount,
                         onShowMore:
@@ -433,7 +434,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
                         onClearSelection: _selectedItemIds.isEmpty
                             ? null
                             : () => setState(() {
-                                _selectedItemIds = <String>{};
+                                _selectedItemIds = <String>[];
                               }),
                         onStart: canStart
                             ? () => widget.onStartWorkingOnSession(

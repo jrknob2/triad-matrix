@@ -880,6 +880,7 @@ Rules:
 
 - `Working On` is the pool
 - session setup is the slice
+- the player should load selected items in the order the user selected them, not re-sort them by their position in `Working On`
 - ideal session scope is `1-4` items
 - `5-6` items is allowed but should trigger soft guidance
 - guidance should be advisory, not blocking

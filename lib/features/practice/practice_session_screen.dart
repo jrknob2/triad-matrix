@@ -839,7 +839,7 @@ class _EarnedRepsDisplay extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Text(
-              '$reps Reps',
+              '$reps Reps Earned',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 color: const Color(0xFFFFF4DE),
                 fontWeight: FontWeight.w900,
