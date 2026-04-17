@@ -381,6 +381,7 @@ Must do:
 - when the timer reaches the target duration, switch to a clear completed visual state without force-ending the session
 - in multi-item sessions, BPM changes should belong to the currently shown item, not the whole session globally
 - in multi-item tracked sessions, the target duration applies per current pattern, not once across the entire slice
+- in multi-item tracked sessions, each current pattern should use its own saved launch duration when available
 - when the current pattern reaches its target duration, the player should chime and auto-forward into the next pattern if one remains
 - when the final pattern reaches its target duration, the player should still chime and enter the completed visual state without force-ending the session
 - click playback should use a preloaded low-latency trigger path rather than repeatedly retriggering one shared media player instance
@@ -449,6 +450,7 @@ Running transport rules:
 - Session Summary should remain the main assessment surface even if a later `Claim Your Work` layer is added
 - rep credit may operate as both motivational feedback and claimed-work data for progress logic
 - Session Summary may ask the student whether to keep earned reps before final submission
+- if a tracked session ends with zero earned reps, skip Session Summary and return directly to Practice
 - the player's running transport controls should fit in one row on phone without wrapping
 - Session Summary recommendations should influence the message, not rename the replay action
 - Session Summary should not contain work-management actions like `Add to Working On`

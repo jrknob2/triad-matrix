@@ -319,8 +319,11 @@ class PracticeMetronomeService {
           : (beatValue is num ? beatValue.toInt() : _lastNativeBeatIndex);
       final bool active = activeValue == true;
       if (beatIndex != _lastNativeBeatIndex && beatIndex >= 0) {
+        final bool hasEstablishedBeatPhase = _lastNativeBeatIndex >= 0;
         _lastNativeBeatIndex = beatIndex;
-        _triggerPulseFlash();
+        if (hasEstablishedBeatPhase) {
+          _triggerPulseFlash();
+        }
         return;
       }
       if (!active && pulseActive.value) {
@@ -420,9 +423,8 @@ class _FallbackMetronomeEngine {
     await prepare();
     _clickEnabled = clickEnabled;
     _beatTimer?.cancel();
-    _beatIndex = 0;
+    _beatIndex = -1;
     final int intervalMs = (60000 / bpm).round().clamp(120, 2000);
-    _emitBeat();
     _beatTimer = Timer.periodic(Duration(milliseconds: intervalMs), (_) {
       _beatIndex += 1;
       _emitBeat();

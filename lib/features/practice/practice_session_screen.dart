@@ -479,6 +479,11 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
           ? _currentItemId
           : _practicedItemIds.first,
     );
+    if (session.earnedReps <= 0) {
+      _discardEphemeralItemsIfNeeded();
+      Navigator.of(context).pop();
+      return;
+    }
     _summaryOpenedForCurrentRun = true;
     unawaited(_openSessionSummary(session.id));
   }
@@ -581,6 +586,11 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   Duration? _targetDuration() {
     if (_isWarmup) {
       return Duration(minutes: _setup.practiceItemIds.length);
+    }
+    if (_usesPerItemTargetTiming) {
+      return timerPresetToDuration(
+        widget.controller.launchTimerPresetForItem(_currentItemId),
+      );
     }
     return timerPresetToDuration(_setup.timerPreset);
   }
