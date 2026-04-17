@@ -238,7 +238,10 @@ private final class AppleScheduledMetronomeEngine {
     if !audioEngine.isRunning {
       try audioEngine.start()
     }
-    let loopBuffer = try buildLoopBuffer(clickBuffer: clickBuffer, bpm: bpm)
+    let loopBuffer = try buildLoopBuffer(
+      clickBuffer: clickBuffer,
+      bpm: bpm,
+      includeClick: clickEnabled)
     clickNode.stop()
     clickNode.volume = clickEnabled ? 1.0 : 0.0
     beatFrames = Int(loopBuffer.frameLength)
@@ -246,7 +249,11 @@ private final class AppleScheduledMetronomeEngine {
     clickNode.play()
   }
 
-  private func buildLoopBuffer(clickBuffer: AVAudioPCMBuffer, bpm: Int) throws -> AVAudioPCMBuffer {
+  private func buildLoopBuffer(
+    clickBuffer: AVAudioPCMBuffer,
+    bpm: Int,
+    includeClick: Bool
+  ) throws -> AVAudioPCMBuffer {
     let sampleRate = clickBuffer.format.sampleRate
     let clickFrames = Int(clickBuffer.frameLength)
     let beatFrames = max(
@@ -260,10 +267,12 @@ private final class AppleScheduledMetronomeEngine {
     }
     loopBuffer.frameLength = AVAudioFrameCount(beatFrames)
     try clear(buffer: loopBuffer)
-    try copy(
-      source: clickBuffer,
-      destination: loopBuffer,
-      destinationFrameOffset: 0)
+    if includeClick {
+      try copy(
+        source: clickBuffer,
+        destination: loopBuffer,
+        destinationFrameOffset: 0)
+    }
     return loopBuffer
   }
 

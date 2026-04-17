@@ -96,7 +96,7 @@ private class AndroidScheduledMetronomeEngine(
   fun start(bpm: Int, clickEnabled: Boolean) {
     val wav = requireNotNull(wavData) { "Metronome audio is not prepared." }
     this.clickEnabled = clickEnabled
-    val loopBytes = buildLoopBuffer(wav, bpm)
+    val loopBytes = buildLoopBuffer(wav, bpm, clickEnabled)
     val track = buildTrack(
       sampleRate = wav.sampleRate,
       bufferBytes = loopBytes,
@@ -258,13 +258,15 @@ private class AndroidScheduledMetronomeEngine(
     )
   }
 
-  private fun buildLoopBuffer(wav: WavPcmData, bpm: Int): ByteArray {
+  private fun buildLoopBuffer(wav: WavPcmData, bpm: Int, includeClick: Boolean): ByteArray {
     val beatFrames = max(
       ((60.0 / max(30, bpm).toDouble()) * wav.sampleRate).roundToInt(),
       wav.frameCount + 1
     )
     val loopBytes = ByteArray(beatFrames * 2)
-    System.arraycopy(wav.pcmBytes, 0, loopBytes, 0, wav.pcmBytes.size)
+    if (includeClick) {
+      System.arraycopy(wav.pcmBytes, 0, loopBytes, 0, wav.pcmBytes.size)
+    }
     return loopBytes
   }
 

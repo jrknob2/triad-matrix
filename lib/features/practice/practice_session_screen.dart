@@ -823,9 +823,9 @@ class _EarnedRepsDisplay extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: const Color(0xFF7C3E1F),
+        color: const Color(0xFFF05A28),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0xFFB86B3F), width: 1.0),
+        border: Border.all(color: const Color(0xFFF7B788), width: 1.0),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
@@ -1025,16 +1025,7 @@ class _TickRingPainter extends CustomPainter {
   }
 
   Color _progressColor(double t) {
-    const Color green = Color(0xFFA1D46E);
-    const Color lime = Color(0xFFC9D873);
-    const Color gold = Color(0xFFF0C57D);
-    const Color orange = Color(0xFFF6AE72);
-    final Color base = t < 0.42
-        ? Color.lerp(green, lime, t / 0.42)!
-        : t < 0.74
-        ? Color.lerp(lime, gold, (t - 0.42) / 0.32)!
-        : Color.lerp(gold, orange, (t - 0.74) / 0.26)!;
-    return base;
+    return const Color(0xFFA1D46E);
   }
 
   int _majorTickCount() {
