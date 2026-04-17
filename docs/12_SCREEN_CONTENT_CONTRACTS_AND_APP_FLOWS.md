@@ -1025,6 +1025,10 @@ Practice Session is execution only.
 - reaching target duration must not silently stop the session
 - `End` leads to summary
 - in multi-item sessions, BPM is per-item runtime state
+- in multi-item tracked sessions, the target duration applies per current pattern rather than once across the whole slice
+- when the current pattern reaches its target duration, the player should chime and automatically move to the next pattern if one remains
+- when auto-forward moves to the next pattern, the player should stay running and carry straight into that next pattern's timing state
+- when the final pattern reaches its target duration, the player should still chime and enter the completed visual state without force-ending the session
 - changing BPM during a multi-item session must apply to the currently shown item only
 - when the player moves between items, the item's current runtime BPM must be restored
 - in a multi-item session, only patterns that were actually practiced should be recorded into the completed tracked session

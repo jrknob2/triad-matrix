@@ -591,6 +591,9 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
       !_isWarmup &&
       _setup.endBehavior == PracticeSessionEndBehaviorV1.openSummary;
 
+  bool get _usesPerItemTargetTiming =>
+      !_isWarmup && _setup.practiceItemIds.length > 1;
+
   String get _currentItemId => _setup.practiceItemIds[_currentItemIndex];
 
   Duration get _elapsed => _elapsedOffset + _stopwatch.elapsed;
@@ -607,14 +610,17 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
 
   _SessionTransportState get _transportState {
     final Duration? target = _targetDuration();
+    final Duration displayElapsed = _usesPerItemTargetTiming
+        ? _activeDurationForItem(_currentItemId)
+        : _elapsed;
     final String timerText = target == null
-        ? formatDuration(_elapsed)
-        : '${formatDuration(_elapsed)} / ${formatDuration(target)}';
+        ? formatDuration(displayElapsed)
+        : '${formatDuration(displayElapsed)} / ${formatDuration(target)}';
     final String? statusText = _warmupComplete
         ? 'Warmup complete'
         : (_completionStateVisible ? 'Target reached' : null);
     return _SessionTransportState(
-      elapsed: _elapsed,
+      elapsed: displayElapsed,
       target: target,
       timerText: timerText,
       statusText: statusText,
@@ -671,13 +677,27 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   void _syncPracticeTargetProgress() {
     final Duration? target = _targetDuration();
     if (target == null) return;
-    if (_elapsed >= target) {
-      if (!_targetReached) {
-        _targetReached = true;
-        _completionStateVisible = true;
-        _playCompletionChimeOnce();
-      }
+    final Duration currentItemElapsed = _activeDurationForItem(_currentItemId);
+    if (currentItemElapsed < target) return;
+    final bool isLastItem =
+        _currentItemIndex >= _setup.practiceItemIds.length - 1;
+    if (!isLastItem) {
+      _playTargetReachedChime();
+      _changeItem(_currentItemIndex + 1);
+      _targetReached = false;
+      _completionStateVisible = false;
+      _completionChimed = false;
+      return;
     }
+    if (!_targetReached) {
+      _targetReached = true;
+      _completionStateVisible = true;
+      _playCompletionChimeOnce();
+    }
+  }
+
+  void _playTargetReachedChime() {
+    unawaited(_metronome.playCompletionChime());
   }
 
   void _playCompletionChimeOnce() {

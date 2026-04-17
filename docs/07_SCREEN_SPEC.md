@@ -380,6 +380,9 @@ Must do:
 
 - when the timer reaches the target duration, switch to a clear completed visual state without force-ending the session
 - in multi-item sessions, BPM changes should belong to the currently shown item, not the whole session globally
+- in multi-item tracked sessions, the target duration applies per current pattern, not once across the entire slice
+- when the current pattern reaches its target duration, the player should chime and auto-forward into the next pattern if one remains
+- when the final pattern reaches its target duration, the player should still chime and enter the completed visual state without force-ending the session
 - click playback should use a preloaded low-latency trigger path rather than repeatedly retriggering one shared media player instance
 - when native metronome playback is active, the visual pulse should derive from the native audio playback phase rather than an event-channel beat callback or an independent Dart beat clock
 - after native beat onset is detected, the player may hold the visual pulse briefly for readability, but the beat onset itself must still come from the native playback phase
