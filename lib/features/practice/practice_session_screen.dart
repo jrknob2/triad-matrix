@@ -943,7 +943,7 @@ class _BeatPulseState extends State<_BeatPulse> {
           if (widget.enabled)
             _PulseGaugeRing(
               diameter: 154,
-              color: active ? const Color(0xFFFFC08D) : const Color(0xFF5A4A39),
+              color: active ? const Color(0xFFF05A28) : const Color(0xFF5A4A39),
               width: active ? 5.5 : 4.0,
             ),
           Container(
@@ -956,7 +956,7 @@ class _BeatPulseState extends State<_BeatPulse> {
               shape: BoxShape.circle,
               border: Border.all(
                 color: active
-                    ? const Color(0xFFFFC08D).withValues(alpha: 0.78)
+                    ? const Color(0xFFF05A28).withValues(alpha: 0.86)
                     : ringBase.withValues(alpha: 0.5),
                 width: active ? 1.9 : 1.1,
               ),
