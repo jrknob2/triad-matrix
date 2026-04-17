@@ -383,8 +383,9 @@ Must do:
 - when native metronome playback is active, the visual pulse should derive from the native audio playback phase rather than an event-channel beat callback or an independent Dart beat clock
 - after native beat onset is detected, the player may hold the visual pulse briefly for readability, but the beat onset itself must still come from the native playback phase
 - any tick-ring or segmented pulse treatment must still be driven by that same synchronized beat state, not by a separate animation clock
-- session-progress color in the player may move from neutral through warm toward green as the session advances
-- session-progress color in the player communicates completion progress, not rep quality
+- completed gauge ticks in the player should use one green progression color as the session advances
+- inactive gauge ticks in the player should remain neutral
+- gauge tick color in the player communicates completion progress, not rep quality
 - when the outer gauge uses major and minor ticks, the hierarchy should read primarily through thickness and weight, not by making the major ticks much longer than the minor ticks
 - earned reps should advance from active tracked practice time at `1 rep = 60 seconds`
 - warmup and Matrix preview practice do not earn reps

@@ -970,7 +970,7 @@ class _TickRingPainter extends CustomPainter {
 
   static const double _sweep = math.pi * 1.70;
   static const double _startAngle = math.pi * 0.64;
-  static const int _minorTicksPerMajor = 4;
+  static const int _minorTicksPerMajor = 6;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1021,7 +1021,7 @@ class _TickRingPainter extends CustomPainter {
   }
 
   Color _inactiveColor() {
-    return const Color(0x5A7A6A58);
+    return const Color(0x47636E62);
   }
 
   Color _progressColor(double t) {
