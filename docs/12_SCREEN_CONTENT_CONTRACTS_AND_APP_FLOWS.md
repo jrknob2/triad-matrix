@@ -136,6 +136,10 @@ Rules:
 - non-interactive labels should read as labels immediately, not as tappable pills or chips
 - passive displays such as credit, earned reps, scope, legend, and status must remain visually distinct from action buttons even when they share rounded shapes
 - if passive informational surfaces use pill-like containers, they must step back through tone, border, contrast, and icon treatment so they cannot be mistaken for tappable controls
+- on high-focus screens like the player, primary and secondary transport buttons should avoid soft pill silhouettes when nearby passive displays also use rounded containers
+- transport buttons should read as controls first; passive displays should read as instrumentation or status first
+- top-level launch panels and primary entry surfaces should not be shown as dead disabled blocks when their source is unavailable
+- when a launch surface cannot perform its primary action yet, it should explain why and point to the next valid action instead of only dimming the whole surface
 - button sizing should stay proportional to the surrounding UI and shared control system
 - one screen should not introduce oversized buttons that visually dominate the app without a specific contract reason
 
@@ -857,6 +861,7 @@ Optional later:
 - this does not create a separate user-facing `Advanced Mode` unless a later contract explicitly adds one
 - `Choose Patterns to Practice` is the entry into normal tracked practice
 - `From Working On` belongs inside `Choose Patterns to Practice`, not as a separate peer card
+- if a direct-entry Practice source is unavailable, its entry tile should stay informative and should offer the next valid action instead of rendering as a dead disabled block
 - single-item practice should use saved BPM and duration defaults without storing them as authored notation/item data
 - `Warm Up` remains separate because it is a distinct prep mode, not a slice of current work
 - `Repeat a Previous Session` should open a recent-session browser, not silently assume the last session is the right one

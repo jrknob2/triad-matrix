@@ -173,6 +173,11 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
       padding: const WidgetStatePropertyAll<EdgeInsetsGeometry>(
         EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       ),
+      shape: const WidgetStatePropertyAll<OutlinedBorder>(
+        RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(14)),
+        ),
+      ),
       foregroundColor: WidgetStateProperty.resolveWith<Color>((states) {
         if (states.contains(WidgetState.disabled)) {
           return const Color(0xB3FFF4DE);
@@ -193,7 +198,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
       backgroundColor: const Color(0xFFFFF4DE),
       foregroundColor: const Color(0xFF211B14),
       side: const BorderSide(color: Color(0xFFFFF4DE)),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       textStyle: Theme.of(
         context,
       ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w900),
@@ -781,18 +786,36 @@ class _EarnedRepsDisplay extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: const Color(0x22FFF4DE),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0x44FFF4DE)),
+        color: const Color(0xFFF05A28),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFF7B788), width: 1.2),
+        boxShadow: const <BoxShadow>[
+          BoxShadow(
+            color: Color(0x2AF05A28),
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
+        ],
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        child: Text(
-          '+$reps Reps',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: const Color(0xFFFFE7C9),
-            fontWeight: FontWeight.w900,
-          ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            const Icon(
+              Icons.add_circle_rounded,
+              size: 18,
+              color: Color(0xFFFFF4DE),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              '+$reps Reps',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: const Color(0xFFFFF4DE),
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -849,8 +872,8 @@ class _BeatPulseState extends State<_BeatPulse> {
         children: <Widget>[
           if (widget.enabled)
             SizedBox(
-              width: 176,
-              height: 176,
+              width: 188,
+              height: 188,
               child: CustomPaint(
                 painter: _TickRingPainter(
                   progress: widget.progress,
@@ -860,9 +883,9 @@ class _BeatPulseState extends State<_BeatPulse> {
             ),
           if (widget.enabled)
             _PulseGaugeRing(
-              diameter: 138,
+              diameter: 124,
               color: active ? const Color(0xFFFFC08D) : const Color(0xFF5A4A39),
-              width: active ? 5.5 : 4.0,
+              width: active ? 5.8 : 4.2,
             ),
           Container(
             width: 112,
@@ -920,7 +943,7 @@ class _TickRingPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final Offset center = size.center(Offset.zero);
-    final double radius = math.min(size.width, size.height) / 2 - 8;
+    final double radius = math.min(size.width, size.height) / 2 - 6;
     final double progressClamped = progress.clamp(0.0, 1.0);
     final Paint paint = Paint()
       ..style = PaintingStyle.stroke
@@ -940,10 +963,10 @@ class _TickRingPainter extends CustomPainter {
       final Color tickColor = completed
           ? _progressColor(tickT)
           : _inactiveColor();
-      final double tickLength = majorTick ? 16 : 9;
+      final double tickLength = majorTick ? 23 : 8;
       paint
         ..color = tickColor
-        ..strokeWidth = majorTick ? 3.6 : 2.4;
+        ..strokeWidth = majorTick ? 5.4 : 1.8;
 
       final Offset outer = Offset(
         center.dx + math.cos(angle) * radius,

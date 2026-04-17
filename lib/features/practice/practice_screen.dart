@@ -54,6 +54,25 @@ class _PracticeScreenState extends State<PracticeScreen> {
     return AnimatedBuilder(
       animation: widget.controller,
       builder: (BuildContext context, _) {
+        void openPreviousSessionBrowser() {
+          setState(() {
+            _showPreviousSessionBrowser = !_showPreviousSessionBrowser;
+            if (_showPreviousSessionBrowser) {
+              _showWorkingOnSetup = false;
+            }
+          });
+        }
+
+        void openWorkingOnSetup() {
+          setState(() {
+            _showWorkingOnSetup = !_showWorkingOnSetup;
+            if (_showWorkingOnSetup) {
+              _showPreviousSessionBrowser = false;
+              _visibleWorkingOnItemCount = 5;
+            }
+          });
+        }
+
         final bool isTablet = AppViewport.isTablet(context);
         final List<PracticeSessionLogV1> recentSessions =
             widget.controller.trackedRecentSessions;
@@ -106,19 +125,20 @@ class _PracticeScreenState extends State<PracticeScreen> {
               _PracticeLaunchTile(
                 title: 'Repeat a Previous Session',
                 subtitle: recentSessions.isEmpty
-                    ? 'No tracked session yet.'
+                    ? 'No tracked session yet. Start one from Working On first.'
                     : 'Pick from your recent tracked sessions.',
                 icon: Icons.replay_rounded,
-                enabled: recentSessions.isNotEmpty,
                 onTap: recentSessions.isEmpty
                     ? null
-                    : () => setState(() {
-                        _showPreviousSessionBrowser =
-                            !_showPreviousSessionBrowser;
-                        if (_showPreviousSessionBrowser) {
-                          _showWorkingOnSetup = false;
-                        }
-                      }),
+                    : openPreviousSessionBrowser,
+                fallbackActionLabel: recentSessions.isEmpty
+                    ? (workingOn.isNotEmpty ? 'Choose Patterns' : 'Open Matrix')
+                    : null,
+                onFallbackAction: recentSessions.isEmpty
+                    ? (workingOn.isNotEmpty
+                          ? openWorkingOnSetup
+                          : widget.onOpenMatrix)
+                    : null,
                 trailing: Icon(
                   _showPreviousSessionBrowser
                       ? Icons.expand_less_rounded
@@ -129,21 +149,16 @@ class _PracticeScreenState extends State<PracticeScreen> {
               _PracticeLaunchTile(
                 title: 'Choose Patterns to Practice',
                 subtitle: workingOn.isEmpty
-                    ? 'Put a few items in Working On first.'
+                    ? 'Nothing is in Working On yet. Add a few items first.'
                     : _showWorkingOnSetup
                     ? 'Pick today\'s slice from Working On.'
                     : 'Choose what you want to work on from Working On.',
                 icon: Icons.play_circle_outline_rounded,
-                enabled: workingOn.isNotEmpty,
-                onTap: workingOn.isEmpty
-                    ? null
-                    : () => setState(() {
-                        _showWorkingOnSetup = !_showWorkingOnSetup;
-                        if (_showWorkingOnSetup) {
-                          _showPreviousSessionBrowser = false;
-                          _visibleWorkingOnItemCount = 5;
-                        }
-                      }),
+                onTap: workingOn.isEmpty ? null : openWorkingOnSetup,
+                fallbackActionLabel: workingOn.isEmpty ? 'Open Matrix' : null,
+                onFallbackAction: workingOn.isEmpty
+                    ? widget.onOpenMatrix
+                    : null,
                 trailing: Icon(
                   _showWorkingOnSetup
                       ? Icons.expand_less_rounded
@@ -156,7 +171,6 @@ class _PracticeScreenState extends State<PracticeScreen> {
                 subtitle:
                     'Singles, doubles, paradiddles, and paradiddle-diddles. Not logged.',
                 icon: Icons.local_fire_department_outlined,
-                enabled: true,
                 onTap: widget.onPracticeWarmup,
               ),
               if (workingOn.isEmpty) ...<Widget>[
@@ -309,19 +323,22 @@ class _PracticeScreenState extends State<PracticeScreen> {
                     _PracticeLaunchTile(
                       title: 'Repeat a Previous Session',
                       subtitle: recentSessions.isEmpty
-                          ? 'No tracked session yet.'
+                          ? 'No tracked session yet. Start one from Working On first.'
                           : 'Pick from your recent tracked sessions.',
                       icon: Icons.replay_rounded,
-                      enabled: recentSessions.isNotEmpty,
                       onTap: recentSessions.isEmpty
                           ? null
-                          : () => setState(() {
-                              _showPreviousSessionBrowser =
-                                  !_showPreviousSessionBrowser;
-                              if (_showPreviousSessionBrowser) {
-                                _showWorkingOnSetup = false;
-                              }
-                            }),
+                          : openPreviousSessionBrowser,
+                      fallbackActionLabel: recentSessions.isEmpty
+                          ? (workingOn.isNotEmpty
+                                ? 'Choose Patterns'
+                                : 'Open Matrix')
+                          : null,
+                      onFallbackAction: recentSessions.isEmpty
+                          ? (workingOn.isNotEmpty
+                                ? openWorkingOnSetup
+                                : widget.onOpenMatrix)
+                          : null,
                       trailing: Icon(
                         _showPreviousSessionBrowser
                             ? Icons.expand_less_rounded
@@ -352,21 +369,18 @@ class _PracticeScreenState extends State<PracticeScreen> {
                     _PracticeLaunchTile(
                       title: 'Choose Patterns to Practice',
                       subtitle: workingOn.isEmpty
-                          ? 'Put a few items in Working On first.'
+                          ? 'Nothing is in Working On yet. Add a few items first.'
                           : _showWorkingOnSetup
                           ? 'Pick today\'s slice from Working On.'
                           : 'Choose what you want to work on from Working On.',
                       icon: Icons.play_circle_outline_rounded,
-                      enabled: workingOn.isNotEmpty,
-                      onTap: workingOn.isEmpty
-                          ? null
-                          : () => setState(() {
-                              _showWorkingOnSetup = !_showWorkingOnSetup;
-                              if (_showWorkingOnSetup) {
-                                _showPreviousSessionBrowser = false;
-                                _visibleWorkingOnItemCount = 5;
-                              }
-                            }),
+                      onTap: workingOn.isEmpty ? null : openWorkingOnSetup,
+                      fallbackActionLabel: workingOn.isEmpty
+                          ? 'Open Matrix'
+                          : null,
+                      onFallbackAction: workingOn.isEmpty
+                          ? widget.onOpenMatrix
+                          : null,
                       trailing: Icon(
                         _showWorkingOnSetup
                             ? Icons.expand_less_rounded
@@ -435,7 +449,6 @@ class _PracticeScreenState extends State<PracticeScreen> {
                       subtitle:
                           'Singles, doubles, paradiddles, and paradiddle-diddles. Not logged.',
                       icon: Icons.local_fire_department_outlined,
-                      enabled: true,
                       onTap: widget.onPracticeWarmup,
                     ),
                     if (workingOn.isEmpty) ...<Widget>[
@@ -494,26 +507,31 @@ class _PracticeLaunchTile extends StatelessWidget {
   final String title;
   final String subtitle;
   final IconData icon;
-  final bool enabled;
   final VoidCallback? onTap;
+  final String? fallbackActionLabel;
+  final VoidCallback? onFallbackAction;
   final Widget? trailing;
 
   const _PracticeLaunchTile({
     required this.title,
     required this.subtitle,
     required this.icon,
-    required this.enabled,
     required this.onTap,
+    this.fallbackActionLabel,
+    this.onFallbackAction,
     this.trailing,
   });
 
   @override
   Widget build(BuildContext context) {
-    final Color muted = enabled
+    final bool interactive = onTap != null;
+    final bool hasFallbackAction =
+        fallbackActionLabel != null && onFallbackAction != null;
+    final Color muted = interactive
         ? const Color(0xFF61584A)
-        : const Color(0xFF9C9284);
+        : const Color(0xFF7B7163);
     return Material(
-      color: enabled ? const Color(0xFFFFFCF5) : const Color(0xFFF3EDE1),
+      color: const Color(0xFFFFFCF5),
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
         onTap: onTap,
@@ -522,7 +540,7 @@ class _PracticeLaunchTile extends StatelessWidget {
           padding: const EdgeInsets.all(14),
           child: Row(
             children: <Widget>[
-              Icon(icon, color: enabled ? null : muted),
+              Icon(icon, color: interactive ? null : muted),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -532,7 +550,7 @@ class _PracticeLaunchTile extends StatelessWidget {
                       title,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w900,
-                        color: enabled ? null : muted,
+                        color: interactive ? null : const Color(0xFF463E34),
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -543,15 +561,20 @@ class _PracticeLaunchTile extends StatelessWidget {
                         height: 1.3,
                       ),
                     ),
+                    if (hasFallbackAction) ...<Widget>[
+                      const SizedBox(height: 10),
+                      OutlinedButton(
+                        onPressed: onFallbackAction,
+                        child: Text(fallbackActionLabel!),
+                      ),
+                    ],
                   ],
                 ),
               ),
-              const SizedBox(width: 12),
-              trailing ??
-                  Icon(
-                    Icons.arrow_forward_rounded,
-                    color: enabled ? null : muted,
-                  ),
+              if (interactive) ...<Widget>[
+                const SizedBox(width: 12),
+                trailing ?? const Icon(Icons.arrow_forward_rounded),
+              ],
             ],
           ),
         ),
