@@ -1027,10 +1027,10 @@ class _TickRingPainter extends CustomPainter {
       final Color tickColor = completed
           ? _progressColor(tickT)
           : _inactiveColor();
-      final double tickLength = majorTick ? 11 : 8;
+      final double tickLength = majorTick ? 13 : 8;
       paint
         ..color = tickColor
-        ..strokeWidth = 5.8;
+        ..strokeWidth = majorTick ? 6.6 : 5.8;
 
       final Offset outer = Offset(
         center.dx + math.cos(angle) * radius,
