@@ -329,7 +329,7 @@ class PatternVoiceDisplay extends StatelessWidget {
             ),
           if (marking == PatternNoteMarkingV1.ghost) ...<Widget>[
             Align(
-              alignment: const Alignment(-0.58, 0),
+              alignment: const Alignment(-0.72, 0),
               child: Text(
                 '(',
                 textAlign: TextAlign.center,
@@ -340,7 +340,7 @@ class PatternVoiceDisplay extends StatelessWidget {
               ),
             ),
             Align(
-              alignment: const Alignment(0.58, 0),
+              alignment: const Alignment(0.72, 0),
               child: Text(
                 ')',
                 textAlign: TextAlign.center,

@@ -1465,6 +1465,9 @@ class _PlayerNotation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool showVoices = voices.any(
+      (DrumVoiceV1 voice) => voice != DrumVoiceV1.snare,
+    );
     final double fontSize = switch (tokens.length) {
       >= 24 => 20,
       >= 16 => 25,
@@ -1505,37 +1508,20 @@ class _PlayerNotation extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       child: Center(
-        child: setup.practiceMode == PracticeModeV1.flow
-            ? PatternVoiceDisplay(
-                tokens: tokens,
-                markings: markings,
-                voices: voices,
-                grouping: grouping,
-                showRepeatIndicator: false,
-                scrollable: false,
-                wrap: true,
-                cellWidth: tokens.length >= 24 ? 34 : (isWarmup ? 44 : 42),
-                patternStyle: patternStyle,
-                voiceStyle: voiceStyle,
-              )
-            : PatternVoiceDisplay(
-                tokens: tokens,
-                markings: markings,
-                voices: List<DrumVoiceV1>.filled(
-                  tokens.length,
-                  DrumVoiceV1.snare,
-                  growable: false,
-                ),
-                grouping: grouping,
-                showRepeatIndicator: false,
-                scrollable: false,
-                showPatternRow: true,
-                showVoiceRow: false,
-                wrap: true,
-                cellWidth: tokens.length >= 24 ? 34 : (isWarmup ? 44 : 42),
-                patternStyle: patternStyle,
-                voiceStyle: voiceStyle,
-              ),
+        child: PatternVoiceDisplay(
+          tokens: tokens,
+          markings: markings,
+          voices: voices,
+          grouping: grouping,
+          showRepeatIndicator: false,
+          scrollable: false,
+          showPatternRow: true,
+          showVoiceRow: showVoices,
+          wrap: true,
+          cellWidth: tokens.length >= 24 ? 34 : (isWarmup ? 44 : 42),
+          patternStyle: patternStyle,
+          voiceStyle: voiceStyle,
+        ),
       ),
     );
   }
