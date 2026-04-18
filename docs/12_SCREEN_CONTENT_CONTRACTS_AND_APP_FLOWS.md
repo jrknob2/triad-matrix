@@ -1010,6 +1010,7 @@ Practice Session is execution only.
 - completed gauge ticks should use one green progression color as the session advances
 - inactive gauge ticks should remain neutral
 - gauge tick color should communicate cycle completion progress, not rep quality
+- minor-tick density should be defined by physical spacing, not a fixed count: the gap between two minor ticks should equal one minor-tick width regardless of gauge size
 - major tick count should represent the current pattern cycle target, not the total multi-pattern session span
 - major ticks should turn green in sync with the current cycle timer rather than lagging behind it
 - overall gauge tick density should stay visually consistent across durations; shorter targets should change major tick placement, not make the whole ring sparse

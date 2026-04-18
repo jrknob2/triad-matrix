@@ -401,6 +401,7 @@ Must do:
 - completed gauge ticks in the player should use one green progression color as the session advances
 - inactive gauge ticks in the player should remain neutral
 - gauge tick color in the player communicates cycle completion progress, not rep quality
+- minor-tick density should be based on physical spacing, with the gap between minor ticks equal to one minor-tick width regardless of gauge size
 - major tick count in the player should represent the current pattern cycle target, not the total session span
 - major tick progression should stay visually in sync with the current cycle timer
 - overall gauge tick density should stay visually consistent across durations

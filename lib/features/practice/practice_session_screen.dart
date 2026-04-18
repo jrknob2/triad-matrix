@@ -1327,7 +1327,10 @@ class _TickRingPainter extends CustomPainter {
 
   static const double _sweep = math.pi * 1.70;
   static const double _startAngle = math.pi * 0.64;
-  static const int _tickIntervals = 52;
+  static const double _majorTickWidth = 6.6;
+  static const double _minorTickWidth = 5.8;
+  static const double _majorTickLength = 13;
+  static const double _minorTickLength = 8;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1339,8 +1342,12 @@ class _TickRingPainter extends CustomPainter {
       ..strokeCap = StrokeCap.butt;
 
     final int majorTickCount = _majorTickCount();
-    final Set<int> majorTickIndices = _majorTickIndices(majorTickCount);
-    final int totalTickCount = _tickIntervals + 1;
+    final int tickIntervals = _tickIntervalsForRadius(radius);
+    final Set<int> majorTickIndices = _majorTickIndices(
+      majorTickCount,
+      tickIntervals,
+    );
+    final int totalTickCount = tickIntervals + 1;
 
     for (int index = 0; index < totalTickCount; index++) {
       final bool majorTick = majorTickIndices.contains(index);
@@ -1356,10 +1363,10 @@ class _TickRingPainter extends CustomPainter {
       final Color tickColor = majorTick
           ? _majorTickColor(completed)
           : (completed ? _progressColor(tickT) : _inactiveColor());
-      final double tickLength = majorTick ? 13 : 8;
+      final double tickLength = majorTick ? _majorTickLength : _minorTickLength;
       paint
         ..color = tickColor
-        ..strokeWidth = majorTick ? 6.6 : 5.8;
+        ..strokeWidth = majorTick ? _majorTickWidth : _minorTickWidth;
 
       final Offset outer = Offset(
         center.dx + math.cos(angle) * radius,
@@ -1396,10 +1403,16 @@ class _TickRingPainter extends CustomPainter {
     return minutes.clamp(2, 20);
   }
 
-  Set<int> _majorTickIndices(int majorTickCount) {
+  int _tickIntervalsForRadius(double radius) {
+    final double sweepLength = radius * _sweep;
+    final double tickPitch = _minorTickWidth * 2;
+    return (sweepLength / tickPitch).round().clamp(24, 200);
+  }
+
+  Set<int> _majorTickIndices(int majorTickCount, int tickIntervals) {
     final Set<int> indices = <int>{};
     for (int step = 0; step <= majorTickCount; step++) {
-      indices.add((step * _tickIntervals / majorTickCount).round());
+      indices.add((step * tickIntervals / majorTickCount).round());
     }
     return indices;
   }
