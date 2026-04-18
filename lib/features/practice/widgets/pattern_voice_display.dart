@@ -328,26 +328,36 @@ class PatternVoiceDisplay extends StatelessWidget {
               ),
             ),
           if (marking == PatternNoteMarkingV1.ghost) ...<Widget>[
-            Align(
-              alignment: const Alignment(-0.72, 0),
-              child: Text(
-                '(',
-                textAlign: TextAlign.center,
-                softWrap: false,
-                maxLines: 1,
-                overflow: TextOverflow.visible,
-                style: _ghostParenStyle(baseStyle),
+            Positioned(
+              left: -fontSize * 0.34,
+              top: 0,
+              bottom: 0,
+              width: fontSize * 0.52,
+              child: Center(
+                child: Text(
+                  '(',
+                  textAlign: TextAlign.center,
+                  softWrap: false,
+                  maxLines: 1,
+                  overflow: TextOverflow.visible,
+                  style: _ghostParenStyle(baseStyle),
+                ),
               ),
             ),
-            Align(
-              alignment: const Alignment(0.72, 0),
-              child: Text(
-                ')',
-                textAlign: TextAlign.center,
-                softWrap: false,
-                maxLines: 1,
-                overflow: TextOverflow.visible,
-                style: _ghostParenStyle(baseStyle),
+            Positioned(
+              right: -fontSize * 0.34,
+              top: 0,
+              bottom: 0,
+              width: fontSize * 0.52,
+              child: Center(
+                child: Text(
+                  ')',
+                  textAlign: TextAlign.center,
+                  softWrap: false,
+                  maxLines: 1,
+                  overflow: TextOverflow.visible,
+                  style: _ghostParenStyle(baseStyle),
+                ),
               ),
             ),
           ],

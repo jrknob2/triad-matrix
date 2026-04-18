@@ -376,6 +376,9 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                             _PlayerNotation(
                               setup: _setup,
                               isWarmup: isWarmup,
+                              showVoices: widget.controller.hasNonSnareVoice(
+                                currentItemId,
+                              ),
                               grouping: widget.controller.displayGroupingFor(
                                 currentItemId,
                               ),
@@ -536,6 +539,9 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                   _PlayerNotation(
                     setup: _setup,
                     isWarmup: isWarmup,
+                    showVoices: widget.controller.hasNonSnareVoice(
+                      currentItemId,
+                    ),
                     grouping: widget.controller.displayGroupingFor(
                       currentItemId,
                     ),
@@ -1449,6 +1455,7 @@ class _PulseGaugeRing extends StatelessWidget {
 class _PlayerNotation extends StatelessWidget {
   final PracticeSessionSetupV1 setup;
   final bool isWarmup;
+  final bool showVoices;
   final PatternGroupingV1 grouping;
   final List<String> tokens;
   final List<PatternNoteMarkingV1> markings;
@@ -1457,6 +1464,7 @@ class _PlayerNotation extends StatelessWidget {
   const _PlayerNotation({
     required this.setup,
     required this.isWarmup,
+    required this.showVoices,
     required this.grouping,
     required this.tokens,
     required this.markings,
@@ -1465,9 +1473,6 @@ class _PlayerNotation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool showVoices = voices.any(
-      (DrumVoiceV1 voice) => voice != DrumVoiceV1.snare,
-    );
     final double fontSize = switch (tokens.length) {
       >= 24 => 20,
       >= 16 => 25,
