@@ -329,10 +329,10 @@ class PatternVoiceDisplay extends StatelessWidget {
             ),
           if (marking == PatternNoteMarkingV1.ghost) ...<Widget>[
             Positioned(
-              left: -fontSize * 0.34,
+              left: 0,
               top: 0,
               bottom: 0,
-              width: fontSize * 0.52,
+              width: fontSize * 0.42,
               child: Center(
                 child: Text(
                   '(',
@@ -345,10 +345,10 @@ class PatternVoiceDisplay extends StatelessWidget {
               ),
             ),
             Positioned(
-              right: -fontSize * 0.34,
+              right: 0,
               top: 0,
               bottom: 0,
-              width: fontSize * 0.52,
+              width: fontSize * 0.42,
               child: Center(
                 child: Text(
                   ')',
