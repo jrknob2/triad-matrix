@@ -7,14 +7,13 @@ import UIKit
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
-    let didFinish = super.application(application, didFinishLaunchingWithOptions: launchOptions)
-    if let registrar = registrar(forPlugin: "NativeMetronomePlugin") {
-      NativeMetronomePlugin.register(with: registrar)
-    }
-    return didFinish
+    return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "NativeMetronomePlugin") {
+      NativeMetronomePlugin.register(with: registrar)
+    }
   }
 }
