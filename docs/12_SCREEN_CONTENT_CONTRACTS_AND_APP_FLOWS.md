@@ -1011,6 +1011,7 @@ Practice Session is execution only.
 - gauge tick color should communicate cycle completion progress, not rep quality
 - major tick count should represent the current pattern cycle target, not the total multi-pattern session span
 - major ticks should turn green in sync with the current cycle timer rather than lagging behind it
+- short pattern targets should still keep a dense field of minor ticks so the gauge does not become visually sparse when major tick count is low
 - when the outer gauge uses major and minor ticks, the visual distinction should come mainly from thickness and weight rather than much longer major marks
 - decorative player visuals must remain subordinate to synchronization and readability
 - if tick-ring treatment and synchronization conflict, the player must keep the simpler synchronized behavior and reduce decoration

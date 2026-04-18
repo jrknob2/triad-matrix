@@ -1327,7 +1327,6 @@ class _TickRingPainter extends CustomPainter {
 
   static const double _sweep = math.pi * 1.70;
   static const double _startAngle = math.pi * 0.64;
-  static const int _minorTicksPerMajor = 6;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1339,10 +1338,11 @@ class _TickRingPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round;
 
     final int majorTickCount = _majorTickCount();
-    final int totalTickCount = (majorTickCount * _minorTicksPerMajor) + 1;
+    final int minorTicksPerMajor = _minorTicksPerMajor(majorTickCount);
+    final int totalTickCount = (majorTickCount * minorTicksPerMajor) + 1;
 
     for (int index = 0; index < totalTickCount; index++) {
-      final bool majorTick = index % _minorTicksPerMajor == 0;
+      final bool majorTick = index % minorTicksPerMajor == 0;
       final double tickT = totalTickCount == 1
           ? 1.0
           : index / (totalTickCount - 1);
@@ -1389,6 +1389,13 @@ class _TickRingPainter extends CustomPainter {
     final int? minutes = target?.inMinutes;
     if (minutes == null || minutes <= 0) return 10;
     return minutes.clamp(2, 20);
+  }
+
+  int _minorTicksPerMajor(int majorTickCount) {
+    const int minimumVisibleTickCount = 25;
+    final int densityFromTarget =
+        ((minimumVisibleTickCount - 1) / majorTickCount).ceil();
+    return densityFromTarget.clamp(6, 12);
   }
 }
 

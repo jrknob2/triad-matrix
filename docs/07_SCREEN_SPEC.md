@@ -402,6 +402,7 @@ Must do:
 - gauge tick color in the player communicates cycle completion progress, not rep quality
 - major tick count in the player should represent the current pattern cycle target, not the total session span
 - major tick progression should stay visually in sync with the current cycle timer
+- short current-pattern targets should still retain a dense minor-tick field
 - when the outer gauge uses major and minor ticks, the hierarchy should read primarily through thickness and weight, not by making the major ticks much longer than the minor ticks
 - earned reps should advance from active tracked practice time at `1 rep = 60 seconds`
 - warmup and Matrix preview practice do not earn reps
