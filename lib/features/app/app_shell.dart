@@ -22,7 +22,7 @@ class AppShell extends StatefulWidget {
 }
 
 class _AppShellState extends State<AppShell> {
-  static const Duration _focusTransitionDuration = Duration(milliseconds: 220);
+  static const Duration _focusTransitionDuration = Duration(milliseconds: 320);
   int _currentIndex = 0;
   int _matrixRequestVersion = 0;
   MatrixScreenRequest? _matrixRequest;

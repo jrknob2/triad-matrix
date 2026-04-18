@@ -382,7 +382,7 @@ Must do:
 - when `Play` is pressed, collapse/fade the session header and phone bottom nav while the player region expands into the reclaimed space
 - when `Pause` is pressed, reverse the same transition smoothly
 - a distinct running focus layout is acceptable as long as the transition remains continuous and the stopped layout is not redesigned
-- keep focus-mode motion subtle and fast, roughly `180–250ms`, with no bouncy motion
+- keep focus-mode motion subtle and smooth, roughly `280–340ms`, with no bouncy motion
 - the transition should feel like regions sliding into place rather than flipping between layouts
 - on phone, the BPM/settings card should remain a clearly secondary utility card below the player rather than visually covering it
 - the settings card must not obscure the gauge, timer, earned-reps display, or transport controls
@@ -400,6 +400,8 @@ Must do:
 - completed gauge ticks in the player should use one green progression color as the session advances
 - inactive gauge ticks in the player should remain neutral
 - gauge tick color in the player communicates cycle completion progress, not rep quality
+- major tick count in the player should represent the current pattern cycle target, not the total session span
+- major tick progression should stay visually in sync with the current cycle timer
 - when the outer gauge uses major and minor ticks, the hierarchy should read primarily through thickness and weight, not by making the major ticks much longer than the minor ticks
 - earned reps should advance from active tracked practice time at `1 rep = 60 seconds`
 - warmup and Matrix preview practice do not earn reps

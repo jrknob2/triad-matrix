@@ -47,7 +47,7 @@ class _SessionTransportState {
 
 class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   static const String _metronomeAssetPath = 'assets/audio/metronome_beep.wav';
-  static const Duration _focusTransitionDuration = Duration(milliseconds: 220);
+  static const Duration _focusTransitionDuration = Duration(milliseconds: 320);
 
   final Stopwatch _stopwatch = Stopwatch();
   late final PracticeMetronomeService _metronome;
@@ -1388,7 +1388,7 @@ class _TickRingPainter extends CustomPainter {
   int _majorTickCount() {
     final int? minutes = target?.inMinutes;
     if (minutes == null || minutes <= 0) return 10;
-    return minutes.clamp(4, 20);
+    return minutes.clamp(2, 20);
   }
 }
 

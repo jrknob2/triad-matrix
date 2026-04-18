@@ -996,7 +996,7 @@ Practice Session is execution only.
 - when `Play` is pressed, the session header and phone bottom nav should fade/collapse out while the player region expands into the reclaimed space
 - when `Pause` is pressed, the same transition should reverse smoothly back to the default session layout
 - it is acceptable for focus mode to use a distinct running layout as long as the transition feels continuous and the default stopped layout is left intact
-- focus-mode transition timing should stay subtle and fast, around `180–250ms`, with no bouncy or playful motion
+- focus-mode transition timing should stay subtle and smooth, around `280–340ms`, with no bouncy or playful motion
 - focus-mode transitions should read as regions sliding and settling into place, not as a flip, pop, or abrupt subtree swap
 - pattern, gauge, and timer should keep their visual anchor during the transition and must not jump abruptly
 - the gauge may grow slightly in focus mode, but it should still feel anchored inside the same player card
@@ -1009,6 +1009,8 @@ Practice Session is execution only.
 - completed gauge ticks should use one green progression color as the session advances
 - inactive gauge ticks should remain neutral
 - gauge tick color should communicate cycle completion progress, not rep quality
+- major tick count should represent the current pattern cycle target, not the total multi-pattern session span
+- major ticks should turn green in sync with the current cycle timer rather than lagging behind it
 - when the outer gauge uses major and minor ticks, the visual distinction should come mainly from thickness and weight rather than much longer major marks
 - decorative player visuals must remain subordinate to synchronization and readability
 - if tick-ring treatment and synchronization conflict, the player must keep the simpler synchronized behavior and reduce decoration

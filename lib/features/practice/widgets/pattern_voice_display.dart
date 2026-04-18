@@ -276,7 +276,7 @@ class PatternVoiceDisplay extends StatelessWidget {
             width: separatorWidth,
             height: cellHeight,
             child: Transform.translate(
-              offset: Offset(0, showSeparatorText ? -(cellHeight * 0.08) : 0),
+              offset: Offset(0, showSeparatorText ? -(cellHeight * 0.18) : 0),
               child: Text(
                 showSeparatorText ? separators[index] : '',
                 textAlign: TextAlign.center,
