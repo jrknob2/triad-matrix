@@ -88,7 +88,7 @@ void main() {
     );
 
     test(
-      'saving an authored built-in triad creates or reuses a distinct saved variant',
+      'saving an authored built-in triad mutates the same item and preserves its routine identity',
       () async {
         final FakeAppStateStore store = FakeAppStateStore();
         final AppController controller = await AppController.createForTesting(
@@ -96,44 +96,35 @@ void main() {
         );
         final String baseItemId =
             controller.recommendedStartingTriadItemIds.first;
-        final int initialSavedCount = controller.items
-            .where((PracticeItemV1 item) => item.saved)
-            .length;
 
-        final String firstVariantId = controller.savePracticeItemEdits(
+        controller.toggleRoutineItem(baseItemId);
+
+        final String savedItemId = controller.savePracticeItemEdits(
           itemId: baseItemId,
-          accentedNoteIndices: const <int>[0],
-          ghostNoteIndices: const <int>[],
+          accentedNoteIndices: const <int>[0, 2],
+          ghostNoteIndices: const <int>[1],
           voiceAssignments: const <DrumVoiceV1>[],
           competency: CompetencyLevelV1.learning,
           saveToWorkingOn: true,
         );
 
-        expect(firstVariantId, isNot(baseItemId));
+        expect(savedItemId, baseItemId);
         expect(
-          controller.itemById(firstVariantId).source,
-          PracticeItemSourceV1.userDefined,
+          controller.itemById(baseItemId).accentedNoteIndices,
+          const <int>[0, 2],
         );
         expect(
-          controller.itemById(firstVariantId).accentedNoteIndices,
-          const <int>[0],
+          controller.itemById(baseItemId).ghostNoteIndices,
+          const <int>[1],
         );
-        expect(controller.isDirectRoutineEntry(firstVariantId), isTrue);
-        expect(controller.itemById(baseItemId).accentedNoteIndices, isEmpty);
-
-        final String reusedVariantId = controller.savePracticeItemEdits(
-          itemId: baseItemId,
-          accentedNoteIndices: const <int>[0],
-          ghostNoteIndices: const <int>[],
-          voiceAssignments: const <DrumVoiceV1>[],
-          competency: CompetencyLevelV1.learning,
-          saveToWorkingOn: true,
-        );
-
-        expect(reusedVariantId, firstVariantId);
+        expect(controller.isDirectRoutineEntry(baseItemId), isTrue);
         expect(
-          controller.items.where((PracticeItemV1 item) => item.saved).length,
-          initialSavedCount + 1,
+          controller.noteMarkingsFor(baseItemId),
+          const <PatternNoteMarkingV1>[
+            PatternNoteMarkingV1.accent,
+            PatternNoteMarkingV1.ghost,
+            PatternNoteMarkingV1.accent,
+          ],
         );
       },
     );

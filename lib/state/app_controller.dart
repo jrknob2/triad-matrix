@@ -1849,31 +1849,12 @@ class AppController extends ChangeNotifier {
     required CompetencyLevelV1 competency,
     bool saveToWorkingOn = false,
   }) {
-    final PracticeItemV1 originalItem = itemById(itemId);
     final List<int> sanitizedAccents = List<int>.from(accentedNoteIndices)
       ..sort();
     final List<int> sanitizedGhosts = List<int>.from(ghostNoteIndices)..sort();
     final List<DrumVoiceV1> sanitizedVoices = List<DrumVoiceV1>.from(
       voiceAssignments,
     );
-
-    if (_shouldSaveAsDistinctVariant(
-      originalItem,
-      accentedNoteIndices: sanitizedAccents,
-      ghostNoteIndices: sanitizedGhosts,
-      voiceAssignments: sanitizedVoices,
-    )) {
-      final PracticeItemV1 savedVariant = _saveDistinctVariantItem(
-        baseItem: originalItem,
-        accentedNoteIndices: sanitizedAccents,
-        ghostNoteIndices: sanitizedGhosts,
-        voiceAssignments: sanitizedVoices,
-        competency: competency,
-        saveToWorkingOn: saveToWorkingOn,
-      );
-      _notifyChanged();
-      return savedVariant.id;
-    }
 
     _items = _items
         .map((PracticeItemV1 entry) {
@@ -2999,115 +2980,6 @@ class AppController extends ChangeNotifier {
       if (effective[index] != DrumVoiceV1.snare) return true;
     }
     return false;
-  }
-
-  bool _shouldSaveAsDistinctVariant(
-    PracticeItemV1 item, {
-    required List<int> accentedNoteIndices,
-    required List<int> ghostNoteIndices,
-    required List<DrumVoiceV1> voiceAssignments,
-  }) {
-    if (item.source != PracticeItemSourceV1.builtIn) return false;
-    if (item.isWarmup) return false;
-    return accentedNoteIndices.isNotEmpty ||
-        ghostNoteIndices.isNotEmpty ||
-        _storedVoicesForItem(
-          item.copyWith(voiceAssignments: voiceAssignments),
-        ).isNotEmpty;
-  }
-
-  PracticeItemV1 _saveDistinctVariantItem({
-    required PracticeItemV1 baseItem,
-    required List<int> accentedNoteIndices,
-    required List<int> ghostNoteIndices,
-    required List<DrumVoiceV1> voiceAssignments,
-    required CompetencyLevelV1 competency,
-    required bool saveToWorkingOn,
-  }) {
-    final PracticeItemV1 draftVariant = _sanitizedItem(
-      PracticeItemV1(
-        id: '__draft_variant__',
-        family: baseItem.family,
-        name: baseItem.name,
-        sticking: baseItem.sticking,
-        noteCount: baseItem.noteCount,
-        accentedNoteIndices: accentedNoteIndices,
-        ghostNoteIndices: ghostNoteIndices,
-        voiceAssignments: voiceAssignments,
-        source: PracticeItemSourceV1.userDefined,
-        tags: List<String>.from(baseItem.tags),
-        saved: true,
-      ),
-    );
-
-    final PracticeItemV1? existing = _savedVariantForItemOrNull(
-      baseItem,
-      candidate: draftVariant,
-    );
-    final DateTime now = DateTime.now();
-    if (existing != null) {
-      _competencyByItemId[existing.id] = CompetencyRecordV1(
-        practiceItemId: existing.id,
-        level: competency,
-        updatedAt: now,
-      );
-      if (saveToWorkingOn && !isDirectRoutineEntry(existing.id)) {
-        _routine = _routine.copyWith(
-          entries: <RoutineEntryV1>[
-            ..._routine.entries,
-            RoutineEntryV1(practiceItemId: existing.id, addedAt: now),
-          ],
-        );
-      }
-      return existing;
-    }
-
-    final String variantId =
-        'item_${_normalizedSticking(baseItem).toLowerCase()}_${now.microsecondsSinceEpoch}';
-    final PracticeItemV1 savedVariant = draftVariant.copyWith(id: variantId);
-    _items = <PracticeItemV1>[..._items, savedVariant];
-    _competencyByItemId[variantId] = CompetencyRecordV1(
-      practiceItemId: variantId,
-      level: competency,
-      updatedAt: now,
-    );
-    if (saveToWorkingOn) {
-      _routine = _routine.copyWith(
-        entries: <RoutineEntryV1>[
-          ..._routine.entries,
-          RoutineEntryV1(practiceItemId: variantId, addedAt: now),
-        ],
-      );
-    }
-    return savedVariant;
-  }
-
-  PracticeItemV1? _savedVariantForItemOrNull(
-    PracticeItemV1 baseItem, {
-    required PracticeItemV1 candidate,
-  }) {
-    final String candidateSignature = _practiceItemVariantSignature(candidate);
-    for (final PracticeItemV1 item in _items) {
-      if (!item.saved || item.id == baseItem.id) continue;
-      if (item.family != candidate.family) continue;
-      if (_practiceItemVariantSignature(item) == candidateSignature) {
-        return item;
-      }
-    }
-    return null;
-  }
-
-  String _practiceItemVariantSignature(PracticeItemV1 item) {
-    final PracticeItemV1 sanitized = _sanitizedItem(item);
-    final List<DrumVoiceV1> storedVoices = _storedVoicesForItem(sanitized);
-    return <Object>[
-      sanitized.family.name,
-      _normalizedSticking(sanitized),
-      sanitized.noteCount,
-      sanitized.accentedNoteIndices.join(','),
-      sanitized.ghostNoteIndices.join(','),
-      storedVoices.map((DrumVoiceV1 voice) => voice.name).join(','),
-    ].join('|');
   }
 
   String _triadItemId(String cellId) => 'triad_${cellId.toLowerCase()}';

@@ -205,7 +205,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                       ? null
                       : () async {
                           final String currentItemId = hasUnsavedChanges
-                              ? _saveDraft(navigateToSavedVariant: false)
+                              ? _saveDraft()
                               : item.id;
                           final List<String>? selection = await widget
                               .onOpenInMatrix(currentItemId);
@@ -350,7 +350,6 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
 
   String _saveDraft({
     bool saveToWorkingOn = false,
-    bool navigateToSavedVariant = true,
   }) {
     widget.controller.rememberLaunchPreferencesForItem(
       itemId: widget.itemId,
@@ -365,35 +364,15 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       competency: widget.controller.competencyFor(widget.itemId),
       saveToWorkingOn: saveToWorkingOn,
     );
-    if (savedItemId != widget.itemId) {
-      widget.controller.rememberLaunchPreferencesForItem(
-        itemId: savedItemId,
-        bpm: _sessionBpm,
-        timerPreset: _timerPreset,
-      );
-    }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
           saveToWorkingOn
               ? 'Saved to Working On.'
-              : savedItemId == widget.itemId
-              ? 'Changes saved.'
-              : 'Saved as a separate item.',
+              : 'Changes saved.',
         ),
       ),
     );
-    if (navigateToSavedVariant && savedItemId != widget.itemId && mounted) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(
-          builder: (BuildContext context) => ItemDetailScreen(
-            controller: widget.controller,
-            itemId: savedItemId,
-            onOpenInMatrix: widget.onOpenInMatrix,
-          ),
-        ),
-      );
-    }
     return savedItemId;
   }
 
