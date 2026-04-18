@@ -1353,9 +1353,9 @@ class _TickRingPainter extends CustomPainter {
           : index == 0
           ? progressClamped > 0
           : tickT <= progressClamped;
-      final Color tickColor = completed
-          ? _progressColor(tickT)
-          : _inactiveColor();
+      final Color tickColor = majorTick
+          ? _majorTickColor(completed)
+          : (completed ? _progressColor(tickT) : _inactiveColor());
       final double tickLength = majorTick ? 13 : 8;
       paint
         ..color = tickColor
@@ -1384,6 +1384,10 @@ class _TickRingPainter extends CustomPainter {
 
   Color _progressColor(double t) {
     return const Color(0xFFA1D46E);
+  }
+
+  Color _majorTickColor(bool completed) {
+    return completed ? const Color(0xFFFFF4DE) : const Color(0xB3FFF4DE);
   }
 
   int _majorTickCount() {
