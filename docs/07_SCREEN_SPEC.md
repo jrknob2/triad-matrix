@@ -252,6 +252,8 @@ The phrase editor shows exact ordered occurrences.
 
 Matrix grid cells are structural cells. They should use an in-memory structural triad basis to render the grid and may suppress authored dynamics and voice rows. Phrase readouts and phrase-editor chips may show those authored layers because they represent the selected phrase rather than the structural grid catalog.
 
+Shared notation geometry should remain renderer-owned across screens: note spacing should stay compact, ghost parens should keep consistent breathing room and vertical centering, and accented notes should compensate slightly right so the token still reads visually centered.
+
 If an item appears anywhere in the phrase, its matrix cell is selected.  
 Exact removal happens in the phrase editor, not inside the cell.
 
