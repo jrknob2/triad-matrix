@@ -348,9 +348,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         widget.controller.launchTimerPresetForItem(item.id) != _timerPreset;
   }
 
-  String _saveDraft({
-    bool saveToWorkingOn = false,
-  }) {
+  String _saveDraft({bool saveToWorkingOn = false}) {
     widget.controller.rememberLaunchPreferencesForItem(
       itemId: widget.itemId,
       bpm: _sessionBpm,
@@ -367,9 +365,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          saveToWorkingOn
-              ? 'Saved to Working On.'
-              : 'Changes saved.',
+          saveToWorkingOn ? 'Saved to Working On.' : 'Changes saved.',
         ),
       ),
     );
@@ -458,6 +454,10 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
 }
 
 class _SelectableNotationBlock extends StatelessWidget {
+  static const double _innerCellWidth = 32;
+  static const double _outerCellWidth = 42;
+  static const double _separatorSlotWidth = 8;
+
   final List<String> tokens;
   final List<PatternNoteMarkingV1> markings;
   final List<DrumVoiceV1> voices;
@@ -526,15 +526,19 @@ class _SelectableNotationBlock extends StatelessWidget {
                       showVoice: showVoices,
                       patternStyle: patternStyle,
                       voiceStyle: voiceStyle,
+                      outerCellWidth: _outerCellWidth,
+                      innerCellWidth: _innerCellWidth,
                       onTap: () => onSelect(index),
                     ),
                     if (separators[index].isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 2),
-                        child: Text(
-                          separators[index],
-                          style: patternStyle.copyWith(
-                            color: const Color(0xFF6B6254),
+                      SizedBox(
+                        width: _separatorSlotWidth,
+                        child: Center(
+                          child: Text(
+                            separators[index],
+                            style: patternStyle.copyWith(
+                              color: const Color(0xFF6B6254),
+                            ),
                           ),
                         ),
                       ),
@@ -553,8 +557,6 @@ class _SelectableNotationBlock extends StatelessWidget {
     double maxWidth,
     List<String> separators,
   ) {
-    const double cellWidth = 52;
-    const double separatorWidth = 10;
     if (!maxWidth.isFinite || maxWidth <= 0) {
       return <_NotationChunk>[_NotationChunk(start: 0, end: tokens.length)];
     }
@@ -565,7 +567,8 @@ class _SelectableNotationBlock extends StatelessWidget {
       int end = start;
       while (end < tokens.length) {
         final double nextWidth =
-            cellWidth + (separators[end].isNotEmpty ? separatorWidth : 0);
+            _outerCellWidth +
+            (separators[end].isNotEmpty ? _separatorSlotWidth : 0);
         if (end > start && width + nextWidth > maxWidth) break;
         width += nextWidth;
         end++;
@@ -587,6 +590,8 @@ class _SelectableNotationCell extends StatelessWidget {
   final bool showVoice;
   final TextStyle patternStyle;
   final TextStyle voiceStyle;
+  final double outerCellWidth;
+  final double innerCellWidth;
   final VoidCallback onTap;
 
   const _SelectableNotationCell({
@@ -598,6 +603,8 @@ class _SelectableNotationCell extends StatelessWidget {
     required this.showVoice,
     required this.patternStyle,
     required this.voiceStyle,
+    required this.outerCellWidth,
+    required this.innerCellWidth,
     required this.onTap,
   });
 
@@ -610,7 +617,7 @@ class _SelectableNotationCell extends StatelessWidget {
         onTap: enabled ? onTap : null,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
-          width: 52,
+          width: outerCellWidth,
           padding: const EdgeInsets.symmetric(vertical: 4),
           decoration: BoxDecoration(
             color: selected ? const Color(0xFFE7D6A8) : Colors.transparent,
@@ -630,7 +637,7 @@ class _SelectableNotationCell extends StatelessWidget {
                 voices: <DrumVoiceV1>[voice],
                 patternStyle: patternStyle,
                 voiceStyle: voiceStyle,
-                cellWidth: 32,
+                cellWidth: innerCellWidth,
                 scrollable: false,
                 wrap: false,
                 grouping: PatternGroupingV1.none,

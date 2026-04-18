@@ -62,6 +62,7 @@ Notation rule:
 - `R`, `L`, and `K` are the anchor glyphs and must always render at the exact same size within a notation readout
 - the shared renderer owns notation token geometry; screens may size the overall readout, but they must not introduce local per-screen character spacing or ornament positioning rules
 - note cells should be visually compact enough that adjacent notes read as one pattern rather than isolated glyphs with oversized gaps
+- wrappers such as editable/selectable notation surfaces may expand tap targets, but they must not introduce a second independent note-spacing model on top of the shared renderer
 - the note glyph must remain horizontally centered in its note cell regardless of accents, ghosts, voices, or phrase separators
 - all non-accent notation characters should align to the same note-row centerline
 - `^` is the only notation character allowed to sit off the note-cell center; it decorates the note without moving or resizing the note glyph
@@ -1379,6 +1380,7 @@ Practice Item lets the user inspect and edit one item cleanly.
 - when flow voices exist, that top block should become the unified two-row pattern/voice display
 - the `Flow Voices` section should contain voice editing controls only, not a second notation preview
 - `Practice Item` may wrap the shared notation renderer with selection affordances, but it should not introduce a separate notation rendering style
+- the `Practice Item` selection wrapper may add only a small tap-target halo around each rendered note; it must not widen note slots or separator spacing into a second independent layout model
 - the notation block should be the note-selection surface, so the screen does not need a per-note chip grid for editing
 - when entering voice editing, effective default voices remain `snare` for hand notes and `kick` for `K` notes unless the user assigns something else
 - selection should toggle on tap so the user can build or reduce a note set before applying an edit
