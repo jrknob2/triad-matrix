@@ -371,6 +371,9 @@ Must show:
 - notation
 - pulse / click / BPM / timer
 - integrated BPM core display with tick-ring treatment when the full player treatment is active
+- the BPM display should read as BPM core, inner solid pulse ring, and outer tick gauge
+- the inner pulse ring and the outer tick gauge should remain visually separated by a small clear gap
+- the outer tick gauge should stay visually static apart from cycle-progress color change and should not flash on the beat
 - gauge ticks should render as squared rectangular marks rather than rounded strokes
 - passive `+N Reps` earned-work display for tracked sessions
 - prev/next when source contains multiple items
@@ -406,8 +409,10 @@ Must do:
 - major tick progression should stay visually in sync with the current cycle timer
 - overall gauge tick density should stay visually consistent across durations
 - major ticks may use a higher-contrast color treatment than minor ticks to preserve hierarchy
+- major ticks may use a light high-contrast treatment relative to minor ticks to preserve hierarchy
 - when the outer gauge uses major and minor ticks, the hierarchy should read primarily through thickness and weight, not by making the major ticks much longer than the minor ticks
 - earned reps should advance from active tracked practice time at `1 rep = 60 seconds`
+- the earned-reps readout should remain a passive pill and should read `N Reps Earned`
 - warmup and Matrix preview practice do not earn reps
 - player pulse treatment should stay visually restrained relative to notation and timer
 - if pulse clarity and pulse decoration conflict, the player should prefer a simple synchronized flash treatment

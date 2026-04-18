@@ -1004,7 +1004,10 @@ Practice Session is execution only.
 - the settings card must not visually bisect the gauge or obscure timer, earned-rep display, or transport controls
 - if there is any overlap between player and settings regions, it must be subtle and must never block the lower player stack
 - BPM should sit inside an integrated circular display when the full player treatment is shown
-- the pulse display may use a tick-ring treatment around the BPM core display
+- the BPM core should read as a three-part stack: BPM core, inner solid pulse ring, outer tick gauge
+- the inner pulse ring and outer tick gauge must be visually separated by a small clear gap
+- the pulse display should use a solid inner ring around the BPM core
+- the outer tick gauge should remain visually static apart from cycle-progress color change and must not flash on the beat
 - tick-ring treatment should represent cycle progress, not a separate beat engine
 - gauge ticks should render as clean rectangular marks with squared ends, not rounded hand-drawn strokes
 - completed gauge ticks should use one green progression color as the session advances
@@ -1015,11 +1018,13 @@ Practice Session is execution only.
 - major ticks should turn green in sync with the current cycle timer rather than lagging behind it
 - overall gauge tick density should stay visually consistent across durations; shorter targets should change major tick placement, not make the whole ring sparse
 - major ticks may use a stronger contrast color than minor ticks so the interval structure remains readable at a glance
+- major ticks may use a light high-contrast treatment relative to minor ticks so the interval structure remains readable at a glance
 - when the outer gauge uses major and minor ticks, the visual distinction should come mainly from thickness and weight rather than much longer major marks
 - decorative player visuals must remain subordinate to synchronization and readability
 - if tick-ring treatment and synchronization conflict, the player must keep the simpler synchronized behavior and reduce decoration
 - session credit or rep credit may appear in the player as a passive display surface, not as a transport action
 - earned reps in the player should be a passive display, not a button
+- the earned-reps readout should render as a passive pill and should read `N Reps Earned`
 - MVP earned-rep rule: `1 rep = 60 seconds` of active tracked practice time
 - earned reps should update as tracked active time crosses each 60-second threshold
 - paused time does not earn reps

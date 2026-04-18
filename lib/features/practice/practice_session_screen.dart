@@ -1329,8 +1329,8 @@ class _TickRingPainter extends CustomPainter {
   static const double _startAngle = math.pi * 0.64;
   static const double _majorTickWidth = 6.6;
   static const double _minorTickWidth = 5.8;
-  static const double _majorTickLength = 13;
-  static const double _minorTickLength = 8;
+  static const double _majorTickLength = 21.7;
+  static const double _minorTickLength = 13.3;
 
   @override
   void paint(Canvas canvas, Size size) {
