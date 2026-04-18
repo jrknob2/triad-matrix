@@ -371,6 +371,7 @@ Must show:
 - notation
 - pulse / click / BPM / timer
 - integrated BPM core display with tick-ring treatment when the full player treatment is active
+- gauge ticks should render as squared rectangular marks rather than rounded strokes
 - passive `+N Reps` earned-work display for tracked sessions
 - prev/next when source contains multiple items
 - `Play`

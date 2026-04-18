@@ -1006,6 +1006,7 @@ Practice Session is execution only.
 - BPM should sit inside an integrated circular display when the full player treatment is shown
 - the pulse display may use a tick-ring treatment around the BPM core display
 - tick-ring treatment should represent cycle progress, not a separate beat engine
+- gauge ticks should render as clean rectangular marks with squared ends, not rounded hand-drawn strokes
 - completed gauge ticks should use one green progression color as the session advances
 - inactive gauge ticks should remain neutral
 - gauge tick color should communicate cycle completion progress, not rep quality

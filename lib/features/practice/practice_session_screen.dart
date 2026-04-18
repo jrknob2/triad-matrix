@@ -1327,7 +1327,7 @@ class _TickRingPainter extends CustomPainter {
 
   static const double _sweep = math.pi * 1.70;
   static const double _startAngle = math.pi * 0.64;
-  static const int _tickIntervals = 60;
+  static const int _tickIntervals = 52;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1336,7 +1336,7 @@ class _TickRingPainter extends CustomPainter {
     final double progressClamped = progress.clamp(0.0, 1.0);
     final Paint paint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
+      ..strokeCap = StrokeCap.butt;
 
     final int majorTickCount = _majorTickCount();
     final Set<int> majorTickIndices = _majorTickIndices(majorTickCount);
