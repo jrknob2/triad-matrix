@@ -75,15 +75,19 @@ Notation rule:
 
 Pattern editing source-of-truth rule:
 
-- a saved pattern, triad variant, or phrase is one authored item
+- the Matrix triad basis is a structural in-memory view used only to render and filter the Matrix grid
+- the Matrix triad basis is not the canonical source of editable practice-item identity
+- a saved pattern or phrase is one authored item
 - the authored item owns its complete edit state:
+  - its own notes
   - triad sequence / phrase structure
   - accents
   - ghosts
   - voices
   - practice defaults
+- once a practice item exists, it stands on its own rather than being derived from or rebound to a hard-coded base triad record
 - once triads are saved as part of a phrase item, the phrase item's authored state is the source of truth for that phrase
-- child triad records may be used as templates for newly added material, but they must not overwrite or reinterpret the saved phrase item's existing authored accents, ghosts, or voices
+- Matrix structural triads may be used as templates for newly added material, but they must not overwrite or reinterpret an authored practice item's existing notes, accents, ghosts, or voices
 - editing may be split across screens, but the draft must be shared:
   - `Practice Item` owns item authoring and orchestration edits
   - `Matrix` owns structure edits when entered from `Practice Item`
@@ -766,9 +770,8 @@ Rules:
   - do not show `Remove from Working On`
 - `Add to Working On` must not silently create or persist a new item
 - base sticking alone is not the unique identity of saved work
-- distinct authored variants of the same sticking may coexist in `Working On`
-- the unique identity of a saved authored variant is its pattern plus authored accents, ghosts, and voices
-- exact authored duplicates should resolve to the existing saved item instead of creating another copy
+- a practice item's identity is the item record itself, including its owned notes and authored state
+- exact authored duplicates should resolve to the existing saved item only when the user is explicitly saving or duplicating a new item on purpose
 - for an existing item or saved phrase, `Add to Working On` should prompt the user to open that item instead of creating a duplicate of the same authored item
 - for a new phrase, `Add to Working On` should open `Practice Item` as a draft authoring handoff
 - when Matrix is entered from `Focus -> New`, the primary action should read `Save to Working On` and carry the strongest visual emphasis
@@ -1363,6 +1366,7 @@ Practice Item lets the user inspect and edit one item cleanly.
 - `Flow Voices` assigns the voice for the selected note set
 - practice default controls may live here even though session launch happens elsewhere
 - last BPM and duration for a single item should be remembered outside the authored item data
+- Practice Item owns its notes as part of the authored item record
 - accents, ghosts, and flow voice assignments are user-authored edit layers
 - base material enters the app plain unless the user has explicitly edited it
 - no voice assignments and all-default voices must collapse to the same single-surface state
@@ -1379,12 +1383,12 @@ Practice Item lets the user inspect and edit one item cleanly.
 - Matrix selection and phrase building must not inject authored markings automatically
 - item edits should live in a local draft until the user explicitly saves them
 - navigating away with unsaved item changes should prompt the user to save, discard, or keep editing
-- if the user adds a built-in item to `Working On` while it has unsaved authored accents, ghosts, or voices, that action should save or reuse a distinct authored variant instead of adding the plain built-in item
+- normal editing must not silently split one item into a hidden base item plus authored variant
 - `Open in Matrix` must reuse the Matrix screen in an item-edit context when the material can be expressed as a triad or triad phrase
 - in that context, Matrix should preload the current sequence from the authored item draft, preserve the authored item state through the round trip, and replace `Add to Working On` with a return action back to `Working On`
 - `Open in Matrix` must treat the current `Practice Item` draft as authoritative; it must not render the phrase from global child-triad state if that would scramble or replace authored markings or voices
 - unsaved phrase drafts may still reopen Matrix for structure edits; `Open in Matrix` should not be disabled solely because the item has not been saved to `Working On` yet
-- adding a triad in Matrix should append a new segment with that triad's default/authored template data, while existing segments retain their current authored markings and voices
+- adding a triad in Matrix should append a new segment with that triad's structural/default template data, while existing segments retain their current authored notes, markings, and voices
 - removing a triad in Matrix should remove that occurrence and its attached authored segment data
 - when Matrix editing expands a single triad into a phrase, returning should continue in `Practice Item` on the resulting phrase item instead of silently keeping the old single-triad item
 - `Practice Item` should not offer direct practice-launch buttons when that pulls the screen away from its editing job

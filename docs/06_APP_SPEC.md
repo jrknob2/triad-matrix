@@ -26,6 +26,14 @@ V1 begins with triads as the core system, supports longer triad-built phrases, a
 
 The app is not a neutral pattern bucket. It is a guided practice system.
 
+Active v1 data-model rule:
+
+- the Matrix triad set is a structural in-memory basis used to render and filter the Matrix grid
+- Matrix structural triads are not the canonical persisted source of editable practice items
+- practice items are standalone persisted records
+- a practice item owns its own notes plus its authored state
+- normal editing should update that authored item directly rather than silently splitting it into a base item plus variant
+
 Post-MVP architecture direction:
 
 - v1 intentionally treats triads as the teaching root
