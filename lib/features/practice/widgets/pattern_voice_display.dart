@@ -226,16 +226,11 @@ class PatternVoiceDisplay extends StatelessWidget {
     TextStyle style,
     double cellWidth,
   ) {
-    final double slotWidth = characterSlotWidthForStyle(style, cellWidth);
-    return slotWidth * _slotCountForMarking(marking);
-  }
-
-  static int _slotCountForMarking(PatternNoteMarkingV1 marking) {
-    return switch (marking) {
-      PatternNoteMarkingV1.normal => 1,
-      PatternNoteMarkingV1.accent => 2,
-      PatternNoteMarkingV1.ghost => 3,
-    };
+    final double noteSlotWidth = characterSlotWidthForStyle(style, cellWidth);
+    return _slotWidthsForMarking(
+      marking,
+      noteSlotWidth,
+    ).fold<double>(0, (double sum, double width) => sum + width);
   }
 
   _NotationTokenGeometry _tokenGeometryFor({
@@ -243,16 +238,36 @@ class PatternVoiceDisplay extends StatelessWidget {
     required TextStyle patternStyle,
     required double cellWidth,
   }) {
-    final double slotWidth = characterSlotWidthForStyle(
+    final double noteSlotWidth = characterSlotWidthForStyle(
       patternStyle,
       cellWidth,
     );
+    final List<double> slotWidths = _slotWidthsForMarking(
+      marking,
+      noteSlotWidth,
+    );
     return _NotationTokenGeometry(
       marking: marking,
-      slotWidth: slotWidth,
-      slotCount: _slotCountForMarking(marking),
+      slotWidths: slotWidths,
       noteSlotIndex: marking == PatternNoteMarkingV1.normal ? 0 : 1,
     );
+  }
+
+  static List<double> _slotWidthsForMarking(
+    PatternNoteMarkingV1 marking,
+    double noteSlotWidth,
+  ) {
+    final double accentSlotWidth = noteSlotWidth * 0.64;
+    final double ghostParenSlotWidth = noteSlotWidth * 0.72;
+    return switch (marking) {
+      PatternNoteMarkingV1.normal => <double>[noteSlotWidth],
+      PatternNoteMarkingV1.accent => <double>[accentSlotWidth, noteSlotWidth],
+      PatternNoteMarkingV1.ghost => <double>[
+        ghostParenSlotWidth,
+        noteSlotWidth,
+        ghostParenSlotWidth,
+      ],
+    };
   }
 
   List<_PatternVoiceChunk> _chunksForWidth({
@@ -411,10 +426,10 @@ class PatternVoiceDisplay extends StatelessWidget {
         children: <Widget>[
           for (final _NotationGlyphSlot glyph in glyphs)
             Positioned(
-              left: glyph.slotIndex * geometry.slotWidth,
+              left: geometry.slotLeft(glyph.slotIndex),
               top: 0,
               bottom: 0,
-              width: geometry.slotWidth,
+              width: geometry.slotWidthAt(glyph.slotIndex),
               child: Center(
                 child: Text(
                   glyph.text,
@@ -436,8 +451,10 @@ class PatternVoiceDisplay extends StatelessWidget {
     required _NotationTokenGeometry geometry,
     required TextStyle baseStyle,
   }) {
-    final double horizontalAnchor =
-        ((geometry.noteSlotIndex + 0.5) / geometry.slotCount) * 2 - 1;
+    final double noteCenter = geometry.noteCenterX;
+    final double horizontalAnchor = geometry.width == 0
+        ? 0
+        : ((noteCenter / geometry.width) * 2) - 1;
     return SizedBox(
       width: geometry.width,
       child: Align(
@@ -505,18 +522,32 @@ class _PatternVoiceSegment {
 
 class _NotationTokenGeometry {
   final PatternNoteMarkingV1 marking;
-  final double slotWidth;
-  final int slotCount;
+  final List<double> slotWidths;
   final int noteSlotIndex;
 
   const _NotationTokenGeometry({
     required this.marking,
-    required this.slotWidth,
-    required this.slotCount,
+    required this.slotWidths,
     required this.noteSlotIndex,
   });
 
-  double get width => slotWidth * slotCount;
+  int get slotCount => slotWidths.length;
+
+  double get width =>
+      slotWidths.fold<double>(0, (double sum, double value) => sum + value);
+
+  double slotLeft(int slotIndex) {
+    double left = 0;
+    for (int index = 0; index < slotIndex; index += 1) {
+      left += slotWidths[index];
+    }
+    return left;
+  }
+
+  double slotWidthAt(int slotIndex) => slotWidths[slotIndex];
+
+  double get noteCenterX =>
+      slotLeft(noteSlotIndex) + (slotWidthAt(noteSlotIndex) / 2);
 }
 
 class _NotationGlyphSlot {
