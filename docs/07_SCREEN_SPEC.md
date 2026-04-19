@@ -252,7 +252,7 @@ The phrase editor shows exact ordered occurrences.
 
 Matrix grid cells are structural cells. They should use an in-memory structural triad basis to render the grid and may suppress authored dynamics and voice rows. Phrase readouts and phrase-editor chips may show those authored layers because they represent the selected phrase rather than the structural grid catalog.
 
-Shared notation geometry should remain renderer-owned across screens and should use a character-slot model: each visible notation character gets its own padded slot, ornament slots like `^`, `(`, and `)` may be narrower than note-letter slots, note spacing stays compact, ghost parens keep consistent breathing room and vertical centering around the note, accent marks sit in their own slot before the note, and phrase separators keep a small clear gap from adjacent marked tokens.
+Shared notation geometry should remain renderer-owned across screens and should use a character-slot model: each visible notation character gets its own padded slot, ornament slots like `^`, `(`, and `)` may be narrower than note-letter slots, ornament glyphs may be biased within those slots to tune visual proximity, note spacing stays compact, ghost parens keep consistent breathing room and vertical centering around the note, accent marks sit in their own slot before the note, and phrase separators keep a small clear gap from adjacent marked tokens.
 
 If an item appears anywhere in the phrase, its matrix cell is selected.  
 Exact removal happens in the phrase editor, not inside the cell.

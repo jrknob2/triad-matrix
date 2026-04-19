@@ -258,7 +258,7 @@ class PatternVoiceDisplay extends StatelessWidget {
     double noteSlotWidth,
   ) {
     final double accentSlotWidth = noteSlotWidth * 0.64;
-    final double ghostParenSlotWidth = noteSlotWidth * 0.72;
+    final double ghostParenSlotWidth = noteSlotWidth * 0.58;
     return switch (marking) {
       PatternNoteMarkingV1.normal => <double>[noteSlotWidth],
       PatternNoteMarkingV1.accent => <double>[accentSlotWidth, noteSlotWidth],
@@ -401,6 +401,7 @@ class PatternVoiceDisplay extends StatelessWidget {
           slotIndex: 0,
           text: '^',
           style: baseStyle.copyWith(height: 1.0),
+          alignmentX: -0.35,
         ),
         _NotationGlyphSlot(slotIndex: 1, text: token, style: baseStyle),
       ],
@@ -409,12 +410,14 @@ class PatternVoiceDisplay extends StatelessWidget {
           slotIndex: 0,
           text: '(',
           style: _ghostParenStyle(baseStyle),
+          alignmentX: 0.45,
         ),
         _NotationGlyphSlot(slotIndex: 1, text: token, style: baseStyle),
         _NotationGlyphSlot(
           slotIndex: 2,
           text: ')',
           style: _ghostParenStyle(baseStyle),
+          alignmentX: -0.45,
         ),
       ],
     };
@@ -430,7 +433,8 @@ class PatternVoiceDisplay extends StatelessWidget {
               top: 0,
               bottom: 0,
               width: geometry.slotWidthAt(glyph.slotIndex),
-              child: Center(
+              child: Align(
+                alignment: Alignment(glyph.alignmentX, 0),
                 child: Text(
                   glyph.text,
                   textAlign: TextAlign.center,
@@ -554,10 +558,12 @@ class _NotationGlyphSlot {
   final int slotIndex;
   final String text;
   final TextStyle style;
+  final double alignmentX;
 
   const _NotationGlyphSlot({
     required this.slotIndex,
     required this.text,
     required this.style,
+    this.alignmentX = 0,
   });
 }
