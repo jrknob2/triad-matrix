@@ -666,6 +666,7 @@ Practice Item is the detail/edit screen for one piece of material.
 - when the item has flow voices, that primary notation block should render as a unified two-row pattern/voice display
 - the `Flow Voices` section should contain editing controls, not a second notation preview
 - the `Practice Item` note-selection affordance may add only a small tap-target halo around the shared renderer; it should not create a wider second spacing model for note slots or separators
+- the `Practice Item` note-selection affordance should derive its slot and separator sizing from the shared renderer geometry instead of fixed local constants
 - edits should not write through immediately while the user is still working on the screen
 - selection should toggle on tap so the user can add and remove notes from the current selected set
 - applying a marking or voice assignment should clear the current selection

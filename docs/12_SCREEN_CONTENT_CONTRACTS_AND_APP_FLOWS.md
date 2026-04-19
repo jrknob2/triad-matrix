@@ -1382,6 +1382,7 @@ Practice Item lets the user inspect and edit one item cleanly.
 - the `Flow Voices` section should contain voice editing controls only, not a second notation preview
 - `Practice Item` may wrap the shared notation renderer with selection affordances, but it should not introduce a separate notation rendering style
 - the `Practice Item` selection wrapper may add only a small tap-target halo around each rendered note; it must not widen note slots or separator spacing into a second independent layout model
+- any `Practice Item` note-selection wrapper must derive its slot and separator measurements from the shared renderer geometry rather than fixed local spacing constants
 - the notation block should be the note-selection surface, so the screen does not need a per-note chip grid for editing
 - when entering voice editing, effective default voices remain `snare` for hand notes and `kick` for `K` notes unless the user assigns something else
 - selection should toggle on tap so the user can build or reduce a note set before applying an edit

@@ -313,8 +313,8 @@ class PatternVoiceDisplay extends StatelessWidget {
         ? fontSize * 0.10
         : 0;
     final double ghostInset = (resolvedCellWidth - (fontSize * 0.92)).clamp(
-      fontSize * 0.02,
-      fontSize * 0.10,
+      -fontSize * 0.02,
+      fontSize * 0.05,
     );
     final double ghostOffsetY = -(fontSize * 0.04);
     return SizedBox(
