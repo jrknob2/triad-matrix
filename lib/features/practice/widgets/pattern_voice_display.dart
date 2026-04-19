@@ -52,7 +52,7 @@ class PatternVoiceDisplay extends StatelessWidget {
       growable: false,
     );
     final double resolvedCellWidth = _resolvedCellWidth(resolvedPatternStyle);
-    final double separatorWidth = (resolvedCellWidth * 0.38).clamp(10.0, 24.0);
+    final double separatorWidth = (resolvedCellWidth * 0.46).clamp(12.0, 26.0);
 
     final Widget content = wrap
         ? LayoutBuilder(
@@ -244,7 +244,8 @@ class PatternVoiceDisplay extends StatelessWidget {
     double width = 0;
     for (int index = 0; index < tokens.length; index += 1) {
       width +=
-          resolvedCellWidth + (separators[index].isNotEmpty ? separatorWidth : 0);
+          resolvedCellWidth +
+          (separators[index].isNotEmpty ? separatorWidth : 0);
       final bool closesSegment =
           separators[index].isNotEmpty || index == tokens.length - 1;
       if (closesSegment) {
@@ -311,8 +312,10 @@ class PatternVoiceDisplay extends StatelessWidget {
     final double accentShift = marking == PatternNoteMarkingV1.accent
         ? fontSize * 0.10
         : 0;
-    final double ghostInset = (resolvedCellWidth - (fontSize * 0.92))
-        .clamp(fontSize * 0.06, fontSize * 0.16);
+    final double ghostInset = (resolvedCellWidth - (fontSize * 0.92)).clamp(
+      fontSize * 0.02,
+      fontSize * 0.10,
+    );
     final double ghostOffsetY = -(fontSize * 0.04);
     return SizedBox(
       width: resolvedCellWidth,

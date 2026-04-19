@@ -70,6 +70,7 @@ Notation rule:
 - ghost parentheses must leave a small consistent breathing gap around the note letter and stay vertically centered with the note, with the same visual amount above and below
 - dynamics are part of the pattern token presentation; accent marks should render beside the note, not over the note
 - accented notes should shift slightly to the right inside the token so the accent-plus-note unit reads visually centered and does not leave an abnormal trailing gap after the note
+- phrase separators must leave a small clear gap from adjacent marked tokens, including accented notes, so `-` never visually touches the neighboring notation
 - voice rows should align to the same note-cell centers as the pattern row, without changing the pattern token rendering
 - phrase separators like `-` belong to the notes row and must align with that row's centerline, not visually drift between the notes row and the voice row
 - if a pattern has authored dynamics or authored voices, that authored state should render consistently everywhere the pattern is shown
