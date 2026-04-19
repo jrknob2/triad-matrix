@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../../core/practice/practice_domain_v1.dart';
@@ -51,8 +53,21 @@ class PatternVoiceDisplay extends StatelessWidget {
       (int index) => grouping.separatorAfter(index, tokens.length),
       growable: false,
     );
-    final double resolvedCellWidth = _resolvedCellWidth(resolvedPatternStyle);
-    final double separatorWidth = (resolvedCellWidth * 0.46).clamp(12.0, 26.0);
+    final List<_NotationTokenGeometry> tokenGeometry =
+        List<_NotationTokenGeometry>.generate(tokens.length, (int index) {
+          final PatternNoteMarkingV1 effectiveMarking = showDynamics
+              ? markings[index]
+              : PatternNoteMarkingV1.normal;
+          return _tokenGeometryFor(
+            marking: effectiveMarking,
+            patternStyle: resolvedPatternStyle,
+            cellWidth: cellWidth,
+          );
+        });
+    final double separatorWidth = separatorWidthForStyle(
+      resolvedPatternStyle,
+      cellWidth,
+    );
 
     final Widget content = wrap
         ? LayoutBuilder(
@@ -63,7 +78,7 @@ class PatternVoiceDisplay extends StatelessWidget {
               final List<_PatternVoiceChunk> chunks = _chunksForWidth(
                 maxWidth: maxWidth,
                 separators: separators,
-                resolvedCellWidth: resolvedCellWidth,
+                tokenGeometry: tokenGeometry,
                 separatorWidth: separatorWidth,
               );
               return Align(
@@ -76,7 +91,7 @@ class PatternVoiceDisplay extends StatelessWidget {
                       _chunkWidget(
                         chunk: chunks[i],
                         separators: separators,
-                        resolvedCellWidth: resolvedCellWidth,
+                        tokenGeometry: tokenGeometry,
                         separatorWidth: separatorWidth,
                         patternStyle: resolvedPatternStyle,
                         voiceStyle: resolvedVoiceStyle,
@@ -106,7 +121,7 @@ class PatternVoiceDisplay extends StatelessWidget {
               _chunkWidget(
                 chunk: _PatternVoiceChunk(start: 0, end: tokens.length),
                 separators: separators,
-                resolvedCellWidth: resolvedCellWidth,
+                tokenGeometry: tokenGeometry,
                 separatorWidth: separatorWidth,
                 patternStyle: resolvedPatternStyle,
                 voiceStyle: resolvedVoiceStyle,
@@ -134,7 +149,7 @@ class PatternVoiceDisplay extends StatelessWidget {
   Widget _chunkWidget({
     required _PatternVoiceChunk chunk,
     required List<String> separators,
-    required double resolvedCellWidth,
+    required List<_NotationTokenGeometry> tokenGeometry,
     required double separatorWidth,
     required TextStyle patternStyle,
     required TextStyle voiceStyle,
@@ -151,14 +166,13 @@ class PatternVoiceDisplay extends StatelessWidget {
             children: _rowCellsForRange(
               chunk: chunk,
               separators: separators,
-              resolvedCellWidth: resolvedCellWidth,
+              tokenGeometry: tokenGeometry,
               separatorWidth: separatorWidth,
               cellHeight: patternCellHeight,
               noteCellFor: (int index) => _patternText(
                 tokens[index],
-                showDynamics ? markings[index] : PatternNoteMarkingV1.normal,
+                tokenGeometry[index],
                 patternStyle,
-                resolvedCellWidth,
               ),
               separatorStyle: patternStyle,
             ),
@@ -170,16 +184,13 @@ class PatternVoiceDisplay extends StatelessWidget {
             children: _rowCellsForRange(
               chunk: chunk,
               separators: separators,
-              resolvedCellWidth: resolvedCellWidth,
+              tokenGeometry: tokenGeometry,
               separatorWidth: separatorWidth,
               cellHeight: voiceCellHeight,
-              noteCellFor: (int index) => Text(
-                voices[index].shortLabel,
-                textAlign: TextAlign.center,
-                style: voiceStyle.copyWith(
-                  color: const Color(0xFF5B5345),
-                  fontWeight: FontWeight.w800,
-                ),
+              noteCellFor: (int index) => _voiceText(
+                label: voices[index].shortLabel,
+                geometry: tokenGeometry[index],
+                baseStyle: voiceStyle,
               ),
               separatorStyle: voiceStyle,
               showSeparatorText: false,
@@ -190,10 +201,64 @@ class PatternVoiceDisplay extends StatelessWidget {
     );
   }
 
+  static double resolvedCellWidthForStyle(TextStyle style, double cellWidth) {
+    final double fontSize = style.fontSize ?? 18;
+    final double minWidth = fontSize * 1.04;
+    final double tightenedWidth = cellWidth * 0.84;
+    return tightenedWidth < minWidth ? minWidth : tightenedWidth;
+  }
+
+  static double characterSlotWidthForStyle(TextStyle style, double cellWidth) {
+    final double resolvedCellWidth = resolvedCellWidthForStyle(
+      style,
+      cellWidth,
+    );
+    final double fontSize = style.fontSize ?? 18;
+    return math.max(fontSize * 0.72, resolvedCellWidth * 0.56);
+  }
+
+  static double separatorWidthForStyle(TextStyle style, double cellWidth) {
+    return characterSlotWidthForStyle(style, cellWidth);
+  }
+
+  static double tokenWidthForMarking(
+    PatternNoteMarkingV1 marking,
+    TextStyle style,
+    double cellWidth,
+  ) {
+    final double slotWidth = characterSlotWidthForStyle(style, cellWidth);
+    return slotWidth * _slotCountForMarking(marking);
+  }
+
+  static int _slotCountForMarking(PatternNoteMarkingV1 marking) {
+    return switch (marking) {
+      PatternNoteMarkingV1.normal => 1,
+      PatternNoteMarkingV1.accent => 2,
+      PatternNoteMarkingV1.ghost => 3,
+    };
+  }
+
+  _NotationTokenGeometry _tokenGeometryFor({
+    required PatternNoteMarkingV1 marking,
+    required TextStyle patternStyle,
+    required double cellWidth,
+  }) {
+    final double slotWidth = characterSlotWidthForStyle(
+      patternStyle,
+      cellWidth,
+    );
+    return _NotationTokenGeometry(
+      marking: marking,
+      slotWidth: slotWidth,
+      slotCount: _slotCountForMarking(marking),
+      noteSlotIndex: marking == PatternNoteMarkingV1.normal ? 0 : 1,
+    );
+  }
+
   List<_PatternVoiceChunk> _chunksForWidth({
     required double maxWidth,
     required List<String> separators,
-    required double resolvedCellWidth,
+    required List<_NotationTokenGeometry> tokenGeometry,
     required double separatorWidth,
   }) {
     if (!maxWidth.isFinite || maxWidth <= 0) {
@@ -203,7 +268,7 @@ class PatternVoiceDisplay extends StatelessWidget {
     }
 
     final List<_PatternVoiceSegment> segments = _segmentsForSeparators(
-      resolvedCellWidth: resolvedCellWidth,
+      tokenGeometry: tokenGeometry,
       separators: separators,
       separatorWidth: separatorWidth,
     );
@@ -235,7 +300,7 @@ class PatternVoiceDisplay extends StatelessWidget {
   }
 
   List<_PatternVoiceSegment> _segmentsForSeparators({
-    required double resolvedCellWidth,
+    required List<_NotationTokenGeometry> tokenGeometry,
     required List<String> separators,
     required double separatorWidth,
   }) {
@@ -244,7 +309,7 @@ class PatternVoiceDisplay extends StatelessWidget {
     double width = 0;
     for (int index = 0; index < tokens.length; index += 1) {
       width +=
-          resolvedCellWidth +
+          tokenGeometry[index].width +
           (separators[index].isNotEmpty ? separatorWidth : 0);
       final bool closesSegment =
           separators[index].isNotEmpty || index == tokens.length - 1;
@@ -261,7 +326,11 @@ class PatternVoiceDisplay extends StatelessWidget {
         _PatternVoiceSegment(
           start: 0,
           end: tokens.length,
-          width: tokens.length * resolvedCellWidth,
+          width: tokenGeometry.fold<double>(
+            0,
+            (double sum, _NotationTokenGeometry geometry) =>
+                sum + geometry.width,
+          ),
         ),
       );
     }
@@ -271,7 +340,7 @@ class PatternVoiceDisplay extends StatelessWidget {
   List<Widget> _rowCellsForRange({
     required _PatternVoiceChunk chunk,
     required List<String> separators,
-    required double resolvedCellWidth,
+    required List<_NotationTokenGeometry> tokenGeometry,
     required double separatorWidth,
     required double cellHeight,
     required Widget Function(int index) noteCellFor,
@@ -281,7 +350,7 @@ class PatternVoiceDisplay extends StatelessWidget {
     return <Widget>[
       for (int index = chunk.start; index < chunk.end; index++) ...<Widget>[
         _PatternVoiceCell(
-          width: resolvedCellWidth,
+          width: tokenGeometry[index].width,
           height: cellHeight,
           child: noteCellFor(index),
         ),
@@ -304,96 +373,83 @@ class PatternVoiceDisplay extends StatelessWidget {
 
   Widget _patternText(
     String token,
-    PatternNoteMarkingV1 marking,
+    _NotationTokenGeometry geometry,
     TextStyle baseStyle,
-    double resolvedCellWidth,
   ) {
     final double fontSize = baseStyle.fontSize ?? 18;
-    final double accentShift = marking == PatternNoteMarkingV1.accent
-        ? fontSize * 0.10
-        : 0;
-    final double ghostInset = (resolvedCellWidth - (fontSize * 0.92)).clamp(
-      -fontSize * 0.02,
-      fontSize * 0.05,
-    );
-    final double ghostOffsetY = -(fontSize * 0.04);
+    final List<_NotationGlyphSlot> glyphs = switch (geometry.marking) {
+      PatternNoteMarkingV1.normal => <_NotationGlyphSlot>[
+        _NotationGlyphSlot(slotIndex: 0, text: token, style: baseStyle),
+      ],
+      PatternNoteMarkingV1.accent => <_NotationGlyphSlot>[
+        _NotationGlyphSlot(
+          slotIndex: 0,
+          text: '^',
+          style: baseStyle.copyWith(height: 1.0),
+        ),
+        _NotationGlyphSlot(slotIndex: 1, text: token, style: baseStyle),
+      ],
+      PatternNoteMarkingV1.ghost => <_NotationGlyphSlot>[
+        _NotationGlyphSlot(
+          slotIndex: 0,
+          text: '(',
+          style: _ghostParenStyle(baseStyle),
+        ),
+        _NotationGlyphSlot(slotIndex: 1, text: token, style: baseStyle),
+        _NotationGlyphSlot(
+          slotIndex: 2,
+          text: ')',
+          style: _ghostParenStyle(baseStyle),
+        ),
+      ],
+    };
     return SizedBox(
-      width: resolvedCellWidth,
+      width: geometry.width,
       height: fontSize * 1.35,
       child: Stack(
-        fit: StackFit.expand,
         clipBehavior: Clip.none,
-        alignment: Alignment.center,
         children: <Widget>[
-          Transform.translate(
-            offset: Offset(accentShift, 0),
-            child: Text(
-              token,
-              textAlign: TextAlign.center,
-              softWrap: false,
-              maxLines: 1,
-              overflow: TextOverflow.visible,
-              style: baseStyle,
-            ),
-          ),
-          if (marking == PatternNoteMarkingV1.accent)
+          for (final _NotationGlyphSlot glyph in glyphs)
             Positioned(
-              left: -fontSize * 0.35,
+              left: glyph.slotIndex * geometry.slotWidth,
               top: 0,
               bottom: 0,
-              width: fontSize * 0.7,
+              width: geometry.slotWidth,
               child: Center(
                 child: Text(
-                  '^',
+                  glyph.text,
                   textAlign: TextAlign.center,
                   softWrap: false,
                   maxLines: 1,
                   overflow: TextOverflow.visible,
-                  style: baseStyle.copyWith(height: 1.0),
+                  style: glyph.style,
                 ),
               ),
             ),
-          if (marking == PatternNoteMarkingV1.ghost) ...<Widget>[
-            Positioned(
-              left: ghostInset,
-              top: 0,
-              bottom: 0,
-              width: fontSize * 0.34,
-              child: Center(
-                child: Transform.translate(
-                  offset: Offset(0, ghostOffsetY),
-                  child: Text(
-                    '(',
-                    textAlign: TextAlign.center,
-                    softWrap: false,
-                    maxLines: 1,
-                    overflow: TextOverflow.visible,
-                    style: _ghostParenStyle(baseStyle),
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              right: ghostInset,
-              top: 0,
-              bottom: 0,
-              width: fontSize * 0.34,
-              child: Center(
-                child: Transform.translate(
-                  offset: Offset(0, ghostOffsetY),
-                  child: Text(
-                    ')',
-                    textAlign: TextAlign.center,
-                    softWrap: false,
-                    maxLines: 1,
-                    overflow: TextOverflow.visible,
-                    style: _ghostParenStyle(baseStyle),
-                  ),
-                ),
-              ),
-            ),
-          ],
         ],
+      ),
+    );
+  }
+
+  Widget _voiceText({
+    required String label,
+    required _NotationTokenGeometry geometry,
+    required TextStyle baseStyle,
+  }) {
+    final double horizontalAnchor =
+        ((geometry.noteSlotIndex + 0.5) / geometry.slotCount) * 2 - 1;
+    return SizedBox(
+      width: geometry.width,
+      child: Align(
+        alignment: Alignment(horizontalAnchor, 0),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: baseStyle.copyWith(
+            color: const Color(0xFF5B5345),
+            fontWeight: FontWeight.w800,
+          ),
+        ),
       ),
     );
   }
@@ -404,13 +460,6 @@ class PatternVoiceDisplay extends StatelessWidget {
       color: baseColor.withValues(alpha: ghostOpacity),
       height: 1.0,
     );
-  }
-
-  double _resolvedCellWidth(TextStyle style) {
-    final double fontSize = style.fontSize ?? 18;
-    final double minWidth = fontSize * 1.04;
-    final double tightenedWidth = cellWidth * 0.84;
-    return tightenedWidth < minWidth ? minWidth : tightenedWidth;
   }
 }
 
@@ -451,5 +500,33 @@ class _PatternVoiceSegment {
     required this.start,
     required this.end,
     required this.width,
+  });
+}
+
+class _NotationTokenGeometry {
+  final PatternNoteMarkingV1 marking;
+  final double slotWidth;
+  final int slotCount;
+  final int noteSlotIndex;
+
+  const _NotationTokenGeometry({
+    required this.marking,
+    required this.slotWidth,
+    required this.slotCount,
+    required this.noteSlotIndex,
+  });
+
+  double get width => slotWidth * slotCount;
+}
+
+class _NotationGlyphSlot {
+  final int slotIndex;
+  final String text;
+  final TextStyle style;
+
+  const _NotationGlyphSlot({
+    required this.slotIndex,
+    required this.text,
+    required this.style,
   });
 }

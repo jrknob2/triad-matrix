@@ -489,11 +489,22 @@ class _SelectableNotationBlock extends StatelessWidget {
           color: const Color(0xFF5B5345),
         ) ??
         const TextStyle(fontSize: 14, fontWeight: FontWeight.w800);
-    final double resolvedCellWidth = _resolvedRendererCellWidth(patternStyle);
-    final double outerCellWidth = resolvedCellWidth + _selectionHaloWidth;
-    final double separatorSlotWidth = _rendererSeparatorWidth(
-      resolvedCellWidth,
+    final List<double> outerCellWidths = List<double>.generate(
+      markings.length,
+      (int index) =>
+          PatternVoiceDisplay.tokenWidthForMarking(
+            markings[index],
+            patternStyle,
+            _rendererCellWidthInput,
+          ) +
+          _selectionHaloWidth,
+      growable: false,
     );
+    final double separatorSlotWidth =
+        PatternVoiceDisplay.separatorWidthForStyle(
+          patternStyle,
+          _rendererCellWidthInput,
+        );
     final List<String> separators = List<String>.generate(
       tokens.length,
       (int index) => grouping.separatorAfter(index, tokens.length),
@@ -507,8 +518,8 @@ class _SelectableNotationBlock extends StatelessWidget {
             : double.infinity;
         final List<_NotationChunk> chunks = _chunksForWidth(
           maxWidth,
+          outerCellWidths,
           separators,
-          outerCellWidth: outerCellWidth,
           separatorSlotWidth: separatorSlotWidth,
         );
         return Column(
@@ -532,7 +543,7 @@ class _SelectableNotationBlock extends StatelessWidget {
                       showVoice: showVoices,
                       patternStyle: patternStyle,
                       voiceStyle: voiceStyle,
-                      outerCellWidth: outerCellWidth,
+                      outerCellWidth: outerCellWidths[index],
                       innerCellWidth: _rendererCellWidthInput,
                       onTap: () => onSelect(index),
                     ),
@@ -561,8 +572,8 @@ class _SelectableNotationBlock extends StatelessWidget {
 
   List<_NotationChunk> _chunksForWidth(
     double maxWidth,
+    List<double> outerCellWidths,
     List<String> separators, {
-    required double outerCellWidth,
     required double separatorSlotWidth,
   }) {
     if (!maxWidth.isFinite || maxWidth <= 0) {
@@ -575,7 +586,7 @@ class _SelectableNotationBlock extends StatelessWidget {
       int end = start;
       while (end < tokens.length) {
         final double nextWidth =
-            outerCellWidth +
+            outerCellWidths[end] +
             (separators[end].isNotEmpty ? separatorSlotWidth : 0);
         if (end > start && width + nextWidth > maxWidth) break;
         width += nextWidth;
@@ -586,17 +597,6 @@ class _SelectableNotationBlock extends StatelessWidget {
       start = end;
     }
     return chunks;
-  }
-
-  static double _resolvedRendererCellWidth(TextStyle patternStyle) {
-    final double fontSize = patternStyle.fontSize ?? 18;
-    final double minWidth = fontSize * 1.04;
-    final double tightenedWidth = _rendererCellWidthInput * 0.84;
-    return tightenedWidth < minWidth ? minWidth : tightenedWidth;
-  }
-
-  static double _rendererSeparatorWidth(double resolvedCellWidth) {
-    return (resolvedCellWidth * 0.46).clamp(12.0, 26.0);
   }
 }
 

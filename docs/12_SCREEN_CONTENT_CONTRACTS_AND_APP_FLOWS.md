@@ -61,17 +61,19 @@ Notation rule:
 - marked tokens like `^R` and `(R)` must remain visually intact as one unit
 - `R`, `L`, and `K` are the anchor glyphs and must always render at the exact same size within a notation readout
 - the shared renderer owns notation token geometry; screens may size the overall readout, but they must not introduce local per-screen character spacing or ornament positioning rules
+- shared notation geometry should use a character-slot model rather than overlaying symbols inside one note box
+- each visible notation character should occupy its own padded slot in the rendered string, including `^`, `(`, `)`, note letters, and phrase separators
 - note cells should be visually compact enough that adjacent notes read as one pattern rather than isolated glyphs with oversized gaps
 - wrappers such as editable/selectable notation surfaces may expand tap targets, but they must not introduce a second independent note-spacing model on top of the shared renderer
-- the note glyph must remain horizontally centered in its note cell regardless of accents, ghosts, voices, or phrase separators
+- the note glyph must remain horizontally centered in its own character slot regardless of accents, ghosts, voices, or phrase separators
 - all non-accent notation characters should align to the same note-row centerline
-- `^` is the only notation character allowed to sit off the note-cell center; it decorates the note without moving or resizing the note glyph
+- `^` should render in its own slot immediately before the accented note rather than being overlaid on the note slot
 - ghost notation should keep the note letter at normal size and weight; only the parentheses should step back visually
-- ghost parentheses must leave a small consistent breathing gap around the note letter and stay vertically centered with the note, with the same visual amount above and below
+- ghost parentheses must render in their own slots around the note, leave a small consistent breathing gap, and stay vertically centered with the note, with the same visual amount above and below
 - dynamics are part of the pattern token presentation; accent marks should render beside the note, not over the note
-- accented notes should shift slightly to the right inside the token so the accent-plus-note unit reads visually centered and does not leave an abnormal trailing gap after the note
+- accented notes should read as adjacent character slots, so the accent-plus-note unit stays visually balanced without an abnormal trailing gap
 - phrase separators must leave a small clear gap from adjacent marked tokens, including accented notes, so `-` never visually touches the neighboring notation
-- voice rows should align to the same note-cell centers as the pattern row, without changing the pattern token rendering
+- voice rows should align to the same note-slot centers as the pattern row, without changing the pattern token rendering
 - phrase separators like `-` belong to the notes row and must align with that row's centerline, not visually drift between the notes row and the voice row
 - if a pattern has authored dynamics or authored voices, that authored state should render consistently everywhere the pattern is shown
 - screens that need a compact structural view, such as the Matrix grid, may suppress dynamics and voices while still using the canonical renderer
