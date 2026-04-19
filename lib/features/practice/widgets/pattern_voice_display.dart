@@ -401,9 +401,14 @@ class PatternVoiceDisplay extends StatelessWidget {
           slotIndex: 0,
           text: '^',
           style: baseStyle.copyWith(height: 1.0),
-          alignmentX: -0.35,
+          alignmentX: -0.65,
         ),
-        _NotationGlyphSlot(slotIndex: 1, text: token, style: baseStyle),
+        _NotationGlyphSlot(
+          slotIndex: 1,
+          text: token,
+          style: baseStyle,
+          alignmentX: 0.22,
+        ),
       ],
       PatternNoteMarkingV1.ghost => <_NotationGlyphSlot>[
         _NotationGlyphSlot(
