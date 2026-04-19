@@ -257,8 +257,8 @@ class PatternVoiceDisplay extends StatelessWidget {
     PatternNoteMarkingV1 marking,
     double noteSlotWidth,
   ) {
-    final double accentSlotWidth = noteSlotWidth * 0.64;
-    final double ghostParenSlotWidth = noteSlotWidth * 0.58;
+    final double accentSlotWidth = noteSlotWidth * 0.70;
+    final double ghostParenSlotWidth = noteSlotWidth * 0.54;
     return switch (marking) {
       PatternNoteMarkingV1.normal => <double>[noteSlotWidth],
       PatternNoteMarkingV1.accent => <double>[accentSlotWidth, noteSlotWidth],
