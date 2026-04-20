@@ -213,6 +213,7 @@ State:
 - stable phrase material
 - voice assignment ready
 - includes some longer non-triad material in `Working On`
+- still includes visible triad material mixed with the longer items rather than replacing it entirely
 
 ### Expected Screen States
 

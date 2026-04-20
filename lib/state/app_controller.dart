@@ -3529,8 +3529,10 @@ class AppController extends ChangeNotifier {
       ..addRoutineItems(<String>[
         combo.id,
         _triadItemId('KRL'),
+        _triadItemId('RLL'),
         _triadItemId('RLR'),
         _triadItemId('LRR'),
+        _triadItemId('LLR'),
         _fourNoteItemId('RLRK'),
         _fourNoteItemId('LRLK'),
         _fiveNoteItemId('RLRLK'),
@@ -3618,6 +3620,26 @@ class AppController extends ChangeNotifier {
         selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
       )
       ..addManualSession(
+        itemId: _triadItemId('RLL'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 84,
+        duration: const Duration(minutes: 4),
+        endedAt: now.subtract(const Duration(days: 11)),
+        selfReportControl: SelfReportControlV1.medium,
+        selfReportTension: SelfReportTensionV1.some,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+      )
+      ..addManualSession(
+        itemId: _triadItemId('RLL'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 88,
+        duration: const Duration(minutes: 5),
+        endedAt: now.subtract(const Duration(days: 3)),
+        selfReportControl: SelfReportControlV1.high,
+        selfReportTension: SelfReportTensionV1.none,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.increase,
+      )
+      ..addManualSession(
         itemId: _triadItemId('RLR'),
         practiceMode: PracticeModeV1.flow,
         bpm: 88,
@@ -3636,6 +3658,16 @@ class AppController extends ChangeNotifier {
         selfReportControl: SelfReportControlV1.high,
         selfReportTension: SelfReportTensionV1.none,
         selfReportTempoReadiness: SelfReportTempoReadinessV1.increase,
+      )
+      ..addManualSession(
+        itemId: _triadItemId('LLR'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 86,
+        duration: const Duration(minutes: 4),
+        endedAt: now.subtract(const Duration(days: 6)),
+        selfReportControl: SelfReportControlV1.medium,
+        selfReportTension: SelfReportTensionV1.some,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
       )
       ..addManualSession(
         itemId: _fourNoteItemId('RLRK'),
@@ -3689,8 +3721,10 @@ class AppController extends ChangeNotifier {
       )
       ..setCompetency(combo.id, CompetencyLevelV1.reliable)
       ..setCompetency(_triadItemId('KRL'), CompetencyLevelV1.comfortable)
+      ..setCompetency(_triadItemId('RLL'), CompetencyLevelV1.learning)
       ..setCompetency(_triadItemId('RLR'), CompetencyLevelV1.reliable)
       ..setCompetency(_triadItemId('LRR'), CompetencyLevelV1.comfortable)
+      ..setCompetency(_triadItemId('LLR'), CompetencyLevelV1.learning)
       ..setCompetency(_fourNoteItemId('RLRK'), CompetencyLevelV1.learning)
       ..setCompetency(_fourNoteItemId('LRLK'), CompetencyLevelV1.comfortable)
       ..setCompetency(_fiveNoteItemId('RLRLK'), CompetencyLevelV1.learning)
