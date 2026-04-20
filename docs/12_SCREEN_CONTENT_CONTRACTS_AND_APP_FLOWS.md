@@ -65,6 +65,7 @@ Notation rule:
 - each visible notation character should occupy its own padded slot in the rendered string, including `^`, `(`, `)`, note letters, and phrase separators
 - ornament character slots such as `^`, `(`, and `)` may be narrower than note-letter slots so the readout stays compact without collapsing the character order
 - ornament glyphs may be biased within their own slots to tune visual proximity: `^` should sit a little away from the note, while ghost parens should sit a little toward the note
+- implementation should stay simple and adjustable: each notation token should be a rectangle layout with explicit ornament widths, note width, and internal gaps, so spacing changes are direct and predictable
 - note cells should be visually compact enough that adjacent notes read as one pattern rather than isolated glyphs with oversized gaps
 - wrappers such as editable/selectable notation surfaces may expand tap targets, but they must not introduce a second independent note-spacing model on top of the shared renderer
 - the note glyph must remain horizontally centered in its own character slot regardless of accents, ghosts, voices, or phrase separators

@@ -2983,6 +2983,8 @@ class AppController extends ChangeNotifier {
   }
 
   String _triadItemId(String cellId) => 'triad_${cellId.toLowerCase()}';
+  String _fourNoteItemId(String sticking) => 'four_${sticking.toLowerCase()}';
+  String _fiveNoteItemId(String sticking) => 'five_${sticking.toLowerCase()}';
 
   List<String> _tagsForTriadCell(TriadMatrixCell cell) {
     final List<String> tags = <String>['matrix'];
@@ -3529,6 +3531,11 @@ class AppController extends ChangeNotifier {
         _triadItemId('KRL'),
         _triadItemId('RLR'),
         _triadItemId('LRR'),
+        _fourNoteItemId('RLRK'),
+        _fourNoteItemId('LRLK'),
+        _fiveNoteItemId('RLRLK'),
+        _fiveNoteItemId('RLLRL'),
+        _fiveNoteItemId('LRLRK'),
       ])
       ..setVoices(_triadItemId('RLR'), <DrumVoiceV1>[
         DrumVoiceV1.hihat,
@@ -3630,10 +3637,65 @@ class AppController extends ChangeNotifier {
         selfReportTension: SelfReportTensionV1.none,
         selfReportTempoReadiness: SelfReportTempoReadinessV1.increase,
       )
+      ..addManualSession(
+        itemId: _fourNoteItemId('RLRK'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 86,
+        duration: const Duration(minutes: 4),
+        endedAt: now.subtract(const Duration(days: 9)),
+        selfReportControl: SelfReportControlV1.medium,
+        selfReportTension: SelfReportTensionV1.some,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+      )
+      ..addManualSession(
+        itemId: _fourNoteItemId('LRLK'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 90,
+        duration: const Duration(minutes: 5),
+        endedAt: now.subtract(const Duration(days: 5)),
+        selfReportControl: SelfReportControlV1.high,
+        selfReportTension: SelfReportTensionV1.none,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.increase,
+      )
+      ..addManualSession(
+        itemId: _fiveNoteItemId('RLRLK'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 88,
+        duration: const Duration(minutes: 4),
+        endedAt: now.subtract(const Duration(days: 8)),
+        selfReportControl: SelfReportControlV1.medium,
+        selfReportTension: SelfReportTensionV1.some,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+      )
+      ..addManualSession(
+        itemId: _fiveNoteItemId('RLLRL'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 92,
+        duration: const Duration(minutes: 5),
+        endedAt: now.subtract(const Duration(days: 4)),
+        selfReportControl: SelfReportControlV1.high,
+        selfReportTension: SelfReportTensionV1.none,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.increase,
+      )
+      ..addManualSession(
+        itemId: _fiveNoteItemId('LRLRK'),
+        practiceMode: PracticeModeV1.singleSurface,
+        bpm: 94,
+        duration: const Duration(minutes: 5),
+        endedAt: now.subtract(const Duration(days: 2)),
+        selfReportControl: SelfReportControlV1.high,
+        selfReportTension: SelfReportTensionV1.none,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.increase,
+      )
       ..setCompetency(combo.id, CompetencyLevelV1.reliable)
       ..setCompetency(_triadItemId('KRL'), CompetencyLevelV1.comfortable)
       ..setCompetency(_triadItemId('RLR'), CompetencyLevelV1.reliable)
-      ..setCompetency(_triadItemId('LRR'), CompetencyLevelV1.comfortable);
+      ..setCompetency(_triadItemId('LRR'), CompetencyLevelV1.comfortable)
+      ..setCompetency(_fourNoteItemId('RLRK'), CompetencyLevelV1.learning)
+      ..setCompetency(_fourNoteItemId('LRLK'), CompetencyLevelV1.comfortable)
+      ..setCompetency(_fiveNoteItemId('RLRLK'), CompetencyLevelV1.learning)
+      ..setCompetency(_fiveNoteItemId('RLLRL'), CompetencyLevelV1.comfortable)
+      ..setCompetency(_fiveNoteItemId('LRLRK'), CompetencyLevelV1.comfortable);
     return builder.build();
   }
 
@@ -3659,6 +3721,45 @@ class AppController extends ChangeNotifier {
     return <PracticeItemV1>[
       ...triadItems,
       ..._baseWarmupItems(),
+      PracticeItemV1(
+        id: _fourNoteItemId('RLRK'),
+        family: MaterialFamilyV1.fourNote,
+        name: 'RLRK',
+        sticking: 'RLRK',
+        noteCount: 4,
+        accentedNoteIndices: const <int>[],
+        ghostNoteIndices: const <int>[],
+        voiceAssignments: const <DrumVoiceV1>[],
+        source: PracticeItemSourceV1.builtIn,
+        tags: const <String>['4s', 'kick'],
+        saved: true,
+      ),
+      PracticeItemV1(
+        id: _fourNoteItemId('RRLK'),
+        family: MaterialFamilyV1.fourNote,
+        name: 'RRLK',
+        sticking: 'RRLK',
+        noteCount: 4,
+        accentedNoteIndices: const <int>[],
+        ghostNoteIndices: const <int>[],
+        voiceAssignments: const <DrumVoiceV1>[],
+        source: PracticeItemSourceV1.builtIn,
+        tags: const <String>['4s', 'kick'],
+        saved: true,
+      ),
+      PracticeItemV1(
+        id: _fourNoteItemId('LRLK'),
+        family: MaterialFamilyV1.fourNote,
+        name: 'LRLK',
+        sticking: 'LRLK',
+        noteCount: 4,
+        accentedNoteIndices: const <int>[],
+        ghostNoteIndices: const <int>[],
+        voiceAssignments: const <DrumVoiceV1>[],
+        source: PracticeItemSourceV1.builtIn,
+        tags: const <String>['4s', 'kick'],
+        saved: true,
+      ),
       const PracticeItemV1(
         id: 'five_rlrlk',
         family: MaterialFamilyV1.fiveNote,
@@ -3683,6 +3784,19 @@ class AppController extends ChangeNotifier {
         voiceAssignments: <DrumVoiceV1>[],
         source: PracticeItemSourceV1.builtIn,
         tags: <String>['5s'],
+        saved: true,
+      ),
+      PracticeItemV1(
+        id: _fiveNoteItemId('LRLRK'),
+        family: MaterialFamilyV1.fiveNote,
+        name: 'LRLRK',
+        sticking: 'LRLRK',
+        noteCount: 5,
+        accentedNoteIndices: const <int>[],
+        ghostNoteIndices: const <int>[],
+        voiceAssignments: const <DrumVoiceV1>[],
+        source: PracticeItemSourceV1.builtIn,
+        tags: const <String>['5s', 'kick'],
         saved: true,
       ),
     ];

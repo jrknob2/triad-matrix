@@ -10,6 +10,8 @@ They must also contain enough longitudinal data to exercise Progress graphs in a
 
 They must also contain enough breadth in `Working On` and recent session history to exercise search meaningfully in `Practice` and `Focus`.
 
+Where the runtime model already supports it, richer mock scenarios should also include some non-triad material such as 4-note and 5-note items so broader material lengths are exercised in the same surfaces as triads and phrases.
+
 ---
 
 ## Scenario 1: `first_light`
@@ -210,6 +212,7 @@ State:
 
 - stable phrase material
 - voice assignment ready
+- includes some longer non-triad material in `Working On`
 
 ### Expected Screen States
 

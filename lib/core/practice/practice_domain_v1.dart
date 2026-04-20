@@ -12,7 +12,7 @@ import 'package:flutter/foundation.dart';
 
 enum HandednessV1 { right, left }
 
-enum MaterialFamilyV1 { triad, fiveNote, custom, combo, warmup }
+enum MaterialFamilyV1 { triad, fourNote, fiveNote, custom, combo, warmup }
 
 enum PracticeItemSourceV1 { builtIn, userDefined, generated }
 
@@ -247,6 +247,7 @@ class PracticeItemV1 {
   });
 
   bool get isTriad => family == MaterialFamilyV1.triad;
+  bool get isFourNote => family == MaterialFamilyV1.fourNote;
   bool get isFiveNote => family == MaterialFamilyV1.fiveNote;
   bool get isCustom => family == MaterialFamilyV1.custom;
   bool get isCombo => family == MaterialFamilyV1.combo;

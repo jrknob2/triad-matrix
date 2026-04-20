@@ -36,6 +36,7 @@ Duration? timerPresetToDuration(TimerPresetV1 preset) {
 extension MaterialFamilyLabel on MaterialFamilyV1 {
   String get label => switch (this) {
     MaterialFamilyV1.triad => 'Triad',
+    MaterialFamilyV1.fourNote => '4-Note',
     MaterialFamilyV1.fiveNote => '5-Note',
     MaterialFamilyV1.custom => 'Custom',
     MaterialFamilyV1.combo => 'Combo',

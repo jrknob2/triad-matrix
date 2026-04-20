@@ -226,11 +226,8 @@ class PatternVoiceDisplay extends StatelessWidget {
     TextStyle style,
     double cellWidth,
   ) {
-    final double noteSlotWidth = characterSlotWidthForStyle(style, cellWidth);
-    return _slotWidthsForMarking(
-      marking,
-      noteSlotWidth,
-    ).fold<double>(0, (double sum, double width) => sum + width);
+    final _NotationMetrics metrics = _metricsForStyle(style, cellWidth);
+    return _tokenGeometryForMarking(marking, metrics).width;
   }
 
   _NotationTokenGeometry _tokenGeometryFor({
@@ -238,35 +235,75 @@ class PatternVoiceDisplay extends StatelessWidget {
     required TextStyle patternStyle,
     required double cellWidth,
   }) {
-    final double noteSlotWidth = characterSlotWidthForStyle(
-      patternStyle,
-      cellWidth,
-    );
-    final List<double> slotWidths = _slotWidthsForMarking(
-      marking,
-      noteSlotWidth,
-    );
-    return _NotationTokenGeometry(
-      marking: marking,
-      slotWidths: slotWidths,
-      noteSlotIndex: marking == PatternNoteMarkingV1.normal ? 0 : 1,
+    final _NotationMetrics metrics = _metricsForStyle(patternStyle, cellWidth);
+    return _tokenGeometryForMarking(marking, metrics);
+  }
+
+  static _NotationMetrics _metricsForStyle(TextStyle style, double cellWidth) {
+    final double noteWidth = characterSlotWidthForStyle(style, cellWidth);
+    return _NotationMetrics(
+      noteWidth: noteWidth,
+      accentWidth: noteWidth * 0.78,
+      parenWidth: noteWidth * 0.44,
+      accentGap: noteWidth * 0.28,
+      parenGap: noteWidth * 0.10,
     );
   }
 
-  static List<double> _slotWidthsForMarking(
+  static _NotationTokenGeometry _tokenGeometryForMarking(
     PatternNoteMarkingV1 marking,
-    double noteSlotWidth,
+    _NotationMetrics metrics,
   ) {
-    final double accentSlotWidth = noteSlotWidth * 0.70;
-    final double ghostParenSlotWidth = noteSlotWidth * 0.54;
     return switch (marking) {
-      PatternNoteMarkingV1.normal => <double>[noteSlotWidth],
-      PatternNoteMarkingV1.accent => <double>[accentSlotWidth, noteSlotWidth],
-      PatternNoteMarkingV1.ghost => <double>[
-        ghostParenSlotWidth,
-        noteSlotWidth,
-        ghostParenSlotWidth,
-      ],
+      PatternNoteMarkingV1.normal => _NotationTokenGeometry(
+        marking: marking,
+        boxes: <_NotationBox>[
+          _NotationBox(
+            kind: _NotationBoxKind.note,
+            left: 0,
+            width: metrics.noteWidth,
+          ),
+        ],
+      ),
+      PatternNoteMarkingV1.accent => _NotationTokenGeometry(
+        marking: marking,
+        boxes: <_NotationBox>[
+          _NotationBox(
+            kind: _NotationBoxKind.accent,
+            left: 0,
+            width: metrics.accentWidth,
+          ),
+          _NotationBox(
+            kind: _NotationBoxKind.note,
+            left: metrics.accentWidth + metrics.accentGap,
+            width: metrics.noteWidth,
+          ),
+        ],
+      ),
+      PatternNoteMarkingV1.ghost => _NotationTokenGeometry(
+        marking: marking,
+        boxes: <_NotationBox>[
+          _NotationBox(
+            kind: _NotationBoxKind.leftParen,
+            left: 0,
+            width: metrics.parenWidth,
+          ),
+          _NotationBox(
+            kind: _NotationBoxKind.note,
+            left: metrics.parenWidth + metrics.parenGap,
+            width: metrics.noteWidth,
+          ),
+          _NotationBox(
+            kind: _NotationBoxKind.rightParen,
+            left:
+                metrics.parenWidth +
+                metrics.parenGap +
+                metrics.noteWidth +
+                metrics.parenGap,
+            width: metrics.parenWidth,
+          ),
+        ],
+      ),
     };
   }
 
@@ -392,61 +429,36 @@ class PatternVoiceDisplay extends StatelessWidget {
     TextStyle baseStyle,
   ) {
     final double fontSize = baseStyle.fontSize ?? 18;
-    final List<_NotationGlyphSlot> glyphs = switch (geometry.marking) {
-      PatternNoteMarkingV1.normal => <_NotationGlyphSlot>[
-        _NotationGlyphSlot(slotIndex: 0, text: token, style: baseStyle),
-      ],
-      PatternNoteMarkingV1.accent => <_NotationGlyphSlot>[
-        _NotationGlyphSlot(
-          slotIndex: 0,
-          text: '^',
-          style: baseStyle.copyWith(height: 1.0),
-          alignmentX: -0.65,
-        ),
-        _NotationGlyphSlot(
-          slotIndex: 1,
-          text: token,
-          style: baseStyle,
-          alignmentX: 0.22,
-        ),
-      ],
-      PatternNoteMarkingV1.ghost => <_NotationGlyphSlot>[
-        _NotationGlyphSlot(
-          slotIndex: 0,
-          text: '(',
-          style: _ghostParenStyle(baseStyle),
-          alignmentX: 0.45,
-        ),
-        _NotationGlyphSlot(slotIndex: 1, text: token, style: baseStyle),
-        _NotationGlyphSlot(
-          slotIndex: 2,
-          text: ')',
-          style: _ghostParenStyle(baseStyle),
-          alignmentX: -0.45,
-        ),
-      ],
-    };
     return SizedBox(
       width: geometry.width,
       height: fontSize * 1.35,
       child: Stack(
         clipBehavior: Clip.none,
         children: <Widget>[
-          for (final _NotationGlyphSlot glyph in glyphs)
+          for (final _NotationBox box in geometry.boxes)
             Positioned(
-              left: geometry.slotLeft(glyph.slotIndex),
+              left: box.left,
               top: 0,
               bottom: 0,
-              width: geometry.slotWidthAt(glyph.slotIndex),
-              child: Align(
-                alignment: Alignment(glyph.alignmentX, 0),
+              width: box.width,
+              child: Center(
                 child: Text(
-                  glyph.text,
+                  switch (box.kind) {
+                    _NotationBoxKind.note => token,
+                    _NotationBoxKind.accent => '^',
+                    _NotationBoxKind.leftParen => '(',
+                    _NotationBoxKind.rightParen => ')',
+                  },
                   textAlign: TextAlign.center,
                   softWrap: false,
                   maxLines: 1,
                   overflow: TextOverflow.visible,
-                  style: glyph.style,
+                  style: switch (box.kind) {
+                    _NotationBoxKind.note => baseStyle,
+                    _NotationBoxKind.accent => baseStyle.copyWith(height: 1.0),
+                    _NotationBoxKind.leftParen ||
+                    _NotationBoxKind.rightParen => _ghostParenStyle(baseStyle),
+                  },
                 ),
               ),
             ),
@@ -531,44 +543,44 @@ class _PatternVoiceSegment {
 
 class _NotationTokenGeometry {
   final PatternNoteMarkingV1 marking;
-  final List<double> slotWidths;
-  final int noteSlotIndex;
+  final List<_NotationBox> boxes;
 
-  const _NotationTokenGeometry({
-    required this.marking,
-    required this.slotWidths,
-    required this.noteSlotIndex,
-  });
+  const _NotationTokenGeometry({required this.marking, required this.boxes});
 
-  int get slotCount => slotWidths.length;
+  double get width => boxes.isEmpty ? 0 : boxes.last.left + boxes.last.width;
 
-  double get width =>
-      slotWidths.fold<double>(0, (double sum, double value) => sum + value);
+  _NotationBox get noteBox =>
+      boxes.firstWhere((_NotationBox box) => box.kind == _NotationBoxKind.note);
 
-  double slotLeft(int slotIndex) {
-    double left = 0;
-    for (int index = 0; index < slotIndex; index += 1) {
-      left += slotWidths[index];
-    }
-    return left;
-  }
-
-  double slotWidthAt(int slotIndex) => slotWidths[slotIndex];
-
-  double get noteCenterX =>
-      slotLeft(noteSlotIndex) + (slotWidthAt(noteSlotIndex) / 2);
+  double get noteCenterX => noteBox.left + (noteBox.width / 2);
 }
 
-class _NotationGlyphSlot {
-  final int slotIndex;
-  final String text;
-  final TextStyle style;
-  final double alignmentX;
+class _NotationMetrics {
+  final double noteWidth;
+  final double accentWidth;
+  final double parenWidth;
+  final double accentGap;
+  final double parenGap;
 
-  const _NotationGlyphSlot({
-    required this.slotIndex,
-    required this.text,
-    required this.style,
-    this.alignmentX = 0,
+  const _NotationMetrics({
+    required this.noteWidth,
+    required this.accentWidth,
+    required this.parenWidth,
+    required this.accentGap,
+    required this.parenGap,
+  });
+}
+
+enum _NotationBoxKind { note, accent, leftParen, rightParen }
+
+class _NotationBox {
+  final _NotationBoxKind kind;
+  final double left;
+  final double width;
+
+  const _NotationBox({
+    required this.kind,
+    required this.left,
+    required this.width,
   });
 }
