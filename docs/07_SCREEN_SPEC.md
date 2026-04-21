@@ -691,6 +691,7 @@ Practice Item is the detail/edit screen for one piece of material.
 - the `Practice Item` note-selection affordance may add only a small tap-target halo around the shared renderer; it should not create a wider second spacing model for note slots or separators
 - the `Practice Item` note-selection affordance should derive its slot and separator sizing from the shared renderer geometry instead of fixed local constants
 - `Practice Item` should contain a `Pattern Structure` section for direct token-sequence editing
+- a new blank `Practice Item` draft should open with a stable empty notation row already visible so the editor does not jump when the first token is inserted
 - edits should not write through immediately while the user is still working on the screen
 - selection should toggle on tap so the user can add and remove notes from the current selected set
 - applying a marking or voice assignment should clear the current selection
@@ -698,8 +699,10 @@ Practice Item is the detail/edit screen for one piece of material.
 - non-hand positions may still be selected for structure editing even though they are not assignable for dynamics or voices
 - structure edits should stay in the local draft until save, just like dynamics, voices, BPM, and duration
 - the structure editor should support replace, insert, delete, rest insertion, and triad-helper insertion without switching to a different editor mode
+- deleting the entire current token sequence should be allowed and should return the draft to that stable empty-row state
 - when direct structure edits break an inherited grouping shape, the stale grouping hint should clear instead of continuing to render separators that no longer fit the edited pattern
 - triad-helper insertion inside `Practice Item` should use the same shared triad-grid rendering language as Matrix, even if the modal or sheet wrapper is simpler
+- triad-helper insertion should establish explicit triad grouping metadata when the resulting draft is fully triad-grouped and contains no rests
 - `Practice Item` should stay authoring-focused and should not contain direct practice-launch buttons
 - `Practice Item` is the primary screen for creating a new pattern from scratch
 - Matrix is not the primary generic new-item builder; it remains a triad-specific teaching, discovery, insertion, and triad-structure-editing helper

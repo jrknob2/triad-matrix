@@ -162,50 +162,68 @@ class PatternVoiceDisplay extends StatelessWidget {
   }) {
     final double patternCellHeight = (patternStyle.fontSize ?? 18) * 1.35;
     final double voiceCellHeight = (voiceStyle.fontSize ?? 12) * 1.25;
+    final Widget patternRow = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: _rowCellsForRange(
+        chunk: chunk,
+        separators: separators,
+        tokenGeometry: tokenGeometry,
+        separatorWidth: separatorWidth,
+        cellHeight: patternCellHeight,
+        noteCellFor: (int index) => _patternText(
+          tokens[index],
+          tokenGeometry[index],
+          patternStyle,
+          isActive: activeIndex == index,
+        ),
+        separatorStyle: patternStyle,
+      ),
+    );
+    final Widget voiceRow = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: _rowCellsForRange(
+        chunk: chunk,
+        separators: separators,
+        tokenGeometry: tokenGeometry,
+        separatorWidth: separatorWidth,
+        cellHeight: voiceCellHeight,
+        noteCellFor: (int index) => _voiceText(
+          label: tokens[index].isRest ? '' : voices[index].shortLabel,
+          geometry: tokenGeometry[index],
+          baseStyle: voiceStyle,
+          isActive: activeIndex == index,
+        ),
+        separatorStyle: voiceStyle,
+        showSeparatorText: false,
+      ),
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: <Widget>[
-        if (showPatternRow)
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: _rowCellsForRange(
-              chunk: chunk,
-              separators: separators,
-              tokenGeometry: tokenGeometry,
-              separatorWidth: separatorWidth,
-              cellHeight: patternCellHeight,
-              noteCellFor: (int index) => _patternText(
-                tokens[index],
-                tokenGeometry[index],
-                patternStyle,
-                isActive: activeIndex == index,
-              ),
-              separatorStyle: patternStyle,
-            ),
-          ),
+        if (showPatternRow) _fitRowToBounds(patternRow),
         if (showVoiceRow) ...<Widget>[
           if (showPatternRow) const SizedBox(height: 6),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: _rowCellsForRange(
-              chunk: chunk,
-              separators: separators,
-              tokenGeometry: tokenGeometry,
-              separatorWidth: separatorWidth,
-              cellHeight: voiceCellHeight,
-              noteCellFor: (int index) => _voiceText(
-                label: tokens[index].isRest ? '' : voices[index].shortLabel,
-                geometry: tokenGeometry[index],
-                baseStyle: voiceStyle,
-                isActive: activeIndex == index,
-              ),
-              separatorStyle: voiceStyle,
-              showSeparatorText: false,
-            ),
-          ),
+          _fitRowToBounds(voiceRow),
         ],
       ],
+    );
+  }
+
+  Widget _fitRowToBounds(Widget row) {
+    if (scrollable || wrap) return row;
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        if (!constraints.maxWidth.isFinite) return row;
+        return SizedBox(
+          width: constraints.maxWidth,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.center,
+            child: row,
+          ),
+        );
+      },
     );
   }
 

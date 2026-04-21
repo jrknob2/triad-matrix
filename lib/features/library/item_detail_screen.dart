@@ -123,7 +123,10 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                             _insertTokens(inserted, beforeSelection: false);
                           },
                           onDeleteSelection: _deleteSelection,
-                          onPickTriad: _showTriadInsertDialog,
+                          onInsertTriadBefore: () =>
+                              _insertTriadTokens(beforeSelection: true),
+                          onInsertTriadAfter: () =>
+                              _insertTriadTokens(beforeSelection: false),
                         ),
                         const SizedBox(height: 12),
                         Text(
@@ -387,6 +390,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   void _insertTokens(
     List<PatternTokenV1> inserted, {
     required bool beforeSelection,
+    PatternGroupingV1? groupingOverride,
   }) {
     if (inserted.isEmpty) return;
     final List<int> sortedIndices = _selectedNoteIndices.toList()..sort();
@@ -414,6 +418,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         _voiceAssignments,
       )..insertAll(insertAt, inserted.map(_defaultVoiceForDraftToken));
       _voiceAssignments = nextVoices;
+      if (groupingOverride != null) {
+        _draftGrouping = groupingOverride;
+      }
       _normalizeDraftStructure();
       _selectedNoteIndices = <int>{};
     });
@@ -421,7 +428,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
 
   void _deleteSelection() {
     final Set<int> selected = Set<int>.from(_selectedNoteIndices);
-    if (selected.isEmpty || selected.length >= _draftTokens.length) return;
+    if (selected.isEmpty) return;
     final List<PatternTokenV1> nextTokens = <PatternTokenV1>[];
     final List<DrumVoiceV1> nextVoices = <DrumVoiceV1>[];
     final Map<int, int> nextIndexByOld = <int, int>{};
@@ -546,6 +553,29 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     return List<PatternTokenV1>.from(
       widget.controller.itemById(selectedItemId).tokens,
       growable: false,
+    );
+  }
+
+  Future<void> _insertTriadTokens({required bool beforeSelection}) async {
+    final List<PatternTokenV1>? triad = await _showTriadInsertDialog();
+    if (!mounted || triad == null || triad.isEmpty) return;
+    final List<int> sortedIndices = _selectedNoteIndices.toList()..sort();
+    final int insertAt = sortedIndices.isEmpty
+        ? _draftTokens.length
+        : (beforeSelection ? sortedIndices.first : sortedIndices.last + 1);
+    final List<PatternTokenV1> nextTokens = List<PatternTokenV1>.from(
+      _draftTokens,
+    )..insertAll(insertAt, triad);
+    final bool canKeepTriadGrouping =
+        nextTokens.isNotEmpty &&
+        !nextTokens.any((PatternTokenV1 token) => token.isRest) &&
+        nextTokens.length % 3 == 0;
+    _insertTokens(
+      triad,
+      beforeSelection: beforeSelection,
+      groupingOverride: canKeepTriadGrouping
+          ? PatternGroupingV1.triads
+          : _draftGrouping,
     );
   }
 
@@ -760,6 +790,21 @@ class _SelectableNotationBlock extends StatelessWidget {
         final double maxWidth = constraints.maxWidth.isFinite
             ? constraints.maxWidth
             : double.infinity;
+        if (tokens.isEmpty) {
+          final double patternRowHeight = (patternStyle.fontSize ?? 28) * 1.35;
+          return Align(
+            alignment: Alignment.centerLeft,
+            child: Container(
+              width: maxWidth.isFinite ? maxWidth : 180,
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0x1F000000)),
+              ),
+              child: SizedBox(height: patternRowHeight),
+            ),
+          );
+        }
         final List<_NotationChunk> chunks = _chunksForWidth(
           maxWidth,
           outerCellWidths,
@@ -921,7 +966,8 @@ class _StructureEditor extends StatelessWidget {
   final ValueChanged<List<PatternTokenV1>> onInsertBefore;
   final ValueChanged<List<PatternTokenV1>> onInsertAfter;
   final VoidCallback onDeleteSelection;
-  final Future<List<PatternTokenV1>?> Function() onPickTriad;
+  final Future<void> Function() onInsertTriadBefore;
+  final Future<void> Function() onInsertTriadAfter;
 
   const _StructureEditor({
     required this.tokens,
@@ -930,7 +976,8 @@ class _StructureEditor extends StatelessWidget {
     required this.onInsertBefore,
     required this.onInsertAfter,
     required this.onDeleteSelection,
-    required this.onPickTriad,
+    required this.onInsertTriadBefore,
+    required this.onInsertTriadAfter,
   });
 
   @override
@@ -938,8 +985,7 @@ class _StructureEditor extends StatelessWidget {
     final List<int> sortedSelection = selectedIndices.toList()..sort();
     final bool hasSelection = sortedSelection.isNotEmpty;
     final bool hasSingleSelection = sortedSelection.length == 1;
-    final bool canDelete =
-        hasSelection && sortedSelection.length < tokens.length;
+    final bool canDelete = hasSelection;
     final String summary = !hasSelection
         ? 'No position selected. Insert actions append to the end of the pattern.'
         : hasSingleSelection
@@ -1037,10 +1083,7 @@ class _StructureEditor extends StatelessWidget {
             _TokenActionPill(
               label: 'Triad...',
               onPressed: () {
-                onPickTriad().then((List<PatternTokenV1>? triad) {
-                  if (triad == null) return;
-                  onInsertBefore(triad);
-                });
+                onInsertTriadBefore();
               },
             ),
           ],
@@ -1086,10 +1129,7 @@ class _StructureEditor extends StatelessWidget {
               _TokenActionPill(
                 label: 'Triad...',
                 onPressed: () {
-                  onPickTriad().then((List<PatternTokenV1>? triad) {
-                    if (triad == null) return;
-                    onInsertAfter(triad);
-                  });
+                  onInsertTriadAfter();
                 },
               ),
             ],
