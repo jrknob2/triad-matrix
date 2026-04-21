@@ -14,6 +14,7 @@ class FocusScreen extends StatefulWidget {
   final AppController controller;
   final ValueChanged<String> onOpenItem;
   final void Function(String, PracticeModeV1) onPracticeItemInMode;
+  final VoidCallback onCreateNewItem;
   final VoidCallback onOpenMatrix;
 
   const FocusScreen({
@@ -21,6 +22,7 @@ class FocusScreen extends StatefulWidget {
     required this.controller,
     required this.onOpenItem,
     required this.onPracticeItemInMode,
+    required this.onCreateNewItem,
     required this.onOpenMatrix,
   });
 
@@ -89,7 +91,7 @@ class _FocusScreenState extends State<FocusScreen> {
                   ),
                   const SizedBox(width: 10),
                   OutlinedButton(
-                    onPressed: widget.onOpenMatrix,
+                    onPressed: widget.onCreateNewItem,
                     child: const Text('New'),
                   ),
                 ],
@@ -359,7 +361,7 @@ class _FocusItemCard extends StatelessWidget {
                 tooltip: 'Practice',
                 visualDensity: VisualDensity.compact,
                 icon: const Icon(Icons.play_arrow_rounded),
-                  onPressed: () => onPracticeItemInMode(
+                onPressed: () => onPracticeItemInMode(
                   item.id,
                   controller.displayPracticeModeForItem(item.id),
                 ),

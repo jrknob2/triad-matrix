@@ -569,6 +569,8 @@ Per-item play should read as `Practice`, not as `Practice on One Surface`; voice
 - the user should never wonder whether an item is “saved”, “mastered”, or “current”
 - the screen should not duplicate its own title with a second visible `Working On` heading
 - the add entry point may live inline with search as a compact `New` / `+` control
+- `New` from Library should open a new `Practice Item` draft rather than opening Matrix
+- that draft should begin as a blank generic token-sequence item and may offer triad insertion as a helper from inside the editor
 - no extra per-item flow-launch button should appear in the list
 - there should be no fake summary cards trying to turn this into a dashboard
 - removing an item should require confirmation with the item's notation visible in the prompt
@@ -695,7 +697,10 @@ Practice Item is the detail/edit screen for one piece of material.
 - non-hand positions may still be selected for structure editing even though they are not assignable for dynamics or voices
 - structure edits should stay in the local draft until save, just like dynamics, voices, BPM, and duration
 - the structure editor should support replace, insert, delete, rest insertion, and triad-helper insertion without switching to a different editor mode
+- triad-helper insertion inside `Practice Item` should use the same shared triad-grid rendering language as Matrix, even if the modal or sheet wrapper is simpler
 - `Practice Item` should stay authoring-focused and should not contain direct practice-launch buttons
+- `Practice Item` is the primary screen for creating a new pattern from scratch
+- Matrix is not the primary generic new-item builder; it remains a triad-specific teaching, discovery, insertion, and triad-structure-editing helper
 - when Matrix editing expands a single triad into a phrase, returning should continue on the resulting phrase item instead of dropping the added triads
 
 Practice screen session setup:

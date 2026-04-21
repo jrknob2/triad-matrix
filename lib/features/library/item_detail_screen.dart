@@ -6,6 +6,7 @@ import '../../features/app/app_formatters.dart';
 import '../../features/app/drumcabulary_ui.dart';
 import '../../features/app/unsaved_changes_dialog.dart';
 import '../../state/app_controller.dart';
+import '../matrix/widgets/triad_matrix_grid.dart';
 import '../practice/widgets/session_setup_controls.dart';
 import '../practice/widgets/pattern_voice_display.dart';
 
@@ -457,59 +458,95 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   }
 
   Future<List<PatternTokenV1>?> _showTriadInsertDialog() async {
-    final String? selectedName = await showDialog<String>(
+    String? localSelectedItemId;
+    final String? selectedItemId = await showDialog<String>(
       context: context,
       builder: (BuildContext context) {
-        final List<PracticeItemV1> triads = widget.controller.triadMatrixItems;
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 24),
-          child: DrumPanel(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    'Insert Triad',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w900,
-                    ),
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            return Dialog(
+              backgroundColor: Colors.transparent,
+              insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+              child: DrumPanel(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        'Insert Triad',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Pick a triad from the shared matrix grid, then insert it into the pattern.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: const Color(0xFF5B5345),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 360),
+                        child: TriadMatrixGrid(
+                          controller: widget.controller,
+                          filters: const MatrixFiltersV1(
+                            lane: null,
+                            filters: <TriadMatrixFilterV1>{},
+                            selectedRows: <String>{},
+                            selectedColumns: <String>{},
+                          ),
+                          selection: MatrixSelectionStateV1(
+                            orderedItemIds: localSelectedItemId == null
+                                ? const <String>[]
+                                : <String>[localSelectedItemId!],
+                          ),
+                          showProgressColors: false,
+                          axisSelectionEnabled: false,
+                          onToggleRow: (_) {},
+                          onToggleColumn: (_) {},
+                          onTapItem: (String itemId) {
+                            setModalState(() {
+                              localSelectedItemId = itemId;
+                            });
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: <Widget>[
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            child: const Text('Cancel'),
+                          ),
+                          const SizedBox(width: 8),
+                          FilledButton(
+                            onPressed: localSelectedItemId == null
+                                ? null
+                                : () => Navigator.of(
+                                    context,
+                                  ).pop(localSelectedItemId),
+                            child: const Text('Insert'),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 12),
-                  SingleChildScrollView(
-                    child: Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: triads
-                          .map(
-                            (PracticeItemV1 triad) => OutlinedButton(
-                              onPressed: () =>
-                                  Navigator.of(context).pop(triad.name),
-                              child: Text(triad.name),
-                            ),
-                          )
-                          .toList(growable: false),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Cancel'),
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     );
-    if (!mounted || selectedName == null) return null;
-    return PatternSequenceV1.parse(selectedName).tokens;
+    if (!mounted || selectedItemId == null) return null;
+    return List<PatternTokenV1>.from(
+      widget.controller.itemById(selectedItemId).tokens,
+      growable: false,
+    );
   }
 
   void _normalizeDraftStructure() {

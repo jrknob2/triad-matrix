@@ -10,6 +10,7 @@ class TriadMatrixGrid extends StatelessWidget {
   final MatrixFiltersV1 filters;
   final MatrixSelectionStateV1 selection;
   final bool showProgressColors;
+  final bool axisSelectionEnabled;
   final ValueChanged<String> onToggleRow;
   final ValueChanged<String> onToggleColumn;
   final ValueChanged<String> onTapItem;
@@ -20,6 +21,7 @@ class TriadMatrixGrid extends StatelessWidget {
     required this.filters,
     required this.selection,
     required this.showProgressColors,
+    this.axisSelectionEnabled = true,
     required this.onToggleRow,
     required this.onToggleColumn,
     required this.onTapItem,
@@ -45,16 +47,19 @@ class TriadMatrixGrid extends StatelessWidget {
                 const SizedBox.shrink(),
                 _MatrixAxisLabel(
                   label: 'R',
+                  enabled: axisSelectionEnabled,
                   selected: filters.selectedColumns.contains('R'),
                   onTap: () => onToggleColumn('R'),
                 ),
                 _MatrixAxisLabel(
                   label: 'L',
+                  enabled: axisSelectionEnabled,
                   selected: filters.selectedColumns.contains('L'),
                   onTap: () => onToggleColumn('L'),
                 ),
                 _MatrixAxisLabel(
                   label: 'K',
+                  enabled: axisSelectionEnabled,
                   selected: filters.selectedColumns.contains('K'),
                   onTap: () => onToggleColumn('K'),
                 ),
@@ -65,6 +70,7 @@ class TriadMatrixGrid extends StatelessWidget {
                 children: <Widget>[
                   _MatrixAxisLabel(
                     label: cells[rowIndex * 3].id.substring(1),
+                    enabled: axisSelectionEnabled,
                     selected: filters.selectedRows.contains(
                       cells[rowIndex * 3].id.substring(1),
                     ),
@@ -95,11 +101,13 @@ class TriadMatrixGrid extends StatelessWidget {
 
 class _MatrixAxisLabel extends StatelessWidget {
   final String label;
+  final bool enabled;
   final bool selected;
   final VoidCallback onTap;
 
   const _MatrixAxisLabel({
     required this.label,
+    required this.enabled,
     required this.selected,
     required this.onTap,
   });
@@ -110,7 +118,7 @@ class _MatrixAxisLabel extends StatelessWidget {
       padding: const EdgeInsets.only(top: 2, bottom: 2),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
+        onTap: enabled ? onTap : null,
         child: Container(
           height: 34,
           alignment: Alignment.center,

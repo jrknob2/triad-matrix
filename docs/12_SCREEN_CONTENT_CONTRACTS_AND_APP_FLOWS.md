@@ -805,8 +805,8 @@ Rules:
 - exact authored duplicates should resolve to the existing saved item only when the user is explicitly saving or duplicating a new item on purpose
 - for an existing item or saved phrase, `Add to Working On` should prompt the user to open that item instead of creating a duplicate of the same authored item
 - for a new phrase, `Add to Working On` should open `Practice Item` as a draft authoring handoff
-- when Matrix is entered from `Focus -> New`, the primary action should read `Save to Working On` and carry the strongest visual emphasis
-- that entry should feel like authoring a new item, not like generic browsing with a secondary add action
+- top-level new-item authoring should not begin in Matrix
+- Matrix may still create a draft authoring handoff when the user explicitly builds from triad selection, but that is a helper flow rather than the primary `New` path
 - when Matrix is entered from `Practice Item`, the primary return action should return the updated structure to the same editing flow instead of adding, saving, or opening a separate item
 
 ### Matrix States
@@ -824,7 +824,7 @@ Hide:
 - phrase editor
 - action row
 
-#### Build State
+#### Build/Helper State
 
 Show:
 
@@ -832,6 +832,12 @@ Show:
 - grid
 - phrase editor
 - action row
+
+Rules:
+
+- this state exists for triad selection and triad-based structure editing
+- it is not the primary generic new-item builder for the app
+- when it creates new material, it should hand off to `Practice Item` as the universal authoring surface
 
 #### Deep-Link State
 
@@ -1262,6 +1268,8 @@ Must not show:
 - this screen should default to less verbose presentation
 - if explanatory/help content is needed, it should live in optional help, not as a permanent top card
 - the add entry point may sit inline with search as a compact `New` / `+` control
+- `New` from Library should open a new `Practice Item` draft rather than opening Matrix directly
+- that draft should start as a blank generic token-sequence item and expose triad insertion as a helper from inside the editor
 - flow voice assignments remain user-authored item data and must not add extra list-level per-item launch buttons
 - any `Flow` filter on this screen must be derived from authored off-snare voices on non-kick notes
 - `Single Surface` may appear as a derived list filter and must mean the item has no authored off-snare voices on non-kick notes
@@ -1418,6 +1426,7 @@ Practice Item lets the user inspect and edit one item cleanly.
 - kick notes should not be assignable through this editing surface
 - non-hand positions may still be selected for structure editing even though they are not assignable through the dynamics/voice controls
 - structure editing should support replace, insert, delete, rest insertion, and triad-helper insertion inside the same `Practice Item` surface
+- triad-helper insertion inside `Practice Item` should use the same shared triad-grid rendering language as Matrix, even if the insert modal or sheet carries a reduced control set
 - Matrix selection and phrase building must not inject authored markings automatically
 - item edits should live in a local draft until the user explicitly saves them
 - navigating away with unsaved item changes should prompt the user to save, discard, or keep editing
@@ -1431,6 +1440,8 @@ Practice Item lets the user inspect and edit one item cleanly.
 - removing a triad in Matrix should remove that occurrence and its attached authored segment data
 - when Matrix editing expands a single triad into a phrase, returning should continue in `Practice Item` on the resulting phrase item instead of silently keeping the old single-triad item
 - `Practice Item` should not offer direct practice-launch buttons when that pulls the screen away from its editing job
+- `Practice Item` is the primary screen for creating a new pattern from scratch
+- Matrix is not the default place to start generic pattern creation; it remains a triad-specific teaching, discovery, insertion, and triad-structure-editing helper
 
 ---
 

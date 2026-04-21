@@ -2179,6 +2179,29 @@ class AppController extends ChangeNotifier {
     return combo;
   }
 
+  String createBlankDraftPracticeItem() {
+    final String itemId =
+        'draft_pattern_${DateTime.now().microsecondsSinceEpoch}';
+    final PracticeItemV1 item = _sanitizedItem(
+      PracticeItemV1(
+        id: itemId,
+        family: MaterialFamilyV1.custom,
+        name: 'New Pattern',
+        sequence: PatternSequenceV1(tokens: const <PatternTokenV1>[]),
+        groupingHint: PatternGroupingV1.none,
+        accentedNoteIndices: const <int>[],
+        ghostNoteIndices: const <int>[],
+        voiceAssignments: const <DrumVoiceV1>[],
+        source: PracticeItemSourceV1.userDefined,
+        tags: const <String>['custom'],
+        saved: false,
+      ),
+    );
+    _items = <PracticeItemV1>[item, ..._items];
+    _notifyChanged();
+    return itemId;
+  }
+
   String createDraftPatternFromTriadSelection({
     required List<String> itemIds,
     String? targetItemId,
