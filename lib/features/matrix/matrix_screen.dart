@@ -244,8 +244,7 @@ class _MatrixScreenState extends State<MatrixScreen> {
 
   String? get _selectionRoutineItemId {
     if (_selectedItemIds.isEmpty) return null;
-    if (_selectedItemIds.length == 1) return _selectedItemIds.first;
-    return widget.controller.combinationForItemIdsOrNull(_selectedItemIds)?.id;
+    return widget.controller.savedItemIdForTriadSelection(_selectedItemIds);
   }
 
   String? get _progressScopeText {
@@ -469,30 +468,29 @@ class _MatrixScreenState extends State<MatrixScreen> {
   Future<void> _addSelectionToWorkingOn() async {
     if (_selectedItemIds.isEmpty) return;
 
+    final String? existingItemId = widget.controller
+        .savedItemIdForTriadSelection(_selectedItemIds);
+    if (existingItemId != null) {
+      await _showExistingItemPrompt(
+        title:
+            '${widget.controller.itemById(existingItemId).name} already exists',
+        message: 'Open it to add it to Working On.',
+        itemId: existingItemId,
+      );
+      return;
+    }
+
     if (_selectedItemIds.length == 1) {
-      final String itemId = _selectedItemIds.first;
-      await _showExistingItemPrompt(
-        title: '${widget.controller.itemById(itemId).name} already exists',
-        message: 'Open it to add it to Working On.',
-        itemId: itemId,
-      );
+      widget.onOpenItem(_selectedItemIds.first);
       return;
     }
 
-    final PracticeCombinationV1? existing = widget.controller
-        .combinationForItemIdsOrNull(_selectedItemIds);
-    if (existing != null && widget.controller.itemById(existing.id).saved) {
-      await _showExistingItemPrompt(
-        title: 'This phrase is already saved',
-        message: 'Open it to add it to Working On.',
-        itemId: existing.id,
-      );
-      return;
-    }
-
-    final PracticeCombinationV1 draft = widget.controller
-        .createDraftCombinationForEditing(itemIds: _selectedItemIds);
-    widget.onOpenItem(draft.id);
+    final String draftItemId = widget.controller
+        .createDraftPatternFromTriadSelection(
+          itemIds: _selectedItemIds,
+          saved: false,
+        );
+    widget.onOpenItem(draftItemId);
   }
 
   Future<void> _showExistingItemPrompt({

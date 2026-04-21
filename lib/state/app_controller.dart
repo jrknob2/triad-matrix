@@ -10,7 +10,7 @@ import 'persistence/app_state_store.dart';
 
 @immutable
 class MatrixPhraseReadoutDataV1 {
-  final List<String> tokens;
+  final List<PatternTokenV1> tokens;
   final List<PatternNoteMarkingV1> markings;
   final List<DrumVoiceV1> voices;
   final bool showVoices;
@@ -23,7 +23,7 @@ class MatrixPhraseReadoutDataV1 {
   });
 
   static const MatrixPhraseReadoutDataV1 empty = MatrixPhraseReadoutDataV1(
-    tokens: <String>[],
+    tokens: <PatternTokenV1>[],
     markings: <PatternNoteMarkingV1>[],
     voices: <DrumVoiceV1>[],
     showVoices: false,
@@ -303,7 +303,7 @@ class AppController extends ChangeNotifier {
 
   List<PracticeItemV1> get trackedItems {
     return _items
-        .where((item) => item.saved && !item.isCustom && !item.isWarmup)
+        .where((item) => item.saved && !item.isWarmup)
         .toList(growable: false);
   }
 
@@ -312,12 +312,46 @@ class AppController extends ChangeNotifier {
     PracticeModeV1 practiceMode = PracticeModeV1.singleSurface,
   }) {
     final PracticeItemV1 item = itemById(itemId);
-    if (practiceMode == PracticeModeV1.flow) return LearningLaneV1.flow;
-    if (item.isCombo) return LearningLaneV1.phrasing;
+    if (displayPracticeModeForItem(itemId, preferredMode: practiceMode) ==
+        PracticeModeV1.flow) {
+      return LearningLaneV1.flow;
+    }
+    if (item.noteCount > 3) return LearningLaneV1.phrasing;
     if (hasKick(itemId)) return LearningLaneV1.integration;
     if (item.hasAccents || item.hasGhostNotes) return LearningLaneV1.dynamics;
     if (_isWeakHandLead(item)) return LearningLaneV1.balance;
     return LearningLaneV1.control;
+  }
+
+  PracticeModeV1 displayPracticeModeForItem(
+    String itemId, {
+    PracticeModeV1? preferredMode,
+  }) {
+    return displayPracticeModeForItemIds(<String>[
+      itemId,
+    ], preferredMode: preferredMode);
+  }
+
+  PracticeModeV1 displayPracticeModeForItemIds(
+    Iterable<String> itemIds, {
+    PracticeModeV1? preferredMode,
+  }) {
+    if (preferredMode == PracticeModeV1.flow) return PracticeModeV1.flow;
+    final List<String> ids = itemIds.toList(growable: false);
+    if (ids.isEmpty) return PracticeModeV1.singleSurface;
+    return ids.every(hasNonSnareVoice)
+        ? PracticeModeV1.flow
+        : PracticeModeV1.singleSurface;
+  }
+
+  MaterialFamilyV1 sessionMetadataFamilyForItemIds(Iterable<String> itemIds) {
+    final List<String> ids = itemIds.toList(growable: false);
+    if (ids.isEmpty) return MaterialFamilyV1.custom;
+    return ids.every(
+          (String itemId) => itemByIdOrNull(itemId)?.isWarmup ?? false,
+        )
+        ? MaterialFamilyV1.warmup
+        : MaterialFamilyV1.custom;
   }
 
   String practiceGuidanceFor(
@@ -644,19 +678,20 @@ class AppController extends ChangeNotifier {
     if (candidates.isEmpty) return null;
 
     final PracticeItemV1 target = candidates.first;
+    final bool orchestrated = hasNonSnareVoice(target.id);
     return CoachBlockV1(
       id: 'momentum_${target.id}',
       type: CoachBlockTypeV1.momentum,
-      title: target.isCombo ? 'Move this around the kit' : 'Keep this going',
+      title: orchestrated ? 'Move this around the kit' : 'Keep this going',
       subtitle: null,
       body: _momentumBodyForAggregate(assessmentAggregateFor(target.id)),
       itemIds: <String>[target.id],
-      ctaLabel: target.isCombo ? 'Move to Flow' : 'Build Phrase',
-      ctaAction: target.isCombo
+      ctaLabel: orchestrated ? 'Move to Flow' : 'Build Phrase',
+      ctaAction: orchestrated
           ? CoachActionV1.moveToFlow
           : CoachActionV1.buildCombo,
       matrixFilters: const <TriadMatrixFilterV1>{TriadMatrixFilterV1.recent},
-      practiceMode: target.isCombo
+      practiceMode: orchestrated
           ? PracticeModeV1.flow
           : PracticeModeV1.singleSurface,
     );
@@ -884,7 +919,7 @@ class AppController extends ChangeNotifier {
 
   List<PracticeItemV1> get activeWorkItems {
     final List<PracticeItemV1> items = routineItems
-        .where((item) => !item.isCustom && !item.isWarmup)
+        .where((item) => !item.isWarmup)
         .toList(growable: false);
     items.sort((a, b) => _compareByNeed(a, b));
     return items;
@@ -914,7 +949,6 @@ class AppController extends ChangeNotifier {
     final List<PracticeItemV1> items = _items
         .where(
           (item) =>
-              !item.isCustom &&
               !item.isWarmup &&
               matrixProgressStateFor(item.id) == MatrixProgressStateV1.strong,
         )
@@ -1005,6 +1039,18 @@ class AppController extends ChangeNotifier {
     return total;
   }
 
+  Duration totalTrackedTime({String? itemId}) {
+    Duration total = Duration.zero;
+
+    for (final PracticeSessionLogV1 session in _sessions) {
+      if (_isWarmupSession(session)) continue;
+      if (itemId != null && !_sessionContainsItem(session, itemId)) continue;
+      total += session.duration;
+    }
+
+    return total;
+  }
+
   int sessionCount({String? itemId, MaterialFamilyV1? family}) {
     int total = 0;
 
@@ -1018,10 +1064,16 @@ class AppController extends ChangeNotifier {
   }
 
   bool usesKick(String itemId) =>
-      _normalizedSticking(itemById(itemId)).contains('K');
+      itemById(itemId).tokens.any((PatternTokenV1 token) => token.isKick);
+
+  List<PatternTokenV1> patternTokensFor(String itemId) {
+    return List<PatternTokenV1>.unmodifiable(itemById(itemId).tokens);
+  }
 
   List<String> noteTokensFor(String itemId) {
-    return _normalizedSticking(itemById(itemId)).split('');
+    return patternTokensFor(
+      itemId,
+    ).map((PatternTokenV1 token) => token.symbol).toList(growable: false);
   }
 
   List<PatternNoteMarkingV1> noteMarkingsFor(String itemId) {
@@ -1037,13 +1089,7 @@ class AppController extends ChangeNotifier {
   }
 
   PatternGroupingV1 displayGroupingFor(String itemId) {
-    final PracticeItemV1 item = itemById(itemId);
-    if (item.isCombo) return PatternGroupingV1.triads;
-    if (!item.isWarmup) return PatternGroupingV1.spaced;
-    if (item.tags.contains('paradiddle-diddle')) {
-      return const PatternGroupingV1(groupSize: 6, separator: '-');
-    }
-    return PatternGroupingV1.fourNote;
+    return itemById(itemId).groupingHint;
   }
 
   String? warmupRudimentLabelFor(String itemId) {
@@ -1102,18 +1148,18 @@ class AppController extends ChangeNotifier {
       );
     }
 
-    final List<String> tokens = <String>[];
+    final List<PatternTokenV1> tokens = <PatternTokenV1>[];
     final List<PatternNoteMarkingV1> markings = <PatternNoteMarkingV1>[];
     final List<DrumVoiceV1> voices = <DrumVoiceV1>[];
     for (final String itemId in selectedItemIds) {
       final PracticeItemV1? item = itemByIdOrNull(itemId);
       if (item == null) continue;
-      tokens.addAll(noteTokensFor(itemId));
+      tokens.addAll(patternTokensFor(itemId));
       markings.addAll(noteMarkingsFor(itemId));
       voices.addAll(noteVoicesFor(itemId));
     }
     return MatrixPhraseReadoutDataV1(
-      tokens: List<String>.unmodifiable(tokens),
+      tokens: List<PatternTokenV1>.unmodifiable(tokens),
       markings: List<PatternNoteMarkingV1>.unmodifiable(markings),
       voices: List<DrumVoiceV1>.unmodifiable(voices),
       showVoices: _hasReadoutFlowVoices(tokens: tokens, voices: voices),
@@ -1138,7 +1184,7 @@ class AppController extends ChangeNotifier {
         .map((String itemId) {
           final PracticeItemV1? item = itemByIdOrNull(itemId);
           if (item == null) return MatrixPhraseReadoutDataV1.empty;
-          final List<String> tokens = noteTokensFor(itemId);
+          final List<PatternTokenV1> tokens = patternTokensFor(itemId);
           final List<DrumVoiceV1> voices = noteVoicesFor(itemId);
           return MatrixPhraseReadoutDataV1(
             tokens: tokens,
@@ -1340,10 +1386,32 @@ class AppController extends ChangeNotifier {
     if (item.isCombo) {
       return List<String>.from(combinationById(itemId).itemIds);
     }
-    if (item.isTriad) {
-      return <String>[itemId];
+    return _triadSequenceItemIdsForTokens(item.tokens);
+  }
+
+  String? savedItemIdForTriadSelection(List<String> itemIds) {
+    if (itemIds.isEmpty) return null;
+    if (itemIds.length == 1) {
+      final String itemId = itemIds.first;
+      return itemByIdOrNull(itemId)?.saved ?? false ? itemId : null;
     }
-    return const <String>[];
+    for (final PracticeItemV1 item in _items) {
+      if (!item.saved) continue;
+      if (listEquals(matrixSelectionItemIdsForItem(item.id), itemIds)) {
+        return item.id;
+      }
+    }
+    final String phraseId = _matrixPhraseItemId(itemIds);
+    final PracticeItemV1? genericItem = itemByIdOrNull(phraseId);
+    if (genericItem?.saved ?? false) return phraseId;
+    final PracticeCombinationV1? legacyCombo = combinationForItemIdsOrNull(
+      itemIds,
+    );
+    if (legacyCombo != null &&
+        (itemByIdOrNull(legacyCombo.id)?.saved ?? false)) {
+      return legacyCombo.id;
+    }
+    return null;
   }
 
   PracticeCombinationV1? combinationForItemIdsOrNull(List<String> itemIds) {
@@ -1488,7 +1556,7 @@ class AppController extends ChangeNotifier {
           sourceItem: sourceItem,
           selectedItemIds: selectedItemIds,
         );
-    final List<String> tokens = <String>[];
+    final List<PatternTokenV1> tokens = <PatternTokenV1>[];
     final List<PatternNoteMarkingV1> markings = <PatternNoteMarkingV1>[];
     final List<DrumVoiceV1> voices = <DrumVoiceV1>[];
     for (final MatrixPhraseReadoutDataV1 segment in segments) {
@@ -1497,7 +1565,7 @@ class AppController extends ChangeNotifier {
       voices.addAll(segment.voices);
     }
     return MatrixPhraseReadoutDataV1(
-      tokens: List<String>.unmodifiable(tokens),
+      tokens: List<PatternTokenV1>.unmodifiable(tokens),
       markings: List<PatternNoteMarkingV1>.unmodifiable(markings),
       voices: List<DrumVoiceV1>.unmodifiable(voices),
       showVoices: _hasReadoutFlowVoices(tokens: tokens, voices: voices),
@@ -1508,9 +1576,19 @@ class AppController extends ChangeNotifier {
     required PracticeItemV1 sourceItem,
     required List<String> selectedItemIds,
   }) {
-    final List<String> sourceItemIds = sourceItem.isCombo
-        ? combinationById(sourceItem.id).itemIds
-        : <String>[sourceItem.id];
+    final List<String> sourceItemIds = matrixSelectionItemIdsForItem(
+      sourceItem.id,
+    );
+    if (sourceItemIds.isEmpty) {
+      return <MatrixPhraseReadoutDataV1>[
+        MatrixPhraseReadoutDataV1(
+          tokens: List<PatternTokenV1>.unmodifiable(sourceItem.tokens),
+          markings: noteMarkingsFor(sourceItem.id),
+          voices: List<DrumVoiceV1>.unmodifiable(noteVoicesFor(sourceItem.id)),
+          showVoices: hasNonSnareVoice(sourceItem.id),
+        ),
+      ];
+    }
     final List<_CombinationItemSegment> previousSegments =
         _combinationItemSegments(
           itemIds: sourceItemIds,
@@ -1527,7 +1605,7 @@ class AppController extends ChangeNotifier {
         (_CombinationItemSegment segment) =>
             !segment.used && segment.itemId == nextItemId,
       );
-      final List<String> segmentTokens = _normalizedTokensForItem(nextItem);
+      final List<PatternTokenV1> segmentTokens = nextItem.tokens;
       if (segmentIndex >= 0) {
         final _CombinationItemSegment segment = previousSegments[segmentIndex];
         segment.used = true;
@@ -1539,7 +1617,7 @@ class AppController extends ChangeNotifier {
             );
         readouts.add(
           MatrixPhraseReadoutDataV1(
-            tokens: List<String>.unmodifiable(segmentTokens),
+            tokens: List<PatternTokenV1>.unmodifiable(segmentTokens),
             markings: List<PatternNoteMarkingV1>.unmodifiable(segmentMarkings),
             voices: List<DrumVoiceV1>.unmodifiable(segment.voiceAssignments),
             showVoices: _hasReadoutFlowVoices(
@@ -1554,7 +1632,7 @@ class AppController extends ChangeNotifier {
         );
         readouts.add(
           MatrixPhraseReadoutDataV1(
-            tokens: List<String>.unmodifiable(segmentTokens),
+            tokens: List<PatternTokenV1>.unmodifiable(segmentTokens),
             markings: noteMarkingsFor(nextItemId),
             voices: List<DrumVoiceV1>.unmodifiable(segmentVoices),
             showVoices: _hasReadoutFlowVoices(
@@ -1584,7 +1662,7 @@ class AppController extends ChangeNotifier {
   }
 
   bool _hasReadoutFlowVoices({
-    required List<String> tokens,
+    required List<PatternTokenV1> tokens,
     required List<DrumVoiceV1> voices,
   }) {
     for (
@@ -1592,7 +1670,7 @@ class AppController extends ChangeNotifier {
       index < tokens.length && index < voices.length;
       index++
     ) {
-      if (tokens[index] == 'K') continue;
+      if (tokens[index].isKick || tokens[index].isRest) continue;
       if (voices[index] != DrumVoiceV1.snare) return true;
     }
     return false;
@@ -1692,13 +1770,9 @@ class AppController extends ChangeNotifier {
   }
 
   List<PracticeItemV1> _flowReadyItems() {
-    final List<PracticeItemV1> items = <PracticeItemV1>[
-      ...itemsByFamily(MaterialFamilyV1.combo),
-      ...triadMatrixItems.where(
-        (item) =>
-            competencyFor(item.id).index >= CompetencyLevelV1.comfortable.index,
-      ),
-    ];
+    final List<PracticeItemV1> items = trackedItems
+        .where((PracticeItemV1 item) => isFlowReadyItem(item.id))
+        .toList(growable: false);
     final Map<String, PracticeItemV1> unique = <String, PracticeItemV1>{};
     for (final PracticeItemV1 item in items) {
       unique[item.id] = item;
@@ -1715,9 +1789,8 @@ class AppController extends ChangeNotifier {
   }
 
   bool isFlowReadyItem(String itemId) {
-    final PracticeItemV1 item = itemById(itemId);
-    if (item.isCombo) return true;
-    return competencyFor(itemId).index >= CompetencyLevelV1.comfortable.index;
+    return competencyFor(itemId).index >= CompetencyLevelV1.comfortable.index ||
+        hasNonSnareVoice(itemId);
   }
 
   List<PracticeItemV1> activeWorkItemsForSessionFilters(
@@ -1847,23 +1920,56 @@ class AppController extends ChangeNotifier {
     required List<int> ghostNoteIndices,
     required List<DrumVoiceV1> voiceAssignments,
     required CompetencyLevelV1 competency,
+    PatternSequenceV1? sequence,
+    PatternGroupingV1? groupingHint,
     bool saveToWorkingOn = false,
   }) {
+    final PracticeItemV1 existingItem = _sanitizedItem(itemById(itemId));
     final List<int> sanitizedAccents = List<int>.from(accentedNoteIndices)
       ..sort();
     final List<int> sanitizedGhosts = List<int>.from(ghostNoteIndices)..sort();
     final List<DrumVoiceV1> sanitizedVoices = List<DrumVoiceV1>.from(
       voiceAssignments,
     );
+    final PatternSequenceV1 nextSequence = sequence ?? existingItem.sequence;
+    final bool sequenceChanged = !listEquals(
+      nextSequence.tokens,
+      existingItem.tokens,
+    );
+    final bool structureChanged =
+        sequenceChanged ||
+        (groupingHint != null && groupingHint != existingItem.groupingHint);
+    final MaterialFamilyV1 nextFamily = structureChanged
+        ? _derivedEditableFamily(existingItem, nextSequence)
+        : existingItem.family;
+    final PatternGroupingV1 nextGroupingHint =
+        groupingHint ?? existingItem.groupingHint;
+    final String nextName = structureChanged
+        ? nextSequence.toDisplayText(nextGroupingHint)
+        : existingItem.name;
+    final List<String> nextTags = structureChanged
+        ? _tagsForEditedSequence(nextSequence.tokens, nextFamily)
+        : existingItem.tags;
+
+    if (sequenceChanged && existingItem.isCombo) {
+      _combinations = _combinations
+          .where((PracticeCombinationV1 combo) => combo.id != itemId)
+          .toList(growable: false);
+    }
 
     _items = _items
         .map((PracticeItemV1 entry) {
           if (entry.id != itemId) return entry;
           return _sanitizedItem(
             entry.copyWith(
+              family: nextFamily,
+              name: nextName,
+              sequence: nextSequence,
+              groupingHint: nextGroupingHint,
               accentedNoteIndices: sanitizedAccents,
               ghostNoteIndices: sanitizedGhosts,
               voiceAssignments: sanitizedVoices,
+              tags: nextTags,
               saved: saveToWorkingOn ? true : entry.saved,
             ),
           );
@@ -1907,12 +2013,15 @@ class AppController extends ChangeNotifier {
       case PatternNoteMarkingV1.normal:
         break;
       case PatternNoteMarkingV1.accent:
-        if (_tokenAt(item, noteIndex) != 'K') {
+        if (_tokenAt(item, noteIndex) != 'K' &&
+            _tokenAt(item, noteIndex) != '_') {
           accents.add(noteIndex);
         }
         break;
       case PatternNoteMarkingV1.ghost:
-        ghosts.add(noteIndex);
+        if (_tokenAt(item, noteIndex) != '_') {
+          ghosts.add(noteIndex);
+        }
         break;
     }
 
@@ -1941,6 +2050,9 @@ class AppController extends ChangeNotifier {
     final List<DrumVoiceV1> voices = List<DrumVoiceV1>.from(
       _effectiveVoicesForItem(_sanitizedItem(item)),
     );
+    if (_tokenAt(item, noteIndex) == '_') {
+      return;
+    }
     if (_tokenAt(item, noteIndex) == 'K') {
       voices[noteIndex] = DrumVoiceV1.kick;
     } else {
@@ -1995,6 +2107,7 @@ class AppController extends ChangeNotifier {
         name: comboName,
         sticking: comboName,
         noteCount: noteCount,
+        groupingHint: PatternGroupingV1.triads,
         accentedNoteIndices: accented,
         ghostNoteIndices: ghosted,
         voiceAssignments: voices,
@@ -2050,6 +2163,7 @@ class AppController extends ChangeNotifier {
         name: comboName,
         sticking: comboName,
         noteCount: noteCount,
+        groupingHint: PatternGroupingV1.triads,
         accentedNoteIndices: accented,
         ghostNoteIndices: ghosted,
         voiceAssignments: voices,
@@ -2063,6 +2177,128 @@ class AppController extends ChangeNotifier {
     _items = <PracticeItemV1>[..._items, comboItem];
     _notifyChanged();
     return combo;
+  }
+
+  String createDraftPatternFromTriadSelection({
+    required List<String> itemIds,
+    String? targetItemId,
+    bool saved = false,
+    bool preview = false,
+  }) {
+    if (itemIds.isEmpty) {
+      throw ArgumentError.value(itemIds, 'itemIds', 'Must not be empty.');
+    }
+    if (itemIds.length == 1 && targetItemId == null && !preview) {
+      return itemIds.first;
+    }
+
+    final String itemId =
+        targetItemId ??
+        (preview
+            ? _matrixPreviewItemId(itemIds)
+            : _matrixPhraseItemId(itemIds));
+    final PracticeItemV1? existingItem = itemByIdOrNull(itemId);
+    final PracticeItemV1? sourceItem = targetItemId == null
+        ? existingItem
+        : itemByIdOrNull(targetItemId);
+    final PatternGroupingV1 groupingHint = itemIds.length > 1
+        ? PatternGroupingV1.triads
+        : itemById(itemIds.first).groupingHint;
+    final List<MatrixPhraseReadoutDataV1> segments = sourceItem == null
+        ? matrixPhraseSegmentReadoutsForSelection(selectedItemIds: itemIds)
+        : _matrixPhraseSegmentReadoutsFromAuthoredItem(
+            sourceItem: _sanitizedItem(sourceItem),
+            selectedItemIds: itemIds,
+          );
+
+    final List<PatternTokenV1> tokens = <PatternTokenV1>[];
+    final List<int> accented = <int>[];
+    final List<int> ghosted = <int>[];
+    final List<DrumVoiceV1> voices = <DrumVoiceV1>[];
+    int offset = 0;
+    for (final MatrixPhraseReadoutDataV1 segment in segments) {
+      tokens.addAll(segment.tokens);
+      for (int index = 0; index < segment.markings.length; index++) {
+        switch (segment.markings[index]) {
+          case PatternNoteMarkingV1.normal:
+            break;
+          case PatternNoteMarkingV1.accent:
+            accented.add(offset + index);
+          case PatternNoteMarkingV1.ghost:
+            ghosted.add(offset + index);
+        }
+      }
+      voices.addAll(segment.voices);
+      offset += segment.tokens.length;
+    }
+
+    final PatternSequenceV1 sequence = PatternSequenceV1(tokens: tokens);
+    final MaterialFamilyV1 family = _derivedEditableFamily(
+      existingItem ??
+          PracticeItemV1(
+            id: itemId,
+            family: MaterialFamilyV1.custom,
+            name: '',
+            sequence: sequence,
+            groupingHint: groupingHint,
+            accentedNoteIndices: const <int>[],
+            ghostNoteIndices: const <int>[],
+            voiceAssignments: const <DrumVoiceV1>[],
+            source: PracticeItemSourceV1.generated,
+            tags: const <String>[],
+            saved: saved,
+          ),
+      sequence,
+    );
+    final PracticeItemV1 nextItem = _sanitizedItem(
+      (existingItem ??
+              PracticeItemV1(
+                id: itemId,
+                family: family,
+                name: comboDisplayName(itemIds),
+                sequence: sequence,
+                groupingHint: groupingHint,
+                accentedNoteIndices: accented,
+                ghostNoteIndices: ghosted,
+                voiceAssignments: voices,
+                source: PracticeItemSourceV1.generated,
+                tags: const <String>[],
+                saved: saved,
+              ))
+          .copyWith(
+            family: family,
+            name: comboDisplayName(itemIds),
+            sequence: sequence,
+            groupingHint: groupingHint,
+            accentedNoteIndices: accented,
+            ghostNoteIndices: ghosted,
+            voiceAssignments: voices,
+            tags: _tagsForEditedSequence(tokens, family),
+            saved: saved || (existingItem?.saved ?? false),
+          ),
+    );
+
+    _items = <PracticeItemV1>[
+      for (final PracticeItemV1 entry in _items)
+        if (entry.id == itemId) nextItem else entry,
+      if (existingItem == null) nextItem,
+    ];
+    _combinations = _combinations
+        .where((PracticeCombinationV1 combo) => combo.id != itemId)
+        .toList(growable: false);
+    _notifyChanged();
+    return itemId;
+  }
+
+  void applyMatrixSelectionToItem({
+    required String itemId,
+    required List<String> itemIds,
+  }) {
+    createDraftPatternFromTriadSelection(
+      itemIds: itemIds,
+      targetItemId: itemId,
+      saved: itemById(itemId).saved,
+    );
   }
 
   void discardUnsavedPracticeItem(String itemId) {
@@ -2135,6 +2371,8 @@ class AppController extends ChangeNotifier {
 
   String competencyGuidanceFor(String itemId, CompetencyLevelV1 level) {
     final PracticeItemV1 item = itemById(itemId);
+    final bool longerPattern = item.noteCount > 3;
+    final bool orchestrated = hasNonSnareVoice(itemId);
     return switch (level) {
       CompetencyLevelV1.notStarted =>
         'Start plain and slow. Get the cycle even before you add speed, accents, or movement.',
@@ -2143,8 +2381,10 @@ class AppController extends ChangeNotifier {
       CompetencyLevelV1.comfortable =>
         'Raise the tempo a little. Then check whether the phrase still feels relaxed and even.',
       CompetencyLevelV1.reliable =>
-        item.isCombo
-            ? 'Review it, then move it into flow. Keep the handoff clean as the phrase moves around the kit.'
+        orchestrated
+            ? 'Review it, then keep the voice path clean as the pattern moves around the kit.'
+            : longerPattern
+            ? 'Review it, then keep the handoff clean as the longer line comes back around.'
             : 'Review it, then connect it to another cell. The goal is a phrase, not an isolated pattern.',
       CompetencyLevelV1.musical =>
         'Keep it in rotation. Use it in fills, transitions, and longer lines until it comes out without forcing it.',
@@ -2153,7 +2393,7 @@ class AppController extends ChangeNotifier {
 
   PracticeSessionSetupV1 buildSessionForItem(
     String itemId, {
-    PracticeModeV1 practiceMode = PracticeModeV1.singleSurface,
+    PracticeModeV1? practiceMode,
     PracticeSessionEndBehaviorV1 endBehavior =
         PracticeSessionEndBehaviorV1.openSummary,
     String? routineId,
@@ -2165,8 +2405,10 @@ class AppController extends ChangeNotifier {
     final PracticeItemV1 item = itemById(itemId);
     return PracticeSessionSetupV1(
       practiceItemIds: <String>[itemId],
-      family: item.family,
-      practiceMode: practiceMode,
+      family: item.isWarmup
+          ? MaterialFamilyV1.warmup
+          : sessionMetadataFamilyForItemIds(<String>[itemId]),
+      practiceMode: practiceMode ?? displayPracticeModeForItem(itemId),
       endBehavior: endBehavior,
       bpm: bpm ?? launchBpmForItem(itemId),
       itemBpmById: <String, int>{itemId: bpm ?? launchBpmForItem(itemId)},
@@ -2180,7 +2422,7 @@ class AppController extends ChangeNotifier {
 
   PracticeSessionSetupV1 buildSessionForWorkingOnSelection(
     List<String> itemIds, {
-    PracticeModeV1 practiceMode = PracticeModeV1.singleSurface,
+    PracticeModeV1? practiceMode,
     PracticeSessionEndBehaviorV1 endBehavior =
         PracticeSessionEndBehaviorV1.openSummary,
     String sourceName = 'Working On',
@@ -2197,10 +2439,8 @@ class AppController extends ChangeNotifier {
     };
     return PracticeSessionSetupV1(
       practiceItemIds: itemIds,
-      family: itemIds.length == 1
-          ? itemById(itemIds.first).family
-          : MaterialFamilyV1.combo,
-      practiceMode: practiceMode,
+      family: sessionMetadataFamilyForItemIds(itemIds),
+      practiceMode: practiceMode ?? displayPracticeModeForItemIds(itemIds),
       endBehavior: endBehavior,
       bpm:
           bpm ??
@@ -2257,17 +2497,19 @@ class AppController extends ChangeNotifier {
       );
     }
 
-    final PracticeCombinationV1 combo = createDraftCombinationForEditing(
+    final String itemId = createDraftPatternFromTriadSelection(
       itemIds: itemIds,
+      preview: true,
+      saved: false,
     );
-    final PracticeItemV1 comboItem = itemById(combo.id);
+    final PracticeItemV1 previewItem = itemById(itemId);
     return buildSessionForItem(
-      combo.id,
+      itemId,
       practiceMode: practiceMode,
       endBehavior: PracticeSessionEndBehaviorV1.returnToPrevious,
       sourceName: 'Matrix Preview',
       routineId: null,
-      ephemeralItemIds: comboItem.saved ? const <String>[] : <String>[combo.id],
+      ephemeralItemIds: previewItem.saved ? const <String>[] : <String>[itemId],
     );
   }
 
@@ -2291,9 +2533,7 @@ class AppController extends ChangeNotifier {
     };
     return PracticeSessionSetupV1(
       practiceItemIds: itemIds,
-      family: itemIds.length == 1
-          ? itemById(itemIds.first).family
-          : MaterialFamilyV1.combo,
+      family: sessionMetadataFamilyForItemIds(itemIds),
       practiceMode: session.practiceMode,
       endBehavior: PracticeSessionEndBehaviorV1.openSummary,
       bpm: itemBpmById[itemIds.first] ?? session.bpm,
@@ -2365,7 +2605,7 @@ class AppController extends ChangeNotifier {
       duration: duration,
       practiceItemIds: resolvedPracticedItemIds,
       assessmentItemId: resolvedAssessmentItemId,
-      family: setup.family,
+      family: sessionMetadataFamilyForItemIds(resolvedPracticedItemIds),
       practiceMode: setup.practiceMode,
       startingBpm: resolvedAssessmentItemId == null
           ? setup.bpm
@@ -2512,7 +2752,7 @@ class AppController extends ChangeNotifier {
             : session.practiceItemIds.first);
     if (itemId == null) return;
     final PracticeItemV1? item = itemByIdOrNull(itemId);
-    if (item == null || item.isCustom || item.isWarmup) return;
+    if (item == null || item.isWarmup) return;
     final SessionAssessmentResultV1 result = _manualAssessmentForItem(
       session: session,
       itemId: itemId,
@@ -2885,19 +3125,68 @@ class AppController extends ChangeNotifier {
   }
 
   String _normalizedSticking(PracticeItemV1 item) {
-    return item.sticking.replaceAll(RegExp(r'[^RLK]'), '');
+    return item.sequence.canonicalText;
+  }
+
+  MaterialFamilyV1 _derivedEditableFamily(
+    PracticeItemV1 item,
+    PatternSequenceV1 sequence,
+  ) {
+    if (item.isWarmup) return MaterialFamilyV1.warmup;
+    if (sequence.tokens.any((PatternTokenV1 token) => token.isRest)) {
+      return MaterialFamilyV1.custom;
+    }
+    return switch (sequence.positionCount) {
+      3 => MaterialFamilyV1.triad,
+      4 => MaterialFamilyV1.fourNote,
+      5 => MaterialFamilyV1.fiveNote,
+      _ => MaterialFamilyV1.custom,
+    };
+  }
+
+  List<String> _tagsForEditedSequence(
+    List<PatternTokenV1> tokens,
+    MaterialFamilyV1 family,
+  ) {
+    final List<String> symbols = tokens
+        .map((PatternTokenV1 token) => token.symbol)
+        .toList(growable: false);
+    final bool usesKick = symbols.contains('K');
+    final String? first = symbols.isEmpty ? null : symbols.first;
+    return switch (family) {
+      MaterialFamilyV1.triad => <String>[
+        if (!usesKick) 'hands' else 'kit',
+        if (_hasAdjacentDouble(symbols, 'R') ||
+            _hasAdjacentDouble(symbols, 'L'))
+          'double',
+        if (_hasAdjacentDouble(symbols, 'K')) 'kick-double',
+        if (first == 'R') 'lead-right',
+        if (first == 'L') 'lead-left',
+        if (first == 'K') 'lead-kick',
+      ],
+      MaterialFamilyV1.fourNote => <String>['4s', if (usesKick) 'kick'],
+      MaterialFamilyV1.fiveNote => <String>['5s', if (usesKick) 'kick'],
+      MaterialFamilyV1.combo => const <String>['combo'],
+      MaterialFamilyV1.warmup => const <String>['warmup'],
+      MaterialFamilyV1.custom => const <String>[],
+    };
+  }
+
+  bool _hasAdjacentDouble(List<String> tokens, String symbol) {
+    for (int index = 0; index < tokens.length - 1; index++) {
+      if (tokens[index] == symbol && tokens[index + 1] == symbol) {
+        return true;
+      }
+    }
+    return false;
   }
 
   List<String> _normalizedTokensForItem(PracticeItemV1 item) {
-    return _normalizedSticking(item).split('');
+    return item.sequence.symbols;
   }
 
   List<String> _normalizedTokensFromSticking(String sticking) {
-    final String normalized = sticking.toUpperCase().replaceAll(
-      RegExp(r'[^RLK]'),
-      '',
-    );
-    return normalized.split('');
+    return PatternSequenceV1.parse(sticking).symbols;
   }
 
   String? _tokenAt(PracticeItemV1 item, int index) {
@@ -2912,14 +3201,20 @@ class AppController extends ChangeNotifier {
         item.accentedNoteIndices
             .where(
               (index) =>
-                  index >= 0 && index < tokens.length && tokens[index] != 'K',
+                  index >= 0 &&
+                  index < tokens.length &&
+                  tokens[index] != 'K' &&
+                  tokens[index] != '_',
             )
             .toSet()
             .toList()
           ..sort();
     final List<int> ghosted =
         item.ghostNoteIndices
-            .where((index) => index >= 0 && index < tokens.length)
+            .where(
+              (index) =>
+                  index >= 0 && index < tokens.length && tokens[index] != '_',
+            )
             .toSet()
             .toList()
           ..sort();
@@ -2976,7 +3271,7 @@ class AppController extends ChangeNotifier {
     final List<String> tokens = _normalizedTokensForItem(item);
     final List<DrumVoiceV1> effective = _effectiveVoicesForItem(item);
     for (int index = 0; index < tokens.length; index++) {
-      if (tokens[index] == 'K') continue;
+      if (tokens[index] == 'K' || tokens[index] == '_') continue;
       if (effective[index] != DrumVoiceV1.snare) return true;
     }
     return false;
@@ -2985,6 +3280,29 @@ class AppController extends ChangeNotifier {
   String _triadItemId(String cellId) => 'triad_${cellId.toLowerCase()}';
   String _fourNoteItemId(String sticking) => 'four_${sticking.toLowerCase()}';
   String _fiveNoteItemId(String sticking) => 'five_${sticking.toLowerCase()}';
+  String _customItemId(String slug) => 'custom_$slug';
+  String _matrixPhraseItemId(List<String> itemIds) =>
+      'phrase_${itemIds.join('_')}';
+  String _matrixPreviewItemId(List<String> itemIds) =>
+      'preview_${itemIds.join('_')}';
+
+  List<String> _triadSequenceItemIdsForTokens(List<PatternTokenV1> tokens) {
+    if (tokens.isEmpty || tokens.length % 3 != 0) return const <String>[];
+    if (tokens.any((PatternTokenV1 token) => token.isRest)) {
+      return const <String>[];
+    }
+    final List<String> itemIds = <String>[];
+    for (int index = 0; index < tokens.length; index += 3) {
+      final String triad = tokens
+          .sublist(index, index + 3)
+          .map((PatternTokenV1 token) => token.symbol)
+          .join();
+      final String itemId = _triadItemId(triad);
+      if (itemByIdOrNull(itemId) == null) return const <String>[];
+      itemIds.add(itemId);
+    }
+    return List<String>.unmodifiable(itemIds);
+  }
 
   List<String> _tagsForTriadCell(TriadMatrixCell cell) {
     final List<String> tags = <String>['matrix'];
@@ -3533,6 +3851,7 @@ class AppController extends ChangeNotifier {
         _triadItemId('RLR'),
         _triadItemId('LRR'),
         _triadItemId('LLR'),
+        _customItemId('rll_rest_lr'),
         _fourNoteItemId('RLRK'),
         _fourNoteItemId('LRLK'),
         _fiveNoteItemId('RLRLK'),
@@ -3547,6 +3866,19 @@ class AppController extends ChangeNotifier {
       ..setVoices(_triadItemId('LRR'), <DrumVoiceV1>[
         DrumVoiceV1.floorTom,
         DrumVoiceV1.snare,
+        DrumVoiceV1.snare,
+      ])
+      ..setMarkings(
+        _customItemId('rll_rest_lr'),
+        accents: const <int>[0],
+        ghosts: const <int>[4],
+      )
+      ..setVoices(_customItemId('rll_rest_lr'), <DrumVoiceV1>[
+        DrumVoiceV1.hihat,
+        DrumVoiceV1.snare,
+        DrumVoiceV1.snare,
+        DrumVoiceV1.snare,
+        DrumVoiceV1.floorTom,
         DrumVoiceV1.snare,
       ])
       ..addManualSession(
@@ -3670,6 +4002,26 @@ class AppController extends ChangeNotifier {
         selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
       )
       ..addManualSession(
+        itemId: _customItemId('rll_rest_lr'),
+        practiceMode: PracticeModeV1.flow,
+        bpm: 84,
+        duration: const Duration(minutes: 4),
+        endedAt: now.subtract(const Duration(days: 7)),
+        selfReportControl: SelfReportControlV1.medium,
+        selfReportTension: SelfReportTensionV1.some,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.same,
+      )
+      ..addManualSession(
+        itemId: _customItemId('rll_rest_lr'),
+        practiceMode: PracticeModeV1.flow,
+        bpm: 88,
+        duration: const Duration(minutes: 5),
+        endedAt: now.subtract(const Duration(days: 2)),
+        selfReportControl: SelfReportControlV1.high,
+        selfReportTension: SelfReportTensionV1.none,
+        selfReportTempoReadiness: SelfReportTempoReadinessV1.increase,
+      )
+      ..addManualSession(
         itemId: _fourNoteItemId('RLRK'),
         practiceMode: PracticeModeV1.singleSurface,
         bpm: 86,
@@ -3725,6 +4077,10 @@ class AppController extends ChangeNotifier {
       ..setCompetency(_triadItemId('RLR'), CompetencyLevelV1.reliable)
       ..setCompetency(_triadItemId('LRR'), CompetencyLevelV1.comfortable)
       ..setCompetency(_triadItemId('LLR'), CompetencyLevelV1.learning)
+      ..setCompetency(
+        _customItemId('rll_rest_lr'),
+        CompetencyLevelV1.comfortable,
+      )
       ..setCompetency(_fourNoteItemId('RLRK'), CompetencyLevelV1.learning)
       ..setCompetency(_fourNoteItemId('LRLK'), CompetencyLevelV1.comfortable)
       ..setCompetency(_fiveNoteItemId('RLRLK'), CompetencyLevelV1.learning)
@@ -3742,6 +4098,7 @@ class AppController extends ChangeNotifier {
             name: cell.id,
             sticking: cell.id,
             noteCount: 3,
+            groupingHint: PatternGroupingV1.none,
             accentedNoteIndices: const <int>[],
             ghostNoteIndices: const <int>[],
             voiceAssignments: const <DrumVoiceV1>[],
@@ -3761,6 +4118,7 @@ class AppController extends ChangeNotifier {
         name: 'RLRK',
         sticking: 'RLRK',
         noteCount: 4,
+        groupingHint: PatternGroupingV1.none,
         accentedNoteIndices: const <int>[],
         ghostNoteIndices: const <int>[],
         voiceAssignments: const <DrumVoiceV1>[],
@@ -3774,6 +4132,7 @@ class AppController extends ChangeNotifier {
         name: 'RRLK',
         sticking: 'RRLK',
         noteCount: 4,
+        groupingHint: PatternGroupingV1.none,
         accentedNoteIndices: const <int>[],
         ghostNoteIndices: const <int>[],
         voiceAssignments: const <DrumVoiceV1>[],
@@ -3787,6 +4146,7 @@ class AppController extends ChangeNotifier {
         name: 'LRLK',
         sticking: 'LRLK',
         noteCount: 4,
+        groupingHint: PatternGroupingV1.none,
         accentedNoteIndices: const <int>[],
         ghostNoteIndices: const <int>[],
         voiceAssignments: const <DrumVoiceV1>[],
@@ -3794,12 +4154,39 @@ class AppController extends ChangeNotifier {
         tags: const <String>['4s', 'kick'],
         saved: true,
       ),
-      const PracticeItemV1(
+      PracticeItemV1(
+        id: _customItemId('rll_rest_lr'),
+        family: MaterialFamilyV1.custom,
+        name: 'RLL-_LR',
+        sequence: PatternSequenceV1.parse('RLL _ LR'),
+        groupingHint: PatternGroupingV1.triads,
+        accentedNoteIndices: const <int>[],
+        ghostNoteIndices: const <int>[],
+        voiceAssignments: const <DrumVoiceV1>[],
+        source: PracticeItemSourceV1.builtIn,
+        tags: const <String>['custom', 'rest', 'grouped'],
+        saved: true,
+      ),
+      PracticeItemV1(
+        id: _customItemId('rl_rest_k'),
+        family: MaterialFamilyV1.custom,
+        name: 'RL_K',
+        sequence: PatternSequenceV1.parse('RL_K'),
+        groupingHint: PatternGroupingV1.none,
+        accentedNoteIndices: const <int>[],
+        ghostNoteIndices: const <int>[],
+        voiceAssignments: const <DrumVoiceV1>[],
+        source: PracticeItemSourceV1.builtIn,
+        tags: const <String>['custom', 'rest', 'kick'],
+        saved: true,
+      ),
+      PracticeItemV1(
         id: 'five_rlrlk',
         family: MaterialFamilyV1.fiveNote,
         name: 'RLRLK',
         sticking: 'RLRLK',
         noteCount: 5,
+        groupingHint: PatternGroupingV1.none,
         accentedNoteIndices: <int>[],
         ghostNoteIndices: <int>[],
         voiceAssignments: <DrumVoiceV1>[],
@@ -3807,12 +4194,13 @@ class AppController extends ChangeNotifier {
         tags: <String>['5s'],
         saved: true,
       ),
-      const PracticeItemV1(
+      PracticeItemV1(
         id: 'five_rllrl',
         family: MaterialFamilyV1.fiveNote,
         name: 'RLLRL',
         sticking: 'RLLRL',
         noteCount: 5,
+        groupingHint: PatternGroupingV1.none,
         accentedNoteIndices: <int>[],
         ghostNoteIndices: <int>[],
         voiceAssignments: <DrumVoiceV1>[],
@@ -3826,6 +4214,7 @@ class AppController extends ChangeNotifier {
         name: 'LRLRK',
         sticking: 'LRLRK',
         noteCount: 5,
+        groupingHint: PatternGroupingV1.none,
         accentedNoteIndices: const <int>[],
         ghostNoteIndices: const <int>[],
         voiceAssignments: const <DrumVoiceV1>[],
@@ -3906,12 +4295,16 @@ class AppController extends ChangeNotifier {
     required String sticking,
     required List<String> tags,
   }) {
+    final PatternGroupingV1 groupingHint = tags.contains('paradiddle-diddle')
+        ? const PatternGroupingV1(groupSize: 6, separator: '-')
+        : PatternGroupingV1.fourNote;
     return PracticeItemV1(
       id: id,
       family: MaterialFamilyV1.warmup,
       name: name,
       sticking: sticking,
       noteCount: _normalizedTokensFromSticking(sticking).length,
+      groupingHint: groupingHint,
       accentedNoteIndices: const <int>[],
       ghostNoteIndices: const <int>[],
       voiceAssignments: const <DrumVoiceV1>[],
@@ -4028,6 +4421,24 @@ class _MockScenarioBuilder {
           if (item.id != itemId) return item;
           return controller._sanitizedItem(
             item.copyWith(voiceAssignments: voices),
+          );
+        })
+        .toList(growable: false);
+  }
+
+  void setMarkings(
+    String itemId, {
+    required List<int> accents,
+    required List<int> ghosts,
+  }) {
+    items = items
+        .map((PracticeItemV1 item) {
+          if (item.id != itemId) return item;
+          return controller._sanitizedItem(
+            item.copyWith(
+              accentedNoteIndices: accents,
+              ghostNoteIndices: ghosts,
+            ),
           );
         })
         .toList(growable: false);

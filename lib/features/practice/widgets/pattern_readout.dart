@@ -37,7 +37,7 @@ class PatternReadout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return PatternVoiceDisplay(
-      tokens: controller.noteTokensFor(itemId),
+      tokens: controller.patternTokensFor(itemId),
       markings: controller.noteMarkingsFor(itemId),
       voices: controller.noteVoicesFor(itemId),
       patternStyle: patternStyle,

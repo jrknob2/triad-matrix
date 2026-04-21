@@ -150,10 +150,7 @@ class _OverviewView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool isTablet = AppViewport.isTablet(context);
-    final Duration trackedTime =
-        controller.totalTime() -
-        controller.totalTime(family: MaterialFamilyV1.custom) -
-        controller.totalTime(family: MaterialFamilyV1.warmup);
+    final Duration trackedTime = controller.totalTrackedTime();
     final List<_StatusCount> statusCounts = <_StatusCount>[
       _StatusCount(
         label: 'Not Practiced',

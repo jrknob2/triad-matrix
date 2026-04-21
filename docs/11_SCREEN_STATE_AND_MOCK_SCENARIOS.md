@@ -12,6 +12,12 @@ They must also contain enough breadth in `Working On` and recent session history
 
 Where the runtime model already supports it, richer mock scenarios should also include some non-triad material such as 4-note and 5-note items so broader material lengths are exercised in the same surfaces as triads and phrases.
 
+They must also include representative generic token-sequence material beyond triad-only cases, including:
+
+- at least one rest-bearing practice item
+- at least one non-warmup item with explicit grouping metadata
+- at least one item with authored dynamics and/or voices
+
 ---
 
 ## Scenario 1: `first_light`
@@ -213,6 +219,8 @@ State:
 - stable phrase material
 - voice assignment ready
 - includes some longer non-triad material in `Working On`
+- includes at least one rest-bearing generic item in `Working On`
+- includes at least one explicitly grouped generic item in `Working On`
 - still includes visible triad material mixed with the longer items rather than replacing it entirely
 
 ### Expected Screen States
@@ -247,6 +255,11 @@ State:
 3. Scenarios must be easy to switch in debug builds and in dev-tools-enabled device builds.
 4. The mock state layer must not require destructive data resets to use.
 5. Designers and QA should be able to test a screen state without recreating it manually.
+
+Representative coverage rule:
+
+- richer scenarios must carry generic token-sequence items through the same runtime surfaces as triads, phrases, and longer material
+- this includes at least one rest-bearing item, one explicitly grouped non-warmup item, and one item with authored dynamics and/or voices
 
 Graph-support rule:
 

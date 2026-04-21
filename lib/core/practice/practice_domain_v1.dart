@@ -20,6 +20,8 @@ enum PracticeModeV1 { singleSurface, flow }
 
 enum PracticeSessionEndBehaviorV1 { openSummary, returnToPrevious }
 
+enum PatternTokenKindV1 { right, left, kick, rest }
+
 enum DrumVoiceV1 { snare, rackTom, tom2, floorTom, hihat, kick }
 
 enum LearningLaneV1 { control, balance, dynamics, integration, phrasing, flow }
@@ -176,6 +178,120 @@ class PatternGroupingV1 {
     if (size == null) return separator;
     return (index + 1) % size == 0 ? separator : '';
   }
+
+  @override
+  bool operator ==(Object other) {
+    return other is PatternGroupingV1 &&
+        other.groupSize == groupSize &&
+        other.separator == separator;
+  }
+
+  @override
+  int get hashCode => Object.hash(groupSize, separator);
+}
+
+@immutable
+class PatternTokenV1 {
+  final PatternTokenKindV1 kind;
+
+  const PatternTokenV1(this.kind);
+
+  static const PatternTokenV1 right = PatternTokenV1(PatternTokenKindV1.right);
+  static const PatternTokenV1 left = PatternTokenV1(PatternTokenKindV1.left);
+  static const PatternTokenV1 kick = PatternTokenV1(PatternTokenKindV1.kick);
+  static const PatternTokenV1 rest = PatternTokenV1(PatternTokenKindV1.rest);
+
+  factory PatternTokenV1.fromSymbol(String symbol) {
+    return switch (symbol.toUpperCase()) {
+      'R' => right,
+      'L' => left,
+      'K' => kick,
+      '_' => rest,
+      _ => throw ArgumentError.value(
+        symbol,
+        'symbol',
+        'Unsupported pattern token symbol.',
+      ),
+    };
+  }
+
+  String get symbol => switch (kind) {
+    PatternTokenKindV1.right => 'R',
+    PatternTokenKindV1.left => 'L',
+    PatternTokenKindV1.kick => 'K',
+    PatternTokenKindV1.rest => '_',
+  };
+
+  String get notationSymbol => symbol;
+
+  bool get isRest => kind == PatternTokenKindV1.rest;
+  bool get isKick => kind == PatternTokenKindV1.kick;
+  bool get isHand =>
+      kind == PatternTokenKindV1.right || kind == PatternTokenKindV1.left;
+
+  @override
+  bool operator ==(Object other) {
+    return other is PatternTokenV1 && other.kind == kind;
+  }
+
+  @override
+  int get hashCode => kind.hashCode;
+
+  @override
+  String toString() => symbol;
+}
+
+@immutable
+class PatternSequenceV1 {
+  final List<PatternTokenV1> tokens;
+
+  PatternSequenceV1({required List<PatternTokenV1> tokens})
+    : tokens = List<PatternTokenV1>.unmodifiable(tokens);
+
+  factory PatternSequenceV1.fromSymbols(List<String> symbols) {
+    return PatternSequenceV1(
+      tokens: symbols.map(PatternTokenV1.fromSymbol).toList(growable: false),
+    );
+  }
+
+  factory PatternSequenceV1.parse(String text) {
+    final List<PatternTokenV1> parsed = <PatternTokenV1>[];
+    for (final String char in text.toUpperCase().split('')) {
+      switch (char) {
+        case 'R':
+        case 'L':
+        case 'K':
+        case '_':
+          parsed.add(PatternTokenV1.fromSymbol(char));
+          break;
+        case ' ':
+        case '-':
+          break;
+        default:
+          break;
+      }
+    }
+    return PatternSequenceV1(tokens: parsed);
+  }
+
+  String get canonicalText =>
+      tokens.map((PatternTokenV1 token) => token.symbol).join();
+
+  int get positionCount => tokens.length;
+
+  List<String> get symbols => tokens
+      .map((PatternTokenV1 token) => token.symbol)
+      .toList(growable: false);
+
+  String toDisplayText(PatternGroupingV1 groupingHint) {
+    if (tokens.isEmpty) return '';
+    final StringBuffer buffer = StringBuffer();
+    for (int index = 0; index < tokens.length; index++) {
+      buffer.write(tokens[index].symbol);
+      buffer.write(groupingHint.separatorAfter(index, tokens.length));
+    }
+    return buffer.toString();
+  }
 }
 
 @immutable
@@ -206,14 +322,21 @@ class PracticeLaunchPreferenceV1 {
 @immutable
 class PracticeItemV1 {
   final String id;
+
+  /// Metadata only.
+  ///
+  /// Family is preserved for pedagogy, filtering, and legacy compatibility.
+  /// It must not define canonical pattern structure.
   final MaterialFamilyV1 family;
   final String name;
+  final PatternSequenceV1 sequence;
 
-  /// Canonical sticking text shown to the user.
-  final String sticking;
-
-  /// Number of notes in the base grouping or phrase.
-  final int noteCount;
+  /// Metadata only.
+  ///
+  /// Grouping is display/readability scaffolding rather than canonical pattern
+  /// structure. `PatternGroupingV1.none` means no explicit grouping hint is
+  /// stored on the item.
+  final PatternGroupingV1 groupingHint;
 
   /// Zero-based note indices the user has explicitly marked as accents.
   final List<int> accentedNoteIndices;
@@ -232,19 +355,40 @@ class PracticeItemV1 {
   final List<String> tags;
   final bool saved;
 
-  const PracticeItemV1({
+  PracticeItemV1({
     required this.id,
     required this.family,
     required this.name,
-    required this.sticking,
-    required this.noteCount,
+    PatternSequenceV1? sequence,
+    String? sticking,
+    int? noteCount,
+    PatternGroupingV1? groupingHint,
     required this.accentedNoteIndices,
     required this.ghostNoteIndices,
     required this.voiceAssignments,
     required this.source,
     required this.tags,
     required this.saved,
-  });
+  }) : assert(sequence != null || sticking != null),
+       sequence = sequence ?? PatternSequenceV1.parse(sticking ?? ''),
+       groupingHint = groupingHint ?? PatternGroupingV1.none,
+       assert(
+         noteCount == null ||
+             (sequence ?? PatternSequenceV1.parse(sticking ?? ''))
+                     .positionCount ==
+                 noteCount,
+         'noteCount must match the canonical token sequence length.',
+       );
+
+  /// Temporary compatibility getter while the app migrates away from
+  /// `sticking` as a structural field.
+  String get sticking => sequence.toDisplayText(groupingHint);
+
+  /// Temporary compatibility getter while the app migrates away from
+  /// `noteCount` as a stored field.
+  int get noteCount => sequence.positionCount;
+
+  List<PatternTokenV1> get tokens => sequence.tokens;
 
   bool get isTriad => family == MaterialFamilyV1.triad;
   bool get isFourNote => family == MaterialFamilyV1.fourNote;
@@ -259,8 +403,10 @@ class PracticeItemV1 {
     String? id,
     MaterialFamilyV1? family,
     String? name,
+    PatternSequenceV1? sequence,
     String? sticking,
     int? noteCount,
+    PatternGroupingV1? groupingHint,
     List<int>? accentedNoteIndices,
     List<int>? ghostNoteIndices,
     List<DrumVoiceV1>? voiceAssignments,
@@ -268,12 +414,20 @@ class PracticeItemV1 {
     List<String>? tags,
     bool? saved,
   }) {
+    final MaterialFamilyV1 nextFamily = family ?? this.family;
+    final PatternSequenceV1 nextSequence =
+        sequence ??
+        (sticking != null ? PatternSequenceV1.parse(sticking) : this.sequence);
+    assert(
+      noteCount == null || nextSequence.positionCount == noteCount,
+      'noteCount must match the canonical token sequence length.',
+    );
     return PracticeItemV1(
       id: id ?? this.id,
-      family: family ?? this.family,
+      family: nextFamily,
       name: name ?? this.name,
-      sticking: sticking ?? this.sticking,
-      noteCount: noteCount ?? this.noteCount,
+      sequence: nextSequence,
+      groupingHint: groupingHint ?? this.groupingHint,
       accentedNoteIndices: accentedNoteIndices ?? this.accentedNoteIndices,
       ghostNoteIndices: ghostNoteIndices ?? this.ghostNoteIndices,
       voiceAssignments: voiceAssignments ?? this.voiceAssignments,
@@ -477,7 +631,11 @@ class PracticeSessionItemRuntimeV1 {
 @immutable
 class PracticeSessionSetupV1 {
   final List<String> practiceItemIds;
+
+  /// Metadata only.
   final MaterialFamilyV1 family;
+
+  /// Metadata only.
   final PracticeModeV1 practiceMode;
   final PracticeSessionEndBehaviorV1 endBehavior;
   final int bpm;
@@ -555,7 +713,11 @@ class PracticeSessionLogV1 {
   final Duration duration;
   final List<String> practiceItemIds;
   final String? assessmentItemId;
+
+  /// Metadata only.
   final MaterialFamilyV1 family;
+
+  /// Metadata only.
   final PracticeModeV1 practiceMode;
   final int startingBpm;
   final int bpm;

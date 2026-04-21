@@ -215,8 +215,13 @@ class IsarAppStateStore implements AppStateStore {
       'id': item.id,
       'family': item.family.name,
       'name': item.name,
-      'sticking': item.sticking,
-      'noteCount': item.noteCount,
+      'tokens': item.sequence.tokens
+          .map((PatternTokenV1 token) => token.symbol)
+          .toList(growable: false),
+      'groupingHint': <String, dynamic>{
+        'groupSize': item.groupingHint.groupSize,
+        'separator': item.groupingHint.separator,
+      },
       'accentedNoteIndices': item.accentedNoteIndices,
       'ghostNoteIndices': item.ghostNoteIndices,
       'voiceAssignments': item.voiceAssignments.map((v) => v.name).toList(),
@@ -227,12 +232,24 @@ class IsarAppStateStore implements AppStateStore {
   }
 
   PracticeItemV1 _practiceItemFromMap(Map<String, dynamic> map) {
+    final Object? rawGroupingHint = map['groupingHint'];
+    final PatternGroupingV1 groupingHint =
+        rawGroupingHint is Map<String, dynamic>
+        ? _patternGroupingFromMap(rawGroupingHint)
+        : _legacyGroupingHintForFamily(
+            MaterialFamilyV1.values.byName(map['family'] as String),
+          );
+    final PatternSequenceV1 sequence = map['tokens'] is List<dynamic>
+        ? PatternSequenceV1.fromSymbols(
+            (map['tokens'] as List<dynamic>).cast<String>(),
+          )
+        : PatternSequenceV1.parse((map['sticking'] as String?) ?? '');
     return PracticeItemV1(
       id: map['id'] as String,
       family: MaterialFamilyV1.values.byName(map['family'] as String),
       name: map['name'] as String,
-      sticking: map['sticking'] as String,
-      noteCount: map['noteCount'] as int,
+      sequence: sequence,
+      groupingHint: groupingHint,
       accentedNoteIndices: (map['accentedNoteIndices'] as List<dynamic>)
           .cast<int>(),
       ghostNoteIndices: (map['ghostNoteIndices'] as List<dynamic>).cast<int>(),
@@ -242,6 +259,21 @@ class IsarAppStateStore implements AppStateStore {
       source: PracticeItemSourceV1.values.byName(map['source'] as String),
       tags: (map['tags'] as List<dynamic>).cast<String>(),
       saved: map['saved'] as bool,
+    );
+  }
+
+  PatternGroupingV1 _legacyGroupingHintForFamily(MaterialFamilyV1 family) {
+    return switch (family) {
+      MaterialFamilyV1.combo => PatternGroupingV1.triads,
+      MaterialFamilyV1.warmup => PatternGroupingV1.fourNote,
+      _ => PatternGroupingV1.none,
+    };
+  }
+
+  PatternGroupingV1 _patternGroupingFromMap(Map<String, dynamic> map) {
+    return PatternGroupingV1(
+      groupSize: map['groupSize'] as int?,
+      separator: map['separator'] as String? ?? '',
     );
   }
 

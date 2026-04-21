@@ -41,6 +41,23 @@ No screen should contain:
 - controls that belong to another screen
 - duplicate information with no new value
 
+Canonical pattern-model rule:
+
+- the app has one canonical playable-pattern model: an ordered token sequence
+- each token represents one timed position in the pattern
+- canonical tokens must support note tokens and a first-class rest/pause token
+- triads, 4-note patterns, 5-note patterns, phrases, flow, and single-surface may still appear as product language, tags, filters, or pedagogy cues, but they must not define parsing, storage structure, renderer choice, playback shape, or session stepping
+- grouping is optional metadata for readability and teaching only
+- grouping may affect display spacing and labels, but it must not create a separate runtime model
+- if a pattern needs visible grouping, that grouping should be stored explicitly on the item; controller/runtime code should not infer grouping from family, mode, or tags outside localized legacy migration boundaries
+- item family and practice mode may remain persisted as metadata for labels, filtering, pedagogy, and legacy compatibility, but they must not define canonical structure, grouping defaults, or non-warmup session behavior
+- non-warmup sessions are generic pattern sessions; they should not become different runtime species based on whether the current item reads as triad, phrase, 4-note, 5-note, flow, or single-surface
+- `Flow` and `Single Surface` should be treated as derived orchestration metadata for labels, filters, and recommendations, not as separate session engines
+- when a session is explicitly launched in `Flow` or `Single Surface`, that chosen session-mode metadata should be preserved in setup, logging, replay, and history rather than being recomputed later from changed item state
+- the shared notation renderer should consume canonical token data directly
+- rest/pause must render explicitly as a timed position in normal notation readouts
+- voice rows should omit labels for rest positions even when the surrounding pattern shows voices
+
 List item rule:
 
 - overall metadata inside list items should be rendered as concise subtext
@@ -90,12 +107,13 @@ Pattern editing source-of-truth rule:
 - the Matrix triad basis is not the canonical source of editable practice-item identity
 - a saved pattern or phrase is one authored item
 - the authored item owns its complete edit state:
-  - its own notes
+  - its own token sequence
   - triad sequence / phrase structure
   - accents
   - ghosts
   - voices
   - practice defaults
+- a rest/pause inside that sequence is a real stored timed position, not a separator and not missing data
 - once a practice item exists, it stands on its own rather than being derived from or rebound to a hard-coded base triad record
 - once triads are saved as part of a phrase item, the phrase item's authored state is the source of truth for that phrase
 - Matrix structural triads may be used as templates for newly added material, but they must not overwrite or reinterpret an authored practice item's existing notes, accents, ghosts, or voices
@@ -780,6 +798,8 @@ Rules:
   - do not show `Open Item`
   - do not show `Remove from Working On`
 - `Add to Working On` must not silently create or persist a new item
+- Matrix `Try It Out` should convert the current triad selection into a generic ephemeral pattern item before opening Practice Session
+- Matrix `Add to Working On` should convert the current triad selection into a generic authored pattern item immediately; no downstream screen should depend on combo metadata to understand that phrase
 - base sticking alone is not the unique identity of saved work
 - a practice item's identity is the item record itself, including its owned notes and authored state
 - exact authored duplicates should resolve to the existing saved item only when the user is explicitly saving or duplicating a new item on purpose
@@ -1069,6 +1089,8 @@ Practice Session is execution only.
 - in multi-item tracked practice, each current pattern should use its own saved launch duration when available rather than one shared slice-wide timer preset
 - changing BPM during a multi-item session must apply to the currently shown item only
 - when the player moves between items, the item's current runtime BPM must be restored
+- Practice Session stepping/highlighting should operate over canonical token positions rather than triad chunks or family-specific groupings
+- rest/pause tokens should consume one full timed slot in Practice Session and should participate in player stepping/highlighting exactly like note positions
 - in a multi-item session, only patterns that were actually practiced should be recorded into the completed tracked session
 - viewing a pattern without playing it should not make it part of the tracked assessed set
 - when a tracked multi-item session ends, Session Summary should open on the first practiced pattern
@@ -1389,15 +1411,19 @@ Practice Item lets the user inspect and edit one item cleanly.
 - the `Practice Item` selection wrapper may add only a small tap-target halo around each rendered note; it must not widen note slots or separator spacing into a second independent layout model
 - any `Practice Item` note-selection wrapper must derive its slot and separator measurements from the shared renderer geometry rather than fixed local spacing constants
 - the notation block should be the note-selection surface, so the screen does not need a per-note chip grid for editing
+- `Practice Item` should also contain a `Pattern Structure` section for direct token-sequence editing
 - when entering voice editing, effective default voices remain `snare` for hand notes and `kick` for `K` notes unless the user assigns something else
 - selection should toggle on tap so the user can build or reduce a note set before applying an edit
 - applying a marking or voice assignment should clear the current note selection
 - kick notes should not be assignable through this editing surface
+- non-hand positions may still be selected for structure editing even though they are not assignable through the dynamics/voice controls
+- structure editing should support replace, insert, delete, rest insertion, and triad-helper insertion inside the same `Practice Item` surface
 - Matrix selection and phrase building must not inject authored markings automatically
 - item edits should live in a local draft until the user explicitly saves them
 - navigating away with unsaved item changes should prompt the user to save, discard, or keep editing
 - normal editing must not silently split one item into a hidden base item plus authored variant
 - `Open in Matrix` must reuse the Matrix screen in an item-edit context when the material can be expressed as a triad or triad phrase
+- any generic item whose current canonical token sequence can be losslessly split into triads may still use `Open in Matrix`; this should be based on the token sequence, not only on combo metadata
 - in that context, Matrix should preload the current sequence from the authored item draft, preserve the authored item state through the round trip, and replace `Add to Working On` with a return action back to `Working On`
 - `Open in Matrix` must treat the current `Practice Item` draft as authoritative; it must not render the phrase from global child-triad state if that would scramble or replace authored markings or voices
 - unsaved phrase drafts may still reopen Matrix for structure edits; `Open in Matrix` should not be disabled solely because the item has not been saved to `Working On` yet

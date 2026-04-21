@@ -96,11 +96,8 @@ class _PracticeScreenState extends State<PracticeScreen> {
             .toList(growable: false);
         final List<PracticeItemV1> visibleItems = widget.controller
             .activeWorkItemsForSessionFilters(_filters);
-        final PracticeModeV1 effectivePracticeMode =
-            selectedItemIds.isNotEmpty &&
-                selectedItemIds.every(widget.controller.hasNonSnareVoice)
-            ? PracticeModeV1.flow
-            : PracticeModeV1.singleSurface;
+        final PracticeModeV1 effectivePracticeMode = widget.controller
+            .displayPracticeModeForItemIds(selectedItemIds);
         final bool canStart = selectedItemIds.isNotEmpty;
         final bool broadRotation = workingOn.length > 8;
 

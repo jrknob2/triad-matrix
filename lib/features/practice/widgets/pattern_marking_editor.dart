@@ -47,6 +47,7 @@ class PatternMarkingEditor extends StatelessWidget {
               label: Text(_labelFor(token, marking)),
               onPressed: editable
                   ? () {
+                      if (token == '_') return;
                       _handleTap(index, token, marking);
                     }
                   : null,
@@ -59,7 +60,7 @@ class PatternMarkingEditor extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             editable
-                ? 'Tap notes to cycle. Kicks skip accents.'
+                ? 'Tap notes to cycle. Kicks skip accents. Rests do not take markings.'
                 : "Accent notes use a tick mark. Ghost notes use parentheses.",
             style: Theme.of(context).textTheme.bodySmall,
           ),
@@ -104,6 +105,7 @@ class PatternMarkingEditor extends StatelessWidget {
     String token,
     PatternNoteMarkingV1 current,
   ) {
+    if (token == '_') return PatternNoteMarkingV1.normal;
     if (token == 'K') {
       return switch (current) {
         PatternNoteMarkingV1.normal => PatternNoteMarkingV1.ghost,

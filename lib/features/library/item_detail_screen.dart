@@ -26,6 +26,8 @@ class ItemDetailScreen extends StatefulWidget {
 }
 
 class _ItemDetailScreenState extends State<ItemDetailScreen> {
+  late List<PatternTokenV1> _draftTokens;
+  late PatternGroupingV1 _draftGrouping;
   late List<int> _accentedNoteIndices;
   late List<int> _ghostNoteIndices;
   late List<DrumVoiceV1> _voiceAssignments;
@@ -46,15 +48,17 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       builder: (BuildContext context, _) {
         final PracticeItemV1 item = widget.controller.itemById(widget.itemId);
         final bool isDraftItem = !item.saved;
-        final bool supportsMatrixEditing = item.isTriad || item.isCombo;
+        final bool supportsMatrixEditing = _supportsMatrixEditingDraft();
         final Duration totalTime = widget.controller.totalTime(itemId: item.id);
         final int sessionCount = widget.controller.sessionCount(
           itemId: item.id,
         );
-        final List<String> tokens = widget.controller.noteTokensFor(item.id);
+        final List<String> tokens = _draftTokens
+            .map((PatternTokenV1 token) => token.symbol)
+            .toList(growable: false);
         final bool flowCapable = _hasDraftFlowVoices(tokens, _voiceAssignments);
         final List<PatternNoteMarkingV1> draftMarkings = _draftMarkingsFor(
-          item.noteCount,
+          _draftTokens.length,
         );
         final bool hasUnsavedChanges = _hasUnsavedChanges(item);
 
@@ -82,13 +86,10 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                           tokens: tokens,
                           markings: draftMarkings,
                           voices: _voiceAssignments,
-                          grouping: widget.controller.displayGroupingFor(
-                            item.id,
-                          ),
+                          grouping: _draftGrouping,
                           selectedIndices: _selectedNoteIndices,
                           showVoices: flowCapable,
                           onSelect: (int index) {
-                            if (tokens[index] == 'K') return;
                             setState(() {
                               if (_selectedNoteIndices.contains(index)) {
                                 _selectedNoteIndices.remove(index);
@@ -100,9 +101,28 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Tap notes to select them, then add a dynamic or voice.',
+                          'Tap positions to select them, then edit structure, dynamics, or voice.',
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(color: const Color(0xFF5B5345)),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Pattern Structure',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 8),
+                        _StructureEditor(
+                          tokens: _draftTokens,
+                          selectedIndices: _selectedNoteIndices,
+                          onReplace: _replaceSelectionWithToken,
+                          onInsertBefore: (List<PatternTokenV1> inserted) {
+                            _insertTokens(inserted, beforeSelection: true);
+                          },
+                          onInsertAfter: (List<PatternTokenV1> inserted) {
+                            _insertTokens(inserted, beforeSelection: false);
+                          },
+                          onDeleteSelection: _deleteSelection,
+                          onPickTriad: _showTriadInsertDialog,
                         ),
                         const SizedBox(height: 12),
                         Text(
@@ -253,6 +273,8 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
 
   void _loadDraftFromController() {
     final PracticeItemV1 item = widget.controller.itemById(widget.itemId);
+    _draftTokens = List<PatternTokenV1>.from(item.tokens);
+    _draftGrouping = item.groupingHint;
     _accentedNoteIndices = List<int>.from(item.accentedNoteIndices)..sort();
     _ghostNoteIndices = List<int>.from(item.ghostNoteIndices)..sort();
     _voiceAssignments = List<DrumVoiceV1>.from(
@@ -274,11 +296,20 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   }
 
   void _setMarkingForSelection(PatternNoteMarkingV1 next) {
-    if (_selectedNoteIndices.isEmpty) return;
+    final List<int> editableIndices = _selectedNoteIndices
+        .where(
+          (int index) =>
+              index >= 0 &&
+              index < _draftTokens.length &&
+              !_draftTokens[index].isKick &&
+              !_draftTokens[index].isRest,
+        )
+        .toList(growable: false);
+    if (editableIndices.isEmpty) return;
     setState(() {
       final Set<int> accents = _accentedNoteIndices.toSet();
       final Set<int> ghosts = _ghostNoteIndices.toSet();
-      for (final int noteIndex in _selectedNoteIndices) {
+      for (final int noteIndex in editableIndices) {
         accents.remove(noteIndex);
         ghosts.remove(noteIndex);
         switch (next) {
@@ -299,12 +330,21 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   }
 
   void _setVoiceForSelection(DrumVoiceV1 next) {
-    if (_selectedNoteIndices.isEmpty) return;
+    final List<int> editableIndices = _selectedNoteIndices
+        .where(
+          (int index) =>
+              index >= 0 &&
+              index < _draftTokens.length &&
+              !_draftTokens[index].isKick &&
+              !_draftTokens[index].isRest,
+        )
+        .toList(growable: false);
+    if (editableIndices.isEmpty) return;
     setState(() {
       final List<DrumVoiceV1> nextAssignments = List<DrumVoiceV1>.from(
         _voiceAssignments,
       );
-      for (final int index in _selectedNoteIndices) {
+      for (final int index in editableIndices) {
         nextAssignments[index] = next;
       }
       _voiceAssignments = nextAssignments;
@@ -314,19 +354,212 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
 
   bool _hasDraftFlowVoices(List<String> tokens, List<DrumVoiceV1> voices) {
     for (int index = 0; index < tokens.length; index++) {
-      if (tokens[index] == 'K') continue;
+      if (tokens[index] == 'K' || tokens[index] == '_') continue;
       if (voices[index] != DrumVoiceV1.snare) return true;
     }
     return false;
   }
 
-  void _clearVoices() {
-    final List<String> tokens = widget.controller.noteTokensFor(widget.itemId);
+  bool _supportsMatrixEditingDraft() {
+    if (_draftTokens.isEmpty || _draftTokens.length % 3 != 0) return false;
+    return !_draftTokens.any((PatternTokenV1 token) => token.isRest);
+  }
+
+  DrumVoiceV1 _defaultVoiceForDraftToken(PatternTokenV1 token) {
+    return token.isKick ? DrumVoiceV1.kick : DrumVoiceV1.snare;
+  }
+
+  void _replaceSelectionWithToken(PatternTokenV1 token) {
+    if (_selectedNoteIndices.length != 1) return;
+    final int index = _selectedNoteIndices.first;
+    final List<PatternTokenV1> nextTokens = List<PatternTokenV1>.from(
+      _draftTokens,
+    );
+    nextTokens[index] = token;
     setState(() {
-      _voiceAssignments = List<DrumVoiceV1>.generate(tokens.length, (
+      _draftTokens = nextTokens;
+      _normalizeDraftStructure();
+      _selectedNoteIndices = <int>{};
+    });
+  }
+
+  void _insertTokens(
+    List<PatternTokenV1> inserted, {
+    required bool beforeSelection,
+  }) {
+    if (inserted.isEmpty) return;
+    final List<int> sortedIndices = _selectedNoteIndices.toList()..sort();
+    final int insertAt = sortedIndices.isEmpty
+        ? _draftTokens.length
+        : (beforeSelection ? sortedIndices.first : sortedIndices.last + 1);
+    final List<PatternTokenV1> nextTokens = List<PatternTokenV1>.from(
+      _draftTokens,
+    )..insertAll(insertAt, inserted);
+    final int shift = inserted.length;
+
+    setState(() {
+      _draftTokens = nextTokens;
+      _accentedNoteIndices =
+          _accentedNoteIndices
+              .map((int index) => index >= insertAt ? index + shift : index)
+              .toList(growable: false)
+            ..sort();
+      _ghostNoteIndices =
+          _ghostNoteIndices
+              .map((int index) => index >= insertAt ? index + shift : index)
+              .toList(growable: false)
+            ..sort();
+      final List<DrumVoiceV1> nextVoices = List<DrumVoiceV1>.from(
+        _voiceAssignments,
+      )..insertAll(insertAt, inserted.map(_defaultVoiceForDraftToken));
+      _voiceAssignments = nextVoices;
+      _normalizeDraftStructure();
+      _selectedNoteIndices = <int>{};
+    });
+  }
+
+  void _deleteSelection() {
+    final Set<int> selected = Set<int>.from(_selectedNoteIndices);
+    if (selected.isEmpty || selected.length >= _draftTokens.length) return;
+    final List<PatternTokenV1> nextTokens = <PatternTokenV1>[];
+    final List<DrumVoiceV1> nextVoices = <DrumVoiceV1>[];
+    final Map<int, int> nextIndexByOld = <int, int>{};
+
+    for (int index = 0; index < _draftTokens.length; index++) {
+      if (selected.contains(index)) continue;
+      nextIndexByOld[index] = nextTokens.length;
+      nextTokens.add(_draftTokens[index]);
+      nextVoices.add(
+        index < _voiceAssignments.length
+            ? _voiceAssignments[index]
+            : _defaultVoiceForDraftToken(_draftTokens[index]),
+      );
+    }
+
+    setState(() {
+      _draftTokens = nextTokens;
+      _voiceAssignments = nextVoices;
+      _accentedNoteIndices =
+          _accentedNoteIndices
+              .where(nextIndexByOld.containsKey)
+              .map((int index) => nextIndexByOld[index]!)
+              .toList(growable: false)
+            ..sort();
+      _ghostNoteIndices =
+          _ghostNoteIndices
+              .where(nextIndexByOld.containsKey)
+              .map((int index) => nextIndexByOld[index]!)
+              .toList(growable: false)
+            ..sort();
+      _normalizeDraftStructure();
+      _selectedNoteIndices = <int>{};
+    });
+  }
+
+  Future<List<PatternTokenV1>?> _showTriadInsertDialog() async {
+    final String? selectedName = await showDialog<String>(
+      context: context,
+      builder: (BuildContext context) {
+        final List<PracticeItemV1> triads = widget.controller.triadMatrixItems;
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+          child: DrumPanel(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    'Insert Triad',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SingleChildScrollView(
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: triads
+                          .map(
+                            (PracticeItemV1 triad) => OutlinedButton(
+                              onPressed: () =>
+                                  Navigator.of(context).pop(triad.name),
+                              child: Text(triad.name),
+                            ),
+                          )
+                          .toList(growable: false),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+    if (!mounted || selectedName == null) return null;
+    return PatternSequenceV1.parse(selectedName).tokens;
+  }
+
+  void _normalizeDraftStructure() {
+    final List<String> symbols = _draftTokens
+        .map((PatternTokenV1 token) => token.symbol)
+        .toList(growable: false);
+    _accentedNoteIndices =
+        _accentedNoteIndices
+            .where(
+              (int index) =>
+                  index >= 0 &&
+                  index < symbols.length &&
+                  symbols[index] != 'K' &&
+                  symbols[index] != '_',
+            )
+            .toSet()
+            .toList(growable: false)
+          ..sort();
+    _ghostNoteIndices =
+        _ghostNoteIndices
+            .where(
+              (int index) =>
+                  index >= 0 && index < symbols.length && symbols[index] != '_',
+            )
+            .toSet()
+            .toList(growable: false)
+          ..sort();
+    final List<DrumVoiceV1> nextVoices = List<DrumVoiceV1>.generate(
+      symbols.length,
+      (int index) {
+        final DrumVoiceV1 fallback = _defaultVoiceForDraftToken(
+          _draftTokens[index],
+        );
+        if (index >= _voiceAssignments.length) return fallback;
+        final DrumVoiceV1 voice = _voiceAssignments[index];
+        if (symbols[index] == 'K') return DrumVoiceV1.kick;
+        if (symbols[index] == '_') return DrumVoiceV1.snare;
+        return voice == DrumVoiceV1.kick ? DrumVoiceV1.snare : voice;
+      },
+      growable: false,
+    );
+    _voiceAssignments = nextVoices;
+  }
+
+  void _clearVoices() {
+    setState(() {
+      _voiceAssignments = List<DrumVoiceV1>.generate(_draftTokens.length, (
         int index,
       ) {
-        return tokens[index] == 'K' ? DrumVoiceV1.kick : DrumVoiceV1.snare;
+        return _defaultVoiceForDraftToken(_draftTokens[index]);
       });
       _selectedNoteIndices = <int>{};
     });
@@ -336,9 +569,11 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     final List<PatternNoteMarkingV1> currentMarkings = widget.controller
         .noteMarkingsFor(item.id);
     final List<PatternNoteMarkingV1> draftMarkings = _draftMarkingsFor(
-      item.noteCount,
+      _draftTokens.length,
     );
     return !item.saved ||
+        !listEquals(item.tokens, _draftTokens) ||
+        item.groupingHint != _draftGrouping ||
         !listEquals(currentMarkings, draftMarkings) ||
         !listEquals(
           widget.controller.noteVoicesFor(item.id),
@@ -360,6 +595,8 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       ghostNoteIndices: _ghostNoteIndices,
       voiceAssignments: _voiceAssignments,
       competency: widget.controller.competencyFor(widget.itemId),
+      sequence: PatternSequenceV1(tokens: _draftTokens),
+      groupingHint: _draftGrouping,
       saveToWorkingOn: saveToWorkingOn,
     );
     ScaffoldMessenger.of(context).showSnackBar(
@@ -376,54 +613,17 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     required String originalItemId,
     required List<String> selection,
   }) {
-    final PracticeItemV1 sourceItem = widget.controller.itemById(
-      originalItemId,
+    widget.controller.applyMatrixSelectionToItem(
+      itemId: originalItemId,
+      itemIds: selection,
     );
-    if (sourceItem.isCombo) {
-      widget.controller.updateCombinationSelection(
-        comboId: originalItemId,
-        itemIds: selection,
-      );
-      _loadDraftFromController();
-      setState(() {});
-      return;
-    }
-
-    if (selection.length == 1) {
-      final String selectedItemId = selection.first;
-      if (selectedItemId == originalItemId) {
-        _loadDraftFromController();
-        setState(() {});
-        return;
-      }
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(
-          builder: (BuildContext context) => ItemDetailScreen(
-            controller: widget.controller,
-            itemId: selectedItemId,
-            onOpenInMatrix: widget.onOpenInMatrix,
-          ),
-        ),
-      );
-      return;
-    }
-
-    final PracticeCombinationV1 combo = widget.controller
-        .createDraftCombinationForEditing(itemIds: selection);
     widget.controller.rememberLaunchPreferencesForItem(
-      itemId: combo.id,
+      itemId: originalItemId,
       bpm: _sessionBpm,
       timerPreset: _timerPreset,
     );
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(
-        builder: (BuildContext context) => ItemDetailScreen(
-          controller: widget.controller,
-          itemId: combo.id,
-          onOpenInMatrix: widget.onOpenInMatrix,
-        ),
-      ),
-    );
+    _loadDraftFromController();
+    setState(() {});
   }
 
   Future<bool> _handleUnsavedExit() async {
@@ -539,7 +739,7 @@ class _SelectableNotationBlock extends StatelessWidget {
                       marking: markings[index],
                       voice: voices[index],
                       selected: selectedIndices.contains(index),
-                      enabled: tokens[index] != 'K',
+                      enabled: true,
                       showVoice: showVoices,
                       patternStyle: patternStyle,
                       voiceStyle: voiceStyle,
@@ -651,7 +851,7 @@ class _SelectableNotationCell extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               PatternVoiceDisplay(
-                tokens: <String>[token],
+                tokens: <PatternTokenV1>[PatternTokenV1.fromSymbol(token)],
                 markings: <PatternNoteMarkingV1>[marking],
                 voices: <DrumVoiceV1>[voice],
                 patternStyle: patternStyle,
@@ -666,6 +866,213 @@ class _SelectableNotationCell extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _StructureEditor extends StatelessWidget {
+  final List<PatternTokenV1> tokens;
+  final Set<int> selectedIndices;
+  final ValueChanged<PatternTokenV1> onReplace;
+  final ValueChanged<List<PatternTokenV1>> onInsertBefore;
+  final ValueChanged<List<PatternTokenV1>> onInsertAfter;
+  final VoidCallback onDeleteSelection;
+  final Future<List<PatternTokenV1>?> Function() onPickTriad;
+
+  const _StructureEditor({
+    required this.tokens,
+    required this.selectedIndices,
+    required this.onReplace,
+    required this.onInsertBefore,
+    required this.onInsertAfter,
+    required this.onDeleteSelection,
+    required this.onPickTriad,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final List<int> sortedSelection = selectedIndices.toList()..sort();
+    final bool hasSelection = sortedSelection.isNotEmpty;
+    final bool hasSingleSelection = sortedSelection.length == 1;
+    final bool canDelete =
+        hasSelection && sortedSelection.length < tokens.length;
+    final String summary = !hasSelection
+        ? 'No position selected. Insert actions append to the end of the pattern.'
+        : hasSingleSelection
+        ? 'Position ${sortedSelection.first + 1} selected · ${tokens[sortedSelection.first].symbol}'
+        : '${sortedSelection.length} positions selected · insert before the first or after the last, or delete them.';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          summary,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: const Color(0xFF5B5345),
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        if (hasSingleSelection) ...<Widget>[
+          const SizedBox(height: 8),
+          Text(
+            'Replace Selected Position',
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: const Color(0xFF5B5345),
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: <Widget>[
+              _TokenActionPill(
+                label: 'R',
+                onPressed: () {
+                  onReplace(PatternTokenV1.right);
+                },
+              ),
+              _TokenActionPill(
+                label: 'L',
+                onPressed: () {
+                  onReplace(PatternTokenV1.left);
+                },
+              ),
+              _TokenActionPill(
+                label: 'K',
+                onPressed: () {
+                  onReplace(PatternTokenV1.kick);
+                },
+              ),
+              _TokenActionPill(
+                label: 'Rest',
+                onPressed: () {
+                  onReplace(PatternTokenV1.rest);
+                },
+              ),
+            ],
+          ),
+        ],
+        const SizedBox(height: 12),
+        Text(
+          hasSelection ? 'Insert Before Selection' : 'Append to Pattern',
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+            color: const Color(0xFF5B5345),
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: <Widget>[
+            _TokenActionPill(
+              label: 'R',
+              onPressed: () {
+                onInsertBefore(const <PatternTokenV1>[PatternTokenV1.right]);
+              },
+            ),
+            _TokenActionPill(
+              label: 'L',
+              onPressed: () {
+                onInsertBefore(const <PatternTokenV1>[PatternTokenV1.left]);
+              },
+            ),
+            _TokenActionPill(
+              label: 'K',
+              onPressed: () {
+                onInsertBefore(const <PatternTokenV1>[PatternTokenV1.kick]);
+              },
+            ),
+            _TokenActionPill(
+              label: 'Rest',
+              onPressed: () {
+                onInsertBefore(const <PatternTokenV1>[PatternTokenV1.rest]);
+              },
+            ),
+            _TokenActionPill(
+              label: 'Triad...',
+              onPressed: () {
+                onPickTriad().then((List<PatternTokenV1>? triad) {
+                  if (triad == null) return;
+                  onInsertBefore(triad);
+                });
+              },
+            ),
+          ],
+        ),
+        if (hasSelection) ...<Widget>[
+          const SizedBox(height: 12),
+          Text(
+            'Insert After Selection',
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: const Color(0xFF5B5345),
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: <Widget>[
+              _TokenActionPill(
+                label: 'R',
+                onPressed: () {
+                  onInsertAfter(const <PatternTokenV1>[PatternTokenV1.right]);
+                },
+              ),
+              _TokenActionPill(
+                label: 'L',
+                onPressed: () {
+                  onInsertAfter(const <PatternTokenV1>[PatternTokenV1.left]);
+                },
+              ),
+              _TokenActionPill(
+                label: 'K',
+                onPressed: () {
+                  onInsertAfter(const <PatternTokenV1>[PatternTokenV1.kick]);
+                },
+              ),
+              _TokenActionPill(
+                label: 'Rest',
+                onPressed: () {
+                  onInsertAfter(const <PatternTokenV1>[PatternTokenV1.rest]);
+                },
+              ),
+              _TokenActionPill(
+                label: 'Triad...',
+                onPressed: () {
+                  onPickTriad().then((List<PatternTokenV1>? triad) {
+                    if (triad == null) return;
+                    onInsertAfter(triad);
+                  });
+                },
+              ),
+            ],
+          ),
+        ],
+        const SizedBox(height: 12),
+        OutlinedButton(
+          onPressed: canDelete ? onDeleteSelection : null,
+          child: const Text('Delete Selected Positions'),
+        ),
+      ],
+    );
+  }
+}
+
+class _TokenActionPill extends StatelessWidget {
+  final String label;
+  final VoidCallback? onPressed;
+
+  const _TokenActionPill({required this.label, this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return DrumSelectablePill(
+      label: Text(label),
+      selected: false,
+      onPressed: onPressed,
     );
   }
 }
@@ -685,6 +1092,9 @@ class _SelectedMarkingEditor extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final List<int> editableIndices = selectedIndices
+        .where((int index) => tokens[index] != 'K' && tokens[index] != '_')
+        .toList(growable: false);
     if (selectedIndices.isEmpty) {
       return Text(
         'Select one or more hand notes to set accents or ghosts.',
@@ -694,7 +1104,16 @@ class _SelectedMarkingEditor extends StatelessWidget {
         ),
       );
     }
-    final List<int> sortedIndices = selectedIndices.toList()..sort();
+    if (editableIndices.isEmpty) {
+      return Text(
+        'Selected positions are structural only. Choose hand notes to edit dynamics.',
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+          color: const Color(0xFF5B5345),
+          fontWeight: FontWeight.w700,
+        ),
+      );
+    }
+    final List<int> sortedIndices = editableIndices..sort();
     final Set<PatternNoteMarkingV1> currentValues = sortedIndices
         .map((int index) => markings[index])
         .toSet();
@@ -782,6 +1201,9 @@ class _SelectedVoiceEditor extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final List<int> editableIndices = selectedIndices
+        .where((int index) => tokens[index] != 'K' && tokens[index] != '_')
+        .toList(growable: false);
     if (selectedIndices.isEmpty) {
       return Text(
         'Select one or more hand notes to assign a voice.',
@@ -791,7 +1213,16 @@ class _SelectedVoiceEditor extends StatelessWidget {
         ),
       );
     }
-    final List<int> sortedIndices = selectedIndices.toList()..sort();
+    if (editableIndices.isEmpty) {
+      return Text(
+        'Selected positions are structural only. Choose hand notes to assign voices.',
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+          color: const Color(0xFF5B5345),
+          fontWeight: FontWeight.w700,
+        ),
+      );
+    }
+    final List<int> sortedIndices = editableIndices..sort();
     final Set<DrumVoiceV1> currentValues = sortedIndices
         .map((int index) => voices[index])
         .toSet();

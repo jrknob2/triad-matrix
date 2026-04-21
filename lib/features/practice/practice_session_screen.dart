@@ -45,6 +45,20 @@ class _SessionTransportState {
   });
 }
 
+class PracticeSessionRuntimeMath {
+  static int? activeTokenIndex({
+    required List<PatternTokenV1> tokens,
+    required Duration elapsed,
+    required int bpm,
+  }) {
+    if (tokens.isEmpty || bpm <= 0 || elapsed.isNegative) return null;
+    final double microsPerBeat = Duration.microsecondsPerMinute / bpm;
+    final int beatIndex = (elapsed.inMicroseconds / microsPerBeat).floor();
+    if (beatIndex < 0) return null;
+    return beatIndex % tokens.length;
+  }
+}
+
 class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   static const String _metronomeAssetPath = 'assets/audio/metronome_beep.wav';
   static const Duration _focusTransitionDuration = Duration(milliseconds: 320);
@@ -78,10 +92,8 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     _itemActiveDurationById = <String, Duration>{};
     _practicedItemIds = <String>[];
     _bpm = _itemBpmById[_currentItemId] ?? _setup.bpm;
-    _clickEnabled = _setup.family == MaterialFamilyV1.warmup
-        ? false
-        : _setup.clickEnabled;
-    _pulseEnabled = _setup.family != MaterialFamilyV1.warmup;
+    _clickEnabled = _isWarmup ? false : _setup.clickEnabled;
+    _pulseEnabled = !_isWarmup;
     _metronome = PracticeMetronomeService(assetPath: _metronomeAssetPath);
     _configureMetronome();
   }
@@ -101,13 +113,16 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     final bool isWarmup = _isWarmup;
     final bool focusMode = _running;
     final String currentItemId = _currentItemId;
-    final List<String> tokens = widget.controller.noteTokensFor(currentItemId);
+    final List<PatternTokenV1> tokens = widget.controller.patternTokensFor(
+      currentItemId,
+    );
     final List<PatternNoteMarkingV1> markings = widget.controller
         .noteMarkingsFor(currentItemId);
     final List<DrumVoiceV1> voices = widget.controller.noteVoicesFor(
       currentItemId,
     );
     final _SessionTransportState transport = _transportState;
+    final int? activeTokenIndex = _activeTokenIndexForCurrentItem(tokens);
 
     return Scaffold(
       body: DrumScreen(
@@ -146,6 +161,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                                 transport: transport,
                                 voices: voices,
                                 focusMode: focusMode,
+                                activeTokenIndex: activeTokenIndex,
                                 availableWidth:
                                     MediaQuery.sizeOf(context).width * 0.52,
                               ),
@@ -179,6 +195,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                                       transport: transport,
                                       voices: voices,
                                       focusMode: false,
+                                      activeTokenIndex: activeTokenIndex,
                                     ),
                                     const SizedBox(height: 16),
                                     _buildSessionControlsPanel(context),
@@ -195,6 +212,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                                     transport: transport,
                                     voices: voices,
                                     focusMode: true,
+                                    activeTokenIndex: activeTokenIndex,
                                     availableWidth: constraints.maxWidth,
                                   ),
                                 );
@@ -289,10 +307,11 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     required bool isWarmup,
     required String currentItemId,
     required List<PatternNoteMarkingV1> markings,
-    required List<String> tokens,
+    required List<PatternTokenV1> tokens,
     required _SessionTransportState transport,
     required List<DrumVoiceV1> voices,
     required bool focusMode,
+    required int? activeTokenIndex,
     double? availableWidth,
   }) {
     final bool canEndSession = _canEndSession;
@@ -385,6 +404,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                               tokens: tokens,
                               markings: markings,
                               voices: voices,
+                              activeTokenIndex: activeTokenIndex,
                             ),
                           ],
                         ),
@@ -548,6 +568,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                     tokens: tokens,
                     markings: markings,
                     voices: voices,
+                    activeTokenIndex: activeTokenIndex,
                   ),
                   const SizedBox(height: 18),
                   _BeatPulse(
@@ -735,7 +756,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
           );
           _summaryOpenedForCurrentRun = false;
         }
-        if (_setup.family == MaterialFamilyV1.warmup && _warmupComplete) {
+        if (_isWarmup && _warmupComplete) {
           _elapsedOffset = Duration.zero;
           _stopwatch.reset();
           _currentItemIndex = 0;
@@ -838,7 +859,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   }
 
   void _changeItem(int nextIndex) {
-    if (_setup.family == MaterialFamilyV1.warmup) {
+    if (_isWarmup) {
       final int itemCount = _setup.practiceItemIds.length;
       if (itemCount == 0) return;
       setState(() {
@@ -974,13 +995,38 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     return Duration(milliseconds: cycleMs);
   }
 
+  int? _activeTokenIndexForCurrentItem(List<PatternTokenV1> tokens) {
+    if (!_running && _elapsed == Duration.zero) return null;
+    return PracticeSessionRuntimeMath.activeTokenIndex(
+      tokens: tokens,
+      elapsed: _tokenCycleElapsedForCurrentItem(),
+      bpm: _bpm,
+    );
+  }
+
+  Duration _tokenCycleElapsedForCurrentItem() {
+    if (_isWarmup) {
+      final Duration minuteOffset = Duration(minutes: _currentItemIndex);
+      final Duration elapsedInCurrentMinute = _elapsed - minuteOffset;
+      return elapsedInCurrentMinute.isNegative
+          ? Duration.zero
+          : elapsedInCurrentMinute;
+    }
+    if (_usesPerItemTargetTiming) {
+      if (_currentItemSegmentStartElapsed == null) return Duration.zero;
+      final Duration itemElapsed = _elapsed - _currentItemSegmentStartElapsed!;
+      return itemElapsed.isNegative ? Duration.zero : itemElapsed;
+    }
+    return _elapsed;
+  }
+
   void _startElapsedTicker() {
     _elapsedTicker?.cancel();
     _elapsedTicker = Timer.periodic(const Duration(milliseconds: 250), (_) {
       if (_running && !_isWarmup) {
         _markCurrentItemPracticed();
       }
-      if (_setup.family == MaterialFamilyV1.warmup) {
+      if (_isWarmup) {
         _syncWarmupProgress();
       } else {
         _syncPracticeTargetProgress();
@@ -1457,9 +1503,10 @@ class _PlayerNotation extends StatelessWidget {
   final bool isWarmup;
   final bool showVoices;
   final PatternGroupingV1 grouping;
-  final List<String> tokens;
+  final List<PatternTokenV1> tokens;
   final List<PatternNoteMarkingV1> markings;
   final List<DrumVoiceV1> voices;
+  final int? activeTokenIndex;
 
   const _PlayerNotation({
     required this.setup,
@@ -1469,6 +1516,7 @@ class _PlayerNotation extends StatelessWidget {
     required this.tokens,
     required this.markings,
     required this.voices,
+    required this.activeTokenIndex,
   });
 
   @override
@@ -1526,6 +1574,7 @@ class _PlayerNotation extends StatelessWidget {
           cellWidth: tokens.length >= 24 ? 34 : (isWarmup ? 44 : 42),
           patternStyle: patternStyle,
           voiceStyle: voiceStyle,
+          activeIndex: activeTokenIndex,
         ),
       ),
     );

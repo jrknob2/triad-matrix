@@ -14,6 +14,20 @@ It answers:
 
 This is the screen-contract spec the UI should now be built against.
 
+Phase-1 architecture rule:
+
+- all downstream playable material should be treated as one canonical token-sequence pattern model
+- Matrix may remain triad-specific internally, but anything it emits into the rest of the app must be generic token-sequence material immediately
+- rest/pause is part of the canonical token model even if some authoring and rendering surfaces are still catching up in later phases
+- groupings such as triads, 4-note chunks, 5-note chunks, and phrase separators are display/pedagogy hints, not alternate runtime species
+- if a screen needs to show grouping, it should read the item's explicit grouping metadata rather than inferring grouping from family or other runtime metadata
+- non-warmup Practice sessions should behave as generic pattern sessions rather than triad/combo/4-note/5-note runtime variants
+- `Flow` and `Single Surface` may still appear as labels or filters, but they should be derived metadata, not separate session engines
+- when a session is explicitly launched in `Flow` or `Single Surface`, that chosen session-mode metadata should be preserved in setup, logging, replay, and history rather than being recomputed later from changed item state
+- item family and practice mode may remain persisted as metadata for labels, filtering, pedagogy, and legacy compatibility, but they should not define canonical structure, grouping defaults, or non-warmup session behavior
+- the shared notation renderer should consume canonical tokens directly rather than reparsing ad hoc screen strings
+- rest/pause positions should render explicitly in normal notation readouts and should not generate a voice-row label
+
 Detailed content inventory, control ownership, and end-to-end flow mapping now live in:
 
 - [12_SCREEN_CONTENT_CONTRACTS_AND_APP_FLOWS.md](/Users/terryknoblock/Development/flutter-projects/traid_trainer/docs/12_SCREEN_CONTENT_CONTRACTS_AND_APP_FLOWS.md)
@@ -252,6 +266,8 @@ The phrase editor shows exact ordered occurrences.
 
 Matrix grid cells are structural cells. They should use an in-memory structural triad basis to render the grid and may suppress authored dynamics and voice rows. Phrase readouts and phrase-editor chips may show those authored layers because they represent the selected phrase rather than the structural grid catalog.
 
+Matrix outputs should hand off generic token-sequence practice material downstream. No downstream practice, list, or session surface should require matrix-cell identity once the item exists.
+
 Shared notation geometry should remain renderer-owned across screens and should use a simple adjustable token-rectangle model: each visible notation character gets its own explicit box, ornament widths and internal gaps are direct constants, note spacing stays compact, ghost parens keep consistent breathing room and vertical centering around the note, accent marks sit in their own box before the note, and phrase separators keep a small clear gap from adjacent marked tokens.
 
 If an item appears anywhere in the phrase, its matrix cell is selected.  
@@ -272,9 +288,11 @@ Phrase rule:
 - once more than one triad is selected, Matrix should behave like phrase-building mode and default practice from that selection to Flow
 - if selected phrase material includes triads that are not ready, Matrix should show guidance instead of blocking phrase building
 - Matrix `Try It Out` should be a try-it-now preview action, not a tracked-session entry
+- Matrix `Try It Out` should convert the current triad selection into a generic ephemeral pattern item before opening Practice Session
 - Matrix preview practice should be untracked
 - Matrix preview practice should return to Matrix on end and should not open Session Summary
 - `Add to Working On` should open authoring/edit flow, not silently create duplicates or save immediately
+- `Add to Working On` should convert the current triad selection into a generic authored pattern item immediately; downstream screens should not depend on combo metadata or matrix-cell structure
 - Matrix phrase-building state should not expose a separate `Save` action when `Add to Working On` already hands off into explicit item authoring
 - when Matrix is opened from `Practice Item`, it should reuse Matrix in edit mode instead of routing to a separate builder screen
 - Matrix edit mode must preload the item's current triad sequence on first render
@@ -399,6 +417,8 @@ Must do:
 - in single-pattern tracked practice, reaching the target duration should chime and restart the gauge cycle while total elapsed time keeps running
 - in multi-item tracked practice, reaching the current pattern's target duration should chime and auto-forward into the next pattern
 - after the final pattern reaches its target duration, the player should chime, wrap back to the first pattern, and continue running with total elapsed time preserved
+- Practice Session stepping/highlighting should follow canonical token positions rather than triad chunks or family labels
+- rest/pause positions should occupy one full timed slot in the player and participate in stepping/highlighting the same way as note positions
 - click playback should use a preloaded low-latency trigger path rather than repeatedly retriggering one shared media player instance
 - when native metronome playback is active, the visual pulse should derive from the native audio playback phase rather than an event-channel beat callback or an independent Dart beat clock
 - after native beat onset is detected, the player may hold the visual pulse briefly for readability, but the beat onset itself must still come from the native playback phase
@@ -667,10 +687,14 @@ Practice Item is the detail/edit screen for one piece of material.
 - the `Flow Voices` section should contain editing controls, not a second notation preview
 - the `Practice Item` note-selection affordance may add only a small tap-target halo around the shared renderer; it should not create a wider second spacing model for note slots or separators
 - the `Practice Item` note-selection affordance should derive its slot and separator sizing from the shared renderer geometry instead of fixed local constants
+- `Practice Item` should contain a `Pattern Structure` section for direct token-sequence editing
 - edits should not write through immediately while the user is still working on the screen
 - selection should toggle on tap so the user can add and remove notes from the current selected set
 - applying a marking or voice assignment should clear the current selection
 - kick notes should not be assignable in this editor flow
+- non-hand positions may still be selected for structure editing even though they are not assignable for dynamics or voices
+- structure edits should stay in the local draft until save, just like dynamics, voices, BPM, and duration
+- the structure editor should support replace, insert, delete, rest insertion, and triad-helper insertion without switching to a different editor mode
 - `Practice Item` should stay authoring-focused and should not contain direct practice-launch buttons
 - when Matrix editing expands a single triad into a phrase, returning should continue on the resulting phrase item instead of dropping the added triads
 
@@ -681,6 +705,7 @@ Practice screen session setup:
 - `Practice Item` owns authored item editing; `Matrix` only edits phrase structure when launched from this screen
 - `Open in Matrix` must hand off the current item draft rather than asking Matrix to infer authored state from child triad records
 - `Open in Matrix` should remain available for unsaved phrase drafts that can be represented as triad sequences
+- any generic item whose current token sequence can be losslessly split into triads may still use `Open in Matrix`
 - normal editing should not create a hidden authored variant of a separate built-in base item
 - when Matrix returns, Practice Item should continue on the same authored item draft when possible, or on the resulting replacement phrase item when the structure changed from one triad to a phrase
 

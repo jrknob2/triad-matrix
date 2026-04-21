@@ -6,7 +6,7 @@ import '../../../core/practice/practice_domain_v1.dart';
 import '../../app/app_formatters.dart';
 
 class PatternVoiceDisplay extends StatelessWidget {
-  final List<String> tokens;
+  final List<PatternTokenV1> tokens;
   final List<PatternNoteMarkingV1> markings;
   final List<DrumVoiceV1> voices;
   final TextStyle? patternStyle;
@@ -20,6 +20,9 @@ class PatternVoiceDisplay extends StatelessWidget {
   final bool showDynamics;
   final bool showVoiceRow;
   final bool wrap;
+  final int? activeIndex;
+  final Color? activePatternColor;
+  final Color? activeVoiceColor;
 
   const PatternVoiceDisplay({
     super.key,
@@ -37,6 +40,9 @@ class PatternVoiceDisplay extends StatelessWidget {
     this.showDynamics = true,
     this.showVoiceRow = true,
     this.wrap = false,
+    this.activeIndex,
+    this.activePatternColor,
+    this.activeVoiceColor,
   }) : assert(tokens.length == markings.length),
        assert(tokens.length == voices.length);
 
@@ -173,6 +179,7 @@ class PatternVoiceDisplay extends StatelessWidget {
                 tokens[index],
                 tokenGeometry[index],
                 patternStyle,
+                isActive: activeIndex == index,
               ),
               separatorStyle: patternStyle,
             ),
@@ -188,9 +195,10 @@ class PatternVoiceDisplay extends StatelessWidget {
               separatorWidth: separatorWidth,
               cellHeight: voiceCellHeight,
               noteCellFor: (int index) => _voiceText(
-                label: voices[index].shortLabel,
+                label: tokens[index].isRest ? '' : voices[index].shortLabel,
                 geometry: tokenGeometry[index],
                 baseStyle: voiceStyle,
+                isActive: activeIndex == index,
               ),
               separatorStyle: voiceStyle,
               showSeparatorText: false,
@@ -424,11 +432,17 @@ class PatternVoiceDisplay extends StatelessWidget {
   }
 
   Widget _patternText(
-    String token,
+    PatternTokenV1 token,
     _NotationTokenGeometry geometry,
-    TextStyle baseStyle,
-  ) {
+    TextStyle baseStyle, {
+    required bool isActive,
+  }) {
     final double fontSize = baseStyle.fontSize ?? 18;
+    final TextStyle activeBaseStyle = isActive
+        ? baseStyle.copyWith(
+            color: activePatternColor ?? const Color(0xFFF6B067),
+          )
+        : baseStyle;
     return SizedBox(
       width: geometry.width,
       height: fontSize * 1.35,
@@ -444,7 +458,7 @@ class PatternVoiceDisplay extends StatelessWidget {
               child: Center(
                 child: Text(
                   switch (box.kind) {
-                    _NotationBoxKind.note => token,
+                    _NotationBoxKind.note => token.notationSymbol,
                     _NotationBoxKind.accent => '^',
                     _NotationBoxKind.leftParen => '(',
                     _NotationBoxKind.rightParen => ')',
@@ -454,10 +468,12 @@ class PatternVoiceDisplay extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.visible,
                   style: switch (box.kind) {
-                    _NotationBoxKind.note => baseStyle,
-                    _NotationBoxKind.accent => baseStyle.copyWith(height: 1.0),
-                    _NotationBoxKind.leftParen ||
-                    _NotationBoxKind.rightParen => _ghostParenStyle(baseStyle),
+                    _NotationBoxKind.note => activeBaseStyle,
+                    _NotationBoxKind.accent => activeBaseStyle.copyWith(
+                      height: 1.0,
+                    ),
+                    _NotationBoxKind.leftParen || _NotationBoxKind.rightParen =>
+                      _ghostParenStyle(activeBaseStyle),
                   },
                 ),
               ),
@@ -471,6 +487,7 @@ class PatternVoiceDisplay extends StatelessWidget {
     required String label,
     required _NotationTokenGeometry geometry,
     required TextStyle baseStyle,
+    required bool isActive,
   }) {
     final double noteCenter = geometry.noteCenterX;
     final double horizontalAnchor = geometry.width == 0
@@ -484,7 +501,9 @@ class PatternVoiceDisplay extends StatelessWidget {
           label,
           textAlign: TextAlign.center,
           style: baseStyle.copyWith(
-            color: const Color(0xFF5B5345),
+            color: isActive
+                ? (activeVoiceColor ?? const Color(0xFFF6B067))
+                : const Color(0xFF5B5345),
             fontWeight: FontWeight.w800,
           ),
         ),

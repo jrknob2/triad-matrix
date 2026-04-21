@@ -503,6 +503,7 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
           title: 'That rep felt strong',
           body: _strongTempoBodyFor(
             item: item,
+            itemId: itemId,
             noAssessmentHistory: noAssessmentHistory,
           ),
         );
@@ -546,12 +547,11 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
     final bool hasKick = widget.controller.hasKick(itemId);
     final bool hasFlowVoices = widget.controller.hasNonSnareVoice(itemId);
     final bool singleHandTriad =
-        item.isTriad &&
-        !hasKick &&
         tokens.length == 3 &&
+        !hasKick &&
         (tokens.every((String token) => token == 'R') ||
             tokens.every((String token) => token == 'L'));
-    final bool simpleHandTriad = item.isTriad && !hasKick && !item.isCombo;
+    final bool simpleHandTriad = tokens.length == 3 && !hasKick;
 
     if (singleHandTriad) {
       if (attemptedBpm >= 180) return _TempoSignal.high;
@@ -565,7 +565,7 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
       return _TempoSignal.low;
     }
 
-    if (item.isCombo || hasFlowVoices) {
+    if (tokens.length > 3 || hasFlowVoices) {
       if (attemptedBpm >= 100) return _TempoSignal.high;
       if (attemptedBpm >= 80) return _TempoSignal.medium;
       return _TempoSignal.low;
@@ -584,14 +584,24 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
 
   String _strongTempoBodyFor({
     required PracticeItemV1 item,
+    required String itemId,
     required bool noAssessmentHistory,
   }) {
-    if (item.isTriad && !item.isCombo && item.name == 'RRR') {
+    final List<String> tokens = widget.controller.noteTokensFor(itemId);
+    final bool simpleHandTriad =
+        tokens.length == 3 &&
+        tokens.every((String token) => token == 'R' || token == 'L');
+    final bool singleHandTriad =
+        simpleHandTriad &&
+        (tokens.every((String token) => token == 'R') ||
+            tokens.every((String token) => token == 'L'));
+
+    if (singleHandTriad) {
       return noAssessmentHistory
           ? 'You played a simple hand triad cleanly at a strong tempo. That gives the app a much better read on where your playing already is.'
           : 'You played a simple hand triad cleanly at a strong tempo. A little more work and it will be firmly in the toolbox.';
     }
-    if (item.isTriad && !item.isCombo && item.name == 'LLL') {
+    if (simpleHandTriad) {
       return noAssessmentHistory
           ? 'You played a simple hand triad cleanly at a strong tempo. That gives the app a much better read on where your playing already is.'
           : 'You played a simple hand triad cleanly at a strong tempo. A little more work and it will be firmly in the toolbox.';

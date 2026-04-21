@@ -48,6 +48,7 @@ class VoiceAssignmentEditor extends StatelessWidget {
               label: Text('$token:${voice.shortLabel}'),
               onPressed: editable
                   ? () {
+                      if (token == '_') return;
                       _handleTap(index, token, voice);
                     }
                   : null,
@@ -60,7 +61,7 @@ class VoiceAssignmentEditor extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             editable
-                ? 'Tap notes to change voices. Kicks stay on kick.'
+                ? 'Tap notes to change voices. Kicks stay on kick. Rests do not take voices.'
                 : 'Voice labels show the flow path across the kit.',
             style: Theme.of(context).textTheme.bodySmall,
           ),
@@ -90,6 +91,7 @@ class VoiceAssignmentEditor extends StatelessWidget {
   }
 
   DrumVoiceV1 _nextVoice(String token, DrumVoiceV1 current) {
+    if (token == '_') return DrumVoiceV1.snare;
     if (token == 'K') return DrumVoiceV1.kick;
 
     const List<DrumVoiceV1> cycle = <DrumVoiceV1>[
