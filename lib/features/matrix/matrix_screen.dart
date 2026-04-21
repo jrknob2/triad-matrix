@@ -18,7 +18,6 @@ class MatrixScreenRequest {
   final Set<TriadMatrixFilterV1> filters;
   final List<String> selectedItemIds;
   final String? editingItemId;
-  final bool prefersSaveToWorkingOn;
 
   const MatrixScreenRequest({
     required this.version,
@@ -26,7 +25,6 @@ class MatrixScreenRequest {
     required this.filters,
     this.selectedItemIds = const <String>[],
     this.editingItemId,
-    this.prefersSaveToWorkingOn = false,
   });
 }
 
@@ -118,67 +116,115 @@ class _MatrixScreenState extends State<MatrixScreen> {
           ? 'Some of these triads are still early in your work. You can save this phrase now, but it may be better to keep practicing those triads on their own before building them into a longer phrase.'
           : null,
     );
+    final bool showPhrasePanel =
+        _selectedItemIds.isNotEmpty || _isEditingFromPracticeItem;
 
     return DrumScreen(
       warm: false,
       child: isTablet
-          ? Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Expanded(
-                    flex: 5,
-                    child: ListView(
+          ? showPhrasePanel
+                ? Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        const DrumEyebrow(text: 'Look At'),
-                        const SizedBox(height: 8),
-                        DrumHorizontalControlStrip(
-                          child: Row(
-                            children: _MatrixPrimaryView.values
-                                .map(
-                                  (_MatrixPrimaryView view) => Padding(
-                                    padding: const EdgeInsets.only(right: 8),
-                                    child: DrumSelectablePill(
-                                      label: _chipText(
-                                        _viewLabel(view),
-                                        _view == view,
-                                      ),
-                                      selected: _view == view,
-                                      onPressed: () => _selectView(view),
-                                    ),
-                                  ),
-                                )
-                                .toList(growable: false),
+                        Expanded(
+                          flex: 5,
+                          child: ListView(
+                            children: <Widget>[
+                              const DrumEyebrow(text: 'Look At'),
+                              const SizedBox(height: 8),
+                              DrumHorizontalControlStrip(
+                                child: Row(
+                                  children: _MatrixPrimaryView.values
+                                      .map(
+                                        (_MatrixPrimaryView view) => Padding(
+                                          padding: const EdgeInsets.only(
+                                            right: 8,
+                                          ),
+                                          child: DrumSelectablePill(
+                                            label: _chipText(
+                                              _viewLabel(view),
+                                              _view == view,
+                                            ),
+                                            selected: _view == view,
+                                            onPressed: () => _selectView(view),
+                                          ),
+                                        ),
+                                      )
+                                      .toList(growable: false),
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              const DrumEyebrow(text: 'Filters'),
+                              const SizedBox(height: 8),
+                              DrumHorizontalControlStrip(
+                                child: Row(children: _buildFilterPills()),
+                              ),
+                              if (progressScopeText != null) ...<Widget>[
+                                const SizedBox(height: 10),
+                                _MatrixScopeLine(text: progressScopeText),
+                              ],
+                              const SizedBox(height: 12),
+                              matrixGrid,
+                              if (_view ==
+                                  _MatrixPrimaryView.progress) ...<Widget>[
+                                const SizedBox(height: 10),
+                                const _ProgressLegendCard(),
+                              ],
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 10),
-                        const DrumEyebrow(text: 'Filters'),
-                        const SizedBox(height: 8),
-                        DrumHorizontalControlStrip(
-                          child: Row(children: _buildFilterPills()),
+                        const SizedBox(width: AppViewport.splitPaneGap),
+                        SizedBox(
+                          width: 340,
+                          child: ListView(children: <Widget>[phrasePanel]),
                         ),
-                        if (progressScopeText != null) ...<Widget>[
-                          const SizedBox(height: 10),
-                          _MatrixScopeLine(text: progressScopeText),
-                        ],
-                        const SizedBox(height: 12),
-                        matrixGrid,
-                        if (_view == _MatrixPrimaryView.progress) ...<Widget>[
-                          const SizedBox(height: 10),
-                          const _ProgressLegendCard(),
-                        ],
                       ],
                     ),
-                  ),
-                  const SizedBox(width: AppViewport.splitPaneGap),
-                  SizedBox(
-                    width: 340,
-                    child: ListView(children: <Widget>[phrasePanel]),
-                  ),
-                ],
-              ),
-            )
+                  )
+                : ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                    children: <Widget>[
+                      const DrumEyebrow(text: 'Look At'),
+                      const SizedBox(height: 8),
+                      DrumHorizontalControlStrip(
+                        child: Row(
+                          children: _MatrixPrimaryView.values
+                              .map(
+                                (_MatrixPrimaryView view) => Padding(
+                                  padding: const EdgeInsets.only(right: 8),
+                                  child: DrumSelectablePill(
+                                    label: _chipText(
+                                      _viewLabel(view),
+                                      _view == view,
+                                    ),
+                                    selected: _view == view,
+                                    onPressed: () => _selectView(view),
+                                  ),
+                                ),
+                              )
+                              .toList(growable: false),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      const DrumEyebrow(text: 'Filters'),
+                      const SizedBox(height: 8),
+                      DrumHorizontalControlStrip(
+                        child: Row(children: _buildFilterPills()),
+                      ),
+                      if (progressScopeText != null) ...<Widget>[
+                        const SizedBox(height: 10),
+                        _MatrixScopeLine(text: progressScopeText),
+                      ],
+                      const SizedBox(height: 12),
+                      matrixGrid,
+                      if (_view == _MatrixPrimaryView.progress) ...<Widget>[
+                        const SizedBox(height: 10),
+                        const _ProgressLegendCard(),
+                      ],
+                    ],
+                  )
           : ListView(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
               children: <Widget>[
@@ -233,9 +279,6 @@ class _MatrixScreenState extends State<MatrixScreen> {
 
   bool get _isEditingFromPracticeItem =>
       widget.request?.editingItemId != null && widget.onFinishEditing != null;
-
-  bool get _prefersSaveToWorkingOn =>
-      widget.request?.prefersSaveToWorkingOn ?? false;
 
   bool get _selectionIsInRoutine {
     final String? itemId = _selectionRoutineItemId;
@@ -301,16 +344,10 @@ class _MatrixScreenState extends State<MatrixScreen> {
           label: Text(
             _isEditingFromPracticeItem
                 ? 'Back to Working On'
-                : _prefersSaveToWorkingOn
-                ? 'Save to Working On'
                 : _selectionIsInRoutine
                 ? 'In Working On'
                 : 'Add to Working On',
           ),
-          prominent:
-              !_isEditingFromPracticeItem &&
-              !_selectionIsInRoutine &&
-              _prefersSaveToWorkingOn,
           onPressed: _isEditingFromPracticeItem
               ? (_selectedItemIds.isEmpty ? null : _finishEditing)
               : _selectionIsInRoutine
@@ -568,8 +605,7 @@ class _MatrixScreenState extends State<MatrixScreen> {
     return request.lane == null &&
         request.filters.isEmpty &&
         request.selectedItemIds.isEmpty &&
-        request.editingItemId == null &&
-        !request.prefersSaveToWorkingOn;
+        request.editingItemId == null;
   }
 
   Set<TriadMatrixFilterV1> _normalizedIncomingFilters(

@@ -1415,6 +1415,7 @@ Practice Item lets the user inspect and edit one item cleanly.
 - Practice Item should have one primary notation block at the top of the screen
 - when flow voices exist, that top block should become the unified two-row pattern/voice display
 - the `Flow Voices` section should contain voice editing controls only, not a second notation preview
+- rest positions should keep `_` as the canonical stored token but render as `•` in user-facing notation
 - `Practice Item` may wrap the shared notation renderer with selection affordances, but it should not introduce a separate notation rendering style
 - the `Practice Item` selection wrapper may add only a small tap-target halo around each rendered note; it must not widen note slots or separator spacing into a second independent layout model
 - any `Practice Item` note-selection wrapper must derive its slot and separator measurements from the shared renderer geometry rather than fixed local spacing constants
@@ -1426,6 +1427,7 @@ Practice Item lets the user inspect and edit one item cleanly.
 - kick notes should not be assignable through this editing surface
 - non-hand positions may still be selected for structure editing even though they are not assignable through the dynamics/voice controls
 - structure editing should support replace, insert, delete, rest insertion, and triad-helper insertion inside the same `Practice Item` surface
+- when direct structure edits break an inherited grouping shape, the stale grouping hint should clear instead of continuing to render separators that no longer fit the edited pattern
 - triad-helper insertion inside `Practice Item` should use the same shared triad-grid rendering language as Matrix, even if the insert modal or sheet carries a reduced control set
 - Matrix selection and phrase building must not inject authored markings automatically
 - item edits should live in a local draft until the user explicitly saves them

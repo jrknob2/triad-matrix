@@ -687,6 +687,7 @@ Practice Item is the detail/edit screen for one piece of material.
 - popup dialogs across the app should stay visually aligned with the app's own dialog motif rather than default tinted Material styling
 - when the item has flow voices, that primary notation block should render as a unified two-row pattern/voice display
 - the `Flow Voices` section should contain editing controls, not a second notation preview
+- rest positions should keep `_` as the canonical stored token but render as `•` in user-facing notation
 - the `Practice Item` note-selection affordance may add only a small tap-target halo around the shared renderer; it should not create a wider second spacing model for note slots or separators
 - the `Practice Item` note-selection affordance should derive its slot and separator sizing from the shared renderer geometry instead of fixed local constants
 - `Practice Item` should contain a `Pattern Structure` section for direct token-sequence editing
@@ -697,6 +698,7 @@ Practice Item is the detail/edit screen for one piece of material.
 - non-hand positions may still be selected for structure editing even though they are not assignable for dynamics or voices
 - structure edits should stay in the local draft until save, just like dynamics, voices, BPM, and duration
 - the structure editor should support replace, insert, delete, rest insertion, and triad-helper insertion without switching to a different editor mode
+- when direct structure edits break an inherited grouping shape, the stale grouping hint should clear instead of continuing to render separators that no longer fit the edited pattern
 - triad-helper insertion inside `Practice Item` should use the same shared triad-grid rendering language as Matrix, even if the modal or sheet wrapper is simpler
 - `Practice Item` should stay authoring-focused and should not contain direct practice-launch buttons
 - `Practice Item` is the primary screen for creating a new pattern from scratch

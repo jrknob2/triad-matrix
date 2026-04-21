@@ -553,6 +553,13 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     final List<String> symbols = _draftTokens
         .map((PatternTokenV1 token) => token.symbol)
         .toList(growable: false);
+    final int? groupSize = _draftGrouping.groupSize;
+    if (groupSize != null &&
+        (_draftTokens.isEmpty ||
+            _draftTokens.any((PatternTokenV1 token) => token.isRest) ||
+            _draftTokens.length % groupSize != 0)) {
+      _draftGrouping = PatternGroupingV1.none;
+    }
     _accentedNoteIndices =
         _accentedNoteIndices
             .where(

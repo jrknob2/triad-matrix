@@ -12,6 +12,18 @@ void main() {
     });
 
     test(
+      'uses bullet for user-facing rest display while keeping underscore canonical',
+      () {
+        final PatternSequenceV1 sequence = PatternSequenceV1.parse('RL_K');
+
+        expect(sequence.canonicalText, 'RL_K');
+        expect(sequence.toDisplayText(PatternGroupingV1.none), 'RL•K');
+        expect(PatternTokenV1.rest.symbol, '_');
+        expect(PatternTokenV1.rest.notationSymbol, '•');
+      },
+    );
+
+    test(
       'legacy practice item inputs resolve to canonical sequence storage',
       () {
         final PracticeItemV1 item = PracticeItemV1(

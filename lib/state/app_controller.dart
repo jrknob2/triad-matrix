@@ -4180,7 +4180,7 @@ class AppController extends ChangeNotifier {
       PracticeItemV1(
         id: _customItemId('rll_rest_lr'),
         family: MaterialFamilyV1.custom,
-        name: 'RLL-_LR',
+        name: 'RLL-•LR',
         sequence: PatternSequenceV1.parse('RLL _ LR'),
         groupingHint: PatternGroupingV1.triads,
         accentedNoteIndices: const <int>[],
@@ -4193,7 +4193,7 @@ class AppController extends ChangeNotifier {
       PracticeItemV1(
         id: _customItemId('rl_rest_k'),
         family: MaterialFamilyV1.custom,
-        name: 'RL_K',
+        name: 'RL•K',
         sequence: PatternSequenceV1.parse('RL_K'),
         groupingHint: PatternGroupingV1.none,
         accentedNoteIndices: const <int>[],

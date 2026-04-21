@@ -222,7 +222,12 @@ class PatternTokenV1 {
     PatternTokenKindV1.rest => '_',
   };
 
-  String get notationSymbol => symbol;
+  String get notationSymbol => switch (kind) {
+    PatternTokenKindV1.right => 'R',
+    PatternTokenKindV1.left => 'L',
+    PatternTokenKindV1.kick => 'K',
+    PatternTokenKindV1.rest => '•',
+  };
 
   bool get isRest => kind == PatternTokenKindV1.rest;
   bool get isKick => kind == PatternTokenKindV1.kick;
@@ -287,7 +292,7 @@ class PatternSequenceV1 {
     if (tokens.isEmpty) return '';
     final StringBuffer buffer = StringBuffer();
     for (int index = 0; index < tokens.length; index++) {
-      buffer.write(tokens[index].symbol);
+      buffer.write(tokens[index].notationSymbol);
       buffer.write(groupingHint.separatorAfter(index, tokens.length));
     }
     return buffer.toString();
