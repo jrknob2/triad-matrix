@@ -47,7 +47,19 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     return AnimatedBuilder(
       animation: widget.controller,
       builder: (BuildContext context, _) {
-        final PracticeItemV1 item = widget.controller.itemById(widget.itemId);
+        final PracticeItemV1? item = widget.controller.itemByIdOrNull(
+          widget.itemId,
+        );
+        if (item == null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            final NavigatorState navigator = Navigator.of(context);
+            if (navigator.canPop()) {
+              navigator.pop();
+            }
+          });
+          return const Scaffold(body: SizedBox.shrink());
+        }
         final bool isDraftItem = !item.saved;
         final bool supportsMatrixEditing = _supportsMatrixEditingDraft();
         final Duration totalTime = widget.controller.totalTime(itemId: item.id);
