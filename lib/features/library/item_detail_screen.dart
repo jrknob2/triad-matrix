@@ -477,10 +477,10 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   }
 
   Future<List<PatternTokenV1>?> _showTriadInsertDialog() async {
-    String? localSelectedItemId;
-    final String? selectedItemId = await showDialog<String>(
+    final List<String>? selectedItemIds = await showDialog<List<String>>(
       context: context,
       builder: (BuildContext context) {
+        final List<String> localSelectedItemIds = <String>[];
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setModalState) {
             return Dialog(
@@ -501,7 +501,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Pick a triad from the shared matrix grid, then insert it into the pattern.',
+                        'Pick one or more triads from the shared matrix grid, then insert them into the pattern in selection order.',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: const Color(0xFF5B5345),
                         ),
@@ -518,9 +518,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                             selectedColumns: <String>{},
                           ),
                           selection: MatrixSelectionStateV1(
-                            orderedItemIds: localSelectedItemId == null
-                                ? const <String>[]
-                                : <String>[localSelectedItemId!],
+                            orderedItemIds: List<String>.unmodifiable(
+                              localSelectedItemIds,
+                            ),
                           ),
                           showProgressColors: false,
                           axisSelectionEnabled: false,
@@ -528,11 +528,26 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                           onToggleColumn: (_) {},
                           onTapItem: (String itemId) {
                             setModalState(() {
-                              localSelectedItemId = itemId;
+                              if (localSelectedItemIds.contains(itemId)) {
+                                localSelectedItemIds.remove(itemId);
+                              } else {
+                                localSelectedItemIds.add(itemId);
+                              }
                             });
                           },
                         ),
                       ),
+                      if (localSelectedItemIds.isNotEmpty) ...<Widget>[
+                        const SizedBox(height: 10),
+                        Text(
+                          '${localSelectedItemIds.length} triad${localSelectedItemIds.length == 1 ? '' : 's'} selected',
+                          style: Theme.of(context).textTheme.labelLarge
+                              ?.copyWith(
+                                color: const Color(0xFF5B5345),
+                                fontWeight: FontWeight.w800,
+                              ),
+                        ),
+                      ],
                       const SizedBox(height: 12),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
@@ -543,11 +558,11 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                           ),
                           const SizedBox(width: 8),
                           FilledButton(
-                            onPressed: localSelectedItemId == null
+                            onPressed: localSelectedItemIds.isEmpty
                                 ? null
-                                : () => Navigator.of(
-                                    context,
-                                  ).pop(localSelectedItemId),
+                                : () => Navigator.of(context).pop(
+                                    List<String>.from(localSelectedItemIds),
+                                  ),
                             child: const Text('Insert'),
                           ),
                         ],
@@ -561,11 +576,12 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         );
       },
     );
-    if (!mounted || selectedItemId == null) return null;
-    return List<PatternTokenV1>.from(
-      widget.controller.itemById(selectedItemId).tokens,
-      growable: false,
-    );
+    if (!mounted || selectedItemIds == null || selectedItemIds.isEmpty) {
+      return null;
+    }
+    return selectedItemIds
+        .expand((String itemId) => widget.controller.itemById(itemId).tokens)
+        .toList(growable: false);
   }
 
   Future<void> _insertTriadTokens({required bool beforeSelection}) async {

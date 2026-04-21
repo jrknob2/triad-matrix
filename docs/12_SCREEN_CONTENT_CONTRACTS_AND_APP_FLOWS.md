@@ -1428,6 +1428,7 @@ Practice Item lets the user inspect and edit one item cleanly.
 - kick notes should not be assignable through this editing surface
 - non-hand positions may still be selected for structure editing even though they are not assignable through the dynamics/voice controls
 - structure editing should support replace, insert, delete, rest insertion, and triad-helper insertion inside the same `Practice Item` surface
+- triad-helper insertion should allow selecting one or more triads and should insert them in the order selected
 - deleting the entire current token sequence should be allowed and should return the draft to that stable empty-row state
 - when direct structure edits break an inherited grouping shape, the stale grouping hint should clear instead of continuing to render separators that no longer fit the edited pattern
 - triad-helper insertion inside `Practice Item` should use the same shared triad-grid rendering language as Matrix, even if the insert modal or sheet carries a reduced control set
