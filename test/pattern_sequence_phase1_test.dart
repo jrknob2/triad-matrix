@@ -66,5 +66,40 @@ void main() {
         expect(item.groupingHint, PatternGroupingV1.none);
       },
     );
+
+    test(
+      'timing metadata is separate from grouping and defaults to auto playback timing',
+      () {
+        final PracticeItemV1 item = PracticeItemV1(
+          id: 'timing_meta_only',
+          family: MaterialFamilyV1.custom,
+          name: 'RLL•RRL',
+          sequence: PatternSequenceV1.parse('RLL_RRL'),
+          groupingHint: PatternGroupingV1.triads,
+          accentedNoteIndices: const <int>[],
+          ghostNoteIndices: const <int>[],
+          voiceAssignments: const <DrumVoiceV1>[],
+          source: PracticeItemSourceV1.userDefined,
+          tags: const <String>[],
+          saved: true,
+        );
+
+        expect(item.timing, const PatternTimingV1.auto());
+        expect(item.groupingHint, PatternGroupingV1.triads);
+
+        final PracticeItemV1 explicitTimingItem = item.copyWith(
+          timing: const PatternTimingV1.explicit(
+            spans: <PatternTimingSpanV1>[
+              PatternTimingSpanV1(startIndex: 0, tokenCount: 3, beatCount: 1),
+              PatternTimingSpanV1(startIndex: 3, tokenCount: 4, beatCount: 1),
+            ],
+          ),
+        );
+
+        expect(explicitTimingItem.timing.usesExplicitSpans, isTrue);
+        expect(explicitTimingItem.groupingHint, PatternGroupingV1.triads);
+        expect(explicitTimingItem.timing.spans.length, 2);
+      },
+    );
   });
 }

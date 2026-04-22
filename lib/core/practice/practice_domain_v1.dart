@@ -22,6 +22,8 @@ enum PracticeSessionEndBehaviorV1 { openSummary, returnToPrevious }
 
 enum PatternTokenKindV1 { right, left, kick, rest }
 
+enum PatternTimingModeV1 { autoByGrouping, explicitSpans }
+
 enum DrumVoiceV1 { snare, rackTom, tom2, floorTom, hihat, kick }
 
 enum LearningLaneV1 { control, balance, dynamics, integration, phrasing, flow }
@@ -305,6 +307,81 @@ class PatternSequenceV1 {
 }
 
 @immutable
+class PatternTimingSpanV1 {
+  final int startIndex;
+  final int tokenCount;
+  final double beatCount;
+
+  const PatternTimingSpanV1({
+    required this.startIndex,
+    required this.tokenCount,
+    required this.beatCount,
+  }) : assert(startIndex >= 0),
+       assert(tokenCount > 0),
+       assert(beatCount > 0);
+
+  PatternTimingSpanV1 copyWith({
+    int? startIndex,
+    int? tokenCount,
+    double? beatCount,
+  }) {
+    return PatternTimingSpanV1(
+      startIndex: startIndex ?? this.startIndex,
+      tokenCount: tokenCount ?? this.tokenCount,
+      beatCount: beatCount ?? this.beatCount,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is PatternTimingSpanV1 &&
+        other.startIndex == startIndex &&
+        other.tokenCount == tokenCount &&
+        other.beatCount == beatCount;
+  }
+
+  @override
+  int get hashCode => Object.hash(startIndex, tokenCount, beatCount);
+}
+
+@immutable
+class PatternTimingV1 {
+  final PatternTimingModeV1 mode;
+  final List<PatternTimingSpanV1> spans;
+
+  PatternTimingV1({
+    this.mode = PatternTimingModeV1.autoByGrouping,
+    List<PatternTimingSpanV1>? spans,
+  }) : spans = List<PatternTimingSpanV1>.unmodifiable(spans ?? const []);
+
+  const PatternTimingV1.auto()
+    : mode = PatternTimingModeV1.autoByGrouping,
+      spans = const <PatternTimingSpanV1>[];
+
+  const PatternTimingV1.explicit({required this.spans})
+    : mode = PatternTimingModeV1.explicitSpans;
+
+  PatternTimingV1 copyWith({
+    PatternTimingModeV1? mode,
+    List<PatternTimingSpanV1>? spans,
+  }) {
+    return PatternTimingV1(mode: mode ?? this.mode, spans: spans ?? this.spans);
+  }
+
+  bool get usesExplicitSpans => mode == PatternTimingModeV1.explicitSpans;
+
+  @override
+  bool operator ==(Object other) {
+    return other is PatternTimingV1 &&
+        other.mode == mode &&
+        listEquals(other.spans, spans);
+  }
+
+  @override
+  int get hashCode => Object.hash(mode, Object.hashAll(spans));
+}
+
+@immutable
 class PracticeLaunchPreferenceV1 {
   final String practiceItemId;
   final int bpm;
@@ -348,6 +425,13 @@ class PracticeItemV1 {
   /// stored on the item.
   final PatternGroupingV1 groupingHint;
 
+  /// Playback timing metadata.
+  ///
+  /// Grouping stays a display/pedagogy hint. Timing is the playback contract.
+  /// The default auto mode is legacy-safe for existing drills. Explicit spans
+  /// allow advanced fills or phrases to diverge from visible grouping later.
+  final PatternTimingV1 timing;
+
   /// Zero-based note indices the user has explicitly marked as accents.
   final List<int> accentedNoteIndices;
 
@@ -373,6 +457,7 @@ class PracticeItemV1 {
     String? sticking,
     int? noteCount,
     PatternGroupingV1? groupingHint,
+    PatternTimingV1? timing,
     required this.accentedNoteIndices,
     required this.ghostNoteIndices,
     required this.voiceAssignments,
@@ -382,6 +467,7 @@ class PracticeItemV1 {
   }) : assert(sequence != null || sticking != null),
        sequence = sequence ?? PatternSequenceV1.parse(sticking ?? ''),
        groupingHint = groupingHint ?? PatternGroupingV1.none,
+       timing = timing ?? const PatternTimingV1.auto(),
        assert(
          noteCount == null ||
              (sequence ?? PatternSequenceV1.parse(sticking ?? ''))
@@ -417,6 +503,7 @@ class PracticeItemV1 {
     String? sticking,
     int? noteCount,
     PatternGroupingV1? groupingHint,
+    PatternTimingV1? timing,
     List<int>? accentedNoteIndices,
     List<int>? ghostNoteIndices,
     List<DrumVoiceV1>? voiceAssignments,
@@ -438,6 +525,7 @@ class PracticeItemV1 {
       name: name ?? this.name,
       sequence: nextSequence,
       groupingHint: groupingHint ?? this.groupingHint,
+      timing: timing ?? this.timing,
       accentedNoteIndices: accentedNoteIndices ?? this.accentedNoteIndices,
       ghostNoteIndices: ghostNoteIndices ?? this.ghostNoteIndices,
       voiceAssignments: voiceAssignments ?? this.voiceAssignments,

@@ -1076,6 +1076,10 @@ class AppController extends ChangeNotifier {
     ).map((PatternTokenV1 token) => token.symbol).toList(growable: false);
   }
 
+  PatternTimingV1 patternTimingFor(String itemId) {
+    return itemById(itemId).timing;
+  }
+
   List<PatternNoteMarkingV1> noteMarkingsFor(String itemId) {
     final PracticeItemV1 item = _sanitizedItem(itemById(itemId));
     final Set<int> accents = item.accentedNoteIndices.toSet();
@@ -1922,6 +1926,7 @@ class AppController extends ChangeNotifier {
     required CompetencyLevelV1 competency,
     PatternSequenceV1? sequence,
     PatternGroupingV1? groupingHint,
+    PatternTimingV1? timing,
     bool saveToWorkingOn = false,
   }) {
     final PracticeItemV1 existingItem = _sanitizedItem(itemById(itemId));
@@ -1944,6 +1949,9 @@ class AppController extends ChangeNotifier {
         : existingItem.family;
     final PatternGroupingV1 nextGroupingHint =
         groupingHint ?? existingItem.groupingHint;
+    final PatternTimingV1 nextTiming =
+        timing ??
+        (structureChanged ? const PatternTimingV1.auto() : existingItem.timing);
     final String nextName = structureChanged
         ? nextSequence.toDisplayText(nextGroupingHint)
         : existingItem.name;
@@ -1966,6 +1974,7 @@ class AppController extends ChangeNotifier {
               name: nextName,
               sequence: nextSequence,
               groupingHint: nextGroupingHint,
+              timing: nextTiming,
               accentedNoteIndices: sanitizedAccents,
               ghostNoteIndices: sanitizedGhosts,
               voiceAssignments: sanitizedVoices,

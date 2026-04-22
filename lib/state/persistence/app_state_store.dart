@@ -222,6 +222,7 @@ class IsarAppStateStore implements AppStateStore {
         'groupSize': item.groupingHint.groupSize,
         'separator': item.groupingHint.separator,
       },
+      'timing': _patternTimingToMap(item.timing),
       'accentedNoteIndices': item.accentedNoteIndices,
       'ghostNoteIndices': item.ghostNoteIndices,
       'voiceAssignments': item.voiceAssignments.map((v) => v.name).toList(),
@@ -244,12 +245,17 @@ class IsarAppStateStore implements AppStateStore {
             (map['tokens'] as List<dynamic>).cast<String>(),
           )
         : PatternSequenceV1.parse((map['sticking'] as String?) ?? '');
+    final Object? rawTiming = map['timing'];
+    final PatternTimingV1 timing = rawTiming is Map<String, dynamic>
+        ? _patternTimingFromMap(rawTiming)
+        : const PatternTimingV1.auto();
     return PracticeItemV1(
       id: map['id'] as String,
       family: MaterialFamilyV1.values.byName(map['family'] as String),
       name: map['name'] as String,
       sequence: sequence,
       groupingHint: groupingHint,
+      timing: timing,
       accentedNoteIndices: (map['accentedNoteIndices'] as List<dynamic>)
           .cast<int>(),
       ghostNoteIndices: (map['ghostNoteIndices'] as List<dynamic>).cast<int>(),
@@ -274,6 +280,45 @@ class IsarAppStateStore implements AppStateStore {
     return PatternGroupingV1(
       groupSize: map['groupSize'] as int?,
       separator: map['separator'] as String? ?? '',
+    );
+  }
+
+  Map<String, dynamic> _patternTimingToMap(PatternTimingV1 timing) {
+    return <String, dynamic>{
+      'mode': timing.mode.name,
+      'spans': timing.spans
+          .map(
+            (PatternTimingSpanV1 span) => <String, dynamic>{
+              'startIndex': span.startIndex,
+              'tokenCount': span.tokenCount,
+              'beatCount': span.beatCount,
+            },
+          )
+          .toList(growable: false),
+    };
+  }
+
+  PatternTimingV1 _patternTimingFromMap(Map<String, dynamic> map) {
+    final List<PatternTimingSpanV1> spans =
+        ((map['spans'] as List<dynamic>?) ?? const <dynamic>[])
+            .map(
+              (dynamic item) =>
+                  _patternTimingSpanFromMap(item as Map<String, dynamic>),
+            )
+            .toList(growable: false);
+    return PatternTimingV1(
+      mode: map['mode'] == null
+          ? PatternTimingModeV1.autoByGrouping
+          : PatternTimingModeV1.values.byName(map['mode'] as String),
+      spans: spans,
+    );
+  }
+
+  PatternTimingSpanV1 _patternTimingSpanFromMap(Map<String, dynamic> map) {
+    return PatternTimingSpanV1(
+      startIndex: map['startIndex'] as int,
+      tokenCount: map['tokenCount'] as int,
+      beatCount: (map['beatCount'] as num).toDouble(),
     );
   }
 

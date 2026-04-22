@@ -10,6 +10,8 @@ import '../../features/app/drumcabulary_ui.dart';
 import '../../state/app_controller.dart';
 import '../../core/practice/practice_domain_v1.dart';
 import 'metronome_service.dart';
+import 'pattern_audio_service.dart';
+import 'pattern_playback_scheduler.dart';
 import 'widgets/pattern_voice_display.dart';
 import 'session_summary_screen.dart';
 
@@ -48,14 +50,18 @@ class _SessionTransportState {
 class PracticeSessionRuntimeMath {
   static int? activeTokenIndex({
     required List<PatternTokenV1> tokens,
+    required PatternGroupingV1 grouping,
+    required PatternTimingV1 timing,
     required Duration elapsed,
     required int bpm,
   }) {
-    if (tokens.isEmpty || bpm <= 0 || elapsed.isNegative) return null;
-    final double microsPerBeat = Duration.microsecondsPerMinute / bpm;
-    final int beatIndex = (elapsed.inMicroseconds / microsPerBeat).floor();
-    if (beatIndex < 0) return null;
-    return beatIndex % tokens.length;
+    return PatternPlaybackSchedulerV1.activeTokenIndex(
+      tokens: tokens,
+      grouping: grouping,
+      timing: timing,
+      elapsed: elapsed,
+      bpm: bpm,
+    );
   }
 }
 
@@ -65,6 +71,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
 
   final Stopwatch _stopwatch = Stopwatch();
   late final PracticeMetronomeService _metronome;
+  late final PatternAudioService _patternAudio;
   Timer? _elapsedTicker;
   bool _running = false;
   bool _warmupComplete = false;
@@ -80,6 +87,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   late bool _pulseEnabled;
   late int _bpm;
   late bool _clickEnabled;
+  bool _patternAudioEnabled = false;
   late PracticeSessionSetupV1 _setup;
   Duration? _currentItemSegmentStartElapsed;
   int _currentItemIndex = 0;
@@ -95,7 +103,8 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     _clickEnabled = _isWarmup ? false : _setup.clickEnabled;
     _pulseEnabled = !_isWarmup;
     _metronome = PracticeMetronomeService(assetPath: _metronomeAssetPath);
-    _configureMetronome();
+    _patternAudio = PatternAudioService();
+    unawaited(_configureAudio());
   }
 
   @override
@@ -104,6 +113,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     _discardEphemeralItemsIfNeeded();
     _elapsedTicker?.cancel();
     unawaited(_metronome.dispose());
+    unawaited(_patternAudio.dispose());
     super.dispose();
   }
 
@@ -739,6 +749,12 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
             value: _pulseEnabled,
             onChanged: _updatePulseEnabled,
           ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Hear Pattern'),
+            value: _patternAudioEnabled,
+            onChanged: _updatePatternAudioEnabled,
+          ),
         ],
       ),
     );
@@ -774,6 +790,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
         _stopwatch.stop();
         _elapsedTicker?.cancel();
         unawaited(_metronome.stop());
+        unawaited(_patternAudio.stop());
       }
     });
     widget.onFocusModeChanged?.call(shouldStart);
@@ -786,6 +803,9 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
             pulseEnabled: _pulseEnabled,
           ),
         );
+      }
+      if (_patternAudioEnabled) {
+        unawaited(_startPatternAudioForCurrentItem());
       }
     }
   }
@@ -880,6 +900,9 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     if (_running && _shouldRunMetronome) {
       unawaited(_metronome.updateBpm(bpm: _bpm));
     }
+    if (_running && _patternAudioEnabled) {
+      unawaited(_startPatternAudioForCurrentItem());
+    }
   }
 
   void _resetRunState({
@@ -899,6 +922,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     }
     _elapsedTicker?.cancel();
     unawaited(_metronome.stop());
+    unawaited(_patternAudio.stop());
     _running = false;
     if (clearFlags) {
       _warmupComplete = false;
@@ -999,6 +1023,8 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     if (!_running && _elapsed == Duration.zero) return null;
     return PracticeSessionRuntimeMath.activeTokenIndex(
       tokens: tokens,
+      grouping: widget.controller.displayGroupingFor(_currentItemId),
+      timing: widget.controller.patternTimingFor(_currentItemId),
       elapsed: _tokenCycleElapsedForCurrentItem(),
       bpm: _bpm,
     );
@@ -1096,6 +1122,9 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     if (_running && _shouldRunMetronome) {
       unawaited(_metronome.updateBpm(bpm: nextBpm));
     }
+    if (_running && _patternAudioEnabled) {
+      unawaited(_startPatternAudioForCurrentItem());
+    }
   }
 
   void _updateClickEnabled(bool value) {
@@ -1138,11 +1167,42 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     unawaited(_metronome.setPulseEnabled(value));
   }
 
-  Future<void> _configureMetronome() async {
+  void _updatePatternAudioEnabled(bool value) {
+    setState(() {
+      _patternAudioEnabled = value;
+    });
+    if (!_running) {
+      if (!value) {
+        unawaited(_patternAudio.stop());
+      }
+      return;
+    }
+    if (value) {
+      unawaited(_startPatternAudioForCurrentItem());
+    } else {
+      unawaited(_patternAudio.stop());
+    }
+  }
+
+  Future<void> _configureAudio() async {
     await _metronome.prepare();
+    await _patternAudio.prepare();
   }
 
   bool get _shouldRunMetronome => _clickEnabled || _pulseEnabled;
+
+  Future<void> _startPatternAudioForCurrentItem() async {
+    final String itemId = _currentItemId;
+    await _patternAudio.start(
+      tokens: widget.controller.patternTokensFor(itemId),
+      markings: widget.controller.noteMarkingsFor(itemId),
+      voices: widget.controller.noteVoicesFor(itemId),
+      grouping: widget.controller.displayGroupingFor(itemId),
+      timing: widget.controller.patternTimingFor(itemId),
+      bpm: _bpm,
+      startElapsed: _tokenCycleElapsedForCurrentItem(),
+    );
+  }
 
   void _markCurrentItemPracticed() {
     if (_isWarmup) return;

@@ -419,6 +419,12 @@ Must do:
 - after the final pattern reaches its target duration, the player should chime, wrap back to the first pattern, and continue running with total elapsed time preserved
 - Practice Session stepping/highlighting should follow canonical token positions rather than triad chunks or family labels
 - rest/pause positions should occupy one full timed slot in the player and participate in stepping/highlighting the same way as note positions
+- Practice Session audible pattern playback should use canonical token positions plus timing metadata rather than grouping or family labels as timing truth
+- audible pattern playback should be optional from the existing Practice Session controls, so the user can hear the current pattern without changing timer, rep, or session-end behavior
+- grouping may provide a default simple timing interpretation for drills, but explicit timing metadata must be able to override grouping for advanced fills or phrases without introducing a new runtime mode
+- the default simple timing interpretation should be:
+  - compatible grouping size -> one grouping per beat
+  - otherwise -> one token per beat
 - click playback should use a preloaded low-latency trigger path rather than repeatedly retriggering one shared media player instance
 - when native metronome playback is active, the visual pulse should derive from the native audio playback phase rather than an event-channel beat callback or an independent Dart beat clock
 - after native beat onset is detected, the player may hold the visual pulse briefly for readability, but the beat onset itself must still come from the native playback phase
@@ -688,6 +694,7 @@ Practice Item is the detail/edit screen for one piece of material.
 - when the item has flow voices, that primary notation block should render as a unified two-row pattern/voice display
 - the `Flow Voices` section should contain editing controls, not a second notation preview
 - rest positions should keep `_` as the canonical stored token but render as `•` in user-facing notation
+- Practice Item may later expose timing controls, but grouping and timing must remain separate concepts in the data model and playback path
 - the `Practice Item` note-selection affordance may add only a small tap-target halo around the shared renderer; it should not create a wider second spacing model for note slots or separators
 - the `Practice Item` note-selection affordance should derive its slot and separator sizing from the shared renderer geometry instead of fixed local constants
 - `Practice Item` should contain a `Pattern Structure` section for direct token-sequence editing

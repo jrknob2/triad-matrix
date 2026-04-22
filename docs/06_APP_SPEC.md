@@ -25,6 +25,7 @@ V1 remains triad-first pedagogically, but the canonical playable-material model 
 - one timed position per token
 - support for note tokens and first-class rest/pause tokens
 - optional grouping hints as display/pedagogy metadata, not structure
+- optional timing metadata as playback truth, separate from grouping
 
 The app is not a neutral pattern bucket. It is a guided practice system.
 
@@ -40,6 +41,10 @@ Active v1 data-model rule:
 - normal editing should update that authored item directly rather than silently splitting it into a base item plus variant
 - rest/pause is a first-class timed token, not whitespace or a display hack
 - grouping is optional metadata for readability and teaching, not runtime structure
+- timing metadata is optional playback structure; when present, it overrides grouping-derived defaults for playback without creating a new pattern type
+- default playback timing for simple drills should be:
+  - if grouping has a compatible group size, one grouping = one beat and token duration = beat / group size
+  - otherwise, one token = one beat as the legacy-safe fallback
 - if an item needs visible grouping, that grouping should be stored explicitly on the item; runtime/controller code should not infer grouping from family or other metadata outside localized legacy migration
 - flow / single-surface should be derived from authored orchestration state or explicit UI intent as metadata, not as a separate runtime engine shape
 - when a session is explicitly launched in `Flow` or `Single Surface`, that chosen session-mode metadata should be preserved in setup, logging, replay, and history rather than being recomputed later from changed item state

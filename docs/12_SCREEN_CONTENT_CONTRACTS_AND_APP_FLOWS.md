@@ -49,6 +49,7 @@ Canonical pattern-model rule:
 - triads, 4-note patterns, 5-note patterns, phrases, flow, and single-surface may still appear as product language, tags, filters, or pedagogy cues, but they must not define parsing, storage structure, renderer choice, playback shape, or session stepping
 - grouping is optional metadata for readability and teaching only
 - grouping may affect display spacing and labels, but it must not create a separate runtime model
+- timing metadata is optional playback structure and must remain separate from grouping metadata
 - if a pattern needs visible grouping, that grouping should be stored explicitly on the item; controller/runtime code should not infer grouping from family, mode, or tags outside localized legacy migration boundaries
 - item family and practice mode may remain persisted as metadata for labels, filtering, pedagogy, and legacy compatibility, but they must not define canonical structure, grouping defaults, or non-warmup session behavior
 - non-warmup sessions are generic pattern sessions; they should not become different runtime species based on whether the current item reads as triad, phrase, 4-note, 5-note, flow, or single-surface
@@ -1097,6 +1098,12 @@ Practice Session is execution only.
 - when the player moves between items, the item's current runtime BPM must be restored
 - Practice Session stepping/highlighting should operate over canonical token positions rather than triad chunks or family-specific groupings
 - rest/pause tokens should consume one full timed slot in Practice Session and should participate in player stepping/highlighting exactly like note positions
+- audible pattern playback should be driven by canonical token positions plus timing metadata
+- audible pattern playback should remain optional from Practice Session controls and must not change timer flow, earned-rep logic, or session completion behavior when enabled
+- grouping may supply a default simple timing interpretation for straightforward drills, but explicit timing metadata must be able to override grouping cleanly for advanced phrases or fills without creating a new runtime mode
+- default simple timing interpretation:
+  - compatible grouping size -> one grouping per beat
+  - otherwise -> one token per beat
 - in a multi-item session, only patterns that were actually practiced should be recorded into the completed tracked session
 - viewing a pattern without playing it should not make it part of the tracked assessed set
 - when a tracked multi-item session ends, Session Summary should open on the first practiced pattern
