@@ -1421,6 +1421,7 @@ Practice Item lets the user inspect and edit one item cleanly.
 - any `Practice Item` note-selection wrapper must derive its slot and separator measurements from the shared renderer geometry rather than fixed local spacing constants
 - the notation block should be the note-selection surface, so the screen does not need a per-note chip grid for editing
 - `Practice Item` should also contain a `Pattern Structure` section for direct token-sequence editing
+- `Practice Item` should contain an explicit `Grouping` control for visible separator metadata
 - a new blank `Practice Item` draft should open with a stable empty notation row already visible so the layout does not jump on first insertion
 - when entering voice editing, effective default voices remain `snare` for hand notes and `kick` for `K` notes unless the user assigns something else
 - selection should toggle on tap so the user can build or reduce a note set before applying an edit
@@ -1429,6 +1430,8 @@ Practice Item lets the user inspect and edit one item cleanly.
 - non-hand positions may still be selected for structure editing even though they are not assignable through the dynamics/voice controls
 - structure editing should support replace, insert, delete, rest insertion, and triad-helper insertion inside the same `Practice Item` surface
 - triad-helper insertion should allow selecting one or more triads and should insert them in the order selected
+- the `Grouping` control should affect only visible separator metadata, not runtime behavior or family labels
+- the `Grouping` control should expose only group sizes compatible with the current token count, plus `None`
 - deleting the entire current token sequence should be allowed and should return the draft to that stable empty-row state
 - when direct structure edits break an inherited grouping shape, the stale grouping hint should clear instead of continuing to render separators that no longer fit the edited pattern
 - triad-helper insertion inside `Practice Item` should use the same shared triad-grid rendering language as Matrix, even if the insert modal or sheet carries a reduced control set

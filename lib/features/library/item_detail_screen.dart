@@ -141,6 +141,16 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                               _insertTriadTokens(beforeSelection: false),
                         ),
                         const SizedBox(height: 12),
+                        _GroupingControl(
+                          tokenCount: _draftTokens.length,
+                          grouping: _draftGrouping,
+                          onChanged: (PatternGroupingV1 next) {
+                            setState(() {
+                              _draftGrouping = next;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 12),
                         Text(
                           'Accents & Ghosts',
                           style: Theme.of(context).textTheme.titleMedium,
@@ -613,9 +623,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         .toList(growable: false);
     final int? groupSize = _draftGrouping.groupSize;
     if (groupSize != null &&
-        (_draftTokens.isEmpty ||
-            _draftTokens.any((PatternTokenV1 token) => token.isRest) ||
-            _draftTokens.length % groupSize != 0)) {
+        (_draftTokens.isEmpty || _draftTokens.length % groupSize != 0)) {
       _draftGrouping = PatternGroupingV1.none;
     }
     _accentedNoteIndices =
@@ -1171,6 +1179,72 @@ class _StructureEditor extends StatelessWidget {
       ],
     );
   }
+}
+
+class _GroupingControl extends StatelessWidget {
+  final int tokenCount;
+  final PatternGroupingV1 grouping;
+  final ValueChanged<PatternGroupingV1> onChanged;
+
+  const _GroupingControl({
+    required this.tokenCount,
+    required this.grouping,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final List<_GroupingOption> options = <_GroupingOption>[
+      const _GroupingOption(label: 'None', grouping: PatternGroupingV1.none),
+      if (tokenCount > 0 && tokenCount % 3 == 0)
+        const _GroupingOption(label: '3', grouping: PatternGroupingV1.triads),
+      if (tokenCount > 0 && tokenCount % 4 == 0)
+        const _GroupingOption(label: '4', grouping: PatternGroupingV1.fourNote),
+      if (tokenCount > 0 && tokenCount % 5 == 0)
+        const _GroupingOption(label: '5', grouping: PatternGroupingV1.fiveNote),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          'Grouping',
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+            color: const Color(0xFF5B5345),
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 8),
+        if (tokenCount == 0)
+          Text(
+            'Add positions first, then choose how visible separators should group the pattern.',
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: const Color(0xFF5B5345)),
+          )
+        else
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: <Widget>[
+              for (final _GroupingOption option in options)
+                DrumSelectablePill(
+                  label: Text(option.label),
+                  selected: option.grouping == grouping,
+                  onPressed: () => onChanged(option.grouping),
+                ),
+            ],
+          ),
+      ],
+    );
+  }
+}
+
+class _GroupingOption {
+  final String label;
+  final PatternGroupingV1 grouping;
+
+  const _GroupingOption({required this.label, required this.grouping});
 }
 
 class _TokenActionPill extends StatelessWidget {

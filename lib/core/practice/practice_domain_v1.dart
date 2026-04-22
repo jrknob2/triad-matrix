@@ -172,6 +172,11 @@ class PatternGroupingV1 {
     separator: '-',
   );
 
+  static const PatternGroupingV1 fiveNote = PatternGroupingV1(
+    groupSize: 5,
+    separator: '-',
+  );
+
   String separatorAfter(int index, int tokenCount) {
     if (index >= tokenCount - 1) return '';
     final int? size = groupSize;
