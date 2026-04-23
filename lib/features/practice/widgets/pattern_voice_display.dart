@@ -353,10 +353,30 @@ class PatternVoiceDisplay extends StatelessWidget {
     final List<_PatternVoiceChunk> chunks = <_PatternVoiceChunk>[];
     int segmentIndex = 0;
     while (segmentIndex < segments.length) {
+      final _PatternVoiceSegment firstSegment = segments[segmentIndex];
+      if (firstSegment.width > maxWidth) {
+        chunks.addAll(
+          _tokenChunksForWidth(
+            start: firstSegment.start,
+            end: firstSegment.end,
+            maxWidth: maxWidth,
+            separators: separators,
+            tokenGeometry: tokenGeometry,
+            separatorWidth: separatorWidth,
+          ),
+        );
+        segmentIndex += 1;
+        continue;
+      }
+
       double width = 0;
       int endSegmentIndex = segmentIndex;
       while (endSegmentIndex < segments.length) {
-        final double nextWidth = segments[endSegmentIndex].width;
+        final _PatternVoiceSegment nextSegment = segments[endSegmentIndex];
+        if (nextSegment.width > maxWidth) {
+          break;
+        }
+        final double nextWidth = nextSegment.width;
         if (endSegmentIndex > segmentIndex && width + nextWidth > maxWidth) {
           break;
         }
@@ -374,6 +394,37 @@ class PatternVoiceDisplay extends StatelessWidget {
       );
       segmentIndex = endSegmentIndex;
     }
+    return chunks;
+  }
+
+  List<_PatternVoiceChunk> _tokenChunksForWidth({
+    required int start,
+    required int end,
+    required double maxWidth,
+    required List<String> separators,
+    required List<_NotationTokenGeometry> tokenGeometry,
+    required double separatorWidth,
+  }) {
+    final List<_PatternVoiceChunk> chunks = <_PatternVoiceChunk>[];
+    int chunkStart = start;
+    double width = 0;
+
+    for (int index = start; index < end; index += 1) {
+      final double tokenWidth =
+          tokenGeometry[index].width +
+          (separators[index].isNotEmpty ? separatorWidth : 0);
+      if (index > chunkStart && width + tokenWidth > maxWidth) {
+        chunks.add(_PatternVoiceChunk(start: chunkStart, end: index));
+        chunkStart = index;
+        width = 0;
+      }
+      width += tokenWidth;
+    }
+
+    if (chunkStart < end) {
+      chunks.add(_PatternVoiceChunk(start: chunkStart, end: end));
+    }
+
     return chunks;
   }
 
