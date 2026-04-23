@@ -10,6 +10,10 @@ import '../matrix/widgets/triad_matrix_grid.dart';
 import '../practice/widgets/session_setup_controls.dart';
 import '../practice/widgets/pattern_voice_display.dart';
 
+enum _ItemDetailControlSet { append, dynamics, voices }
+
+enum _StructureToolOption { right, left, kick, rest, triad }
+
 class ItemDetailScreen extends StatefulWidget {
   final AppController controller;
   final String itemId;
@@ -35,6 +39,8 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   late int _sessionBpm;
   late TimerPresetV1 _timerPreset;
   late Set<int> _selectedNoteIndices;
+  _ItemDetailControlSet _activeControlSet = _ItemDetailControlSet.append;
+  _StructureToolOption? _pendingStructureTool;
 
   @override
   void initState() {
@@ -119,77 +125,113 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                               ?.copyWith(color: const Color(0xFF5B5345)),
                         ),
                         const SizedBox(height: 12),
-                        Text(
-                          'Pattern Structure',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
+                        const DrumEyebrow(text: 'Filters'),
                         const SizedBox(height: 8),
-                        _StructureEditor(
-                          tokens: _draftTokens,
-                          selectedIndices: _selectedNoteIndices,
-                          onReplace: _replaceSelectionWithToken,
-                          onInsertBefore: (List<PatternTokenV1> inserted) {
-                            _insertTokens(inserted, beforeSelection: true);
-                          },
-                          onInsertAfter: (List<PatternTokenV1> inserted) {
-                            _insertTokens(inserted, beforeSelection: false);
-                          },
-                          onDeleteSelection: _deleteSelection,
-                          onInsertTriadBefore: () =>
-                              _insertTriadTokens(beforeSelection: true),
-                          onInsertTriadAfter: () =>
-                              _insertTriadTokens(beforeSelection: false),
+                        DrumHorizontalControlStrip(
+                          child: Row(
+                            children: _ItemDetailControlSet.values
+                                .map(
+                                  (_ItemDetailControlSet controlSet) => Padding(
+                                    padding: const EdgeInsets.only(right: 8),
+                                    child: DrumSelectablePill(
+                                      label: Text(
+                                        _labelForControlSet(controlSet),
+                                        style: TextStyle(
+                                          color: _activeControlSet == controlSet
+                                              ? Colors.white
+                                              : null,
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                      ),
+                                      selected: _activeControlSet == controlSet,
+                                      onPressed: () {
+                                        setState(() {
+                                          _activeControlSet = controlSet;
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                )
+                                .toList(growable: false),
+                          ),
                         ),
                         const SizedBox(height: 12),
-                        _GroupingControl(
-                          tokenCount: _draftTokens.length,
-                          grouping: _draftGrouping,
-                          onChanged: (PatternGroupingV1 next) {
-                            setState(() {
-                              _draftGrouping = next;
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Accents & Ghosts',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 8),
-                        _SelectedMarkingEditor(
-                          tokens: tokens,
-                          markings: draftMarkings,
-                          selectedIndices: _selectedNoteIndices,
-                          onChanged: (PatternNoteMarkingV1 next) {
-                            _setMarkingForSelection(next);
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Flow Voices',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 8),
-                        _SelectedVoiceEditor(
-                          tokens: tokens,
-                          voices: _voiceAssignments,
-                          selectedIndices: _selectedNoteIndices,
-                          onChanged: (DrumVoiceV1 next) {
-                            _setVoiceForSelection(next);
-                          },
-                        ),
-                        if (flowCapable) ...<Widget>[
+                        if (_activeControlSet ==
+                            _ItemDetailControlSet.append) ...<Widget>[
+                          Text(
+                            'Pattern Structure',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
                           const SizedBox(height: 8),
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: OutlinedButton(
-                              onPressed: _clearVoices,
-                              child: const Text('Clear Voices'),
-                            ),
+                          _StructureEditor(
+                            tokens: _draftTokens,
+                            selectedIndices: _selectedNoteIndices,
+                            selectedTool: _pendingStructureTool,
+                            onToolChanged: (_StructureToolOption? next) {
+                              setState(() {
+                                _pendingStructureTool = next;
+                              });
+                            },
+                            onInsertBefore: _applyPendingInsertBefore,
+                            onInsertAfter: _applyPendingInsertAfter,
+                            onReplaceSelection: _applyPendingReplaceSelection,
+                            onDeleteSelection: _deleteSelection,
+                          ),
+                          const SizedBox(height: 12),
+                          _GroupingControl(
+                            tokenCount: _draftTokens.length,
+                            grouping: _draftGrouping,
+                            onChanged: (PatternGroupingV1 next) {
+                              setState(() {
+                                _draftGrouping = next;
+                              });
+                            },
                           ),
                         ],
-                        const SizedBox(height: 12),
-                        _FlowReadinessNote(ready: flowCapable),
+                        if (_activeControlSet ==
+                            _ItemDetailControlSet.dynamics) ...<Widget>[
+                          Text(
+                            'Accents & Ghosts',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 8),
+                          _SelectedMarkingEditor(
+                            tokens: tokens,
+                            markings: draftMarkings,
+                            selectedIndices: _selectedNoteIndices,
+                            onChanged: (PatternNoteMarkingV1 next) {
+                              _setMarkingForSelection(next);
+                            },
+                          ),
+                        ],
+                        if (_activeControlSet ==
+                            _ItemDetailControlSet.voices) ...<Widget>[
+                          Text(
+                            'Flow Voices',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 8),
+                          _SelectedVoiceEditor(
+                            tokens: tokens,
+                            voices: _voiceAssignments,
+                            selectedIndices: _selectedNoteIndices,
+                            onChanged: (DrumVoiceV1 next) {
+                              _setVoiceForSelection(next);
+                            },
+                          ),
+                          if (flowCapable) ...<Widget>[
+                            const SizedBox(height: 8),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: OutlinedButton(
+                                onPressed: _clearVoices,
+                                child: const Text('Clear Voices'),
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 12),
+                          _FlowReadinessNote(ready: flowCapable),
+                        ],
                       ],
                     ),
                   ),
@@ -378,6 +420,14 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     });
   }
 
+  String _labelForControlSet(_ItemDetailControlSet controlSet) {
+    return switch (controlSet) {
+      _ItemDetailControlSet.append => 'Append',
+      _ItemDetailControlSet.dynamics => 'Dynamics',
+      _ItemDetailControlSet.voices => 'Voices',
+    };
+  }
+
   bool _hasDraftFlowVoices(List<String> tokens, List<DrumVoiceV1> voices) {
     for (int index = 0; index < tokens.length; index++) {
       if (tokens[index] == 'K' || tokens[index] == '_') continue;
@@ -393,20 +443,6 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
 
   DrumVoiceV1 _defaultVoiceForDraftToken(PatternTokenV1 token) {
     return token.isKick ? DrumVoiceV1.kick : DrumVoiceV1.snare;
-  }
-
-  void _replaceSelectionWithToken(PatternTokenV1 token) {
-    if (_selectedNoteIndices.length != 1) return;
-    final int index = _selectedNoteIndices.first;
-    final List<PatternTokenV1> nextTokens = List<PatternTokenV1>.from(
-      _draftTokens,
-    );
-    nextTokens[index] = token;
-    setState(() {
-      _draftTokens = nextTokens;
-      _normalizeDraftStructure();
-      _selectedNoteIndices = <int>{};
-    });
   }
 
   void _insertTokens(
@@ -440,6 +476,56 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         _voiceAssignments,
       )..insertAll(insertAt, inserted.map(_defaultVoiceForDraftToken));
       _voiceAssignments = nextVoices;
+      if (groupingOverride != null) {
+        _draftGrouping = groupingOverride;
+      }
+      _normalizeDraftStructure();
+      _selectedNoteIndices = <int>{};
+    });
+  }
+
+  void _replaceSelectionWithTokens(
+    List<PatternTokenV1> replacement, {
+    PatternGroupingV1? groupingOverride,
+  }) {
+    final List<int> sortedSelection = _selectedNoteIndices.toList()..sort();
+    if (sortedSelection.isEmpty) return;
+    final Set<int> selected = sortedSelection.toSet();
+    final int insertAt = sortedSelection.first;
+    final List<PatternTokenV1> nextTokens = <PatternTokenV1>[];
+    final List<DrumVoiceV1> nextVoices = <DrumVoiceV1>[];
+    final Map<int, int> nextIndexByOld = <int, int>{};
+
+    for (int index = 0; index < _draftTokens.length; index++) {
+      if (index == insertAt) {
+        nextTokens.addAll(replacement);
+        nextVoices.addAll(replacement.map(_defaultVoiceForDraftToken));
+      }
+      if (selected.contains(index)) continue;
+      nextIndexByOld[index] = nextTokens.length;
+      nextTokens.add(_draftTokens[index]);
+      nextVoices.add(
+        index < _voiceAssignments.length
+            ? _voiceAssignments[index]
+            : _defaultVoiceForDraftToken(_draftTokens[index]),
+      );
+    }
+
+    setState(() {
+      _draftTokens = nextTokens;
+      _voiceAssignments = nextVoices;
+      _accentedNoteIndices =
+          _accentedNoteIndices
+              .where(nextIndexByOld.containsKey)
+              .map((int index) => nextIndexByOld[index]!)
+              .toList(growable: false)
+            ..sort();
+      _ghostNoteIndices =
+          _ghostNoteIndices
+              .where(nextIndexByOld.containsKey)
+              .map((int index) => nextIndexByOld[index]!)
+              .toList(growable: false)
+            ..sort();
       if (groupingOverride != null) {
         _draftGrouping = groupingOverride;
       }
@@ -594,27 +680,106 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         .toList(growable: false);
   }
 
-  Future<void> _insertTriadTokens({required bool beforeSelection}) async {
-    final List<PatternTokenV1>? triad = await _showTriadInsertDialog();
-    if (!mounted || triad == null || triad.isEmpty) return;
-    final List<int> sortedIndices = _selectedNoteIndices.toList()..sort();
-    final int insertAt = sortedIndices.isEmpty
-        ? _draftTokens.length
-        : (beforeSelection ? sortedIndices.first : sortedIndices.last + 1);
-    final List<PatternTokenV1> nextTokens = List<PatternTokenV1>.from(
-      _draftTokens,
-    )..insertAll(insertAt, triad);
+  PatternGroupingV1 _groupingAfterTriadStructureChange(
+    List<PatternTokenV1> nextTokens,
+  ) {
     final bool canKeepTriadGrouping =
         nextTokens.isNotEmpty &&
         !nextTokens.any((PatternTokenV1 token) => token.isRest) &&
         nextTokens.length % 3 == 0;
-    _insertTokens(
-      triad,
-      beforeSelection: beforeSelection,
-      groupingOverride: canKeepTriadGrouping
-          ? PatternGroupingV1.triads
-          : _draftGrouping,
+    return canKeepTriadGrouping ? PatternGroupingV1.triads : _draftGrouping;
+  }
+
+  Future<List<PatternTokenV1>?> _tokensForPendingStructureTool() async {
+    return switch (_pendingStructureTool) {
+      _StructureToolOption.right => const <PatternTokenV1>[
+        PatternTokenV1.right,
+      ],
+      _StructureToolOption.left => const <PatternTokenV1>[PatternTokenV1.left],
+      _StructureToolOption.kick => const <PatternTokenV1>[PatternTokenV1.kick],
+      _StructureToolOption.rest => const <PatternTokenV1>[PatternTokenV1.rest],
+      _StructureToolOption.triad => _showTriadInsertDialog(),
+      null => null,
+    };
+  }
+
+  Future<void> _applyPendingInsertBefore() async {
+    final List<PatternTokenV1>? inserted =
+        await _tokensForPendingStructureTool();
+    if (!mounted || inserted == null || inserted.isEmpty) return;
+    if (_pendingStructureTool == _StructureToolOption.triad) {
+      final List<int> sortedSelection = _selectedNoteIndices.toList()..sort();
+      final int insertAt = sortedSelection.isEmpty
+          ? _draftTokens.length
+          : sortedSelection.first;
+      final List<PatternTokenV1> nextTokens = List<PatternTokenV1>.from(
+        _draftTokens,
+      )..insertAll(insertAt, inserted);
+      _insertTokens(
+        inserted,
+        beforeSelection: true,
+        groupingOverride: _groupingAfterTriadStructureChange(nextTokens),
+      );
+      return;
+    }
+    _insertTokens(inserted, beforeSelection: true);
+  }
+
+  Future<void> _applyPendingInsertAfter() async {
+    final List<PatternTokenV1>? inserted =
+        await _tokensForPendingStructureTool();
+    if (!mounted || inserted == null || inserted.isEmpty) return;
+    if (_pendingStructureTool == _StructureToolOption.triad) {
+      final List<int> sortedSelection = _selectedNoteIndices.toList()..sort();
+      final int insertAt = sortedSelection.isEmpty
+          ? _draftTokens.length
+          : sortedSelection.last + 1;
+      final List<PatternTokenV1> nextTokens = List<PatternTokenV1>.from(
+        _draftTokens,
+      )..insertAll(insertAt, inserted);
+      _insertTokens(
+        inserted,
+        beforeSelection: false,
+        groupingOverride: _groupingAfterTriadStructureChange(nextTokens),
+      );
+      return;
+    }
+    _insertTokens(inserted, beforeSelection: false);
+  }
+
+  Future<void> _applyPendingReplaceSelection() async {
+    if (_selectedNoteIndices.isEmpty) return;
+    final List<PatternTokenV1>? replacement =
+        await _tokensForPendingStructureTool();
+    if (!mounted || replacement == null || replacement.isEmpty) return;
+    final PatternGroupingV1? groupingOverride =
+        _pendingStructureTool == _StructureToolOption.triad
+        ? _groupingAfterTriadStructureChange(
+            _tokensAfterReplacingSelection(replacement),
+          )
+        : null;
+    _replaceSelectionWithTokens(
+      replacement,
+      groupingOverride: groupingOverride,
     );
+  }
+
+  List<PatternTokenV1> _tokensAfterReplacingSelection(
+    List<PatternTokenV1> replacement,
+  ) {
+    final List<int> sortedSelection = _selectedNoteIndices.toList()..sort();
+    if (sortedSelection.isEmpty) return List<PatternTokenV1>.from(_draftTokens);
+    final Set<int> selected = sortedSelection.toSet();
+    final int insertAt = sortedSelection.first;
+    final List<PatternTokenV1> nextTokens = <PatternTokenV1>[];
+    for (int index = 0; index < _draftTokens.length; index++) {
+      if (index == insertAt) {
+        nextTokens.addAll(replacement);
+      }
+      if (selected.contains(index)) continue;
+      nextTokens.add(_draftTokens[index]);
+    }
+    return nextTokens;
   }
 
   void _normalizeDraftStructure() {
@@ -998,35 +1163,43 @@ class _SelectableNotationCell extends StatelessWidget {
 class _StructureEditor extends StatelessWidget {
   final List<PatternTokenV1> tokens;
   final Set<int> selectedIndices;
-  final ValueChanged<PatternTokenV1> onReplace;
-  final ValueChanged<List<PatternTokenV1>> onInsertBefore;
-  final ValueChanged<List<PatternTokenV1>> onInsertAfter;
+  final _StructureToolOption? selectedTool;
+  final ValueChanged<_StructureToolOption?> onToolChanged;
+  final Future<void> Function() onInsertBefore;
+  final Future<void> Function() onInsertAfter;
+  final Future<void> Function() onReplaceSelection;
   final VoidCallback onDeleteSelection;
-  final Future<void> Function() onInsertTriadBefore;
-  final Future<void> Function() onInsertTriadAfter;
 
   const _StructureEditor({
     required this.tokens,
     required this.selectedIndices,
-    required this.onReplace,
+    required this.selectedTool,
+    required this.onToolChanged,
     required this.onInsertBefore,
     required this.onInsertAfter,
+    required this.onReplaceSelection,
     required this.onDeleteSelection,
-    required this.onInsertTriadBefore,
-    required this.onInsertTriadAfter,
   });
 
   @override
   Widget build(BuildContext context) {
     final List<int> sortedSelection = selectedIndices.toList()..sort();
     final bool hasSelection = sortedSelection.isNotEmpty;
-    final bool hasSingleSelection = sortedSelection.length == 1;
-    final bool canDelete = hasSelection;
-    final String summary = !hasSelection
-        ? 'No position selected. Insert actions append to the end of the pattern.'
-        : hasSingleSelection
-        ? 'Position ${sortedSelection.first + 1} selected · ${tokens[sortedSelection.first].symbol}'
-        : '${sortedSelection.length} positions selected · insert before the first or after the last, or delete them.';
+    final bool hasTool = selectedTool != null;
+    final bool canDelete = hasSelection && !hasTool;
+    final bool canReplace = hasSelection && hasTool;
+    final String summary = switch ((hasSelection, selectedTool)) {
+      (false, null) =>
+        'No position selected. Choose a stroke or triad source, then insert at the start or append to the end.',
+      (false, _) =>
+        'No position selected. Insert Before adds at the start. Insert After appends to the end.',
+      (true, null) =>
+        sortedSelection.length == 1
+            ? 'Position ${sortedSelection.first + 1} selected · ${tokens[sortedSelection.first].symbol}. Choose a stroke source or delete the selection.'
+            : '${sortedSelection.length} positions selected. Choose a stroke source, or delete the selected positions.',
+      (true, _) =>
+        '${sortedSelection.length} position${sortedSelection.length == 1 ? '' : 's'} selected · ${_labelForTool(selectedTool!)} ready.',
+    };
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1038,146 +1211,82 @@ class _StructureEditor extends StatelessWidget {
             fontWeight: FontWeight.w700,
           ),
         ),
-        if (hasSingleSelection) ...<Widget>[
-          const SizedBox(height: 8),
-          Text(
-            'Replace Selected Position',
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: const Color(0xFF5B5345),
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: <Widget>[
-              _TokenActionPill(
-                label: 'R',
-                onPressed: () {
-                  onReplace(PatternTokenV1.right);
-                },
-              ),
-              _TokenActionPill(
-                label: 'L',
-                onPressed: () {
-                  onReplace(PatternTokenV1.left);
-                },
-              ),
-              _TokenActionPill(
-                label: 'K',
-                onPressed: () {
-                  onReplace(PatternTokenV1.kick);
-                },
-              ),
-              _TokenActionPill(
-                label: 'Rest',
-                onPressed: () {
-                  onReplace(PatternTokenV1.rest);
-                },
-              ),
-            ],
-          ),
-        ],
         const SizedBox(height: 12),
-        Text(
-          hasSelection ? 'Insert Before Selection' : 'Append to Pattern',
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            color: const Color(0xFF5B5345),
-            fontWeight: FontWeight.w800,
+        const DrumEyebrow(text: 'Source'),
+        const SizedBox(height: 8),
+        DrumHorizontalControlStrip(
+          child: Row(
+            children: _StructureToolOption.values
+                .map(
+                  (_StructureToolOption tool) => Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: DrumSelectablePill(
+                      label: Text(
+                        _labelForTool(tool),
+                        style: TextStyle(
+                          color: selectedTool == tool ? Colors.white : null,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      selected: selectedTool == tool,
+                      onPressed: () {
+                        onToolChanged(selectedTool == tool ? null : tool);
+                      },
+                    ),
+                  ),
+                )
+                .toList(growable: false),
           ),
         ),
+        const SizedBox(height: 8),
+        const DrumEyebrow(text: 'Actions'),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
           runSpacing: 8,
           children: <Widget>[
             _TokenActionPill(
-              label: 'R',
-              onPressed: () {
-                onInsertBefore(const <PatternTokenV1>[PatternTokenV1.right]);
-              },
+              label: 'Insert Before',
+              onPressed: hasTool
+                  ? () {
+                      onInsertBefore();
+                    }
+                  : null,
             ),
             _TokenActionPill(
-              label: 'L',
-              onPressed: () {
-                onInsertBefore(const <PatternTokenV1>[PatternTokenV1.left]);
-              },
+              label: hasSelection ? 'Insert After' : 'Append',
+              onPressed: hasTool
+                  ? () {
+                      onInsertAfter();
+                    }
+                  : null,
             ),
             _TokenActionPill(
-              label: 'K',
-              onPressed: () {
-                onInsertBefore(const <PatternTokenV1>[PatternTokenV1.kick]);
-              },
+              label: 'Replace',
+              onPressed: canReplace
+                  ? () {
+                      onReplaceSelection();
+                    }
+                  : null,
             ),
             _TokenActionPill(
-              label: 'Rest',
-              onPressed: () {
-                onInsertBefore(const <PatternTokenV1>[PatternTokenV1.rest]);
-              },
-            ),
-            _TokenActionPill(
-              label: 'Triad...',
-              onPressed: () {
-                onInsertTriadBefore();
-              },
+              label: 'Delete',
+              onPressed: canDelete ? onDeleteSelection : null,
             ),
           ],
         ),
-        if (hasSelection) ...<Widget>[
-          const SizedBox(height: 12),
-          Text(
-            'Insert After Selection',
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: const Color(0xFF5B5345),
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: <Widget>[
-              _TokenActionPill(
-                label: 'R',
-                onPressed: () {
-                  onInsertAfter(const <PatternTokenV1>[PatternTokenV1.right]);
-                },
-              ),
-              _TokenActionPill(
-                label: 'L',
-                onPressed: () {
-                  onInsertAfter(const <PatternTokenV1>[PatternTokenV1.left]);
-                },
-              ),
-              _TokenActionPill(
-                label: 'K',
-                onPressed: () {
-                  onInsertAfter(const <PatternTokenV1>[PatternTokenV1.kick]);
-                },
-              ),
-              _TokenActionPill(
-                label: 'Rest',
-                onPressed: () {
-                  onInsertAfter(const <PatternTokenV1>[PatternTokenV1.rest]);
-                },
-              ),
-              _TokenActionPill(
-                label: 'Triad...',
-                onPressed: () {
-                  onInsertTriadAfter();
-                },
-              ),
-            ],
-          ),
-        ],
-        const SizedBox(height: 12),
-        OutlinedButton(
-          onPressed: canDelete ? onDeleteSelection : null,
-          child: const Text('Delete Selected Positions'),
-        ),
       ],
     );
+  }
+
+  String _labelForTool(_StructureToolOption tool) {
+    return switch (tool) {
+      _StructureToolOption.right => 'R',
+      _StructureToolOption.left => 'L',
+      _StructureToolOption.kick => 'K',
+      _StructureToolOption.rest => 'Rest',
+      _StructureToolOption.triad => 'Triad',
+    };
   }
 }
 

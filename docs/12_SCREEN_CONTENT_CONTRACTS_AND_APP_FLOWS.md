@@ -1429,6 +1429,7 @@ Practice Item lets the user inspect and edit one item cleanly.
 - the `Practice Item` selection wrapper may add only a small tap-target halo around each rendered note; it must not widen note slots or separator spacing into a second independent layout model
 - any `Practice Item` note-selection wrapper must derive its slot and separator measurements from the shared renderer geometry rather than fixed local spacing constants
 - the notation block should be the note-selection surface, so the screen does not need a per-note chip grid for editing
+- `Practice Item` should use a filter-style control row with `Append`, `Dynamics`, and `Voices`, with `Append` as the default active set
 - `Practice Item` should also contain a `Pattern Structure` section for direct token-sequence editing
 - `Practice Item` should contain an explicit `Grouping` control for visible separator metadata
 - a new blank `Practice Item` draft should open with a stable empty notation row already visible so the layout does not jump on first insertion
@@ -1437,6 +1438,9 @@ Practice Item lets the user inspect and edit one item cleanly.
 - applying a marking or voice assignment should clear the current note selection
 - kick notes should not be assignable through this editing surface
 - non-hand positions may still be selected for structure editing even though they are not assignable through the dynamics/voice controls
+- the `Append` control set should use one source row for `R`, `L`, `K`, `Rest`, and `Triad`
+- the `Append` control set should use one action row for `Insert Before`, `Insert After`, `Replace`, and `Delete`
+- `Delete` should be the destructive action available when no new source token or triad is selected
 - structure editing should support replace, insert, delete, rest insertion, and triad-helper insertion inside the same `Practice Item` surface
 - triad-helper insertion should allow selecting one or more triads and should insert them in the order selected
 - the `Grouping` control should affect only visible separator metadata, not runtime behavior or family labels
