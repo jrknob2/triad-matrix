@@ -70,15 +70,7 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/audio/metronome_beep.wav
-    - assets/audio/kick.wav
-    - assets/audio/snare_normal.wav
-    - assets/audio/snare_accent.wav
-    - assets/audio/snare_ghost.wav
-    - assets/audio/hihat.wav
-    - assets/audio/rack_tom.wav
-    - assets/audio/tom2.wav
-    - assets/audio/floor_tom.wav
+    - assets/audio/
     - assets/icons/app_icon_1024.png
     - assets/icons/app_icon_splash.png
 

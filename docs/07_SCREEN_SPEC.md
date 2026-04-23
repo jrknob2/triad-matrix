@@ -420,7 +420,9 @@ Must do:
 - Practice Session stepping/highlighting should follow canonical token positions rather than triad chunks or family labels
 - rest/pause positions should occupy one full timed slot in the player and participate in stepping/highlighting the same way as note positions
 - Practice Session audible pattern playback should use canonical token positions plus timing metadata rather than grouping or family labels as timing truth
-- audible pattern playback should be optional from the existing Practice Session controls, so the user can hear the current pattern without changing timer, rep, or session-end behavior
+- audible pattern playback should be optional, but its toggle belongs directly under the pattern notation rather than inside the BPM/settings utility card
+- pattern highlighting should also have its own on/off toggle directly under the pattern notation
+- enabling or disabling pattern audio or highlighting must not change timer, rep, or session-end behavior
 - grouping may provide a default simple timing interpretation for drills, but explicit timing metadata must be able to override grouping for advanced fills or phrases without introducing a new runtime mode
 - the default simple timing interpretation should be:
   - compatible grouping size -> one grouping per beat

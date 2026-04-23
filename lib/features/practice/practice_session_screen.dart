@@ -88,6 +88,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   late int _bpm;
   late bool _clickEnabled;
   bool _patternAudioEnabled = false;
+  bool _patternHighlightEnabled = true;
   late PracticeSessionSetupV1 _setup;
   Duration? _currentItemSegmentStartElapsed;
   int _currentItemIndex = 0;
@@ -402,15 +403,10 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                               ),
                               const SizedBox(height: 12),
                             ],
-                            _PlayerNotation(
-                              setup: _setup,
+                            _buildNotationBlock(
+                              context,
                               isWarmup: isWarmup,
-                              showVoices: widget.controller.hasNonSnareVoice(
-                                currentItemId,
-                              ),
-                              grouping: widget.controller.displayGroupingFor(
-                                currentItemId,
-                              ),
+                              currentItemId: currentItemId,
                               tokens: tokens,
                               markings: markings,
                               voices: voices,
@@ -566,15 +562,10 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                     ),
                     const SizedBox(height: 16),
                   ],
-                  _PlayerNotation(
-                    setup: _setup,
+                  _buildNotationBlock(
+                    context,
                     isWarmup: isWarmup,
-                    showVoices: widget.controller.hasNonSnareVoice(
-                      currentItemId,
-                    ),
-                    grouping: widget.controller.displayGroupingFor(
-                      currentItemId,
-                    ),
+                    currentItemId: currentItemId,
                     tokens: tokens,
                     markings: markings,
                     voices: voices,
@@ -696,6 +687,40 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     );
   }
 
+  Widget _buildNotationBlock(
+    BuildContext context, {
+    required bool isWarmup,
+    required String currentItemId,
+    required List<PatternTokenV1> tokens,
+    required List<PatternNoteMarkingV1> markings,
+    required List<DrumVoiceV1> voices,
+    required int? activeTokenIndex,
+  }) {
+    return Column(
+      children: <Widget>[
+        _PlayerNotation(
+          setup: _setup,
+          isWarmup: isWarmup,
+          showVoices: widget.controller.hasNonSnareVoice(currentItemId),
+          grouping: widget.controller.displayGroupingFor(currentItemId),
+          tokens: tokens,
+          markings: markings,
+          voices: voices,
+          activeTokenIndex: _patternHighlightEnabled ? activeTokenIndex : null,
+        ),
+        if (!isWarmup) ...<Widget>[
+          const SizedBox(height: 10),
+          _PatternPlaybackControls(
+            patternAudioEnabled: _patternAudioEnabled,
+            patternHighlightEnabled: _patternHighlightEnabled,
+            onPatternAudioChanged: _updatePatternAudioEnabled,
+            onPatternHighlightChanged: _updatePatternHighlightEnabled,
+          ),
+        ],
+      ],
+    );
+  }
+
   Widget _buildSessionControlsPanel(BuildContext context) {
     return DrumPanel(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
@@ -748,12 +773,6 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
             title: const Text('Pulse'),
             value: _pulseEnabled,
             onChanged: _updatePulseEnabled,
-          ),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Hear Pattern'),
-            value: _patternAudioEnabled,
-            onChanged: _updatePatternAudioEnabled,
           ),
         ],
       ),
@@ -1182,6 +1201,12 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     } else {
       unawaited(_patternAudio.stop());
     }
+  }
+
+  void _updatePatternHighlightEnabled(bool value) {
+    setState(() {
+      _patternHighlightEnabled = value;
+    });
   }
 
   Future<void> _configureAudio() async {
@@ -1638,6 +1663,156 @@ class _PlayerNotation extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _PatternPlaybackControls extends StatelessWidget {
+  final bool patternAudioEnabled;
+  final bool patternHighlightEnabled;
+  final ValueChanged<bool> onPatternAudioChanged;
+  final ValueChanged<bool> onPatternHighlightChanged;
+
+  const _PatternPlaybackControls({
+    required this.patternAudioEnabled,
+    required this.patternHighlightEnabled,
+    required this.onPatternAudioChanged,
+    required this.onPatternHighlightChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      alignment: WrapAlignment.center,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 10,
+      runSpacing: 10,
+      children: <Widget>[
+        _PatternToggleButton(
+          value: patternAudioEnabled,
+          tooltip: patternAudioEnabled
+              ? 'Turn pattern audio off'
+              : 'Turn pattern audio on',
+          onPressed: () => onPatternAudioChanged(!patternAudioEnabled),
+          icon: const _PlaylistToggleIcon(),
+        ),
+        _PatternToggleButton(
+          value: patternHighlightEnabled,
+          tooltip: patternHighlightEnabled
+              ? 'Turn pattern highlighting off'
+              : 'Turn pattern highlighting on',
+          onPressed: () => onPatternHighlightChanged(!patternHighlightEnabled),
+          icon: Icon(
+            Icons.highlight_alt_rounded,
+            size: 22,
+            color: patternHighlightEnabled
+                ? const Color(0xFF211B14)
+                : const Color(0xFFFFF4DE),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PatternToggleButton extends StatelessWidget {
+  final bool value;
+  final String tooltip;
+  final VoidCallback onPressed;
+  final Widget icon;
+
+  const _PatternToggleButton({
+    required this.value,
+    required this.tooltip,
+    required this.onPressed,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final ButtonStyle style = value
+        ? IconButton.styleFrom(
+            backgroundColor: const Color(0xFFFFF4DE),
+            foregroundColor: const Color(0xFF211B14),
+            fixedSize: const Size(46, 46),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+          )
+        : IconButton.styleFrom(
+            backgroundColor: Colors.transparent,
+            foregroundColor: const Color(0xFFFFF4DE),
+            fixedSize: const Size(46, 46),
+            side: const BorderSide(color: Color(0xFFFFF4DE)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+          );
+    return Tooltip(
+      message: tooltip,
+      child: IconButton(onPressed: onPressed, style: style, icon: icon),
+    );
+  }
+}
+
+class _PlaylistToggleIcon extends StatelessWidget {
+  const _PlaylistToggleIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    final Color resolvedColor =
+        IconTheme.of(context).color ?? const Color(0xFFFFF4DE);
+    return CustomPaint(
+      size: const Size(24, 24),
+      painter: _PlaylistToggleIconPainter(resolvedColor),
+    );
+  }
+}
+
+class _PlaylistToggleIconPainter extends CustomPainter {
+  final Color color;
+
+  const _PlaylistToggleIconPainter(this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint stroke = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    canvas.drawLine(
+      Offset(size.width * 0.12, size.height * 0.22),
+      Offset(size.width * 0.54, size.height * 0.22),
+      stroke,
+    );
+    canvas.drawLine(
+      Offset(size.width * 0.12, size.height * 0.39),
+      Offset(size.width * 0.54, size.height * 0.39),
+      stroke,
+    );
+    canvas.drawLine(
+      Offset(size.width * 0.38, size.height * 0.56),
+      Offset(size.width * 0.12, size.height * 0.56),
+      stroke,
+    );
+
+    final Path stem = Path()
+      ..moveTo(size.width * 0.70, size.height * 0.72)
+      ..lineTo(size.width * 0.70, size.height * 0.17)
+      ..lineTo(size.width * 0.88, size.height * 0.17);
+    canvas.drawPath(stem, stroke);
+    canvas.drawCircle(
+      Offset(size.width * 0.58, size.height * 0.72),
+      size.width * 0.13,
+      stroke,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _PlaylistToggleIconPainter oldDelegate) {
+    return oldDelegate.color != color;
   }
 }
 
