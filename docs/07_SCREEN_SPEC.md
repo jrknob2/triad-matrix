@@ -701,6 +701,7 @@ Practice Item is the detail/edit screen for one piece of material.
 - the `Practice Item` note-selection affordance may add only a small tap-target halo around the shared renderer; it should not create a wider second spacing model for note slots or separators
 - the `Practice Item` note-selection affordance should derive its slot and separator sizing from the shared renderer geometry instead of fixed local constants
 - `Practice Item` editing controls should be organized with a filter-style control row using `Build`, `Dynamics`, and `Voices`, with `Build` as the default active set
+- `Dynamics` and `Voices` should keep their control pills visible even when the current selection is empty or incompatible; those controls should disable rather than disappear behind helper-copy replacement states
 - `Practice Item` should contain a `Pattern Structure` section for direct token-sequence editing
 - `Practice Item` should contain an explicit `Grouping` control for visible separator metadata
 - a new blank `Practice Item` draft should open with a stable empty notation row already visible so the editor does not jump when the first token is inserted

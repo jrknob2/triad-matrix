@@ -1426,24 +1426,6 @@ class _SelectedMarkingEditor extends StatelessWidget {
     final List<int> editableIndices = selectedIndices
         .where((int index) => tokens[index] != 'K' && tokens[index] != '_')
         .toList(growable: false);
-    if (selectedIndices.isEmpty) {
-      return Text(
-        'Select one or more hand notes to set accents or ghosts.',
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: const Color(0xFF5B5345),
-          fontWeight: FontWeight.w700,
-        ),
-      );
-    }
-    if (editableIndices.isEmpty) {
-      return Text(
-        'Selected positions are structural only. Choose hand notes to edit dynamics.',
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: const Color(0xFF5B5345),
-          fontWeight: FontWeight.w700,
-        ),
-      );
-    }
     final List<int> sortedIndices = editableIndices..sort();
     final Set<PatternNoteMarkingV1> currentValues = sortedIndices
         .map((int index) => markings[index])
@@ -1451,12 +1433,13 @@ class _SelectedMarkingEditor extends StatelessWidget {
     final PatternNoteMarkingV1? current = currentValues.length == 1
         ? currentValues.first
         : null;
+    final bool enabled = sortedIndices.isNotEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Text(
-          _selectionLabel(sortedIndices, tokens, current),
+          _selectionLabel(selectedIndices, sortedIndices, tokens, current),
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: const Color(0xFF5B5345),
             fontWeight: FontWeight.w700,
@@ -1471,7 +1454,7 @@ class _SelectedMarkingEditor extends StatelessWidget {
                 (PatternNoteMarkingV1 option) => DrumSelectablePill(
                   label: Text(_markingOptionLabel(option)),
                   selected: current != null && current == option,
-                  onPressed: () => onChanged(option),
+                  onPressed: enabled ? () => onChanged(option) : null,
                 ),
               )
               .toList(growable: false),
@@ -1497,10 +1480,17 @@ class _SelectedMarkingEditor extends StatelessWidget {
   }
 
   static String _selectionLabel(
+    Set<int> allSelectedIndices,
     List<int> indices,
     List<String> tokens,
     PatternNoteMarkingV1? current,
   ) {
+    if (allSelectedIndices.isEmpty) {
+      return 'No hand notes selected';
+    }
+    if (indices.isEmpty) {
+      return 'Selection has no editable hand notes';
+    }
     final String positions = indices
         .map((int index) => '${index + 1}')
         .join(', ');
@@ -1535,24 +1525,6 @@ class _SelectedVoiceEditor extends StatelessWidget {
     final List<int> editableIndices = selectedIndices
         .where((int index) => tokens[index] != 'K' && tokens[index] != '_')
         .toList(growable: false);
-    if (selectedIndices.isEmpty) {
-      return Text(
-        'Select one or more hand notes to assign a voice.',
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: const Color(0xFF5B5345),
-          fontWeight: FontWeight.w700,
-        ),
-      );
-    }
-    if (editableIndices.isEmpty) {
-      return Text(
-        'Selected positions are structural only. Choose hand notes to assign voices.',
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: const Color(0xFF5B5345),
-          fontWeight: FontWeight.w700,
-        ),
-      );
-    }
     final List<int> sortedIndices = editableIndices..sort();
     final Set<DrumVoiceV1> currentValues = sortedIndices
         .map((int index) => voices[index])
@@ -1560,6 +1532,7 @@ class _SelectedVoiceEditor extends StatelessWidget {
     final DrumVoiceV1? current = currentValues.length == 1
         ? currentValues.first
         : null;
+    final bool enabled = sortedIndices.isNotEmpty;
 
     const List<DrumVoiceV1> options = <DrumVoiceV1>[
       DrumVoiceV1.snare,
@@ -1573,9 +1546,7 @@ class _SelectedVoiceEditor extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Text(
-          current == null
-              ? '${sortedIndices.length} notes selected'
-              : '${sortedIndices.length} notes selected · ${current.shortLabel}',
+          _selectionLabel(selectedIndices, sortedIndices, current),
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: const Color(0xFF5B5345),
             fontWeight: FontWeight.w700,
@@ -1590,13 +1561,29 @@ class _SelectedVoiceEditor extends StatelessWidget {
                 (DrumVoiceV1 option) => DrumSelectablePill(
                   label: Text(option.shortLabel),
                   selected: current != null && current == option,
-                  onPressed: () => onChanged(option),
+                  onPressed: enabled ? () => onChanged(option) : null,
                 ),
               )
               .toList(growable: false),
         ),
       ],
     );
+  }
+
+  static String _selectionLabel(
+    Set<int> allSelectedIndices,
+    List<int> editableIndices,
+    DrumVoiceV1? current,
+  ) {
+    if (allSelectedIndices.isEmpty) {
+      return 'No hand notes selected';
+    }
+    if (editableIndices.isEmpty) {
+      return 'Selection has no editable hand notes';
+    }
+    return current == null
+        ? '${editableIndices.length} notes selected'
+        : '${editableIndices.length} notes selected · ${current.shortLabel}';
   }
 }
 
