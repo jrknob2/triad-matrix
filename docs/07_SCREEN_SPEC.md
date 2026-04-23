@@ -408,8 +408,8 @@ Must do:
 - a distinct running focus layout is acceptable as long as the transition remains continuous and the stopped layout is not redesigned
 - keep focus-mode motion subtle and smooth, roughly `280–340ms`, with no bouncy motion
 - the transition should feel like regions sliding into place rather than flipping between layouts
-- on phone, the BPM/settings card should remain a clearly secondary utility card below the player rather than visually covering it
-- the settings card must not obscure the gauge, timer, earned-reps display, or transport controls
+- Practice Session utility controls should live in a settings modal opened from a header-right settings icon rather than in a persistent utility card
+- the settings modal should own BPM adjustment plus click, pulse, and pattern-highlighting toggles
 - reaching the target duration should cue the cycle boundary without force-ending the session
 - in multi-item sessions, BPM changes should belong to the currently shown item, not the whole session globally
 - in multi-item tracked sessions, the target duration applies per current pattern, not once across the entire slice
@@ -420,8 +420,9 @@ Must do:
 - Practice Session stepping/highlighting should follow canonical token positions rather than triad chunks or family labels
 - rest/pause positions should occupy one full timed slot in the player and participate in stepping/highlighting the same way as note positions
 - Practice Session audible pattern playback should use canonical token positions plus timing metadata rather than grouping or family labels as timing truth
-- audible pattern playback should be optional, but its toggle belongs directly under the pattern notation rather than inside the BPM/settings utility card
-- pattern highlighting should also have its own on/off toggle directly under the pattern notation
+- audible pattern playback should be optional, and its toggle belongs directly under the pattern notation as a dedicated ear button
+- when the ear toggle is turned on, pattern audio should begin immediately and continue looping until the toggle is turned off
+- pattern highlighting should use the same switch treatment and settings location as click and pulse rather than a separate notation-row button
 - enabling or disabling pattern audio or highlighting must not change timer, rep, or session-end behavior
 - grouping may provide a default simple timing interpretation for drills, but explicit timing metadata must be able to override grouping for advanced fills or phrases without introducing a new runtime mode
 - the default simple timing interpretation should be:

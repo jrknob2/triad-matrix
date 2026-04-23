@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../features/app/app_formatters.dart';
-import '../../features/app/app_viewport.dart';
 import '../../features/app/drumcabulary_ui.dart';
 import '../../state/app_controller.dart';
 import '../../core/practice/practice_domain_v1.dart';
@@ -120,7 +119,6 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bool isTablet = AppViewport.isTablet(context);
     final bool isWarmup = _isWarmup;
     final bool focusMode = _running;
     final String currentItemId = _currentItemId;
@@ -157,13 +155,13 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                   height: focusMode ? 8 : 12,
                 ),
                 Expanded(
-                  child: isTablet
-                      ? Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            Expanded(
-                              flex: 5,
-                              child: _buildPlayerPanel(
+                  child: LayoutBuilder(
+                    builder:
+                        (BuildContext context, BoxConstraints constraints) {
+                          final Widget defaultLayout = ListView(
+                            padding: EdgeInsets.zero,
+                            children: <Widget>[
+                              _buildPlayerPanel(
                                 context,
                                 isWarmup: isWarmup,
                                 currentItemId: currentItemId,
@@ -171,101 +169,66 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                                 tokens: tokens,
                                 transport: transport,
                                 voices: voices,
-                                focusMode: focusMode,
+                                focusMode: false,
                                 activeTokenIndex: activeTokenIndex,
-                                availableWidth:
-                                    MediaQuery.sizeOf(context).width * 0.52,
+                                availableWidth: constraints.maxWidth,
                               ),
+                            ],
+                          );
+                          final Widget focusLayout = Align(
+                            alignment: Alignment.topCenter,
+                            child: _buildPlayerPanel(
+                              context,
+                              isWarmup: isWarmup,
+                              currentItemId: currentItemId,
+                              markings: markings,
+                              tokens: tokens,
+                              transport: transport,
+                              voices: voices,
+                              focusMode: true,
+                              activeTokenIndex: activeTokenIndex,
+                              availableWidth: constraints.maxWidth,
                             ),
-                            AnimatedContainer(
-                              duration: _focusTransitionDuration,
-                              curve: Curves.easeInOut,
-                              width: AppViewport.splitPaneGap,
-                            ),
-                            SizedBox(
-                              width: 360,
-                              child: _buildSessionControlsPanel(context),
-                            ),
-                          ],
-                        )
-                      : LayoutBuilder(
-                          builder:
-                              (
-                                BuildContext context,
-                                BoxConstraints constraints,
-                              ) {
-                                final Widget defaultLayout = ListView(
-                                  padding: EdgeInsets.zero,
-                                  children: <Widget>[
-                                    _buildPlayerPanel(
-                                      context,
-                                      isWarmup: isWarmup,
-                                      currentItemId: currentItemId,
-                                      markings: markings,
-                                      tokens: tokens,
-                                      transport: transport,
-                                      voices: voices,
-                                      focusMode: false,
-                                      activeTokenIndex: activeTokenIndex,
-                                    ),
-                                    const SizedBox(height: 16),
-                                    _buildSessionControlsPanel(context),
-                                  ],
-                                );
-                                final Widget focusLayout = Align(
-                                  alignment: Alignment.topCenter,
-                                  child: _buildPlayerPanel(
-                                    context,
-                                    isWarmup: isWarmup,
-                                    currentItemId: currentItemId,
-                                    markings: markings,
-                                    tokens: tokens,
-                                    transport: transport,
-                                    voices: voices,
-                                    focusMode: true,
-                                    activeTokenIndex: activeTokenIndex,
-                                    availableWidth: constraints.maxWidth,
+                          );
+                          return Stack(
+                            fit: StackFit.expand,
+                            children: <Widget>[
+                              IgnorePointer(
+                                ignoring: focusMode,
+                                child: AnimatedSlide(
+                                  duration: _focusTransitionDuration,
+                                  curve: Curves.easeInOutCubic,
+                                  offset: focusMode
+                                      ? const Offset(0, -0.025)
+                                      : Offset.zero,
+                                  child: AnimatedOpacity(
+                                    duration: _focusTransitionDuration,
+                                    curve: Curves.easeInOut,
+                                    opacity: focusMode ? 0 : 1,
+                                    child: defaultLayout,
                                   ),
-                                );
-                                return Stack(
-                                  fit: StackFit.expand,
-                                  children: <Widget>[
-                                    IgnorePointer(
-                                      ignoring: focusMode,
-                                      child: AnimatedSlide(
-                                        duration: _focusTransitionDuration,
-                                        curve: Curves.easeInOutCubic,
-                                        offset: focusMode
-                                            ? const Offset(0, -0.025)
-                                            : Offset.zero,
-                                        child: AnimatedOpacity(
-                                          duration: _focusTransitionDuration,
-                                          curve: Curves.easeInOut,
-                                          opacity: focusMode ? 0 : 1,
-                                          child: defaultLayout,
-                                        ),
-                                      ),
-                                    ),
-                                    IgnorePointer(
-                                      ignoring: !focusMode,
-                                      child: AnimatedSlide(
-                                        duration: _focusTransitionDuration,
-                                        curve: Curves.easeInOutCubic,
-                                        offset: focusMode
-                                            ? Offset.zero
-                                            : const Offset(0, 0.03),
-                                        child: AnimatedOpacity(
-                                          duration: _focusTransitionDuration,
-                                          curve: Curves.easeInOut,
-                                          opacity: focusMode ? 1 : 0,
-                                          child: focusLayout,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              },
-                        ),
+                                ),
+                              ),
+                              IgnorePointer(
+                                ignoring: !focusMode,
+                                child: AnimatedSlide(
+                                  duration: _focusTransitionDuration,
+                                  curve: Curves.easeInOutCubic,
+                                  offset: focusMode
+                                      ? Offset.zero
+                                      : const Offset(0, 0.03),
+                                  child: AnimatedOpacity(
+                                    duration: _focusTransitionDuration,
+                                    curve: Curves.easeInOut,
+                                    opacity: focusMode ? 1 : 0,
+                                    child: focusLayout,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                  ),
                 ),
               ],
             ),
@@ -304,7 +267,11 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 48),
+                IconButton(
+                  onPressed: () => _openSessionSettingsModal(context),
+                  icon: const Icon(Icons.settings_outlined),
+                  tooltip: 'Session settings',
+                ),
               ],
             ),
           ),
@@ -710,72 +677,132 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
         ),
         if (!isWarmup) ...<Widget>[
           const SizedBox(height: 10),
-          _PatternPlaybackControls(
+          _PatternAudioToggle(
             patternAudioEnabled: _patternAudioEnabled,
-            patternHighlightEnabled: _patternHighlightEnabled,
             onPatternAudioChanged: _updatePatternAudioEnabled,
-            onPatternHighlightChanged: _updatePatternHighlightEnabled,
           ),
         ],
       ],
     );
   }
 
-  Widget _buildSessionControlsPanel(BuildContext context) {
-    return DrumPanel(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
-      child: Column(
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              Text('BPM', style: Theme.of(context).textTheme.titleMedium),
-              const Spacer(),
-              Text(
-                '$_bpm',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-              ),
-            ],
-          ),
-          Row(
-            children: <Widget>[
-              IconButton(
-                onPressed: _bpm <= 30 ? null : () => _updateBpm(_bpm - 1),
-                icon: const Icon(Icons.remove_circle_outline),
-              ),
-              Expanded(
-                child: Slider(
-                  value: _bpm.toDouble(),
-                  min: 30,
-                  max: 260,
-                  divisions: 230,
-                  label: '$_bpm BPM',
-                  onChanged: (double value) {
-                    _updateBpm(value.round());
-                  },
-                ),
-              ),
-              IconButton(
-                onPressed: _bpm >= 260 ? null : () => _updateBpm(_bpm + 1),
-                icon: const Icon(Icons.add_circle_outline),
-              ),
-            ],
-          ),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Click'),
-            value: _clickEnabled,
-            onChanged: _updateClickEnabled,
-          ),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Pulse'),
-            value: _pulseEnabled,
-            onChanged: _updatePulseEnabled,
-          ),
-        ],
-      ),
+  Future<void> _openSessionSettingsModal(BuildContext context) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder:
+              (
+                BuildContext context,
+                void Function(void Function()) sheetSetState,
+              ) {
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                  child: DrumPanel(
+                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Row(
+                          children: <Widget>[
+                            Text(
+                              'Session Settings',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            const Spacer(),
+                            IconButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              icon: const Icon(Icons.close),
+                              tooltip: 'Close',
+                            ),
+                          ],
+                        ),
+                        Row(
+                          children: <Widget>[
+                            Text(
+                              'BPM',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            const Spacer(),
+                            Text(
+                              '$_bpm',
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(fontWeight: FontWeight.w800),
+                            ),
+                          ],
+                        ),
+                        Row(
+                          children: <Widget>[
+                            IconButton(
+                              onPressed: _bpm <= 30
+                                  ? null
+                                  : () {
+                                      _updateBpm(_bpm - 1);
+                                      sheetSetState(() {});
+                                    },
+                              icon: const Icon(Icons.remove_circle_outline),
+                            ),
+                            Expanded(
+                              child: Slider(
+                                value: _bpm.toDouble(),
+                                min: 30,
+                                max: 260,
+                                divisions: 230,
+                                label: '$_bpm BPM',
+                                onChanged: (double value) {
+                                  _updateBpm(value.round());
+                                  sheetSetState(() {});
+                                },
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: _bpm >= 260
+                                  ? null
+                                  : () {
+                                      _updateBpm(_bpm + 1);
+                                      sheetSetState(() {});
+                                    },
+                              icon: const Icon(Icons.add_circle_outline),
+                            ),
+                          ],
+                        ),
+                        SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('Click'),
+                          value: _clickEnabled,
+                          onChanged: (bool value) {
+                            _updateClickEnabled(value);
+                            sheetSetState(() {});
+                          },
+                        ),
+                        SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('Pulse'),
+                          value: _pulseEnabled,
+                          onChanged: (bool value) {
+                            _updatePulseEnabled(value);
+                            sheetSetState(() {});
+                          },
+                        ),
+                        SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('Pattern Highlight'),
+                          value: _patternHighlightEnabled,
+                          onChanged: (bool value) {
+                            _updatePatternHighlightEnabled(value);
+                            sheetSetState(() {});
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+        );
+      },
     );
   }
 
@@ -809,7 +836,6 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
         _stopwatch.stop();
         _elapsedTicker?.cancel();
         unawaited(_metronome.stop());
-        unawaited(_patternAudio.stop());
       }
     });
     widget.onFocusModeChanged?.call(shouldStart);
@@ -823,14 +849,12 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
           ),
         );
       }
-      if (_patternAudioEnabled) {
-        unawaited(_startPatternAudioForCurrentItem());
-      }
     }
   }
 
   void _endSession() {
     if (!_canEndSession) return;
+    unawaited(_patternAudio.stop());
     if (_isWarmup) {
       _resetRunState(clearElapsed: false);
       _discardEphemeralItemsIfNeeded();
@@ -919,7 +943,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     if (_running && _shouldRunMetronome) {
       unawaited(_metronome.updateBpm(bpm: _bpm));
     }
-    if (_running && _patternAudioEnabled) {
+    if (_patternAudioEnabled) {
       unawaited(_startPatternAudioForCurrentItem());
     }
   }
@@ -941,7 +965,6 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     }
     _elapsedTicker?.cancel();
     unawaited(_metronome.stop());
-    unawaited(_patternAudio.stop());
     _running = false;
     if (clearFlags) {
       _warmupComplete = false;
@@ -1141,7 +1164,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     if (_running && _shouldRunMetronome) {
       unawaited(_metronome.updateBpm(bpm: nextBpm));
     }
-    if (_running && _patternAudioEnabled) {
+    if (_patternAudioEnabled) {
       unawaited(_startPatternAudioForCurrentItem());
     }
   }
@@ -1190,12 +1213,6 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     setState(() {
       _patternAudioEnabled = value;
     });
-    if (!_running) {
-      if (!value) {
-        unawaited(_patternAudio.stop());
-      }
-      return;
-    }
     if (value) {
       unawaited(_startPatternAudioForCurrentItem());
     } else {
@@ -1225,7 +1242,9 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
       grouping: widget.controller.displayGroupingFor(itemId),
       timing: widget.controller.patternTimingFor(itemId),
       bpm: _bpm,
-      startElapsed: _tokenCycleElapsedForCurrentItem(),
+      startElapsed: _running
+          ? _tokenCycleElapsedForCurrentItem()
+          : Duration.zero,
     );
   }
 
@@ -1666,50 +1685,28 @@ class _PlayerNotation extends StatelessWidget {
   }
 }
 
-class _PatternPlaybackControls extends StatelessWidget {
+class _PatternAudioToggle extends StatelessWidget {
   final bool patternAudioEnabled;
-  final bool patternHighlightEnabled;
   final ValueChanged<bool> onPatternAudioChanged;
-  final ValueChanged<bool> onPatternHighlightChanged;
 
-  const _PatternPlaybackControls({
+  const _PatternAudioToggle({
     required this.patternAudioEnabled,
-    required this.patternHighlightEnabled,
     required this.onPatternAudioChanged,
-    required this.onPatternHighlightChanged,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      alignment: WrapAlignment.center,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      spacing: 10,
-      runSpacing: 10,
-      children: <Widget>[
-        _PatternToggleButton(
-          value: patternAudioEnabled,
-          tooltip: patternAudioEnabled
-              ? 'Turn pattern audio off'
-              : 'Turn pattern audio on',
-          onPressed: () => onPatternAudioChanged(!patternAudioEnabled),
-          icon: const _PlaylistToggleIcon(),
-        ),
-        _PatternToggleButton(
-          value: patternHighlightEnabled,
-          tooltip: patternHighlightEnabled
-              ? 'Turn pattern highlighting off'
-              : 'Turn pattern highlighting on',
-          onPressed: () => onPatternHighlightChanged(!patternHighlightEnabled),
-          icon: Icon(
-            Icons.highlight_alt_rounded,
-            size: 22,
-            color: patternHighlightEnabled
-                ? const Color(0xFF211B14)
-                : const Color(0xFFFFF4DE),
-          ),
-        ),
-      ],
+    return _PatternToggleButton(
+      value: patternAudioEnabled,
+      tooltip: patternAudioEnabled
+          ? 'Turn pattern audio off'
+          : 'Turn pattern audio on',
+      onPressed: () => onPatternAudioChanged(!patternAudioEnabled),
+      icon: _EarToggleIcon(
+        color: patternAudioEnabled
+            ? const Color(0xFF211B14)
+            : const Color(0xFFFFF4DE),
+      ),
     );
   }
 }
@@ -1754,24 +1751,24 @@ class _PatternToggleButton extends StatelessWidget {
   }
 }
 
-class _PlaylistToggleIcon extends StatelessWidget {
-  const _PlaylistToggleIcon();
+class _EarToggleIcon extends StatelessWidget {
+  final Color color;
+
+  const _EarToggleIcon({required this.color});
 
   @override
   Widget build(BuildContext context) {
-    final Color resolvedColor =
-        IconTheme.of(context).color ?? const Color(0xFFFFF4DE);
     return CustomPaint(
       size: const Size(24, 24),
-      painter: _PlaylistToggleIconPainter(resolvedColor),
+      painter: _EarToggleIconPainter(color),
     );
   }
 }
 
-class _PlaylistToggleIconPainter extends CustomPainter {
+class _EarToggleIconPainter extends CustomPainter {
   final Color color;
 
-  const _PlaylistToggleIconPainter(this.color);
+  const _EarToggleIconPainter(this.color);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1782,36 +1779,65 @@ class _PlaylistToggleIconPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
 
-    canvas.drawLine(
-      Offset(size.width * 0.12, size.height * 0.22),
-      Offset(size.width * 0.54, size.height * 0.22),
-      stroke,
-    );
-    canvas.drawLine(
-      Offset(size.width * 0.12, size.height * 0.39),
-      Offset(size.width * 0.54, size.height * 0.39),
-      stroke,
-    );
-    canvas.drawLine(
-      Offset(size.width * 0.38, size.height * 0.56),
-      Offset(size.width * 0.12, size.height * 0.56),
-      stroke,
-    );
+    final Path outer = Path()
+      ..moveTo(size.width * 0.25, size.height * 0.42)
+      ..cubicTo(
+        size.width * 0.25,
+        size.height * 0.14,
+        size.width * 0.53,
+        size.height * 0.05,
+        size.width * 0.72,
+        size.height * 0.15,
+      )
+      ..cubicTo(
+        size.width * 0.92,
+        size.height * 0.26,
+        size.width * 0.95,
+        size.height * 0.55,
+        size.width * 0.81,
+        size.height * 0.68,
+      )
+      ..cubicTo(
+        size.width * 0.73,
+        size.height * 0.75,
+        size.width * 0.66,
+        size.height * 0.79,
+        size.width * 0.62,
+        size.height * 0.90,
+      )
+      ..cubicTo(
+        size.width * 0.58,
+        size.height * 0.99,
+        size.width * 0.43,
+        size.height * 0.98,
+        size.width * 0.36,
+        size.height * 0.89,
+      );
+    canvas.drawPath(outer, stroke);
 
-    final Path stem = Path()
-      ..moveTo(size.width * 0.70, size.height * 0.72)
-      ..lineTo(size.width * 0.70, size.height * 0.17)
-      ..lineTo(size.width * 0.88, size.height * 0.17);
-    canvas.drawPath(stem, stroke);
-    canvas.drawCircle(
-      Offset(size.width * 0.58, size.height * 0.72),
-      size.width * 0.13,
-      stroke,
-    );
+    final Path inner = Path()
+      ..moveTo(size.width * 0.42, size.height * 0.43)
+      ..cubicTo(
+        size.width * 0.42,
+        size.height * 0.31,
+        size.width * 0.53,
+        size.height * 0.24,
+        size.width * 0.62,
+        size.height * 0.29,
+      )
+      ..cubicTo(
+        size.width * 0.69,
+        size.height * 0.33,
+        size.width * 0.71,
+        size.height * 0.42,
+        size.width * 0.66,
+        size.height * 0.50,
+      );
+    canvas.drawPath(inner, stroke);
   }
 
   @override
-  bool shouldRepaint(covariant _PlaylistToggleIconPainter oldDelegate) {
+  bool shouldRepaint(covariant _EarToggleIconPainter oldDelegate) {
     return oldDelegate.color != color;
   }
 }

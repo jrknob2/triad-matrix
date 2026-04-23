@@ -1041,9 +1041,8 @@ Practice Session is execution only.
 - focus-mode transitions should read as regions sliding and settling into place, not as a flip, pop, or abrupt subtree swap
 - pattern, gauge, and timer should keep their visual anchor during the transition and must not jump abruptly
 - the gauge may grow slightly in focus mode, but it should still feel anchored inside the same player card
-- on phone, the light BPM/settings card is a secondary utility region that sits beneath the player card, not across it
-- the settings card must not visually bisect the gauge or obscure timer, earned-rep display, or transport controls
-- if there is any overlap between player and settings regions, it must be subtle and must never block the lower player stack
+- Practice Session utility controls should live in a settings modal opened from the header-right settings icon rather than in a persistent utility card
+- that settings modal should own BPM, click, pulse, and pattern-highlighting controls
 - BPM should sit inside an integrated circular display when the full player treatment is shown
 - the BPM core should read as a three-part stack: BPM core, inner solid pulse ring, outer tick gauge
 - the inner pulse ring and outer tick gauge must be visually separated by a small clear gap
@@ -1100,8 +1099,9 @@ Practice Session is execution only.
 - rest/pause tokens should consume one full timed slot in Practice Session and should participate in player stepping/highlighting exactly like note positions
 - audible pattern playback should be driven by canonical token positions plus timing metadata
 - audible pattern playback should remain optional and must not change timer flow, earned-rep logic, or session completion behavior when enabled
-- the pattern-audio toggle should live directly beneath the notation readout, not in the BPM/settings utility card
-- pattern highlighting should have a separate optional toggle in that same notation-control row
+- the pattern-audio toggle should live directly beneath the notation readout as a dedicated ear button, not in the settings modal
+- when the ear toggle is turned on, the current pattern should begin sounding immediately and continue looping until the ear toggle is turned off
+- pattern highlighting should use the same switch treatment and settings location as click and pulse, not a separate notation-row button
 - grouping may supply a default simple timing interpretation for straightforward drills, but explicit timing metadata must be able to override grouping cleanly for advanced phrases or fills without creating a new runtime mode
 - default simple timing interpretation:
   - compatible grouping size -> one grouping per beat
