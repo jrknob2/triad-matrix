@@ -1245,16 +1245,12 @@ class _SelectableNotationBlock extends StatelessWidget {
                       onTap: () => onSelect(index),
                     ),
                     if (separators[index].isNotEmpty)
-                      SizedBox(
+                      _SelectableSeparatorCell(
+                        separator: separators[index],
+                        showVoice: showVoices,
+                        patternStyle: patternStyle,
+                        voiceStyle: voiceStyle,
                         width: separatorSlotWidth,
-                        child: Center(
-                          child: Text(
-                            separators[index],
-                            style: patternStyle.copyWith(
-                              color: const Color(0xFF6B6254),
-                            ),
-                          ),
-                        ),
                       ),
                   ],
                 ],
@@ -1361,6 +1357,53 @@ class _SelectableNotationCell extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SelectableSeparatorCell extends StatelessWidget {
+  final String separator;
+  final bool showVoice;
+  final TextStyle patternStyle;
+  final TextStyle voiceStyle;
+  final double width;
+
+  const _SelectableSeparatorCell({
+    required this.separator,
+    required this.showVoice,
+    required this.patternStyle,
+    required this.voiceStyle,
+    required this.width,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final double patternRowHeight = (patternStyle.fontSize ?? 28) * 1.35;
+    final double voiceRowHeight = (voiceStyle.fontSize ?? 14) * 1.25;
+
+    return SizedBox(
+      width: width,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            SizedBox(
+              height: patternRowHeight,
+              child: Center(
+                child: Text(
+                  separator,
+                  style: patternStyle.copyWith(color: const Color(0xFF6B6254)),
+                ),
+              ),
+            ),
+            if (showVoice) ...<Widget>[
+              const SizedBox(height: 6),
+              SizedBox(height: voiceRowHeight),
+            ],
+          ],
         ),
       ),
     );
