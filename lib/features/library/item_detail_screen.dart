@@ -167,11 +167,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                             tokens: _draftTokens,
                             selectedIndices: _selectedNoteIndices,
                             selectedTool: _pendingStructureTool,
-                            onToolChanged: (_StructureToolOption? next) {
-                              setState(() {
-                                _pendingStructureTool = next;
-                              });
-                            },
+                            onToolChanged: _handleStructureToolChanged,
                             onInsertBefore: _applyPendingInsertBefore,
                             onInsertAfter: _applyPendingInsertAfter,
                             onReplaceSelection: _applyPendingReplaceSelection,
@@ -422,7 +418,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
 
   String _labelForControlSet(_ItemDetailControlSet controlSet) {
     return switch (controlSet) {
-      _ItemDetailControlSet.append => 'Append',
+      _ItemDetailControlSet.append => 'Build',
       _ItemDetailControlSet.dynamics => 'Dynamics',
       _ItemDetailControlSet.voices => 'Voices',
     };
@@ -690,8 +686,10 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     return canKeepTriadGrouping ? PatternGroupingV1.triads : _draftGrouping;
   }
 
-  Future<List<PatternTokenV1>?> _tokensForPendingStructureTool() async {
-    return switch (_pendingStructureTool) {
+  Future<List<PatternTokenV1>?> _tokensForStructureTool(
+    _StructureToolOption? tool,
+  ) async {
+    return switch (tool) {
       _StructureToolOption.right => const <PatternTokenV1>[
         PatternTokenV1.right,
       ],
@@ -703,9 +701,44 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     };
   }
 
+  Future<void> _handleStructureToolChanged(_StructureToolOption? next) async {
+    if (next == null) {
+      setState(() {
+        _pendingStructureTool = null;
+      });
+      return;
+    }
+    if (_selectedNoteIndices.isEmpty) {
+      setState(() {
+        _pendingStructureTool = null;
+      });
+      final List<PatternTokenV1>? inserted = await _tokensForStructureTool(
+        next,
+      );
+      if (!mounted || inserted == null || inserted.isEmpty) return;
+      if (next == _StructureToolOption.triad) {
+        final List<PatternTokenV1> nextTokens = List<PatternTokenV1>.from(
+          _draftTokens,
+        )..addAll(inserted);
+        _insertTokens(
+          inserted,
+          beforeSelection: false,
+          groupingOverride: _groupingAfterTriadStructureChange(nextTokens),
+        );
+      } else {
+        _insertTokens(inserted, beforeSelection: false);
+      }
+      return;
+    }
+    setState(() {
+      _pendingStructureTool = next;
+    });
+  }
+
   Future<void> _applyPendingInsertBefore() async {
-    final List<PatternTokenV1>? inserted =
-        await _tokensForPendingStructureTool();
+    final List<PatternTokenV1>? inserted = await _tokensForStructureTool(
+      _pendingStructureTool,
+    );
     if (!mounted || inserted == null || inserted.isEmpty) return;
     if (_pendingStructureTool == _StructureToolOption.triad) {
       final List<int> sortedSelection = _selectedNoteIndices.toList()..sort();
@@ -726,8 +759,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   }
 
   Future<void> _applyPendingInsertAfter() async {
-    final List<PatternTokenV1>? inserted =
-        await _tokensForPendingStructureTool();
+    final List<PatternTokenV1>? inserted = await _tokensForStructureTool(
+      _pendingStructureTool,
+    );
     if (!mounted || inserted == null || inserted.isEmpty) return;
     if (_pendingStructureTool == _StructureToolOption.triad) {
       final List<int> sortedSelection = _selectedNoteIndices.toList()..sort();
@@ -749,8 +783,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
 
   Future<void> _applyPendingReplaceSelection() async {
     if (_selectedNoteIndices.isEmpty) return;
-    final List<PatternTokenV1>? replacement =
-        await _tokensForPendingStructureTool();
+    final List<PatternTokenV1>? replacement = await _tokensForStructureTool(
+      _pendingStructureTool,
+    );
     if (!mounted || replacement == null || replacement.isEmpty) return;
     final PatternGroupingV1? groupingOverride =
         _pendingStructureTool == _StructureToolOption.triad
@@ -1186,17 +1221,18 @@ class _StructureEditor extends StatelessWidget {
     final List<int> sortedSelection = selectedIndices.toList()..sort();
     final bool hasSelection = sortedSelection.isNotEmpty;
     final bool hasTool = selectedTool != null;
+    final bool canInsert = hasSelection && hasTool;
     final bool canDelete = hasSelection && !hasTool;
     final bool canReplace = hasSelection && hasTool;
     final String summary = switch ((hasSelection, selectedTool)) {
       (false, null) =>
-        'No position selected. Choose a stroke or triad source, then insert at the start or append to the end.',
+        'No position selected. Tap a stroke to append it to the pattern.',
       (false, _) =>
-        'No position selected. Insert Before adds at the start. Insert After appends to the end.',
+        'No position selected. Tapping a stroke appends it automatically.',
       (true, null) =>
         sortedSelection.length == 1
             ? 'Position ${sortedSelection.first + 1} selected · ${tokens[sortedSelection.first].symbol}. Choose a stroke source or delete the selection.'
-            : '${sortedSelection.length} positions selected. Choose a stroke source, or delete the selected positions.',
+            : '${sortedSelection.length} positions selected. Choose a stroke source or delete the selected positions.',
       (true, _) =>
         '${sortedSelection.length} position${sortedSelection.length == 1 ? '' : 's'} selected · ${_labelForTool(selectedTool!)} ready.',
     };
@@ -1212,7 +1248,7 @@ class _StructureEditor extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        const DrumEyebrow(text: 'Source'),
+        const DrumEyebrow(text: 'Strokes'),
         const SizedBox(height: 8),
         DrumHorizontalControlStrip(
           child: Row(
@@ -1247,15 +1283,15 @@ class _StructureEditor extends StatelessWidget {
           children: <Widget>[
             _TokenActionPill(
               label: 'Insert Before',
-              onPressed: hasTool
+              onPressed: canInsert
                   ? () {
                       onInsertBefore();
                     }
                   : null,
             ),
             _TokenActionPill(
-              label: hasSelection ? 'Insert After' : 'Append',
-              onPressed: hasTool
+              label: 'Insert After',
+              onPressed: canInsert
                   ? () {
                       onInsertAfter();
                     }

@@ -700,7 +700,7 @@ Practice Item is the detail/edit screen for one piece of material.
 - Practice Item may later expose timing controls, but grouping and timing must remain separate concepts in the data model and playback path
 - the `Practice Item` note-selection affordance may add only a small tap-target halo around the shared renderer; it should not create a wider second spacing model for note slots or separators
 - the `Practice Item` note-selection affordance should derive its slot and separator sizing from the shared renderer geometry instead of fixed local constants
-- `Practice Item` editing controls should be organized with a filter-style control row using `Append`, `Dynamics`, and `Voices`, with `Append` as the default active set
+- `Practice Item` editing controls should be organized with a filter-style control row using `Build`, `Dynamics`, and `Voices`, with `Build` as the default active set
 - `Practice Item` should contain a `Pattern Structure` section for direct token-sequence editing
 - `Practice Item` should contain an explicit `Grouping` control for visible separator metadata
 - a new blank `Practice Item` draft should open with a stable empty notation row already visible so the editor does not jump when the first token is inserted
@@ -710,8 +710,10 @@ Practice Item is the detail/edit screen for one piece of material.
 - kick notes should not be assignable in this editor flow
 - non-hand positions may still be selected for structure editing even though they are not assignable for dynamics or voices
 - structure edits should stay in the local draft until save, just like dynamics, voices, BPM, and duration
-- the `Append` control set should present one source row for choosing `R`, `L`, `K`, `Rest`, or `Triad`
-- the `Append` control set should present one action row for `Insert Before`, `Insert After`, `Replace`, and `Delete`
+- the `Build` control set should present one `Strokes` row for choosing the next source stroke
+- when no pattern position is selected, choosing a stroke in that row should append it to the end of the current draft automatically
+- the `Build` control set should present one action row for `Insert Before`, `Insert After`, `Replace`, and `Delete`
+- `Insert Before` and `Insert After` should stay disabled unless both a source stroke and at least one pattern position are selected
 - `Delete` should be the available destructive action when no new stroke or triad source is selected
 - the structure editor should support replace, insert, delete, rest insertion, and triad-helper insertion without switching to a different editor mode
 - triad-helper insertion should allow selecting one or more triads and should insert them in the order selected
