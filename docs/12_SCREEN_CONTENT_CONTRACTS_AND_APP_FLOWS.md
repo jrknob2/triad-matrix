@@ -1444,6 +1444,7 @@ Practice Item lets the user inspect and edit one item cleanly.
 - the `Build` control set should use one action row for `Insert Before`, `Insert After`, `Replace`, and `Delete`
 - the `Build` control set should also provide an explicit `Append` action that appends the current stroke source to the end of the draft without requiring a selected pattern position
 - the `Build` control set should also provide a `Repeat` action that repeats the last non-delete structure action when the current selection satisfies that action's prerequisites
+- the `Build` control set should also provide a full-pattern clear/reset action that returns the draft to the empty-row state
 - `Insert Before` and `Insert After` should remain disabled unless both a source stroke and at least one selected pattern position are present
 - `Delete` should be the destructive action available when no new source token or triad is selected
 - structure editing should support replace, insert, delete, rest insertion, and triad-helper insertion inside the same `Practice Item` surface

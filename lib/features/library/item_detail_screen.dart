@@ -189,6 +189,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                             onInsertAfter: _applyPendingInsertAfter,
                             onReplaceSelection: _applyPendingReplaceSelection,
                             onDeleteSelection: _deleteSelection,
+                            onClearPattern: _clearPatternDraft,
                             onRepeatLastAction: _repeatLastStructureAction,
                           ),
                           const SizedBox(height: 12),
@@ -635,6 +636,19 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
             ..sort();
       _normalizeDraftStructure();
       _selectedNoteIndices = <int>{};
+    });
+  }
+
+  void _clearPatternDraft() {
+    if (_draftTokens.isEmpty) return;
+    setState(() {
+      _draftTokens = <PatternTokenV1>[];
+      _draftGrouping = PatternGroupingV1.none;
+      _accentedNoteIndices = <int>[];
+      _ghostNoteIndices = <int>[];
+      _voiceAssignments = <DrumVoiceV1>[];
+      _selectedNoteIndices = <int>{};
+      _lastStructureAction = null;
     });
   }
 
@@ -1364,6 +1378,7 @@ class _StructureEditor extends StatelessWidget {
   final Future<void> Function() onInsertAfter;
   final Future<void> Function() onReplaceSelection;
   final VoidCallback onDeleteSelection;
+  final VoidCallback onClearPattern;
   final Future<void> Function() onRepeatLastAction;
 
   const _StructureEditor({
@@ -1377,6 +1392,7 @@ class _StructureEditor extends StatelessWidget {
     required this.onInsertAfter,
     required this.onReplaceSelection,
     required this.onDeleteSelection,
+    required this.onClearPattern,
     required this.onRepeatLastAction,
   });
 
@@ -1388,6 +1404,7 @@ class _StructureEditor extends StatelessWidget {
     final bool canAppend = hasTool;
     final bool canInsert = hasSelection && hasTool;
     final bool canDelete = hasSelection && !hasTool;
+    final bool canClearPattern = tokens.isNotEmpty;
     final bool canReplace = hasSelection && hasTool;
     final bool canRepeat = switch (lastAction?.kind) {
       _StructureActionKind.append => true,
@@ -1496,6 +1513,10 @@ class _StructureEditor extends StatelessWidget {
             _TokenActionPill(
               label: 'Delete',
               onPressed: canDelete ? onDeleteSelection : null,
+            ),
+            _TokenActionPill(
+              label: 'Clear Pattern',
+              onPressed: canClearPattern ? onClearPattern : null,
             ),
           ],
         ),
