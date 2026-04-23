@@ -69,9 +69,11 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   static const Duration _focusTransitionDuration = Duration(milliseconds: 320);
 
   final Stopwatch _stopwatch = Stopwatch();
+  final Stopwatch _patternPreviewStopwatch = Stopwatch();
   late final PracticeMetronomeService _metronome;
   late final PatternAudioService _patternAudio;
   Timer? _elapsedTicker;
+  Timer? _patternPreviewTicker;
   bool _running = false;
   bool _warmupComplete = false;
   bool _completionChimed = false;
@@ -89,6 +91,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   bool _patternAudioEnabled = false;
   bool _patternHighlightEnabled = true;
   late PracticeSessionSetupV1 _setup;
+  Duration _patternPreviewBaseElapsed = Duration.zero;
   Duration? _currentItemSegmentStartElapsed;
   int _currentItemIndex = 0;
 
@@ -112,6 +115,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     widget.onFocusModeChanged?.call(false);
     _discardEphemeralItemsIfNeeded();
     _elapsedTicker?.cancel();
+    _patternPreviewTicker?.cancel();
     unawaited(_metronome.dispose());
     unawaited(_patternAudio.dispose());
     super.dispose();
@@ -854,6 +858,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
 
   void _endSession() {
     if (!_canEndSession) return;
+    _stopPatternPreviewClock(clearElapsed: true);
     unawaited(_patternAudio.stop());
     if (_isWarmup) {
       _resetRunState(clearElapsed: false);
@@ -965,6 +970,9 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     }
     _elapsedTicker?.cancel();
     unawaited(_metronome.stop());
+    if (!_patternAudioEnabled) {
+      _stopPatternPreviewClock(clearElapsed: true);
+    }
     _running = false;
     if (clearFlags) {
       _warmupComplete = false;
@@ -1062,6 +1070,15 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   }
 
   int? _activeTokenIndexForCurrentItem(List<PatternTokenV1> tokens) {
+    if (_patternAudioEnabled) {
+      return PracticeSessionRuntimeMath.activeTokenIndex(
+        tokens: tokens,
+        grouping: widget.controller.displayGroupingFor(_currentItemId),
+        timing: widget.controller.patternTimingFor(_currentItemId),
+        elapsed: _patternPreviewElapsed,
+        bpm: _bpm,
+      );
+    }
     if (!_running && _elapsed == Duration.zero) return null;
     return PracticeSessionRuntimeMath.activeTokenIndex(
       tokens: tokens,
@@ -1087,6 +1104,9 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     }
     return _elapsed;
   }
+
+  Duration get _patternPreviewElapsed =>
+      _patternPreviewBaseElapsed + _patternPreviewStopwatch.elapsed;
 
   void _startElapsedTicker() {
     _elapsedTicker?.cancel();
@@ -1214,8 +1234,13 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
       _patternAudioEnabled = value;
     });
     if (value) {
-      unawaited(_startPatternAudioForCurrentItem());
+      unawaited(
+        _restartPatternAudioPreview(
+          startElapsed: _running ? _tokenCycleElapsedForCurrentItem() : Duration.zero,
+        ),
+      );
     } else {
+      _stopPatternPreviewClock(clearElapsed: true);
       unawaited(_patternAudio.stop());
     }
   }
@@ -1234,6 +1259,14 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
   bool get _shouldRunMetronome => _clickEnabled || _pulseEnabled;
 
   Future<void> _startPatternAudioForCurrentItem() async {
+    await _restartPatternAudioPreview(
+      startElapsed: _running ? _tokenCycleElapsedForCurrentItem() : Duration.zero,
+    );
+  }
+
+  Future<void> _restartPatternAudioPreview({
+    required Duration startElapsed,
+  }) async {
     final String itemId = _currentItemId;
     await _patternAudio.start(
       tokens: widget.controller.patternTokensFor(itemId),
@@ -1242,10 +1275,34 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
       grouping: widget.controller.displayGroupingFor(itemId),
       timing: widget.controller.patternTimingFor(itemId),
       bpm: _bpm,
-      startElapsed: _running
-          ? _tokenCycleElapsedForCurrentItem()
-          : Duration.zero,
+      startElapsed: startElapsed,
     );
+    if (!_patternAudioEnabled || !mounted) return;
+    _startPatternPreviewClock(startElapsed);
+  }
+
+  void _startPatternPreviewClock(Duration startElapsed) {
+    _patternPreviewTicker?.cancel();
+    _patternPreviewBaseElapsed = startElapsed;
+    _patternPreviewStopwatch
+      ..reset()
+      ..start();
+    _patternPreviewTicker = Timer.periodic(const Duration(milliseconds: 50), (
+      _,
+    ) {
+      if (!mounted || !_patternAudioEnabled) return;
+      setState(() {});
+    });
+  }
+
+  void _stopPatternPreviewClock({required bool clearElapsed}) {
+    _patternPreviewTicker?.cancel();
+    _patternPreviewTicker = null;
+    _patternPreviewStopwatch.stop();
+    if (clearElapsed) {
+      _patternPreviewBaseElapsed = Duration.zero;
+      _patternPreviewStopwatch.reset();
+    }
   }
 
   void _markCurrentItemPracticed() {
