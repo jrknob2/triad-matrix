@@ -714,12 +714,14 @@ Practice Item is the detail/edit screen for one piece of material.
 - the `Build` control set should present one `Strokes` row for choosing the next source stroke
 - when no pattern position is selected, choosing a stroke in that row should append it to the end of the current draft automatically
 - the `Build` control set should present one action row for `Insert Before`, `Insert After`, `Replace`, and `Delete`
+- the `Build` control set should also include an explicit `Append` action that appends the current stroke source to the end of the draft and stays available independently of pattern-position selection
+- the `Build` control set should include a `Repeat` action that repeats the last non-delete structure action when its selection prerequisites are satisfied
 - `Insert Before` and `Insert After` should stay disabled unless both a source stroke and at least one pattern position are selected
 - `Delete` should be the available destructive action when no new stroke or triad source is selected
 - the structure editor should support replace, insert, delete, rest insertion, and triad-helper insertion without switching to a different editor mode
 - triad-helper insertion should allow selecting one or more triads and should insert them in the order selected
 - the `Grouping` control should affect only visible separator metadata, not runtime behavior or family labels
-- the `Grouping` control should expose only group sizes compatible with the current token count, plus `None`
+- the `Grouping` control should show `None`, `3`, `4`, and `5`, and incompatible group sizes should disable rather than disappear
 - deleting the entire current token sequence should be allowed and should return the draft to that stable empty-row state
 - when direct structure edits break an inherited grouping shape, the stale grouping hint should clear instead of continuing to render separators that no longer fit the edited pattern
 - triad-helper insertion inside `Practice Item` should use the same shared triad-grid rendering language as Matrix, even if the modal or sheet wrapper is simpler

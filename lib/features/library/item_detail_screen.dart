@@ -14,6 +14,20 @@ enum _ItemDetailControlSet { append, dynamics, voices }
 
 enum _StructureToolOption { right, left, kick, rest, triad }
 
+enum _StructureActionKind { append, insertBefore, insertAfter, replace }
+
+class _RecordedStructureAction {
+  final _StructureActionKind kind;
+  final List<PatternTokenV1> tokens;
+  final bool usesTriadGroupingRule;
+
+  const _RecordedStructureAction({
+    required this.kind,
+    required this.tokens,
+    required this.usesTriadGroupingRule,
+  });
+}
+
 class ItemDetailScreen extends StatefulWidget {
   final AppController controller;
   final String itemId;
@@ -41,6 +55,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   late Set<int> _selectedNoteIndices;
   _ItemDetailControlSet _activeControlSet = _ItemDetailControlSet.append;
   _StructureToolOption? _pendingStructureTool;
+  _RecordedStructureAction? _lastStructureAction;
 
   @override
   void initState() {
@@ -167,11 +182,14 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                             tokens: _draftTokens,
                             selectedIndices: _selectedNoteIndices,
                             selectedTool: _pendingStructureTool,
+                            lastAction: _lastStructureAction,
                             onToolChanged: _handleStructureToolChanged,
+                            onAppend: _applyPendingAppend,
                             onInsertBefore: _applyPendingInsertBefore,
                             onInsertAfter: _applyPendingInsertAfter,
                             onReplaceSelection: _applyPendingReplaceSelection,
                             onDeleteSelection: _deleteSelection,
+                            onRepeatLastAction: _repeatLastStructureAction,
                           ),
                           const SizedBox(height: 12),
                           _GroupingControl(
@@ -445,6 +463,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     List<PatternTokenV1> inserted, {
     required bool beforeSelection,
     PatternGroupingV1? groupingOverride,
+    bool recordAction = true,
   }) {
     if (inserted.isEmpty) return;
     final List<int> sortedIndices = _selectedNoteIndices.toList()..sort();
@@ -477,12 +496,56 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       }
       _normalizeDraftStructure();
       _selectedNoteIndices = <int>{};
+      if (recordAction) {
+        _lastStructureAction = _RecordedStructureAction(
+          kind: beforeSelection
+              ? _StructureActionKind.insertBefore
+              : _StructureActionKind.insertAfter,
+          tokens: List<PatternTokenV1>.unmodifiable(inserted),
+          usesTriadGroupingRule: groupingOverride != null,
+        );
+      }
+    });
+  }
+
+  void _appendTokens(
+    List<PatternTokenV1> appended, {
+    PatternGroupingV1? groupingOverride,
+    bool recordAction = true,
+  }) {
+    if (appended.isEmpty) return;
+    final int insertAt = _draftTokens.length;
+    final List<PatternTokenV1> nextTokens = List<PatternTokenV1>.from(
+      _draftTokens,
+    )..insertAll(insertAt, appended);
+
+    setState(() {
+      _draftTokens = nextTokens;
+      _accentedNoteIndices = List<int>.from(_accentedNoteIndices)..sort();
+      _ghostNoteIndices = List<int>.from(_ghostNoteIndices)..sort();
+      final List<DrumVoiceV1> nextVoices = List<DrumVoiceV1>.from(
+        _voiceAssignments,
+      )..insertAll(insertAt, appended.map(_defaultVoiceForDraftToken));
+      _voiceAssignments = nextVoices;
+      if (groupingOverride != null) {
+        _draftGrouping = groupingOverride;
+      }
+      _normalizeDraftStructure();
+      _selectedNoteIndices = <int>{};
+      if (recordAction) {
+        _lastStructureAction = _RecordedStructureAction(
+          kind: _StructureActionKind.append,
+          tokens: List<PatternTokenV1>.unmodifiable(appended),
+          usesTriadGroupingRule: groupingOverride != null,
+        );
+      }
     });
   }
 
   void _replaceSelectionWithTokens(
     List<PatternTokenV1> replacement, {
     PatternGroupingV1? groupingOverride,
+    bool recordAction = true,
   }) {
     final List<int> sortedSelection = _selectedNoteIndices.toList()..sort();
     if (sortedSelection.isEmpty) return;
@@ -527,6 +590,13 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       }
       _normalizeDraftStructure();
       _selectedNoteIndices = <int>{};
+      if (recordAction) {
+        _lastStructureAction = _RecordedStructureAction(
+          kind: _StructureActionKind.replace,
+          tokens: List<PatternTokenV1>.unmodifiable(replacement),
+          usesTriadGroupingRule: groupingOverride != null,
+        );
+      }
     });
   }
 
@@ -720,19 +790,36 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         final List<PatternTokenV1> nextTokens = List<PatternTokenV1>.from(
           _draftTokens,
         )..addAll(inserted);
-        _insertTokens(
+        _appendTokens(
           inserted,
-          beforeSelection: false,
           groupingOverride: _groupingAfterTriadStructureChange(nextTokens),
         );
       } else {
-        _insertTokens(inserted, beforeSelection: false);
+        _appendTokens(inserted);
       }
       return;
     }
     setState(() {
       _pendingStructureTool = next;
     });
+  }
+
+  Future<void> _applyPendingAppend() async {
+    final List<PatternTokenV1>? appended = await _tokensForStructureTool(
+      _pendingStructureTool,
+    );
+    if (!mounted || appended == null || appended.isEmpty) return;
+    if (_pendingStructureTool == _StructureToolOption.triad) {
+      final List<PatternTokenV1> nextTokens = List<PatternTokenV1>.from(
+        _draftTokens,
+      )..addAll(appended);
+      _appendTokens(
+        appended,
+        groupingOverride: _groupingAfterTriadStructureChange(nextTokens),
+      );
+      return;
+    }
+    _appendTokens(appended);
   }
 
   Future<void> _applyPendingInsertBefore() async {
@@ -797,6 +884,77 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       replacement,
       groupingOverride: groupingOverride,
     );
+  }
+
+  Future<void> _repeatLastStructureAction() async {
+    final _RecordedStructureAction? lastAction = _lastStructureAction;
+    if (lastAction == null || lastAction.tokens.isEmpty) return;
+    final PatternGroupingV1? groupingOverride = lastAction.usesTriadGroupingRule
+        ? _groupingAfterTriadStructureChange(
+            switch (lastAction.kind) {
+              _StructureActionKind.append => List<PatternTokenV1>.from(
+                _draftTokens,
+              )..addAll(lastAction.tokens),
+              _StructureActionKind.insertBefore => (() {
+                  final List<int> sortedSelection =
+                      _selectedNoteIndices.toList()..sort();
+                  final int insertAt = sortedSelection.isEmpty
+                      ? _draftTokens.length
+                      : sortedSelection.first;
+                  return List<PatternTokenV1>.from(_draftTokens)
+                    ..insertAll(insertAt, lastAction.tokens);
+                })(),
+              _StructureActionKind.insertAfter => (() {
+                  final List<int> sortedSelection =
+                      _selectedNoteIndices.toList()..sort();
+                  final int insertAt = sortedSelection.isEmpty
+                      ? _draftTokens.length
+                      : sortedSelection.last + 1;
+                  return List<PatternTokenV1>.from(_draftTokens)
+                    ..insertAll(insertAt, lastAction.tokens);
+                })(),
+              _StructureActionKind.replace => _tokensAfterReplacingSelection(
+                lastAction.tokens,
+              ),
+            },
+          )
+        : null;
+
+    switch (lastAction.kind) {
+      case _StructureActionKind.append:
+        _appendTokens(
+          lastAction.tokens,
+          groupingOverride: groupingOverride,
+          recordAction: false,
+        );
+        break;
+      case _StructureActionKind.insertBefore:
+        if (_selectedNoteIndices.isEmpty) return;
+        _insertTokens(
+          lastAction.tokens,
+          beforeSelection: true,
+          groupingOverride: groupingOverride,
+          recordAction: false,
+        );
+        break;
+      case _StructureActionKind.insertAfter:
+        if (_selectedNoteIndices.isEmpty) return;
+        _insertTokens(
+          lastAction.tokens,
+          beforeSelection: false,
+          groupingOverride: groupingOverride,
+          recordAction: false,
+        );
+        break;
+      case _StructureActionKind.replace:
+        if (_selectedNoteIndices.isEmpty) return;
+        _replaceSelectionWithTokens(
+          lastAction.tokens,
+          groupingOverride: groupingOverride,
+          recordAction: false,
+        );
+        break;
+    }
   }
 
   List<PatternTokenV1> _tokensAfterReplacingSelection(
@@ -1199,21 +1357,27 @@ class _StructureEditor extends StatelessWidget {
   final List<PatternTokenV1> tokens;
   final Set<int> selectedIndices;
   final _StructureToolOption? selectedTool;
+  final _RecordedStructureAction? lastAction;
   final ValueChanged<_StructureToolOption?> onToolChanged;
+  final Future<void> Function() onAppend;
   final Future<void> Function() onInsertBefore;
   final Future<void> Function() onInsertAfter;
   final Future<void> Function() onReplaceSelection;
   final VoidCallback onDeleteSelection;
+  final Future<void> Function() onRepeatLastAction;
 
   const _StructureEditor({
     required this.tokens,
     required this.selectedIndices,
     required this.selectedTool,
+    required this.lastAction,
     required this.onToolChanged,
+    required this.onAppend,
     required this.onInsertBefore,
     required this.onInsertAfter,
     required this.onReplaceSelection,
     required this.onDeleteSelection,
+    required this.onRepeatLastAction,
   });
 
   @override
@@ -1221,9 +1385,17 @@ class _StructureEditor extends StatelessWidget {
     final List<int> sortedSelection = selectedIndices.toList()..sort();
     final bool hasSelection = sortedSelection.isNotEmpty;
     final bool hasTool = selectedTool != null;
+    final bool canAppend = hasTool;
     final bool canInsert = hasSelection && hasTool;
     final bool canDelete = hasSelection && !hasTool;
     final bool canReplace = hasSelection && hasTool;
+    final bool canRepeat = switch (lastAction?.kind) {
+      _StructureActionKind.append => true,
+      _StructureActionKind.insertBefore ||
+      _StructureActionKind.insertAfter ||
+      _StructureActionKind.replace => hasSelection,
+      null => false,
+    };
     final String summary = switch ((hasSelection, selectedTool)) {
       (false, null) =>
         'No position selected. Tap a stroke to append it to the pattern.',
@@ -1281,6 +1453,22 @@ class _StructureEditor extends StatelessWidget {
           spacing: 8,
           runSpacing: 8,
           children: <Widget>[
+            _TokenActionPill(
+              label: 'Append',
+              onPressed: canAppend
+                  ? () {
+                      onAppend();
+                    }
+                  : null,
+            ),
+            _TokenActionPill(
+              label: 'Repeat',
+              onPressed: canRepeat
+                  ? () {
+                      onRepeatLastAction();
+                    }
+                  : null,
+            ),
             _TokenActionPill(
               label: 'Insert Before',
               onPressed: canInsert
@@ -1340,13 +1528,26 @@ class _GroupingControl extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final List<_GroupingOption> options = <_GroupingOption>[
-      const _GroupingOption(label: 'None', grouping: PatternGroupingV1.none),
-      if (tokenCount > 0 && tokenCount % 3 == 0)
-        const _GroupingOption(label: '3', grouping: PatternGroupingV1.triads),
-      if (tokenCount > 0 && tokenCount % 4 == 0)
-        const _GroupingOption(label: '4', grouping: PatternGroupingV1.fourNote),
-      if (tokenCount > 0 && tokenCount % 5 == 0)
-        const _GroupingOption(label: '5', grouping: PatternGroupingV1.fiveNote),
+      const _GroupingOption(
+        label: 'None',
+        grouping: PatternGroupingV1.none,
+        enabled: true,
+      ),
+      _GroupingOption(
+        label: '3',
+        grouping: PatternGroupingV1.triads,
+        enabled: tokenCount > 0 && tokenCount % 3 == 0,
+      ),
+      _GroupingOption(
+        label: '4',
+        grouping: PatternGroupingV1.fourNote,
+        enabled: tokenCount > 0 && tokenCount % 4 == 0,
+      ),
+      _GroupingOption(
+        label: '5',
+        grouping: PatternGroupingV1.fiveNote,
+        enabled: tokenCount > 0 && tokenCount % 5 == 0,
+      ),
     ];
 
     return Column(
@@ -1360,26 +1561,20 @@ class _GroupingControl extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        if (tokenCount == 0)
-          Text(
-            'Add positions first, then choose how visible separators should group the pattern.',
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: const Color(0xFF5B5345)),
-          )
-        else
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: <Widget>[
-              for (final _GroupingOption option in options)
-                DrumSelectablePill(
-                  label: Text(option.label),
-                  selected: option.grouping == grouping,
-                  onPressed: () => onChanged(option.grouping),
-                ),
-            ],
-          ),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: <Widget>[
+            for (final _GroupingOption option in options)
+              DrumSelectablePill(
+                label: Text(option.label),
+                selected: option.grouping == grouping,
+                onPressed: option.enabled
+                    ? () => onChanged(option.grouping)
+                    : null,
+              ),
+          ],
+        ),
       ],
     );
   }
@@ -1388,8 +1583,13 @@ class _GroupingControl extends StatelessWidget {
 class _GroupingOption {
   final String label;
   final PatternGroupingV1 grouping;
+  final bool enabled;
 
-  const _GroupingOption({required this.label, required this.grouping});
+  const _GroupingOption({
+    required this.label,
+    required this.grouping,
+    required this.enabled,
+  });
 }
 
 class _TokenActionPill extends StatelessWidget {

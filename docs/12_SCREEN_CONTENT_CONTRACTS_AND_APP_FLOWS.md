@@ -1442,12 +1442,14 @@ Practice Item lets the user inspect and edit one item cleanly.
 - the `Build` control set should use one `Strokes` row for choosing the next source stroke
 - when no pattern position is selected, choosing a stroke in that row should append it to the end of the draft automatically
 - the `Build` control set should use one action row for `Insert Before`, `Insert After`, `Replace`, and `Delete`
+- the `Build` control set should also provide an explicit `Append` action that appends the current stroke source to the end of the draft without requiring a selected pattern position
+- the `Build` control set should also provide a `Repeat` action that repeats the last non-delete structure action when the current selection satisfies that action's prerequisites
 - `Insert Before` and `Insert After` should remain disabled unless both a source stroke and at least one selected pattern position are present
 - `Delete` should be the destructive action available when no new source token or triad is selected
 - structure editing should support replace, insert, delete, rest insertion, and triad-helper insertion inside the same `Practice Item` surface
 - triad-helper insertion should allow selecting one or more triads and should insert them in the order selected
 - the `Grouping` control should affect only visible separator metadata, not runtime behavior or family labels
-- the `Grouping` control should expose only group sizes compatible with the current token count, plus `None`
+- the `Grouping` control should show `None`, `3`, `4`, and `5`, and incompatible group sizes should disable rather than disappear
 - deleting the entire current token sequence should be allowed and should return the draft to that stable empty-row state
 - when direct structure edits break an inherited grouping shape, the stale grouping hint should clear instead of continuing to render separators that no longer fit the edited pattern
 - triad-helper insertion inside `Practice Item` should use the same shared triad-grid rendering language as Matrix, even if the insert modal or sheet carries a reduced control set
