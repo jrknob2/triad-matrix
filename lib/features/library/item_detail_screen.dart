@@ -12,19 +12,21 @@ import '../practice/widgets/pattern_voice_display.dart';
 
 enum _ItemDetailControlSet { append, dynamics, voices }
 
-enum _StructureToolOption { right, left, kick, rest, triad }
+enum _StructureToolOption { right, left, kick, rest, triad, fourNote }
 
 enum _StructureActionKind { append, insertBefore, insertAfter, replace }
+
+enum _StructureGroupingRule { triads, fourNote }
 
 class _RecordedStructureAction {
   final _StructureActionKind kind;
   final List<PatternTokenV1> tokens;
-  final bool usesTriadGroupingRule;
+  final _StructureGroupingRule? groupingRule;
 
   const _RecordedStructureAction({
     required this.kind,
     required this.tokens,
-    required this.usesTriadGroupingRule,
+    required this.groupingRule,
   });
 }
 
@@ -464,6 +466,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     List<PatternTokenV1> inserted, {
     required bool beforeSelection,
     PatternGroupingV1? groupingOverride,
+    _StructureGroupingRule? groupingRule,
     bool recordAction = true,
   }) {
     if (inserted.isEmpty) return;
@@ -503,7 +506,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
               ? _StructureActionKind.insertBefore
               : _StructureActionKind.insertAfter,
           tokens: List<PatternTokenV1>.unmodifiable(inserted),
-          usesTriadGroupingRule: groupingOverride != null,
+          groupingRule: groupingRule,
         );
       }
     });
@@ -512,6 +515,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   void _appendTokens(
     List<PatternTokenV1> appended, {
     PatternGroupingV1? groupingOverride,
+    _StructureGroupingRule? groupingRule,
     bool recordAction = true,
   }) {
     if (appended.isEmpty) return;
@@ -537,7 +541,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         _lastStructureAction = _RecordedStructureAction(
           kind: _StructureActionKind.append,
           tokens: List<PatternTokenV1>.unmodifiable(appended),
-          usesTriadGroupingRule: groupingOverride != null,
+          groupingRule: groupingRule,
         );
       }
     });
@@ -546,6 +550,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   void _replaceSelectionWithTokens(
     List<PatternTokenV1> replacement, {
     PatternGroupingV1? groupingOverride,
+    _StructureGroupingRule? groupingRule,
     bool recordAction = true,
   }) {
     final List<int> sortedSelection = _selectedNoteIndices.toList()..sort();
@@ -595,7 +600,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         _lastStructureAction = _RecordedStructureAction(
           kind: _StructureActionKind.replace,
           tokens: List<PatternTokenV1>.unmodifiable(replacement),
-          usesTriadGroupingRule: groupingOverride != null,
+          groupingRule: groupingRule,
         );
       }
     });
@@ -760,6 +765,130 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         .toList(growable: false);
   }
 
+  Future<List<PatternTokenV1>?> _showFourNoteInsertDialog() async {
+    return showDialog<List<PatternTokenV1>>(
+      context: context,
+      builder: (BuildContext context) {
+        String? selectedItemId;
+        PatternTokenV1? appendedToken;
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            final bool canInsert =
+                selectedItemId != null && appendedToken != null;
+            return Dialog(
+              backgroundColor: Colors.transparent,
+              insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+              child: DrumPanel(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        'Build 4-Note',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Pick one triad, then choose one stroke to append.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: const Color(0xFF5B5345),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 360),
+                        child: TriadMatrixGrid(
+                          controller: widget.controller,
+                          filters: const MatrixFiltersV1(
+                            lane: null,
+                            filters: <TriadMatrixFilterV1>{},
+                            selectedRows: <String>{},
+                            selectedColumns: <String>{},
+                          ),
+                          selection: MatrixSelectionStateV1(
+                            orderedItemIds: selectedItemId == null
+                                ? const <String>[]
+                                : <String>[selectedItemId!],
+                          ),
+                          showProgressColors: false,
+                          axisSelectionEnabled: false,
+                          onToggleRow: (_) {},
+                          onToggleColumn: (_) {},
+                          onTapItem: (String itemId) {
+                            setModalState(() {
+                              selectedItemId = selectedItemId == itemId
+                                  ? null
+                                  : itemId;
+                            });
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      const DrumEyebrow(text: 'Append'),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children:
+                            <PatternTokenV1>[
+                                  PatternTokenV1.right,
+                                  PatternTokenV1.left,
+                                  PatternTokenV1.kick,
+                                ]
+                                .map((PatternTokenV1 token) {
+                                  return DrumSelectablePill(
+                                    label: Text('+${token.symbol}'),
+                                    selected: appendedToken == token,
+                                    onPressed: () {
+                                      setModalState(() {
+                                        appendedToken = token;
+                                      });
+                                    },
+                                  );
+                                })
+                                .toList(growable: false),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: <Widget>[
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            child: const Text('Cancel'),
+                          ),
+                          const SizedBox(width: 8),
+                          FilledButton(
+                            onPressed: !canInsert
+                                ? null
+                                : () {
+                                    final List<PatternTokenV1> triadTokens =
+                                        widget.controller
+                                            .itemById(selectedItemId!)
+                                            .tokens;
+                                    Navigator.of(context).pop(<PatternTokenV1>[
+                                      ...triadTokens,
+                                      appendedToken!,
+                                    ]);
+                                  },
+                            child: const Text('Insert'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   PatternGroupingV1 _groupingAfterTriadStructureChange(
     List<PatternTokenV1> nextTokens,
   ) {
@@ -768,6 +897,40 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         !nextTokens.any((PatternTokenV1 token) => token.isRest) &&
         nextTokens.length % 3 == 0;
     return canKeepTriadGrouping ? PatternGroupingV1.triads : _draftGrouping;
+  }
+
+  PatternGroupingV1 _groupingAfterFourNoteStructureChange(
+    List<PatternTokenV1> nextTokens,
+  ) {
+    final bool canKeepFourNoteGrouping =
+        nextTokens.isNotEmpty &&
+        !nextTokens.any((PatternTokenV1 token) => token.isRest) &&
+        nextTokens.length % 4 == 0;
+    return canKeepFourNoteGrouping
+        ? PatternGroupingV1.fourNote
+        : _draftGrouping;
+  }
+
+  _StructureGroupingRule? _groupingRuleForTool(_StructureToolOption? tool) {
+    return switch (tool) {
+      _StructureToolOption.triad => _StructureGroupingRule.triads,
+      _StructureToolOption.fourNote => _StructureGroupingRule.fourNote,
+      _ => null,
+    };
+  }
+
+  PatternGroupingV1 _groupingAfterStructureRule(
+    _StructureGroupingRule rule,
+    List<PatternTokenV1> nextTokens,
+  ) {
+    return switch (rule) {
+      _StructureGroupingRule.triads => _groupingAfterTriadStructureChange(
+        nextTokens,
+      ),
+      _StructureGroupingRule.fourNote => _groupingAfterFourNoteStructureChange(
+        nextTokens,
+      ),
+    };
   }
 
   Future<List<PatternTokenV1>?> _tokensForStructureTool(
@@ -781,6 +944,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       _StructureToolOption.kick => const <PatternTokenV1>[PatternTokenV1.kick],
       _StructureToolOption.rest => const <PatternTokenV1>[PatternTokenV1.rest],
       _StructureToolOption.triad => _showTriadInsertDialog(),
+      _StructureToolOption.fourNote => _showFourNoteInsertDialog(),
       null => null,
     };
   }
@@ -800,13 +964,18 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         next,
       );
       if (!mounted || inserted == null || inserted.isEmpty) return;
-      if (next == _StructureToolOption.triad) {
+      final _StructureGroupingRule? groupingRule = _groupingRuleForTool(next);
+      if (groupingRule != null) {
         final List<PatternTokenV1> nextTokens = List<PatternTokenV1>.from(
           _draftTokens,
         )..addAll(inserted);
         _appendTokens(
           inserted,
-          groupingOverride: _groupingAfterTriadStructureChange(nextTokens),
+          groupingOverride: _groupingAfterStructureRule(
+            groupingRule,
+            nextTokens,
+          ),
+          groupingRule: groupingRule,
         );
       } else {
         _appendTokens(inserted);
@@ -823,13 +992,17 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       _pendingStructureTool,
     );
     if (!mounted || appended == null || appended.isEmpty) return;
-    if (_pendingStructureTool == _StructureToolOption.triad) {
+    final _StructureGroupingRule? groupingRule = _groupingRuleForTool(
+      _pendingStructureTool,
+    );
+    if (groupingRule != null) {
       final List<PatternTokenV1> nextTokens = List<PatternTokenV1>.from(
         _draftTokens,
       )..addAll(appended);
       _appendTokens(
         appended,
-        groupingOverride: _groupingAfterTriadStructureChange(nextTokens),
+        groupingOverride: _groupingAfterStructureRule(groupingRule, nextTokens),
+        groupingRule: groupingRule,
       );
       return;
     }
@@ -841,7 +1014,10 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       _pendingStructureTool,
     );
     if (!mounted || inserted == null || inserted.isEmpty) return;
-    if (_pendingStructureTool == _StructureToolOption.triad) {
+    final _StructureGroupingRule? groupingRule = _groupingRuleForTool(
+      _pendingStructureTool,
+    );
+    if (groupingRule != null) {
       final List<int> sortedSelection = _selectedNoteIndices.toList()..sort();
       final int insertAt = sortedSelection.isEmpty
           ? _draftTokens.length
@@ -852,7 +1028,8 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       _insertTokens(
         inserted,
         beforeSelection: true,
-        groupingOverride: _groupingAfterTriadStructureChange(nextTokens),
+        groupingOverride: _groupingAfterStructureRule(groupingRule, nextTokens),
+        groupingRule: groupingRule,
       );
       return;
     }
@@ -864,7 +1041,10 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       _pendingStructureTool,
     );
     if (!mounted || inserted == null || inserted.isEmpty) return;
-    if (_pendingStructureTool == _StructureToolOption.triad) {
+    final _StructureGroupingRule? groupingRule = _groupingRuleForTool(
+      _pendingStructureTool,
+    );
+    if (groupingRule != null) {
       final List<int> sortedSelection = _selectedNoteIndices.toList()..sort();
       final int insertAt = sortedSelection.isEmpty
           ? _draftTokens.length
@@ -875,7 +1055,8 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       _insertTokens(
         inserted,
         beforeSelection: false,
-        groupingOverride: _groupingAfterTriadStructureChange(nextTokens),
+        groupingOverride: _groupingAfterStructureRule(groupingRule, nextTokens),
+        groupingRule: groupingRule,
       );
       return;
     }
@@ -888,57 +1069,63 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       _pendingStructureTool,
     );
     if (!mounted || replacement == null || replacement.isEmpty) return;
-    final PatternGroupingV1? groupingOverride =
-        _pendingStructureTool == _StructureToolOption.triad
-        ? _groupingAfterTriadStructureChange(
+    final _StructureGroupingRule? groupingRule = _groupingRuleForTool(
+      _pendingStructureTool,
+    );
+    final PatternGroupingV1? groupingOverride = groupingRule == null
+        ? null
+        : _groupingAfterStructureRule(
+            groupingRule,
             _tokensAfterReplacingSelection(replacement),
-          )
-        : null;
+          );
     _replaceSelectionWithTokens(
       replacement,
       groupingOverride: groupingOverride,
+      groupingRule: groupingRule,
     );
   }
 
   Future<void> _repeatLastStructureAction() async {
     final _RecordedStructureAction? lastAction = _lastStructureAction;
     if (lastAction == null || lastAction.tokens.isEmpty) return;
-    final PatternGroupingV1? groupingOverride = lastAction.usesTriadGroupingRule
-        ? _groupingAfterTriadStructureChange(
+    final PatternGroupingV1? groupingOverride = lastAction.groupingRule == null
+        ? null
+        : _groupingAfterStructureRule(
+            lastAction.groupingRule!,
             switch (lastAction.kind) {
               _StructureActionKind.append => List<PatternTokenV1>.from(
                 _draftTokens,
               )..addAll(lastAction.tokens),
               _StructureActionKind.insertBefore => (() {
-                  final List<int> sortedSelection =
-                      _selectedNoteIndices.toList()..sort();
-                  final int insertAt = sortedSelection.isEmpty
-                      ? _draftTokens.length
-                      : sortedSelection.first;
-                  return List<PatternTokenV1>.from(_draftTokens)
-                    ..insertAll(insertAt, lastAction.tokens);
-                })(),
+                final List<int> sortedSelection = _selectedNoteIndices.toList()
+                  ..sort();
+                final int insertAt = sortedSelection.isEmpty
+                    ? _draftTokens.length
+                    : sortedSelection.first;
+                return List<PatternTokenV1>.from(_draftTokens)
+                  ..insertAll(insertAt, lastAction.tokens);
+              })(),
               _StructureActionKind.insertAfter => (() {
-                  final List<int> sortedSelection =
-                      _selectedNoteIndices.toList()..sort();
-                  final int insertAt = sortedSelection.isEmpty
-                      ? _draftTokens.length
-                      : sortedSelection.last + 1;
-                  return List<PatternTokenV1>.from(_draftTokens)
-                    ..insertAll(insertAt, lastAction.tokens);
-                })(),
+                final List<int> sortedSelection = _selectedNoteIndices.toList()
+                  ..sort();
+                final int insertAt = sortedSelection.isEmpty
+                    ? _draftTokens.length
+                    : sortedSelection.last + 1;
+                return List<PatternTokenV1>.from(_draftTokens)
+                  ..insertAll(insertAt, lastAction.tokens);
+              })(),
               _StructureActionKind.replace => _tokensAfterReplacingSelection(
                 lastAction.tokens,
               ),
             },
-          )
-        : null;
+          );
 
     switch (lastAction.kind) {
       case _StructureActionKind.append:
         _appendTokens(
           lastAction.tokens,
           groupingOverride: groupingOverride,
+          groupingRule: lastAction.groupingRule,
           recordAction: false,
         );
         break;
@@ -948,6 +1135,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
           lastAction.tokens,
           beforeSelection: true,
           groupingOverride: groupingOverride,
+          groupingRule: lastAction.groupingRule,
           recordAction: false,
         );
         break;
@@ -957,6 +1145,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
           lastAction.tokens,
           beforeSelection: false,
           groupingOverride: groupingOverride,
+          groupingRule: lastAction.groupingRule,
           recordAction: false,
         );
         break;
@@ -965,6 +1154,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         _replaceSelectionWithTokens(
           lastAction.tokens,
           groupingOverride: groupingOverride,
+          groupingRule: lastAction.groupingRule,
           recordAction: false,
         );
         break;
@@ -1574,6 +1764,7 @@ class _StructureEditor extends StatelessWidget {
       _StructureToolOption.kick => 'K',
       _StructureToolOption.rest => 'Rest',
       _StructureToolOption.triad => 'Triad',
+      _StructureToolOption.fourNote => '4-Note',
     };
   }
 }

@@ -293,6 +293,7 @@ Phrase rule:
 - Matrix preview practice should return to Matrix on end and should not open Session Summary
 - `Add to Working On` should open authoring/edit flow, not silently create duplicates or save immediately
 - `Add to Working On` should convert the current triad selection into a generic authored pattern item immediately; downstream screens should not depend on combo metadata or matrix-cell structure
+- Matrix must not expose 4-note building as a direct Matrix action; 4-note authoring belongs in `Practice Item`
 - Matrix phrase-building state should not expose a separate `Save` action when `Add to Working On` already hands off into explicit item authoring
 - when Matrix is opened from `Practice Item`, it should reuse Matrix in edit mode instead of routing to a separate builder screen
 - Matrix edit mode must preload the item's current triad sequence on first render
@@ -721,6 +722,9 @@ Practice Item is the detail/edit screen for one piece of material.
 - `Delete` should be the available destructive action when no new stroke or triad source is selected
 - the structure editor should support replace, insert, delete, rest insertion, and triad-helper insertion without switching to a different editor mode
 - triad-helper insertion should allow selecting one or more triads and should insert them in the order selected
+- 4-note helper insertion should live in `Practice Item` as a `Build` source, select exactly one triad from the shared triad-grid language, then append exactly one `R`, `L`, or `K`
+- the 4-note helper must expose only `triad + x`; it must not add an `x + triad` construction path, a 4-note Matrix action, a 4-note grid, or a separate 4-note runtime mode
+- a 4-note helper result must enter the draft as ordinary generic pattern tokens with explicit `4` grouping metadata when compatible
 - the `Grouping` control should affect only visible separator metadata, not runtime behavior or family labels
 - the `Grouping` control should show `None`, `3`, `4`, and `5`, and incompatible group sizes should disable rather than disappear
 - deleting the entire current token sequence should be allowed and should return the draft to that stable empty-row state

@@ -52,6 +52,7 @@ class PatternSequenceEditor extends StatelessWidget {
                   ),
                   scrollable: false,
                   wrap: false,
+                  fitToBounds: false,
                   cellWidth: 22,
                   showVoiceRow: showVoiceRows,
                 )
@@ -71,6 +72,7 @@ class PatternSequenceEditor extends StatelessWidget {
                   ),
                   scrollable: false,
                   wrap: false,
+                  fitToBounds: false,
                   cellWidth: 22,
                   showVoiceRow: showVoiceRows ?? readout.showVoices,
                 ),

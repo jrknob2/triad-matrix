@@ -20,6 +20,7 @@ class PatternVoiceDisplay extends StatelessWidget {
   final bool showDynamics;
   final bool showVoiceRow;
   final bool wrap;
+  final bool fitToBounds;
   final int? activeIndex;
   final Color? activePatternColor;
   final Color? activeVoiceColor;
@@ -40,6 +41,7 @@ class PatternVoiceDisplay extends StatelessWidget {
     this.showDynamics = true,
     this.showVoiceRow = true,
     this.wrap = false,
+    this.fitToBounds = true,
     this.activeIndex,
     this.activePatternColor,
     this.activeVoiceColor,
@@ -211,7 +213,7 @@ class PatternVoiceDisplay extends StatelessWidget {
   }
 
   Widget _fitRowToBounds(Widget row) {
-    if (scrollable || wrap) return row;
+    if (scrollable || wrap || !fitToBounds) return row;
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         if (!constraints.maxWidth.isFinite) return row;

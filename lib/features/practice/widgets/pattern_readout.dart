@@ -17,6 +17,7 @@ class PatternReadout extends StatelessWidget {
   final bool showDynamics;
   final bool? showVoiceRow;
   final bool showPatternRow;
+  final bool fitToBounds;
 
   const PatternReadout({
     super.key,
@@ -32,6 +33,7 @@ class PatternReadout extends StatelessWidget {
     this.showDynamics = true,
     this.showVoiceRow,
     this.showPatternRow = true,
+    this.fitToBounds = true,
   });
 
   @override
@@ -50,6 +52,7 @@ class PatternReadout extends StatelessWidget {
       showDynamics: showDynamics,
       showVoiceRow: showVoiceRow ?? controller.hasNonSnareVoice(itemId),
       wrap: wrap,
+      fitToBounds: fitToBounds,
     );
   }
 }

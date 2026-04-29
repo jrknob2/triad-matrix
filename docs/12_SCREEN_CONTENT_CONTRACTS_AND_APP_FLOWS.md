@@ -807,7 +807,7 @@ Rules:
 - for an existing item or saved phrase, `Add to Working On` should prompt the user to open that item instead of creating a duplicate of the same authored item
 - for a new phrase, `Add to Working On` should open `Practice Item` as a draft authoring handoff
 - top-level new-item authoring should not begin in Matrix
-- Matrix may still create a draft authoring handoff when the user explicitly builds from triad selection, but that is a helper flow rather than the primary `New` path
+- Matrix may still create a draft authoring handoff from triad selection, but it must not expose 4-note construction directly; 4-note authoring belongs in `Practice Item`
 - when Matrix is entered from `Practice Item`, the primary return action should return the updated structure to the same editing flow instead of adding, saving, or opening a separate item
 
 ### Matrix States
@@ -839,6 +839,7 @@ Rules:
 - this state exists for triad selection and triad-based structure editing
 - it is not the primary generic new-item builder for the app
 - when it creates new material, it should hand off to `Practice Item` as the universal authoring surface
+- Matrix must not expose 4-note construction directly; 4-note helper authoring is owned by the `Practice Item` Build controls
 
 #### Deep-Link State
 
@@ -1449,6 +1450,9 @@ Practice Item lets the user inspect and edit one item cleanly.
 - `Delete` should be the destructive action available when no new source token or triad is selected
 - structure editing should support replace, insert, delete, rest insertion, and triad-helper insertion inside the same `Practice Item` surface
 - triad-helper insertion should allow selecting one or more triads and should insert them in the order selected
+- 4-note helper insertion should live in `Practice Item` as a `Build` source, select exactly one triad from the shared triad-grid language, then append exactly one `R`, `L`, or `K`
+- the 4-note helper must expose only `triad + x`; it must not add an `x + triad` construction path, a 4-note Matrix action, a 4-note grid, or a separate 4-note runtime mode
+- a 4-note helper result must enter the draft as ordinary generic pattern tokens with explicit `4` grouping metadata when compatible
 - the `Grouping` control should affect only visible separator metadata, not runtime behavior or family labels
 - the `Grouping` control should show `None`, `3`, `4`, and `5`, and incompatible group sizes should disable rather than disappear
 - deleting the entire current token sequence should be allowed and should return the draft to that stable empty-row state
