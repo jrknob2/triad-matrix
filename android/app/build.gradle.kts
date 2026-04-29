@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.traid_trainer"
+    namespace = "com.example.drumcabulary"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -21,7 +21,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.traid_trainer"
+        applicationId = "com.example.drumcabulary"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

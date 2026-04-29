@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:traid_trainer/core/practice/practice_domain_v1.dart';
-import 'package:traid_trainer/features/practice/pattern_audio_service.dart';
+import 'package:drumcabulary/core/practice/practice_domain_v1.dart';
+import 'package:drumcabulary/features/practice/pattern_audio_service.dart';
 
 void main() {
   group('PatternAudioService.buildPlan', () {

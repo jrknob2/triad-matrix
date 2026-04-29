@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
@@ -48,6 +49,7 @@ class AppStateRecord {
 abstract class AppStateStore {
   static Future<AppStateStore> open() async {
     final dir = await getApplicationSupportDirectory();
+    await IsarAppStateStore.migrateLegacyDatabaseFiles(directory: dir);
     final isar = await Isar.open(
       <CollectionSchema<dynamic>>[AppStateRecordSchema],
       directory: dir.path,
@@ -65,8 +67,49 @@ abstract class AppStateStore {
 class IsarAppStateStore implements AppStateStore {
   IsarAppStateStore._(this._isar);
 
-  static const String dbName = 'triad_trainer';
+  static const String dbName = 'drumcabulary';
+  static const String legacyDbName = 'triad_trainer';
   final Isar _isar;
+
+  static Future<void> migrateLegacyDatabaseFiles({
+    required Directory directory,
+  }) async {
+    if (!await directory.exists()) return;
+
+    final List<FileSystemEntity> entities = await directory
+        .list(followLinks: false)
+        .toList();
+    final bool newDatabaseExists = entities.any(
+      (FileSystemEntity entity) =>
+          entity is File &&
+          _fileName(entity).startsWith(dbName) &&
+          !_fileName(entity).endsWith('.lock'),
+    );
+    if (newDatabaseExists) return;
+
+    final List<File> legacyFiles = entities
+        .whereType<File>()
+        .where(
+          (File file) =>
+              _fileName(file).startsWith(legacyDbName) &&
+              !_fileName(file).endsWith('.lock'),
+        )
+        .toList(growable: false);
+
+    for (final File legacyFile in legacyFiles) {
+      final String legacyFileName = _fileName(legacyFile);
+      final String suffix = legacyFileName.substring(legacyDbName.length);
+      final File target = File(
+        '${directory.path}${Platform.pathSeparator}$dbName$suffix',
+      );
+      if (await target.exists()) continue;
+      await legacyFile.copy(target.path);
+    }
+  }
+
+  static String _fileName(FileSystemEntity entity) {
+    return entity.uri.pathSegments.last;
+  }
 
   @override
   Future<AppStateSnapshotData?> load() async {
@@ -295,6 +338,14 @@ class IsarAppStateStore implements AppStateStore {
             },
           )
           .toList(growable: false),
+      'pulses': timing.pulses
+          .map(
+            (PatternPulseMetadataV1 pulse) => <String, dynamic>{
+              'pulseStart': pulse.pulseStart,
+              'role': pulse.role.name,
+            },
+          )
+          .toList(growable: false),
     };
   }
 
@@ -306,11 +357,19 @@ class IsarAppStateStore implements AppStateStore {
                   _patternTimingSpanFromMap(item as Map<String, dynamic>),
             )
             .toList(growable: false);
+    final List<PatternPulseMetadataV1> pulses =
+        ((map['pulses'] as List<dynamic>?) ?? const <dynamic>[])
+            .map(
+              (dynamic item) =>
+                  _patternPulseMetadataFromMap(item as Map<String, dynamic>),
+            )
+            .toList(growable: false);
     return PatternTimingV1(
       mode: map['mode'] == null
           ? PatternTimingModeV1.autoByGrouping
           : PatternTimingModeV1.values.byName(map['mode'] as String),
       spans: spans,
+      pulses: pulses,
     );
   }
 
@@ -319,6 +378,17 @@ class IsarAppStateStore implements AppStateStore {
       startIndex: map['startIndex'] as int,
       tokenCount: map['tokenCount'] as int,
       beatCount: (map['beatCount'] as num).toDouble(),
+    );
+  }
+
+  PatternPulseMetadataV1 _patternPulseMetadataFromMap(
+    Map<String, dynamic> map,
+  ) {
+    return PatternPulseMetadataV1(
+      pulseStart: map['pulseStart'] == true,
+      role: map['role'] == null
+          ? PatternPulseRoleV1.normal
+          : PatternPulseRoleV1.values.byName(map['role'] as String),
     );
   }
 

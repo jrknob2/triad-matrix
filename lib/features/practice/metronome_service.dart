@@ -37,6 +37,19 @@ class PracticeMetronomePulseState {
   });
 }
 
+@immutable
+class PracticeMetronomePulseSchedule {
+  final List<Duration> pulseOffsets;
+  final Duration cycleDuration;
+
+  const PracticeMetronomePulseSchedule({
+    required this.pulseOffsets,
+    required this.cycleDuration,
+  });
+
+  bool get isUsable => pulseOffsets.isNotEmpty && cycleDuration > Duration.zero;
+}
+
 class PracticeMetronomeService {
   static const MethodChannel _methodChannel = MethodChannel(
     'drumcabulary/metronome',
@@ -102,12 +115,29 @@ class PracticeMetronomeService {
     required int bpm,
     required bool clickEnabled,
     required bool pulseEnabled,
+    PracticeMetronomePulseSchedule? pulseSchedule,
   }) async {
     _bpm = bpm;
     _clickEnabled = clickEnabled;
     _pulseEnabled = pulseEnabled;
     _running = true;
     await prepare();
+    if (pulseSchedule != null && pulseSchedule.isUsable) {
+      _stopNativePulsePolling();
+      if (_usingNative) {
+        try {
+          await _methodChannel.invokeMethod<void>('stop');
+        } catch (_) {
+          // Ignore native stop failures when switching to scheduled fallback.
+        }
+      }
+      await _fallback.startScheduled(
+        schedule: pulseSchedule,
+        clickEnabled: clickEnabled,
+      );
+      _updateDiagnostics(mode: PracticeMetronomeEngineMode.fallback);
+      return;
+    }
     if (_usingNative) {
       try {
         await _methodChannel.invokeMethod<void>('start', <String, Object?>{
@@ -152,9 +182,20 @@ class PracticeMetronomeService {
     await _fallback.stop();
   }
 
-  Future<void> updateBpm({required int bpm}) async {
+  Future<void> updateBpm({
+    required int bpm,
+    PracticeMetronomePulseSchedule? pulseSchedule,
+  }) async {
     _bpm = bpm;
     if (!_running) return;
+    if (pulseSchedule != null && pulseSchedule.isUsable) {
+      await _fallback.startScheduled(
+        schedule: pulseSchedule,
+        clickEnabled: _clickEnabled,
+      );
+      _updateDiagnostics(mode: PracticeMetronomeEngineMode.fallback);
+      return;
+    }
     if (_usingNative) {
       try {
         await _methodChannel.invokeMethod<void>('setBpm', <String, Object?>{
@@ -399,6 +440,8 @@ class _FallbackMetronomeEngine {
   int _nextClickPlayerIndex = 0;
   int _beatIndex = 0;
   Timer? _beatTimer;
+  final List<Timer> _scheduledPulseTimers = <Timer>[];
+  Timer? _scheduledCycleTimer;
 
   _FallbackMetronomeEngine({required this.assetPath, required this.onBeat});
 
@@ -421,6 +464,7 @@ class _FallbackMetronomeEngine {
 
   Future<void> start({required int bpm, required bool clickEnabled}) async {
     await prepare();
+    _clearScheduledTimers();
     _clickEnabled = clickEnabled;
     _beatTimer?.cancel();
     _beatIndex = -1;
@@ -433,6 +477,7 @@ class _FallbackMetronomeEngine {
 
   Future<void> stop() async {
     _beatTimer?.cancel();
+    _clearScheduledTimers();
     for (final AudioPlayer player in _clickPlayers) {
       await player.pause();
       await player.seek(Duration.zero);
@@ -441,6 +486,18 @@ class _FallbackMetronomeEngine {
 
   Future<void> updateBpm({required int bpm}) async {
     await start(bpm: bpm, clickEnabled: _clickEnabled);
+  }
+
+  Future<void> startScheduled({
+    required PracticeMetronomePulseSchedule schedule,
+    required bool clickEnabled,
+  }) async {
+    await prepare();
+    _beatTimer?.cancel();
+    _clearScheduledTimers();
+    _clickEnabled = clickEnabled;
+    _beatIndex = 0;
+    _schedulePulseCycle(schedule);
   }
 
   Future<void> setClickEnabled(bool value) async {
@@ -467,6 +524,7 @@ class _FallbackMetronomeEngine {
 
   Future<void> dispose() async {
     _beatTimer?.cancel();
+    _clearScheduledTimers();
     for (final AudioPlayer player in _clickPlayers) {
       await player.dispose();
     }
@@ -478,6 +536,33 @@ class _FallbackMetronomeEngine {
     if (_clickEnabled) {
       unawaited(_triggerClick());
     }
+  }
+
+  void _schedulePulseCycle(PracticeMetronomePulseSchedule schedule) {
+    _clearScheduledTimers();
+    for (final Duration offset in schedule.pulseOffsets) {
+      if (offset < Duration.zero || offset >= schedule.cycleDuration) {
+        continue;
+      }
+      _scheduledPulseTimers.add(
+        Timer(offset, () {
+          _emitBeat();
+          _beatIndex += 1;
+        }),
+      );
+    }
+    _scheduledCycleTimer = Timer(schedule.cycleDuration, () {
+      _schedulePulseCycle(schedule);
+    });
+  }
+
+  void _clearScheduledTimers() {
+    for (final Timer timer in _scheduledPulseTimers) {
+      timer.cancel();
+    }
+    _scheduledPulseTimers.clear();
+    _scheduledCycleTimer?.cancel();
+    _scheduledCycleTimer = null;
   }
 
   Future<void> _triggerClick() async {

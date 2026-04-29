@@ -1,9 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:traid_trainer/core/practice/practice_domain_v1.dart';
-import 'package:traid_trainer/state/app_controller.dart';
-import 'package:traid_trainer/state/persistence/app_state_store.dart';
+import 'package:drumcabulary/core/practice/practice_domain_v1.dart';
+import 'package:drumcabulary/state/app_controller.dart';
+import 'package:drumcabulary/state/persistence/app_state_store.dart';
 
 import 'helpers/fake_app_state_store.dart';
 

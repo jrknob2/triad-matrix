@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:traid_trainer/core/practice/practice_domain_v1.dart';
-import 'package:traid_trainer/features/practice/session_summary_screen.dart';
-import 'package:traid_trainer/state/app_controller.dart';
+import 'package:drumcabulary/core/practice/practice_domain_v1.dart';
+import 'package:drumcabulary/features/practice/session_summary_screen.dart';
+import 'package:drumcabulary/state/app_controller.dart';
 
 import 'helpers/fake_app_state_store.dart';
 

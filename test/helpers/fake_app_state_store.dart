@@ -1,4 +1,4 @@
-import 'package:traid_trainer/state/persistence/app_state_store.dart';
+import 'package:drumcabulary/state/persistence/app_state_store.dart';
 
 class FakeAppStateStore implements AppStateStore {
   FakeAppStateStore({this.initialSnapshot, this.onSave});

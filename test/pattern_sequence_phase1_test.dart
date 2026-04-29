@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:traid_trainer/core/practice/practice_domain_v1.dart';
+import 'package:drumcabulary/core/practice/practice_domain_v1.dart';
 
 void main() {
   group('Phase 1 canonical pattern model', () {

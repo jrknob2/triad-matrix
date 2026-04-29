@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:traid_trainer/core/practice/practice_domain_v1.dart';
-import 'package:traid_trainer/features/practice/practice_session_screen.dart';
+import 'package:drumcabulary/core/practice/practice_domain_v1.dart';
+import 'package:drumcabulary/features/practice/practice_session_screen.dart';
 
 void main() {
   group('PracticeSessionRuntimeMath.activeTokenIndex', () {
@@ -105,28 +105,25 @@ void main() {
       );
     });
 
-    test(
-      'falls back to one token per beat when no compatible grouping exists',
-      () {
-        final List<PatternTokenV1> tokens = <PatternTokenV1>[
-          PatternTokenV1.right,
-          PatternTokenV1.left,
-          PatternTokenV1.right,
-          PatternTokenV1.kick,
-        ];
+    test('falls back to one pulse span when no pulse metadata exists', () {
+      final List<PatternTokenV1> tokens = <PatternTokenV1>[
+        PatternTokenV1.right,
+        PatternTokenV1.left,
+        PatternTokenV1.right,
+        PatternTokenV1.kick,
+      ];
 
-        expect(
-          PracticeSessionRuntimeMath.activeTokenIndex(
-            tokens: tokens,
-            grouping: PatternGroupingV1.none,
-            timing: const PatternTimingV1.auto(),
-            elapsed: const Duration(seconds: 2),
-            bpm: 60,
-          ),
-          2,
-        );
-      },
-    );
+      expect(
+        PracticeSessionRuntimeMath.activeTokenIndex(
+          tokens: tokens,
+          grouping: PatternGroupingV1.none,
+          timing: const PatternTimingV1.auto(),
+          elapsed: const Duration(milliseconds: 500),
+          bpm: 60,
+        ),
+        2,
+      );
+    });
 
     test('explicit timing spans override grouping-derived timing', () {
       final List<PatternTokenV1> tokens = <PatternTokenV1>[

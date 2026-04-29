@@ -21,7 +21,7 @@ iPad-specific shell and fullscreen session exceptions are deferred until after M
 
 Communication rules for all student-facing text are defined in:
 
-- [13_COMMUNICATION_STYLE_CONTRACT.md](/Users/terryknoblock/Development/flutter-projects/traid_trainer/docs/13_COMMUNICATION_STYLE_CONTRACT.md)
+- [13_COMMUNICATION_STYLE_CONTRACT.md](/Users/terryknoblock/Development/flutter-projects/drumcabulary/docs/13_COMMUNICATION_STYLE_CONTRACT.md)
 
 ---
 
@@ -1531,6 +1531,6 @@ Before a rebuilt screen is accepted:
 3. forbidden content must be absent
 4. wording must match the screen job
 5. the screen must be tested against the mock scenarios in:
-   [11_SCREEN_STATE_AND_MOCK_SCENARIOS.md](/Users/terryknoblock/Development/flutter-projects/traid_trainer/docs/11_SCREEN_STATE_AND_MOCK_SCENARIOS.md)
+   [11_SCREEN_STATE_AND_MOCK_SCENARIOS.md](/Users/terryknoblock/Development/flutter-projects/drumcabulary/docs/11_SCREEN_STATE_AND_MOCK_SCENARIOS.md)
 
 If a block cannot survive this checklist, remove it.

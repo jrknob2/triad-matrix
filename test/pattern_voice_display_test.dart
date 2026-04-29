@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:traid_trainer/core/practice/practice_domain_v1.dart';
-import 'package:traid_trainer/features/practice/widgets/pattern_voice_display.dart';
+import 'package:drumcabulary/core/practice/practice_domain_v1.dart';
+import 'package:drumcabulary/features/practice/widgets/pattern_voice_display.dart';
 
 void main() {
   testWidgets(

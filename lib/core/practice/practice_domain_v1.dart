@@ -24,6 +24,8 @@ enum PatternTokenKindV1 { right, left, kick, rest }
 
 enum PatternTimingModeV1 { autoByGrouping, explicitSpans }
 
+enum PatternPulseRoleV1 { normal, tag }
+
 enum DrumVoiceV1 { snare, rackTom, tom2, floorTom, hihat, kick }
 
 enum LearningLaneV1 { control, balance, dynamics, integration, phrasing, flow }
@@ -345,40 +347,85 @@ class PatternTimingSpanV1 {
 }
 
 @immutable
+class PatternPulseMetadataV1 {
+  final bool pulseStart;
+  final PatternPulseRoleV1 role;
+
+  const PatternPulseMetadataV1({
+    this.pulseStart = false,
+    this.role = PatternPulseRoleV1.normal,
+  });
+
+  PatternPulseMetadataV1 copyWith({
+    bool? pulseStart,
+    PatternPulseRoleV1? role,
+  }) {
+    return PatternPulseMetadataV1(
+      pulseStart: pulseStart ?? this.pulseStart,
+      role: role ?? this.role,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is PatternPulseMetadataV1 &&
+        other.pulseStart == pulseStart &&
+        other.role == role;
+  }
+
+  @override
+  int get hashCode => Object.hash(pulseStart, role);
+}
+
+@immutable
 class PatternTimingV1 {
   final PatternTimingModeV1 mode;
   final List<PatternTimingSpanV1> spans;
+  final List<PatternPulseMetadataV1> pulses;
 
   PatternTimingV1({
     this.mode = PatternTimingModeV1.autoByGrouping,
     List<PatternTimingSpanV1>? spans,
-  }) : spans = List<PatternTimingSpanV1>.unmodifiable(spans ?? const []);
+    List<PatternPulseMetadataV1>? pulses,
+  }) : spans = List<PatternTimingSpanV1>.unmodifiable(spans ?? const []),
+       pulses = List<PatternPulseMetadataV1>.unmodifiable(pulses ?? const []);
 
   const PatternTimingV1.auto()
     : mode = PatternTimingModeV1.autoByGrouping,
-      spans = const <PatternTimingSpanV1>[];
+      spans = const <PatternTimingSpanV1>[],
+      pulses = const <PatternPulseMetadataV1>[];
 
-  const PatternTimingV1.explicit({required this.spans})
-    : mode = PatternTimingModeV1.explicitSpans;
+  const PatternTimingV1.explicit({
+    required this.spans,
+    this.pulses = const <PatternPulseMetadataV1>[],
+  }) : mode = PatternTimingModeV1.explicitSpans;
 
   PatternTimingV1 copyWith({
     PatternTimingModeV1? mode,
     List<PatternTimingSpanV1>? spans,
+    List<PatternPulseMetadataV1>? pulses,
   }) {
-    return PatternTimingV1(mode: mode ?? this.mode, spans: spans ?? this.spans);
+    return PatternTimingV1(
+      mode: mode ?? this.mode,
+      spans: spans ?? this.spans,
+      pulses: pulses ?? this.pulses,
+    );
   }
 
   bool get usesExplicitSpans => mode == PatternTimingModeV1.explicitSpans;
+  bool get hasPulseMetadata => pulses.isNotEmpty;
 
   @override
   bool operator ==(Object other) {
     return other is PatternTimingV1 &&
         other.mode == mode &&
-        listEquals(other.spans, spans);
+        listEquals(other.spans, spans) &&
+        listEquals(other.pulses, pulses);
   }
 
   @override
-  int get hashCode => Object.hash(mode, Object.hashAll(spans));
+  int get hashCode =>
+      Object.hash(mode, Object.hashAll(spans), Object.hashAll(pulses));
 }
 
 @immutable

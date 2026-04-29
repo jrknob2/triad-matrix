@@ -1,5 +1,5 @@
-name: traid_trainer
-description: "A new Flutter project."
+name: drumcabulary
+description: "A drummer-first practice app for turning sticking patterns into musical vocabulary."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev

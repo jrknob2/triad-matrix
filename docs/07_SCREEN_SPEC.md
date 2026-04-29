@@ -30,15 +30,15 @@ Phase-1 architecture rule:
 
 Detailed content inventory, control ownership, and end-to-end flow mapping now live in:
 
-- [12_SCREEN_CONTENT_CONTRACTS_AND_APP_FLOWS.md](/Users/terryknoblock/Development/flutter-projects/traid_trainer/docs/12_SCREEN_CONTENT_CONTRACTS_AND_APP_FLOWS.md)
+- [12_SCREEN_CONTENT_CONTRACTS_AND_APP_FLOWS.md](/Users/terryknoblock/Development/flutter-projects/drumcabulary/docs/12_SCREEN_CONTENT_CONTRACTS_AND_APP_FLOWS.md)
 
 Communication voice and wording rules now live in:
 
-- [13_COMMUNICATION_STYLE_CONTRACT.md](/Users/terryknoblock/Development/flutter-projects/traid_trainer/docs/13_COMMUNICATION_STYLE_CONTRACT.md)
+- [13_COMMUNICATION_STYLE_CONTRACT.md](/Users/terryknoblock/Development/flutter-projects/drumcabulary/docs/13_COMMUNICATION_STYLE_CONTRACT.md)
 
 Visual control-affordance rules now live in:
 
-- [12_SCREEN_CONTENT_CONTRACTS_AND_APP_FLOWS.md](/Users/terryknoblock/Development/flutter-projects/traid_trainer/docs/12_SCREEN_CONTENT_CONTRACTS_AND_APP_FLOWS.md)
+- [12_SCREEN_CONTENT_CONTRACTS_AND_APP_FLOWS.md](/Users/terryknoblock/Development/flutter-projects/drumcabulary/docs/12_SCREEN_CONTENT_CONTRACTS_AND_APP_FLOWS.md)
 
 ---
 
@@ -420,15 +420,14 @@ Must do:
 - after the final pattern reaches its target duration, the player should chime, wrap back to the first pattern, and continue running with total elapsed time preserved
 - Practice Session stepping/highlighting should follow canonical token positions rather than triad chunks or family labels
 - rest/pause positions should occupy one full timed slot in the player and participate in stepping/highlighting the same way as note positions
-- Practice Session audible pattern playback should use canonical token positions plus timing metadata rather than grouping or family labels as timing truth
+- Practice Session audible pattern playback should use canonical token positions plus pulse/timing metadata rather than grouping or family labels as timing truth
 - audible pattern playback should be optional, and its toggle belongs directly under the pattern notation as a dedicated ear button
 - when the ear toggle is turned on, pattern audio should begin immediately and continue looping until the toggle is turned off
 - pattern highlighting should use the same switch treatment and settings location as click and pulse rather than a separate notation-row button
 - enabling or disabling pattern audio or highlighting must not change timer, rep, or session-end behavior
-- grouping may provide a default simple timing interpretation for drills, but explicit timing metadata must be able to override grouping for advanced fills or phrases without introducing a new runtime mode
-- the default simple timing interpretation should be:
-  - compatible grouping size -> one grouping per beat
-  - otherwise -> one token per beat
+- grouping may provide readability hints, but pulse metadata is the playback timing contract for advanced fills or phrases without introducing a new runtime mode
+- the default pulse-map interpretation should be conservative: 3-, 4-, and 5-token patterns occupy one pulse; 6-token patterns occupy two 3-token pulses; a 7-token `ABCABCD` shape occupies two 3-token pulses plus a trailing tag; otherwise the whole sequence occupies one pulse
+- metronome clicks should occur on pulse starts only; trailing tag tokens play in time using the previous pulse subdivision and do not receive their own full-beat click by default
 - click playback should use a preloaded low-latency trigger path rather than repeatedly retriggering one shared media player instance
 - when native metronome playback is active, the visual pulse should derive from the native audio playback phase rather than an event-channel beat callback or an independent Dart beat clock
 - after native beat onset is detected, the player may hold the visual pulse briefly for readability, but the beat onset itself must still come from the native playback phase

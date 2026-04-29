@@ -10,7 +10,7 @@ This plan is the bridge from the current app to a tighter v1.
 
 Current pass triage now lives in:
 
-- [15_MVP_TRIAGE_AND_PASS_ORDER.md](/Users/terryknoblock/Development/flutter-projects/traid_trainer/docs/15_MVP_TRIAGE_AND_PASS_ORDER.md)
+- [15_MVP_TRIAGE_AND_PASS_ORDER.md](/Users/terryknoblock/Development/flutter-projects/drumcabulary/docs/15_MVP_TRIAGE_AND_PASS_ORDER.md)
 
 ---
 

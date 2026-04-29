@@ -850,6 +850,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
             bpm: _bpm,
             clickEnabled: _clickEnabled,
             pulseEnabled: _pulseEnabled,
+            pulseSchedule: _pulseScheduleForCurrentItem(),
           ),
         );
       }
@@ -946,7 +947,12 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
       }
     });
     if (_running && _shouldRunMetronome) {
-      unawaited(_metronome.updateBpm(bpm: _bpm));
+      unawaited(
+        _metronome.updateBpm(
+          bpm: _bpm,
+          pulseSchedule: _pulseScheduleForCurrentItem(),
+        ),
+      );
     }
     if (_patternAudioEnabled) {
       unawaited(_startPatternAudioForCurrentItem());
@@ -1182,7 +1188,12 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
       _itemBpmById[_currentItemId] = nextBpm;
     });
     if (_running && _shouldRunMetronome) {
-      unawaited(_metronome.updateBpm(bpm: nextBpm));
+      unawaited(
+        _metronome.updateBpm(
+          bpm: nextBpm,
+          pulseSchedule: _pulseScheduleForCurrentItem(),
+        ),
+      );
     }
     if (_patternAudioEnabled) {
       unawaited(_startPatternAudioForCurrentItem());
@@ -1204,6 +1215,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
           bpm: _bpm,
           clickEnabled: true,
           pulseEnabled: _pulseEnabled,
+          pulseSchedule: _pulseScheduleForCurrentItem(),
         ),
       );
     } else {
@@ -1212,6 +1224,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
           bpm: _bpm,
           clickEnabled: false,
           pulseEnabled: _pulseEnabled,
+          pulseSchedule: _pulseScheduleForCurrentItem(),
         ),
       );
     }
@@ -1236,7 +1249,9 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     if (value) {
       unawaited(
         _restartPatternAudioPreview(
-          startElapsed: _running ? _tokenCycleElapsedForCurrentItem() : Duration.zero,
+          startElapsed: _running
+              ? _tokenCycleElapsedForCurrentItem()
+              : Duration.zero,
         ),
       );
     } else {
@@ -1258,9 +1273,36 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
 
   bool get _shouldRunMetronome => _clickEnabled || _pulseEnabled;
 
+  PracticeMetronomePulseSchedule? _pulseScheduleForCurrentItem() {
+    if (_isWarmup || _bpm <= 0) return null;
+    final String itemId = _currentItemId;
+    final PatternPlaybackPlanV1 plan = PatternPlaybackSchedulerV1.buildPlan(
+      tokens: widget.controller.patternTokensFor(itemId),
+      grouping: widget.controller.displayGroupingFor(itemId),
+      timing: widget.controller.patternTimingFor(itemId),
+    );
+    if (plan.events.isEmpty || plan.totalBeatCount <= 0) return null;
+    final double microsPerBeat = Duration.microsecondsPerMinute / _bpm;
+    return PracticeMetronomePulseSchedule(
+      pulseOffsets: plan.events
+          .where((PatternPlaybackEventV1 event) => event.pulseStart)
+          .map(
+            (PatternPlaybackEventV1 event) => Duration(
+              microseconds: (event.startBeat * microsPerBeat).round(),
+            ),
+          )
+          .toList(growable: false),
+      cycleDuration: Duration(
+        microseconds: (plan.totalBeatCount * microsPerBeat).round(),
+      ),
+    );
+  }
+
   Future<void> _startPatternAudioForCurrentItem() async {
     await _restartPatternAudioPreview(
-      startElapsed: _running ? _tokenCycleElapsedForCurrentItem() : Duration.zero,
+      startElapsed: _running
+          ? _tokenCycleElapsedForCurrentItem()
+          : Duration.zero,
     );
   }
 

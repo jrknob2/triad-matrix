@@ -1,4 +1,4 @@
-package com.example.traid_trainer
+package com.example.drumcabulary
 
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine

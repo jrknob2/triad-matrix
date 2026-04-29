@@ -1,4 +1,4 @@
-package com.example.traid_trainer
+package com.example.drumcabulary
 
 import android.content.Context
 import android.media.AudioAttributes
