@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../../features/app/app_formatters.dart';
 import '../../features/app/drumcabulary_ui.dart';
+import '../../features/app/drumcabulary_theme.dart';
 import '../../state/app_controller.dart';
 import '../../core/practice/practice_domain_v1.dart';
 import 'metronome_service.dart';
@@ -317,24 +318,24 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
       ),
       foregroundColor: WidgetStateProperty.resolveWith<Color>((states) {
         if (states.contains(WidgetState.disabled)) {
-          return const Color(0xB3FFF4DE);
+          return DrumcabularyTheme.creamText.withValues(alpha: 0.7);
         }
-        return const Color(0xFFFFF4DE);
+        return DrumcabularyTheme.creamText;
       }),
       side: WidgetStateProperty.resolveWith<BorderSide>((states) {
         if (states.contains(WidgetState.disabled)) {
           return const BorderSide(color: Color(0x66FFF4DE));
         }
-        return const BorderSide(color: Color(0xFFFFF4DE));
+        return const BorderSide(color: DrumcabularyTheme.creamText);
       }),
     );
     final ButtonStyle primaryTransportStyle = FilledButton.styleFrom(
       minimumSize: const Size(116, 48),
       maximumSize: const Size(116, 48),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      backgroundColor: const Color(0xFFFFF4DE),
-      foregroundColor: const Color(0xFF211B14),
-      side: const BorderSide(color: Color(0xFFFFF4DE)),
+      backgroundColor: DrumcabularyTheme.creamText,
+      foregroundColor: DrumcabularyTheme.ink,
+      side: const BorderSide(color: DrumcabularyTheme.creamText),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       textStyle: Theme.of(
         context,
@@ -402,7 +403,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                               style: Theme.of(context).textTheme.headlineMedium
                                   ?.copyWith(
                                     fontFamily: 'Courier',
-                                    color: const Color(0xFFFFF4DE),
+                                    color: DrumcabularyTheme.creamText,
                                     fontWeight: FontWeight.w900,
                                   ),
                             ),
@@ -416,7 +417,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                                 transport.statusText!,
                                 style: Theme.of(context).textTheme.titleMedium
                                     ?.copyWith(
-                                      color: const Color(0xFFFFC08D),
+                                      color: DrumcabularyTheme.pulseHover,
                                       fontWeight: FontWeight.w900,
                                     ),
                               ),
@@ -556,7 +557,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                     transport.timerText,
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontFamily: 'Courier',
-                      color: const Color(0xFFFFF4DE),
+                      color: DrumcabularyTheme.creamText,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -569,7 +570,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                     Text(
                       transport.statusText!,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: const Color(0xFFFFC08D),
+                        color: DrumcabularyTheme.pulseHover,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
@@ -1429,9 +1430,9 @@ class _EarnedRepsDisplay extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: const Color(0xFFF05A28),
+        color: DrumcabularyTheme.pulsePrimary,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0xFFF7B788), width: 1.0),
+        border: Border.all(color: DrumcabularyTheme.pulseHover, width: 1.0),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
@@ -1441,13 +1442,13 @@ class _EarnedRepsDisplay extends StatelessWidget {
             const Icon(
               Icons.add_circle_rounded,
               size: 18,
-              color: Color(0xFFFFF4DE),
+              color: DrumcabularyTheme.creamText,
             ),
             const SizedBox(width: 8),
             Text(
               '$reps Reps Earned',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: const Color(0xFFFFF4DE),
+                color: DrumcabularyTheme.creamText,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -1499,7 +1500,7 @@ class _BeatPulseState extends State<_BeatPulse> {
   @override
   Widget build(BuildContext context) {
     final bool active = widget.enabled && _flashActive;
-    const Color ringBase = Color(0xFF4A4337);
+    const Color ringBase = DrumcabularyTheme.tickNeutral;
     final double gaugeDiameter = widget.size;
     final double tickDiameter = gaugeDiameter - 8;
     final double pulseDiameter = gaugeDiameter - 74;
@@ -1526,7 +1527,7 @@ class _BeatPulseState extends State<_BeatPulse> {
           if (widget.enabled)
             _PulseGaugeRing(
               diameter: pulseDiameter,
-              color: active ? const Color(0xFFF05A28) : const Color(0xFF5A4A39),
+              color: active ? DrumcabularyTheme.pulsePrimary : DrumcabularyTheme.tickNeutral,
               width: active ? 5.5 : 4.0,
             ),
           Container(
@@ -1534,12 +1535,12 @@ class _BeatPulseState extends State<_BeatPulse> {
             height: bpmCoreDiameter,
             decoration: BoxDecoration(
               color: widget.enabled
-                  ? const Color(0xFF1F1A14)
-                  : const Color(0xFF14100C),
+                  ? DrumcabularyTheme.appBackground
+                  : DrumcabularyTheme.appBackground,
               shape: BoxShape.circle,
               border: Border.all(
                 color: active
-                    ? const Color(0xFFF05A28).withValues(alpha: 0.86)
+                    ? DrumcabularyTheme.pulsePrimary.withValues(alpha: 0.86)
                     : ringBase.withValues(alpha: 0.5),
                 width: active ? 1.9 : 1.1,
               ),
@@ -1551,7 +1552,7 @@ class _BeatPulseState extends State<_BeatPulse> {
                   Text(
                     '${widget.bpm}',
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      color: const Color(0xFFFFF4DE),
+                      color: DrumcabularyTheme.creamText,
                       fontWeight: FontWeight.w900,
                       letterSpacing: -0.8,
                     ),
@@ -1559,7 +1560,7 @@ class _BeatPulseState extends State<_BeatPulse> {
                   Text(
                     widget.enabled ? 'BPM' : 'PULSE OFF',
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: const Color(0xFFFFF4DE),
+                      color: DrumcabularyTheme.creamText,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 1.2,
                     ),
@@ -1645,11 +1646,11 @@ class _TickRingPainter extends CustomPainter {
   }
 
   Color _progressColor(double t) {
-    return const Color(0xFFA1D46E);
+    return DrumcabularyTheme.progressPrimary;
   }
 
   Color _majorTickColor(bool completed) {
-    return completed ? const Color(0xFFFFF4DE) : const Color(0xB3FFF4DE);
+    return completed ? DrumcabularyTheme.creamText : DrumcabularyTheme.creamText.withValues(alpha: 0.7);
   }
 
   int _majorTickCount() {
@@ -1732,7 +1733,7 @@ class _PlayerNotation extends StatelessWidget {
     };
     final TextStyle patternStyle =
         Theme.of(context).textTheme.displaySmall?.copyWith(
-          color: const Color(0xFFFFF4DE),
+          color: DrumcabularyTheme.creamText,
           fontWeight: FontWeight.w900,
           fontSize: fontSize,
           letterSpacing: 0.1,
@@ -1740,7 +1741,7 @@ class _PlayerNotation extends StatelessWidget {
           height: 1.0,
         ) ??
         const TextStyle(
-          color: Color(0xFFFFF4DE),
+          color: DrumcabularyTheme.creamText,
           fontWeight: FontWeight.w900,
           fontSize: 31,
           letterSpacing: 0.1,
@@ -1750,12 +1751,12 @@ class _PlayerNotation extends StatelessWidget {
 
     final TextStyle voiceStyle =
         Theme.of(context).textTheme.titleMedium?.copyWith(
-          color: const Color(0xFFE5D5BB),
+          color: DrumcabularyTheme.line,
           fontWeight: FontWeight.w800,
           fontFamily: 'Courier',
         ) ??
         const TextStyle(
-          color: Color(0xFFE5D5BB),
+          color: DrumcabularyTheme.line,
           fontWeight: FontWeight.w800,
           fontSize: 16,
           fontFamily: 'Courier',
@@ -1803,8 +1804,8 @@ class _PatternAudioToggle extends StatelessWidget {
       onPressed: () => onPatternAudioChanged(!patternAudioEnabled),
       icon: _EarToggleIcon(
         color: patternAudioEnabled
-            ? const Color(0xFF211B14)
-            : const Color(0xFFFFF4DE),
+            ? DrumcabularyTheme.ink
+            : DrumcabularyTheme.creamText,
       ),
     );
   }
@@ -1827,8 +1828,8 @@ class _PatternToggleButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final ButtonStyle style = value
         ? IconButton.styleFrom(
-            backgroundColor: const Color(0xFFFFF4DE),
-            foregroundColor: const Color(0xFF211B14),
+            backgroundColor: DrumcabularyTheme.creamText,
+            foregroundColor: DrumcabularyTheme.ink,
             fixedSize: const Size(46, 46),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
@@ -1836,9 +1837,9 @@ class _PatternToggleButton extends StatelessWidget {
           )
         : IconButton.styleFrom(
             backgroundColor: Colors.transparent,
-            foregroundColor: const Color(0xFFFFF4DE),
+            foregroundColor: DrumcabularyTheme.creamText,
             fixedSize: const Size(46, 46),
-            side: const BorderSide(color: Color(0xFFFFF4DE)),
+            side: const BorderSide(color: DrumcabularyTheme.creamText),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
             ),
@@ -1959,11 +1960,11 @@ class _SessionStepper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Color textColor = dark
-        ? const Color(0xFFFFF4DE)
-        : const Color(0xFF211B14);
+        ? DrumcabularyTheme.creamText
+        : DrumcabularyTheme.ink;
     final Color mutedColor = dark
         ? const Color(0xCCFFF4DE)
-        : const Color(0xFF5B5345);
+        : DrumcabularyTheme.textSecondary;
 
     return Row(
       children: <Widget>[

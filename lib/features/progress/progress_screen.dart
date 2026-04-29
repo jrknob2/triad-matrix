@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/practice/practice_domain_v1.dart';
 import '../../features/app/app_formatters.dart';
+import '../../features/app/drumcabulary_theme.dart';
 import '../../features/app/app_viewport.dart';
 import '../../features/app/drumcabulary_ui.dart';
 import '../../state/app_controller.dart';
@@ -268,7 +269,7 @@ class _OverviewView extends StatelessWidget {
             'Weekly assessment status across the catalog.',
             style: Theme.of(
               context,
-            ).textTheme.bodyMedium?.copyWith(color: const Color(0xFF5E584D)),
+            ).textTheme.bodyMedium?.copyWith(color: DrumcabularyTheme.mutedInk),
           ),
           const SizedBox(height: 10),
           const _ChartLegend(
@@ -460,7 +461,7 @@ class _ByItemView extends StatelessWidget {
                             ? 'Select an item to inspect its assessment history.'
                             : 'Select tracked material to inspect its assessment history.',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: const Color(0xFF5E584D),
+                          color: DrumcabularyTheme.mutedInk,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -491,7 +492,7 @@ class _ByItemView extends StatelessWidget {
                         child: Text(
                           'Select an item to inspect its assessment history.',
                           style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(color: const Color(0xFF5E584D)),
+                              ?.copyWith(color: DrumcabularyTheme.mutedInk),
                         ),
                       )
                     : _ItemAssessmentPanel(
@@ -518,7 +519,7 @@ class _ByItemView extends StatelessWidget {
                       ? 'Select an item to inspect its assessment history.'
                       : 'Select tracked material to inspect its assessment history.',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: const Color(0xFF5E584D),
+                    color: DrumcabularyTheme.mutedInk,
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -674,7 +675,7 @@ class _TrendView extends StatelessWidget {
             'Minutes practiced each day.',
             style: Theme.of(
               context,
-            ).textTheme.bodyMedium?.copyWith(color: const Color(0xFF5E584D)),
+            ).textTheme.bodyMedium?.copyWith(color: DrumcabularyTheme.mutedInk),
           ),
           const SizedBox(height: 12),
           Row(
@@ -792,7 +793,7 @@ class _ItemAssessmentPanel extends StatelessWidget {
                         letterSpacing: -0.5,
                       ),
                   voiceStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: const Color(0xFF6A5E4C),
+                    color: DrumcabularyTheme.mutedInk,
                     fontWeight: FontWeight.w700,
                   ),
                   scrollable: false,
@@ -813,7 +814,7 @@ class _ItemAssessmentPanel extends StatelessWidget {
                 : '${aggregate.status.label} • ${assessments.length} assessed sessions',
             style: Theme.of(
               context,
-            ).textTheme.bodyMedium?.copyWith(color: const Color(0xFF5E584D)),
+            ).textTheme.bodyMedium?.copyWith(color: DrumcabularyTheme.mutedInk),
           ),
           const SizedBox(height: 12),
           if (assessments.length < 3)
@@ -1031,7 +1032,7 @@ class _ProgressItemRow extends StatelessWidget {
                           letterSpacing: -0.5,
                         ),
                     voiceStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: const Color(0xFF6A5E4C),
+                      color: DrumcabularyTheme.mutedInk,
                       fontWeight: FontWeight.w700,
                     ),
                     scrollable: false,
@@ -1042,14 +1043,14 @@ class _ProgressItemRow extends StatelessWidget {
                   Text(
                     '${controller.matrixProgressStateFor(item.id).label} • ${controller.recentSummaryForItem(item.id)}',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: const Color(0xFF6A5E4C),
+                      color: DrumcabularyTheme.mutedInk,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     '${formatDuration(controller.totalTime(itemId: item.id))} logged • ${controller.sessionCount(itemId: item.id)} sessions',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: const Color(0xFF6A5E4C),
+                      color: DrumcabularyTheme.mutedInk,
                     ),
                   ),
                 ],
@@ -1082,7 +1083,7 @@ class _CoverageRow extends StatelessWidget {
             label,
             style: Theme.of(
               context,
-            ).textTheme.bodyMedium?.copyWith(color: const Color(0xFF5E584D)),
+            ).textTheme.bodyMedium?.copyWith(color: DrumcabularyTheme.mutedInk),
           ),
         ),
         Text(
@@ -1124,7 +1125,7 @@ class _ChartLegend extends StatelessWidget {
                 Text(
                   entry.label,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: const Color(0xFF5E584D),
+                    color: DrumcabularyTheme.mutedInk,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -1157,7 +1158,7 @@ class _CoverageSnapshotRow extends StatelessWidget {
             label,
             style: Theme.of(
               context,
-            ).textTheme.bodyMedium?.copyWith(color: const Color(0xFF5E584D)),
+            ).textTheme.bodyMedium?.copyWith(color: DrumcabularyTheme.mutedInk),
           ),
         ),
         Column(
@@ -1174,7 +1175,7 @@ class _CoverageSnapshotRow extends StatelessWidget {
               'of $total total',
               style: Theme.of(
                 context,
-              ).textTheme.bodySmall?.copyWith(color: const Color(0xFF6A5E4C)),
+              ).textTheme.bodySmall?.copyWith(color: DrumcabularyTheme.mutedInk),
             ),
           ],
         ),
@@ -1717,7 +1718,7 @@ class _PassiveScopeLabel extends StatelessWidget {
     return Text(
       text,
       style: Theme.of(context).textTheme.labelMedium?.copyWith(
-        color: const Color(0xFF6A5E4C),
+        color: DrumcabularyTheme.mutedInk,
         fontWeight: FontWeight.w900,
       ),
     );

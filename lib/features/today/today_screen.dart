@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/practice/practice_domain_v1.dart';
 import '../../state/app_controller.dart';
 import '../app/drumcabulary_ui.dart';
+import '../app/drumcabulary_theme.dart';
 import '../practice/widgets/pattern_readout.dart';
 
 typedef OpenMatrixCallback =
@@ -186,9 +187,9 @@ class _CoachBlockCard extends StatelessWidget {
     final bool prominent = block.type == CoachBlockTypeV1.summary;
     final ButtonStyle? primaryButtonStyle = prominent
         ? FilledButton.styleFrom(
-            backgroundColor: const Color(0xFFFFF4DE),
+            backgroundColor: DrumcabularyTheme.creamText,
             foregroundColor: const Color(0xFF17130F),
-            side: const BorderSide(color: Color(0xFFFFC08D), width: 1.5),
+            side: const BorderSide(color: DrumcabularyTheme.pulseHover, width: 1.5),
             textStyle: const TextStyle(fontWeight: FontWeight.w900),
           ).copyWith(
             overlayColor: WidgetStateProperty.resolveWith((states) {
@@ -222,7 +223,7 @@ class _CoachBlockCard extends StatelessWidget {
             Text(
               block.title,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: prominent ? const Color(0xFFFFF4DE) : null,
+                color: prominent ? DrumcabularyTheme.creamText : null,
                 fontWeight: FontWeight.w900,
                 height: 1.05,
               ),
@@ -314,7 +315,7 @@ class _CoachPatternStrip extends StatelessWidget {
                       ),
                   voiceStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF6A5E4C),
+                    color: DrumcabularyTheme.mutedInk,
                   ),
                   scrollable: false,
                   wrap: false,

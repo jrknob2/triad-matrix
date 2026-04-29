@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../../core/practice/practice_domain_v1.dart';
+import '../../app/drumcabulary_theme.dart';
 import '../../app/app_formatters.dart';
 
 class PatternVoiceDisplay extends StatelessWidget {
@@ -511,7 +512,7 @@ class PatternVoiceDisplay extends StatelessWidget {
     final double fontSize = baseStyle.fontSize ?? 18;
     final TextStyle activeBaseStyle = isActive
         ? baseStyle.copyWith(
-            color: activePatternColor ?? const Color(0xFFF6B067),
+            color: activePatternColor ?? DrumcabularyTheme.pulsePrimary,
           )
         : baseStyle;
     return SizedBox(
@@ -573,8 +574,8 @@ class PatternVoiceDisplay extends StatelessWidget {
           textAlign: TextAlign.center,
           style: baseStyle.copyWith(
             color: isActive
-                ? (activeVoiceColor ?? const Color(0xFFF6B067))
-                : const Color(0xFF5B5345),
+                ? (activeVoiceColor ?? DrumcabularyTheme.pulsePrimary)
+                : DrumcabularyTheme.textSecondary,
             fontWeight: FontWeight.w800,
           ),
         ),

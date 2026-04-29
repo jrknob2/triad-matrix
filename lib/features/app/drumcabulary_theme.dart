@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 class DrumcabularyTheme {
+  // Legacy warm tokens (kept for backward compat)
   static const Color ink = Color(0xFF17130F);
   static const Color paper = Color(0xFFFBF4E7);
   static const Color surface = Color(0xFFFFFAF0);
@@ -11,6 +12,21 @@ class DrumcabularyTheme {
   static const Color gold = Color(0xFFF0C35B);
   static const Color blue = Color(0xFF2F6FCC);
   static const Color green = Color(0xFF3C8B58);
+
+  // Dark palette tokens
+  static const Color appBackground = Color(0xFF0A0F14);
+  static const Color darkSurface = Color(0xFF121A22);
+  static const Color tealPrimary = Color(0xFF00C2C7);
+  static const Color tealSecondary = Color(0xFF147A7E);
+  static const Color pulsePrimary = Color(0xFFBF5700);
+  static const Color pulseHover = Color(0xFFD46A1A);
+  static const Color progressPrimary = Color(0xFF3FAF7A);
+  static const Color progressActive = Color(0xFF58C98A);
+  static const Color textPrimary = Color(0xFFE6EDF3);
+  static const Color textSecondary = Color(0xFF8A9AA8);
+  static const Color darkDivider = Color(0xFF1F2A33);
+  static const Color tickNeutral = Color(0xFF2A343D);
+  static const Color creamText = Color(0xFFFFF4DC);
 
   static ThemeData get light {
     final ColorScheme scheme =

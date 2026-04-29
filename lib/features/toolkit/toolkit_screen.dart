@@ -283,7 +283,7 @@ class _FocusEmptyState extends StatelessWidget {
           Text(
             'Add a few items from Coach or Matrix. This screen is only for the material you are actively trying to develop now.',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: const Color(0xFF5E584D),
+              color: DrumcabularyTheme.mutedInk,
               height: 1.35,
             ),
           ),
@@ -316,7 +316,7 @@ class _FocusSearchEmptyState extends StatelessWidget {
             : 'Nothing in Working On matches $filterLabel right now.',
         style: Theme.of(
           context,
-        ).textTheme.bodyMedium?.copyWith(color: const Color(0xFF5E584D)),
+        ).textTheme.bodyMedium?.copyWith(color: DrumcabularyTheme.mutedInk),
       ),
     );
   }

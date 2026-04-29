@@ -750,7 +750,7 @@ class _MatrixScopeLine extends StatelessWidget {
     return Text(
       text,
       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-        color: const Color(0xFF6A5E4C),
+        color: DrumcabularyTheme.mutedInk,
         fontWeight: FontWeight.w800,
       ),
     );
@@ -812,7 +812,7 @@ class _MatrixPhrasePanel extends StatelessWidget {
                 Text(
                   'Select triads in the grid to build a phrase or practice one item directly.',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: const Color(0xFF5E584D),
+                    color: DrumcabularyTheme.mutedInk,
                     height: 1.35,
                   ),
                 )
@@ -832,7 +832,7 @@ class _MatrixPhrasePanel extends StatelessWidget {
                         letterSpacing: -0.4,
                       ),
                   voiceStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: const Color(0xFF6A5E4C),
+                    color: DrumcabularyTheme.mutedInk,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -942,9 +942,9 @@ class _MatrixPhraseWarning extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: const Color(0xFFF4E7CF),
+        color: DrumcabularyTheme.surfaceStrong,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFB98739)),
+        border: Border.all(color: DrumcabularyTheme.gold),
       ),
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -952,7 +952,7 @@ class _MatrixPhraseWarning extends StatelessWidget {
           message,
           style: Theme.of(
             context,
-          ).textTheme.bodyMedium?.copyWith(color: const Color(0xFF5C4423)),
+          ).textTheme.bodyMedium?.copyWith(color: DrumcabularyTheme.mutedInk),
         ),
       ),
     );

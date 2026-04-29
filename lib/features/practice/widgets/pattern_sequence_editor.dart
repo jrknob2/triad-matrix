@@ -4,6 +4,7 @@ import '../../../core/practice/practice_domain_v1.dart';
 import '../../../state/app_controller.dart';
 import 'pattern_voice_display.dart';
 import 'pattern_readout.dart';
+import '../../app/drumcabulary_theme.dart';
 
 class PatternSequenceEditor extends StatelessWidget {
   final AppController controller;
@@ -48,7 +49,7 @@ class PatternSequenceEditor extends StatelessWidget {
                       ),
                   voiceStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF6A5E4C),
+                    color: DrumcabularyTheme.mutedInk,
                   ),
                   scrollable: false,
                   wrap: false,
@@ -68,7 +69,7 @@ class PatternSequenceEditor extends StatelessWidget {
                       ),
                   voiceStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF6A5E4C),
+                    color: DrumcabularyTheme.mutedInk,
                   ),
                   scrollable: false,
                   wrap: false,

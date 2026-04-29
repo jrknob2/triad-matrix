@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/practice/practice_domain_v1.dart';
 import '../../../state/app_controller.dart';
 import 'pattern_readout.dart';
+import '../../app/drumcabulary_theme.dart';
 
 class PracticeItemSummaryBlock extends StatelessWidget {
   final AppController controller;
@@ -33,7 +34,7 @@ class PracticeItemSummaryBlock extends StatelessWidget {
             letterSpacing: -0.4,
           ),
           voiceStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: const Color(0xFF6A5E4C),
+            color: DrumcabularyTheme.mutedInk,
             fontWeight: FontWeight.w700,
           ),
           scrollable: false,
@@ -49,7 +50,7 @@ class PracticeItemSummaryBlock extends StatelessWidget {
           Text(
             visibleMetadata[index],
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: const Color(0xFF6A5E4C),
+              color: DrumcabularyTheme.mutedInk,
               fontWeight: FontWeight.w700,
             ),
           ),

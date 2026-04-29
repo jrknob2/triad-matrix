@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/practice/practice_domain_v1.dart';
 import '../../state/app_controller.dart';
 import '../app/app_formatters.dart';
+import '../app/drumcabulary_theme.dart';
 import '../app/app_viewport.dart';
 import '../app/drumcabulary_ui.dart';
 import 'widgets/practice_item_summary_block.dart';
@@ -111,7 +112,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
               Text(
                 'Choose your material, then start.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: const Color(0xFF5B5345),
+                  color: DrumcabularyTheme.textSecondary,
                   height: 1.35,
                 ),
               ),
@@ -261,7 +262,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
                           ? 'Add items to Working On, then choose a practice source.'
                           : 'Choose a source on the left. On iPad the browser or setup stays here so you can keep both in view.',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: const Color(0xFF5E584D),
+                        color: DrumcabularyTheme.mutedInk,
                         height: 1.35,
                       ),
                     ),
@@ -310,7 +311,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
                     Text(
                       'Choose your material, then start.',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: const Color(0xFF5B5345),
+                        color: DrumcabularyTheme.textSecondary,
                         height: 1.35,
                       ),
                     ),
@@ -526,8 +527,8 @@ class _PracticeLaunchTile extends StatelessWidget {
     final bool hasFallbackAction =
         fallbackActionLabel != null && onFallbackAction != null;
     final Color muted = interactive
-        ? const Color(0xFF61584A)
-        : const Color(0xFF7B7163);
+        ? DrumcabularyTheme.mutedInk
+        : DrumcabularyTheme.mutedInk;
     return Material(
       color: const Color(0xFFFFFCF5),
       borderRadius: BorderRadius.circular(18),
@@ -548,7 +549,7 @@ class _PracticeLaunchTile extends StatelessWidget {
                       title,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w900,
-                        color: interactive ? null : const Color(0xFF463E34),
+                        color: interactive ? null : DrumcabularyTheme.mutedInk,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -618,7 +619,7 @@ class _PreviousSessionBrowser extends StatelessWidget {
             Text(
               'Pick a session you want to repeat.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: const Color(0xFF5E584D),
+                color: DrumcabularyTheme.mutedInk,
                 height: 1.35,
               ),
             ),
@@ -636,7 +637,7 @@ class _PreviousSessionBrowser extends StatelessWidget {
             Text(
               'Showing ${sessions.length} of $totalCount',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: const Color(0xFF6A5E4C),
+                color: DrumcabularyTheme.mutedInk,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -645,7 +646,7 @@ class _PreviousSessionBrowser extends StatelessWidget {
               Text(
                 'No recent sessions match that search.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: const Color(0xFF6A5E4C),
+                  color: DrumcabularyTheme.mutedInk,
                 ),
               ),
             ...sessions.map(
@@ -718,7 +719,7 @@ class _PreviousSessionRow extends StatelessWidget {
                       Text(
                         controller.sessionPatternSummary(session),
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: const Color(0xFF2E2921),
+                          color: DrumcabularyTheme.ink,
                           height: 1.3,
                         ),
                       ),
@@ -786,7 +787,7 @@ class _WorkingOnSessionSetup extends StatelessWidget {
             Text(
               'Pick today\'s slice. Keep it tight and get clean reps.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: const Color(0xFF5E584D),
+                color: DrumcabularyTheme.mutedInk,
                 height: 1.35,
               ),
             ),
@@ -840,7 +841,7 @@ class _WorkingOnSessionSetup extends StatelessWidget {
               Text(
                 'This is a big session. Pick 3 or 4 if you want cleaner reps.',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: const Color(0xFF855E18),
+                  color: DrumcabularyTheme.gold,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -850,7 +851,7 @@ class _WorkingOnSessionSetup extends StatelessWidget {
               Text(
                 'Working On is broad right now. Keep today\'s slice small.',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: const Color(0xFF6B6150),
+                  color: DrumcabularyTheme.mutedInk,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -862,7 +863,7 @@ class _WorkingOnSessionSetup extends StatelessWidget {
               Text(
                 'Nothing in Working On matches this slice.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: const Color(0xFF6A5E4C),
+                  color: DrumcabularyTheme.mutedInk,
                 ),
               )
             else
@@ -923,7 +924,7 @@ class _SelectableWorkingOnRow extends StatelessWidget {
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
               color: selected
-                  ? const Color(0xFF2E2921)
+                  ? DrumcabularyTheme.ink
                   : const Color(0xFFE2D8C6),
               width: selected ? 1.4 : 1,
             ),
@@ -934,7 +935,7 @@ class _SelectableWorkingOnRow extends StatelessWidget {
               children: <Widget>[
                 Icon(
                   selected ? Icons.check_circle_rounded : Icons.circle_outlined,
-                  color: selected ? const Color(0xFF2E2921) : null,
+                  color: selected ? DrumcabularyTheme.ink : null,
                 ),
                 const SizedBox(width: 12),
                 Expanded(

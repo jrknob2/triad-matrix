@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/practice/practice_domain_v1.dart';
 import '../../features/app/app_formatters.dart';
+import '../../features/app/drumcabulary_theme.dart';
 import '../../features/app/drumcabulary_ui.dart';
 import '../../features/app/unsaved_changes_dialog.dart';
 import '../../state/app_controller.dart';
@@ -139,7 +140,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                         Text(
                           'Tap positions to select them, then edit structure, dynamics, or voice.',
                           style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: const Color(0xFF5B5345)),
+                              ?.copyWith(color: DrumcabularyTheme.textSecondary),
                         ),
                         const SizedBox(height: 12),
                         const DrumEyebrow(text: 'Filters'),
@@ -684,7 +685,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                       Text(
                         'Pick one or more triads from the shared matrix grid, then insert them into the pattern in selection order.',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: const Color(0xFF5B5345),
+                          color: DrumcabularyTheme.textSecondary,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -724,7 +725,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                           '${localSelectedItemIds.length} triad${localSelectedItemIds.length == 1 ? '' : 's'} selected',
                           style: Theme.of(context).textTheme.labelLarge
                               ?.copyWith(
-                                color: const Color(0xFF5B5345),
+                                color: DrumcabularyTheme.textSecondary,
                                 fontWeight: FontWeight.w800,
                               ),
                         ),
@@ -795,7 +796,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                       Text(
                         'Pick one triad, then choose one stroke to append.',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: const Color(0xFF5B5345),
+                          color: DrumcabularyTheme.textSecondary,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -1358,7 +1359,7 @@ class _SelectableNotationBlock extends StatelessWidget {
     final TextStyle voiceStyle =
         Theme.of(context).textTheme.titleSmall?.copyWith(
           fontWeight: FontWeight.w800,
-          color: const Color(0xFF5B5345),
+          color: DrumcabularyTheme.textSecondary,
         ) ??
         const TextStyle(fontSize: 14, fontWeight: FontWeight.w800);
     final List<double> outerCellWidths = List<double>.generate(
@@ -1665,7 +1666,7 @@ class _StructureEditor extends StatelessWidget {
         Text(
           summary,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: const Color(0xFF5B5345),
+            color: DrumcabularyTheme.textSecondary,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -1811,7 +1812,7 @@ class _GroupingControl extends StatelessWidget {
         Text(
           'Grouping',
           style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            color: const Color(0xFF5B5345),
+            color: DrumcabularyTheme.textSecondary,
             fontWeight: FontWeight.w800,
           ),
         ),
@@ -1896,7 +1897,7 @@ class _SelectedMarkingEditor extends StatelessWidget {
         Text(
           _selectionLabel(selectedIndices, sortedIndices, tokens, current),
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: const Color(0xFF5B5345),
+            color: DrumcabularyTheme.textSecondary,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -2003,7 +2004,7 @@ class _SelectedVoiceEditor extends StatelessWidget {
         Text(
           _selectionLabel(selectedIndices, sortedIndices, current),
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: const Color(0xFF5B5345),
+            color: DrumcabularyTheme.textSecondary,
             fontWeight: FontWeight.w700,
           ),
         ),
