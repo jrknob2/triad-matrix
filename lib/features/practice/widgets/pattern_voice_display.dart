@@ -27,6 +27,7 @@ class PatternVoiceDisplay extends StatelessWidget {
   static const double _ghostParenSlotScale = 0.72;
   static const double _ghostParenInwardBias = 0.28;
   static const double _textLineHeight = 1.0;
+  static const String _notationFontFamily = 'Courier';
 
   final List<PatternTokenV1> tokens;
   final List<PatternNoteMarkingV1> markings;
@@ -73,7 +74,9 @@ class PatternVoiceDisplay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final TextStyle resolvedPatternStyle =
-        patternStyle ?? DefaultTextStyle.of(context).style;
+        (patternStyle ?? DefaultTextStyle.of(context).style).copyWith(
+          fontFamily: _notationFontFamily,
+        );
     final TextStyle resolvedVoiceStyle =
         voiceStyle ??
         Theme.of(context).textTheme.labelLarge ??
@@ -606,15 +609,11 @@ class PatternVoiceDisplay extends StatelessWidget {
   TextStyle _noteStyleForToken(PatternTokenV1 token, TextStyle baseStyle) {
     final Color baseColor = baseStyle.color ?? DrumcabularyTheme.textPrimary;
     return switch (token.kind) {
-      PatternTokenKindV1.flam => baseStyle.copyWith(
-        fontStyle: FontStyle.italic,
-      ),
+      PatternTokenKindV1.flam => baseStyle,
       PatternTokenKindV1.both => baseStyle.copyWith(
         fontWeight: FontWeight.w900,
       ),
-      PatternTokenKindV1.accent => baseStyle.copyWith(
-        color: DrumcabularyTheme.pulsePrimary,
-      ),
+      PatternTokenKindV1.accent => baseStyle,
       PatternTokenKindV1.rest => baseStyle.copyWith(
         color: baseColor.withValues(alpha: 0.48),
       ),

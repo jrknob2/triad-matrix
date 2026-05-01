@@ -41,9 +41,6 @@ class AppController extends ChangeNotifier {
     final AppStateStore store = await AppStateStore.open();
     final AppController controller = AppController._(store);
     await controller._restorePersistedState();
-    if (mockScenariosEnabled) {
-      controller.setMockScenario(AppMockScenarioV1.flowReady);
-    }
     return controller;
   }
 
