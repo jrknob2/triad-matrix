@@ -239,6 +239,7 @@ class IsarAppStateStore implements AppStateStore {
       'defaultBpm': profile.defaultBpm,
       'defaultTimerPreset': profile.defaultTimerPreset.name,
       'clickEnabledByDefault': profile.clickEnabledByDefault,
+      'accentVoice': profile.accentVoice.name,
     };
   }
 
@@ -250,6 +251,9 @@ class IsarAppStateStore implements AppStateStore {
         map['defaultTimerPreset'] as String,
       ),
       clickEnabledByDefault: map['clickEnabledByDefault'] as bool,
+      accentVoice: AccentVoiceV1.values.byName(
+        map['accentVoice'] as String? ?? AccentVoiceV1.snare.name,
+      ),
     );
   }
 

@@ -158,6 +158,26 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                 });
               },
             ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<AccentVoiceV1>(
+              initialValue: _draft.accentVoice,
+              decoration: const InputDecoration(
+                labelText: 'Accent Voice',
+                border: OutlineInputBorder(),
+              ),
+              items: AccentVoiceV1.values
+                  .map(
+                    (voice) => DropdownMenuItem<AccentVoiceV1>(
+                      value: voice,
+                      child: Text(voice.label),
+                    ),
+                  )
+                  .toList(growable: false),
+              onChanged: (AccentVoiceV1? value) {
+                if (value == null) return;
+                setState(() => _draft = _draft.copyWith(accentVoice: value));
+              },
+            ),
             const SizedBox(height: 20),
             FilledButton(
               onPressed: () {
@@ -271,7 +291,8 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
     return _draft.handedness != current.handedness ||
         _draft.defaultBpm != current.defaultBpm ||
         _draft.defaultTimerPreset != current.defaultTimerPreset ||
-        _draft.clickEnabledByDefault != current.clickEnabledByDefault;
+        _draft.clickEnabledByDefault != current.clickEnabledByDefault ||
+        _draft.accentVoice != current.accentVoice;
   }
 
   void _saveDraft() {

@@ -1674,7 +1674,7 @@ class AppController extends ChangeNotifier {
       index < tokens.length && index < voices.length;
       index++
     ) {
-      if (tokens[index].isKick || tokens[index].isRest) continue;
+      if (!tokens[index].allowsAuthoredVoice) continue;
       if (voices[index] != DrumVoiceV1.snare) return true;
     }
     return false;
@@ -3269,6 +3269,10 @@ class AppController extends ChangeNotifier {
     return token == 'K' ? DrumVoiceV1.kick : DrumVoiceV1.snare;
   }
 
+  bool _allowsAuthoredVoiceForToken(String token) {
+    return PatternTokenV1.fromSymbol(token).allowsAuthoredVoice;
+  }
+
   List<DrumVoiceV1> _effectiveVoicesForItem(PracticeItemV1 item) {
     final List<String> tokens = _normalizedTokensForItem(item);
     if (item.voiceAssignments.isEmpty) {
@@ -3282,6 +3286,9 @@ class AppController extends ChangeNotifier {
       if (index >= item.voiceAssignments.length) return fallback;
       final DrumVoiceV1 voice = item.voiceAssignments[index];
       if (tokens[index] == 'K') return DrumVoiceV1.kick;
+      if (!_allowsAuthoredVoiceForToken(tokens[index])) {
+        return DrumVoiceV1.snare;
+      }
       return voice == DrumVoiceV1.kick ? DrumVoiceV1.snare : voice;
     });
   }
@@ -3303,7 +3310,7 @@ class AppController extends ChangeNotifier {
     final List<String> tokens = _normalizedTokensForItem(item);
     final List<DrumVoiceV1> effective = _effectiveVoicesForItem(item);
     for (int index = 0; index < tokens.length; index++) {
-      if (tokens[index] == 'K' || tokens[index] == '_') continue;
+      if (!_allowsAuthoredVoiceForToken(tokens[index])) continue;
       if (effective[index] != DrumVoiceV1.snare) return true;
     }
     return false;

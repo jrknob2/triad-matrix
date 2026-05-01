@@ -46,9 +46,8 @@ class VoiceAssignmentEditor extends StatelessWidget {
             return DrumIndexedPill(
               indexLabel: '${index + 1}',
               label: Text('$token:${voice.shortLabel}'),
-              onPressed: editable
+              onPressed: editable && _allowsAuthoredVoice(token)
                   ? () {
-                      if (token == '_') return;
                       _handleTap(index, token, voice);
                     }
                   : null,
@@ -61,7 +60,7 @@ class VoiceAssignmentEditor extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             editable
-                ? 'Tap notes to change voices. Kicks stay on kick. Rests do not take voices.'
+                ? 'Tap R/L notes to change voices. Fixed tokens keep their playback voices.'
                 : 'Voice labels show the flow path across the kit.',
             style: Theme.of(context).textTheme.bodySmall,
           ),
@@ -91,8 +90,8 @@ class VoiceAssignmentEditor extends StatelessWidget {
   }
 
   DrumVoiceV1 _nextVoice(String token, DrumVoiceV1 current) {
-    if (token == '_') return DrumVoiceV1.snare;
     if (token == 'K') return DrumVoiceV1.kick;
+    if (!_allowsAuthoredVoice(token)) return DrumVoiceV1.snare;
 
     const List<DrumVoiceV1> cycle = <DrumVoiceV1>[
       DrumVoiceV1.snare,
@@ -105,6 +104,10 @@ class VoiceAssignmentEditor extends StatelessWidget {
     final int index = cycle.indexOf(current);
     if (index < 0) return cycle.first;
     return cycle[(index + 1) % cycle.length];
+  }
+
+  bool _allowsAuthoredVoice(String token) {
+    return PatternTokenV1.fromSymbol(token).allowsAuthoredVoice;
   }
 
   Color _backgroundFor(DrumVoiceV1 voice) {

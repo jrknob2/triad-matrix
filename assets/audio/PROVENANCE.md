@@ -8,6 +8,7 @@ Source/provider:
 - In-repo generated synthetic audio
 
 Files:
+- `snare.wav`
 - `kick.wav`
 - `snare_normal.wav`
 - `snare_accent.wav`
@@ -16,6 +17,11 @@ Files:
 - `rack_tom.wav`
 - `tom2.wav`
 - `floor_tom.wav`
+- `flam.wav`
+- `unison.wav`
+- `accent_snare.wav`
+- `accent_crash.wav`
+- `accent_ride.wav`
 
 License notes:
 - Generated specifically for this repository
@@ -27,3 +33,6 @@ Generation notes:
 - 44.1kHz
 - short synthesized one-shots created from simple sine/noise envelopes
 - no external recordings or licensed packs were incorporated
+- `snare.wav`, `flam.wav`, `unison.wav`, and accent samples are placeholder
+  expressive-token assets copied from the existing generated one-shots; replace
+  them with distinct tightly trimmed samples when final sound design is ready

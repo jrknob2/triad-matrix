@@ -20,13 +20,15 @@ enum PracticeModeV1 { singleSurface, flow }
 
 enum PracticeSessionEndBehaviorV1 { openSummary, returnToPrevious }
 
-enum PatternTokenKindV1 { right, left, kick, rest }
+enum PatternTokenKindV1 { right, left, kick, both, flam, accent, rest }
 
 enum PatternTimingModeV1 { autoByGrouping, explicitSpans }
 
 enum PatternPulseRoleV1 { normal, tag }
 
 enum DrumVoiceV1 { snare, rackTom, tom2, floorTom, hihat, kick }
+
+enum AccentVoiceV1 { snare, crash, ride }
 
 enum LearningLaneV1 { control, balance, dynamics, integration, phrasing, flow }
 
@@ -117,12 +119,14 @@ class UserProfileV1 {
   final int defaultBpm;
   final TimerPresetV1 defaultTimerPreset;
   final bool clickEnabledByDefault;
+  final AccentVoiceV1 accentVoice;
 
   const UserProfileV1({
     required this.handedness,
     required this.defaultBpm,
     required this.defaultTimerPreset,
     required this.clickEnabledByDefault,
+    required this.accentVoice,
   });
 
   UserProfileV1 copyWith({
@@ -130,6 +134,7 @@ class UserProfileV1 {
     int? defaultBpm,
     TimerPresetV1? defaultTimerPreset,
     bool? clickEnabledByDefault,
+    AccentVoiceV1? accentVoice,
   }) {
     return UserProfileV1(
       handedness: handedness ?? this.handedness,
@@ -137,6 +142,7 @@ class UserProfileV1 {
       defaultTimerPreset: defaultTimerPreset ?? this.defaultTimerPreset,
       clickEnabledByDefault:
           clickEnabledByDefault ?? this.clickEnabledByDefault,
+      accentVoice: accentVoice ?? this.accentVoice,
     );
   }
 
@@ -145,6 +151,7 @@ class UserProfileV1 {
     defaultBpm: 92,
     defaultTimerPreset: TimerPresetV1.minutes10,
     clickEnabledByDefault: true,
+    accentVoice: AccentVoiceV1.snare,
   );
 }
 
@@ -208,6 +215,11 @@ class PatternTokenV1 {
   static const PatternTokenV1 right = PatternTokenV1(PatternTokenKindV1.right);
   static const PatternTokenV1 left = PatternTokenV1(PatternTokenKindV1.left);
   static const PatternTokenV1 kick = PatternTokenV1(PatternTokenKindV1.kick);
+  static const PatternTokenV1 both = PatternTokenV1(PatternTokenKindV1.both);
+  static const PatternTokenV1 flam = PatternTokenV1(PatternTokenKindV1.flam);
+  static const PatternTokenV1 accent = PatternTokenV1(
+    PatternTokenKindV1.accent,
+  );
   static const PatternTokenV1 rest = PatternTokenV1(PatternTokenKindV1.rest);
 
   factory PatternTokenV1.fromSymbol(String symbol) {
@@ -215,6 +227,9 @@ class PatternTokenV1 {
       'R' => right,
       'L' => left,
       'K' => kick,
+      'B' => both,
+      'F' => flam,
+      'X' => accent,
       '_' => rest,
       _ => throw ArgumentError.value(
         symbol,
@@ -228,6 +243,9 @@ class PatternTokenV1 {
     PatternTokenKindV1.right => 'R',
     PatternTokenKindV1.left => 'L',
     PatternTokenKindV1.kick => 'K',
+    PatternTokenKindV1.both => 'B',
+    PatternTokenKindV1.flam => 'F',
+    PatternTokenKindV1.accent => 'X',
     PatternTokenKindV1.rest => '_',
   };
 
@@ -235,6 +253,9 @@ class PatternTokenV1 {
     PatternTokenKindV1.right => 'R',
     PatternTokenKindV1.left => 'L',
     PatternTokenKindV1.kick => 'K',
+    PatternTokenKindV1.both => 'B',
+    PatternTokenKindV1.flam => 'F',
+    PatternTokenKindV1.accent => 'X',
     PatternTokenKindV1.rest => '•',
   };
 
@@ -242,6 +263,7 @@ class PatternTokenV1 {
   bool get isKick => kind == PatternTokenKindV1.kick;
   bool get isHand =>
       kind == PatternTokenKindV1.right || kind == PatternTokenKindV1.left;
+  bool get allowsAuthoredVoice => isHand;
 
   @override
   bool operator ==(Object other) {
@@ -275,6 +297,9 @@ class PatternSequenceV1 {
         case 'R':
         case 'L':
         case 'K':
+        case 'B':
+        case 'F':
+        case 'X':
         case '_':
           parsed.add(PatternTokenV1.fromSymbol(char));
           break;

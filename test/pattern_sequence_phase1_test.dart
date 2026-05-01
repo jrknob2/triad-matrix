@@ -23,6 +23,30 @@ void main() {
       },
     );
 
+    test('accepts expressive chop tokens as single preserved positions', () {
+      const List<String> examples = <String>[
+        'FKLRK',
+        'RLBXK',
+        'RLLF_K',
+        'FBXKRL',
+        'XRLK',
+        'BBLR',
+      ];
+
+      for (final String example in examples) {
+        final PatternSequenceV1 sequence = PatternSequenceV1.parse(example);
+
+        expect(sequence.canonicalText, example);
+        expect(sequence.positionCount, example.length);
+      }
+
+      expect(PatternTokenV1.flam.symbol, 'F');
+      expect(PatternTokenV1.both.symbol, 'B');
+      expect(PatternTokenV1.accent.symbol, 'X');
+      expect(PatternTokenV1.rest.symbol, '_');
+      expect(PatternTokenV1.rest.notationSymbol, '•');
+    });
+
     test(
       'legacy practice item inputs resolve to canonical sequence storage',
       () {

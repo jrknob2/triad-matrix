@@ -45,6 +45,8 @@ Canonical pattern-model rule:
 
 - the app has one canonical playable-pattern model: an ordered token sequence
 - each token represents one timed position in the pattern
+- the core alphabet is `R`, `L`, `K`, `B`, `F`, `X`, and `_`
+- `B`, `F`, and `X` are expressive intent tokens, not expanded rudiment variants
 - canonical tokens must support note tokens and a first-class rest/pause token
 - triads, 4-note patterns, 5-note patterns, phrases, flow, and single-surface may still appear as product language, tags, filters, or pedagogy cues, but they must not define parsing, storage structure, renderer choice, playback shape, or session stepping
 - grouping is optional metadata for readability and teaching only
@@ -57,6 +59,7 @@ Canonical pattern-model rule:
 - when a session is explicitly launched in `Flow` or `Single Surface`, that chosen session-mode metadata should be preserved in setup, logging, replay, and history rather than being recomputed later from changed item state
 - the shared notation renderer should consume canonical token data directly
 - rest/pause must render explicitly as a timed position in normal notation readouts
+- `_` must remain the canonical stored rest token while rendering as `•`
 - voice rows should omit labels for rest positions even when the surrounding pattern shows voices
 
 List item rule:
@@ -81,6 +84,7 @@ Notation rule:
 - notation may wrap only between note cells or documented group boundaries, never inside a marked token
 - marked tokens like `^R` and `(R)` must remain visually intact as one unit
 - `R`, `L`, and `K` are the anchor glyphs and must always render at the exact same size within a notation readout
+- `F`, `B`, and `X` should use light visual differentiation only: `F` may be subtly italicized, `B` slightly bolder, and `X` highlighted with the pulse/accent color
 - the shared renderer owns notation token geometry; screens may size the overall readout, but they must not introduce local per-screen character spacing or ornament positioning rules
 - shared notation geometry should use a character-slot model rather than overlaying symbols inside one note box
 - each visible notation character should occupy its own padded slot in the rendered string, including `^`, `(`, `)`, note letters, and phrase separators

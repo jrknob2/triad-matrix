@@ -582,7 +582,10 @@ class PatternVoiceDisplay extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.visible,
                     style: switch (box.kind) {
-                      _NotationBoxKind.note => activeBaseStyle,
+                      _NotationBoxKind.note => _noteStyleForToken(
+                        token,
+                        activeBaseStyle,
+                      ),
                       _NotationBoxKind.accent => activeBaseStyle.copyWith(
                         height: _textLineHeight,
                       ),
@@ -598,6 +601,27 @@ class PatternVoiceDisplay extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  TextStyle _noteStyleForToken(PatternTokenV1 token, TextStyle baseStyle) {
+    final Color baseColor = baseStyle.color ?? DrumcabularyTheme.textPrimary;
+    return switch (token.kind) {
+      PatternTokenKindV1.flam => baseStyle.copyWith(
+        fontStyle: FontStyle.italic,
+      ),
+      PatternTokenKindV1.both => baseStyle.copyWith(
+        fontWeight: FontWeight.w900,
+      ),
+      PatternTokenKindV1.accent => baseStyle.copyWith(
+        color: DrumcabularyTheme.pulsePrimary,
+      ),
+      PatternTokenKindV1.rest => baseStyle.copyWith(
+        color: baseColor.withValues(alpha: 0.48),
+      ),
+      PatternTokenKindV1.right ||
+      PatternTokenKindV1.left ||
+      PatternTokenKindV1.kick => baseStyle,
+    };
   }
 
   Widget _voiceText({

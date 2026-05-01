@@ -70,6 +70,83 @@ void main() {
       expect(plan.cues[1].volume, lessThan(plan.cues[2].volume));
     });
 
+    test('maps expressive tokens without expanding timing positions', () {
+      final PatternAudioPlanV1 plan = PatternAudioService.buildPlan(
+        tokens: const <PatternTokenV1>[
+          PatternTokenV1.flam,
+          PatternTokenV1.kick,
+          PatternTokenV1.left,
+          PatternTokenV1.right,
+          PatternTokenV1.kick,
+          PatternTokenV1.both,
+          PatternTokenV1.accent,
+          PatternTokenV1.rest,
+        ],
+        markings: const <PatternNoteMarkingV1>[
+          PatternNoteMarkingV1.normal,
+          PatternNoteMarkingV1.normal,
+          PatternNoteMarkingV1.normal,
+          PatternNoteMarkingV1.normal,
+          PatternNoteMarkingV1.normal,
+          PatternNoteMarkingV1.normal,
+          PatternNoteMarkingV1.normal,
+          PatternNoteMarkingV1.normal,
+        ],
+        voices: const <DrumVoiceV1>[
+          DrumVoiceV1.snare,
+          DrumVoiceV1.kick,
+          DrumVoiceV1.snare,
+          DrumVoiceV1.snare,
+          DrumVoiceV1.kick,
+          DrumVoiceV1.snare,
+          DrumVoiceV1.snare,
+          DrumVoiceV1.snare,
+        ],
+        grouping: PatternGroupingV1.none,
+        timing: const PatternTimingV1.auto(),
+        bpm: 60,
+        accentVoice: AccentVoiceV1.ride,
+      );
+
+      expect(plan.cycleDuration, const Duration(seconds: 1));
+      expect(plan.cues.length, 7);
+      expect(
+        plan.cues.map((PatternAudioCueV1 cue) => cue.tokenIndex).toList(),
+        <int>[0, 1, 2, 3, 4, 5, 6],
+      );
+      expect(plan.cues[0].sample, PatternAudioSampleV1.flam);
+      expect(plan.cues[5].sample, PatternAudioSampleV1.unison);
+      expect(plan.cues[6].sample, PatternAudioSampleV1.accentRide);
+      expect(plan.cues[6].offset, const Duration(milliseconds: 750));
+    });
+
+    test('maps X to the selected accent voice', () {
+      PatternAudioPlanV1 planFor(AccentVoiceV1 accentVoice) {
+        return PatternAudioService.buildPlan(
+          tokens: const <PatternTokenV1>[PatternTokenV1.accent],
+          markings: const <PatternNoteMarkingV1>[PatternNoteMarkingV1.normal],
+          voices: const <DrumVoiceV1>[DrumVoiceV1.snare],
+          grouping: PatternGroupingV1.none,
+          timing: const PatternTimingV1.auto(),
+          bpm: 60,
+          accentVoice: accentVoice,
+        );
+      }
+
+      expect(
+        planFor(AccentVoiceV1.snare).cues.single.sample,
+        PatternAudioSampleV1.accentSnare,
+      );
+      expect(
+        planFor(AccentVoiceV1.crash).cues.single.sample,
+        PatternAudioSampleV1.accentCrash,
+      );
+      expect(
+        planFor(AccentVoiceV1.ride).cues.single.sample,
+        PatternAudioSampleV1.accentRide,
+      );
+    });
+
     test('uses explicit timing spans for cue offsets', () {
       final PatternAudioPlanV1 plan = PatternAudioService.buildPlan(
         tokens: const <PatternTokenV1>[

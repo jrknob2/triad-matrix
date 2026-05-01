@@ -151,6 +151,14 @@ extension DrumVoiceLabel on DrumVoiceV1 {
   };
 }
 
+extension AccentVoiceLabel on AccentVoiceV1 {
+  String get label => switch (this) {
+    AccentVoiceV1.snare => 'Snare',
+    AccentVoiceV1.crash => 'Crash',
+    AccentVoiceV1.ride => 'Ride',
+  };
+}
+
 extension AppMockScenarioLabel on AppMockScenarioV1 {
   String get label => switch (this) {
     AppMockScenarioV1.firstLight => 'First Light',

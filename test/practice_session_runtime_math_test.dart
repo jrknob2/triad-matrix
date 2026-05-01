@@ -105,6 +105,43 @@ void main() {
       );
     });
 
+    test('counts expressive tokens as normal timed positions', () {
+      final List<PatternTokenV1> tokens = PatternSequenceV1.parse(
+        'FKLRK',
+      ).tokens;
+
+      expect(
+        PracticeSessionRuntimeMath.activeTokenIndex(
+          tokens: tokens,
+          grouping: PatternGroupingV1.none,
+          timing: const PatternTimingV1.auto(),
+          elapsed: Duration.zero,
+          bpm: 60,
+        ),
+        0,
+      );
+      expect(
+        PracticeSessionRuntimeMath.activeTokenIndex(
+          tokens: tokens,
+          grouping: PatternGroupingV1.none,
+          timing: const PatternTimingV1.auto(),
+          elapsed: const Duration(milliseconds: 200),
+          bpm: 60,
+        ),
+        1,
+      );
+      expect(
+        PracticeSessionRuntimeMath.activeTokenIndex(
+          tokens: tokens,
+          grouping: PatternGroupingV1.none,
+          timing: const PatternTimingV1.auto(),
+          elapsed: const Duration(milliseconds: 800),
+          bpm: 60,
+        ),
+        4,
+      );
+    });
+
     test('falls back to one pulse span when no pulse metadata exists', () {
       final List<PatternTokenV1> tokens = <PatternTokenV1>[
         PatternTokenV1.right,

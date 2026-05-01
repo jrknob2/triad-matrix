@@ -13,7 +13,17 @@ import '../practice/widgets/pattern_voice_display.dart';
 
 enum _ItemDetailControlSet { append, dynamics, voices }
 
-enum _StructureToolOption { right, left, kick, rest, triad, fourNote }
+enum _StructureToolOption {
+  right,
+  left,
+  kick,
+  flam,
+  both,
+  accent,
+  rest,
+  triad,
+  fourNote,
+}
 
 enum _StructureActionKind { append, insertBefore, insertAfter, replace }
 
@@ -423,8 +433,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
           (int index) =>
               index >= 0 &&
               index < _draftTokens.length &&
-              !_draftTokens[index].isKick &&
-              !_draftTokens[index].isRest,
+              _draftTokens[index].allowsAuthoredVoice,
         )
         .toList(growable: false);
     if (editableIndices.isEmpty) return;
@@ -450,7 +459,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
 
   bool _hasDraftFlowVoices(List<String> tokens, List<DrumVoiceV1> voices) {
     for (int index = 0; index < tokens.length; index++) {
-      if (tokens[index] == 'K' || tokens[index] == '_') continue;
+      if (!PatternTokenV1.fromSymbol(tokens[index]).allowsAuthoredVoice) {
+        continue;
+      }
       if (voices[index] != DrumVoiceV1.snare) return true;
     }
     return false;
@@ -945,6 +956,11 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       ],
       _StructureToolOption.left => const <PatternTokenV1>[PatternTokenV1.left],
       _StructureToolOption.kick => const <PatternTokenV1>[PatternTokenV1.kick],
+      _StructureToolOption.flam => const <PatternTokenV1>[PatternTokenV1.flam],
+      _StructureToolOption.both => const <PatternTokenV1>[PatternTokenV1.both],
+      _StructureToolOption.accent => const <PatternTokenV1>[
+        PatternTokenV1.accent,
+      ],
       _StructureToolOption.rest => const <PatternTokenV1>[PatternTokenV1.rest],
       _StructureToolOption.triad => _showTriadInsertDialog(),
       _StructureToolOption.fourNote => _showFourNoteInsertDialog(),
@@ -1220,8 +1236,8 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         );
         if (index >= _voiceAssignments.length) return fallback;
         final DrumVoiceV1 voice = _voiceAssignments[index];
-        if (symbols[index] == 'K') return DrumVoiceV1.kick;
-        if (symbols[index] == '_') return DrumVoiceV1.snare;
+        if (_draftTokens[index].isKick) return DrumVoiceV1.kick;
+        if (!_draftTokens[index].allowsAuthoredVoice) return DrumVoiceV1.snare;
         return voice == DrumVoiceV1.kick ? DrumVoiceV1.snare : voice;
       },
       growable: false,
@@ -1770,6 +1786,9 @@ class _StructureEditor extends StatelessWidget {
       _StructureToolOption.right => 'R',
       _StructureToolOption.left => 'L',
       _StructureToolOption.kick => 'K',
+      _StructureToolOption.flam => 'F',
+      _StructureToolOption.both => 'B',
+      _StructureToolOption.accent => 'X',
       _StructureToolOption.rest => 'Rest',
       _StructureToolOption.triad => 'Triad',
       _StructureToolOption.fourNote => '4-Note',
@@ -1986,7 +2005,10 @@ class _SelectedVoiceEditor extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final List<int> editableIndices = selectedIndices
-        .where((int index) => tokens[index] != 'K' && tokens[index] != '_')
+        .where(
+          (int index) =>
+              PatternTokenV1.fromSymbol(tokens[index]).allowsAuthoredVoice,
+        )
         .toList(growable: false);
     final List<int> sortedIndices = editableIndices..sort();
     final Set<DrumVoiceV1> currentValues = sortedIndices

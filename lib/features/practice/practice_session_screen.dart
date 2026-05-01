@@ -1318,6 +1318,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
       grouping: widget.controller.displayGroupingFor(itemId),
       timing: widget.controller.patternTimingFor(itemId),
       bpm: _bpm,
+      accentVoice: widget.controller.profile.accentVoice,
       startElapsed: startElapsed,
     );
     if (!_patternAudioEnabled || !mounted) return;
@@ -1527,7 +1528,9 @@ class _BeatPulseState extends State<_BeatPulse> {
           if (widget.enabled)
             _PulseGaugeRing(
               diameter: pulseDiameter,
-              color: active ? DrumcabularyTheme.pulsePrimary : DrumcabularyTheme.tickNeutral,
+              color: active
+                  ? DrumcabularyTheme.pulsePrimary
+                  : DrumcabularyTheme.tickNeutral,
               width: active ? 5.5 : 4.0,
             ),
           Container(
@@ -1650,7 +1653,9 @@ class _TickRingPainter extends CustomPainter {
   }
 
   Color _majorTickColor(bool completed) {
-    return completed ? DrumcabularyTheme.creamText : DrumcabularyTheme.creamText.withValues(alpha: 0.7);
+    return completed
+        ? DrumcabularyTheme.creamText
+        : DrumcabularyTheme.creamText.withValues(alpha: 0.7);
   }
 
   int _majorTickCount() {
