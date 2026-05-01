@@ -1393,6 +1393,10 @@ class _SelectableNotationBlock extends StatelessWidget {
           patternStyle,
           _rendererCellWidthInput,
         );
+    final double tokenGapWidth = PatternVoiceDisplay.tokenGapWidthForStyle(
+      patternStyle,
+      _rendererCellWidthInput,
+    );
     final List<String> separators = List<String>.generate(
       tokens.length,
       (int index) => grouping.separatorAfter(index, tokens.length),
@@ -1424,6 +1428,7 @@ class _SelectableNotationBlock extends StatelessWidget {
           outerCellWidths,
           separators,
           separatorSlotWidth: separatorSlotWidth,
+          tokenGapWidth: tokenGapWidth,
         );
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1458,6 +1463,8 @@ class _SelectableNotationBlock extends StatelessWidget {
                         voiceStyle: voiceStyle,
                         width: separatorSlotWidth,
                       ),
+                    if (index < chunks[i].end - 1)
+                      SizedBox(width: tokenGapWidth),
                   ],
                 ],
               ),
@@ -1474,6 +1481,7 @@ class _SelectableNotationBlock extends StatelessWidget {
     List<double> outerCellWidths,
     List<String> separators, {
     required double separatorSlotWidth,
+    required double tokenGapWidth,
   }) {
     if (!maxWidth.isFinite || maxWidth <= 0) {
       return <_NotationChunk>[_NotationChunk(start: 0, end: tokens.length)];
@@ -1486,7 +1494,8 @@ class _SelectableNotationBlock extends StatelessWidget {
       while (end < tokens.length) {
         final double nextWidth =
             outerCellWidths[end] +
-            (separators[end].isNotEmpty ? separatorSlotWidth : 0);
+            (separators[end].isNotEmpty ? separatorSlotWidth : 0) +
+            (end < tokens.length - 1 ? tokenGapWidth : 0);
         if (end > start && width + nextWidth > maxWidth) break;
         width += nextWidth;
         end++;

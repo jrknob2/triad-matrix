@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 
 import '../../../core/practice/practice_domain_v1.dart';
@@ -19,13 +17,13 @@ class PatternVoiceDisplay extends StatelessWidget {
   static const double _repeatIndicatorIconScale = 1.05;
   static const double _patternCellHeightScale = 1.35;
   static const double _voiceCellHeightScale = 1.25;
-  static const double _minimumCellWidthFontScale = 1.04;
-  static const double _resolvedCellWidthScale = 0.84;
-  static const double _minimumCharacterSlotFontScale = 0.66;
-  static const double _characterSlotCellScale = 0.50;
-  static const double _normalTokenSidePaddingScale = 0.14;
+  static const double _characterSlotFontScale = 0.58;
+  static const double _tokenGapScale = 0.08;
   static const double _ghostParenSlotScale = 0.72;
-  static const double _ghostParenInwardBias = 0.28;
+  static const double _ghostLeftInnerGapScale = 0.2;
+  static const double _ghostRightInnerGapScale = 0.0;
+  static const double _ghostLeftParenOffsetScale = 0.04;
+  static const double _ghostRightParenOffsetScale = -0.28;
   static const double _textLineHeight = 1.0;
   static const String _notationFontFamily = 'Courier';
 
@@ -76,6 +74,7 @@ class PatternVoiceDisplay extends StatelessWidget {
     final TextStyle resolvedPatternStyle =
         (patternStyle ?? DefaultTextStyle.of(context).style).copyWith(
           fontFamily: _notationFontFamily,
+          letterSpacing: 0,
         );
     final TextStyle resolvedVoiceStyle =
         voiceStyle ??
@@ -101,6 +100,10 @@ class PatternVoiceDisplay extends StatelessWidget {
       resolvedPatternStyle,
       cellWidth,
     );
+    final double tokenGap = tokenGapWidthForStyle(
+      resolvedPatternStyle,
+      cellWidth,
+    );
 
     final Widget content = wrap
         ? LayoutBuilder(
@@ -113,6 +116,7 @@ class PatternVoiceDisplay extends StatelessWidget {
                 separators: separators,
                 tokenGeometry: tokenGeometry,
                 separatorWidth: separatorWidth,
+                tokenGap: tokenGap,
               );
               return Align(
                 alignment: Alignment.center,
@@ -126,6 +130,7 @@ class PatternVoiceDisplay extends StatelessWidget {
                         separators: separators,
                         tokenGeometry: tokenGeometry,
                         separatorWidth: separatorWidth,
+                        tokenGap: tokenGap,
                         patternStyle: resolvedPatternStyle,
                         voiceStyle: resolvedVoiceStyle,
                       ),
@@ -162,6 +167,7 @@ class PatternVoiceDisplay extends StatelessWidget {
                 separators: separators,
                 tokenGeometry: tokenGeometry,
                 separatorWidth: separatorWidth,
+                tokenGap: tokenGap,
                 patternStyle: resolvedPatternStyle,
                 voiceStyle: resolvedVoiceStyle,
               ),
@@ -195,6 +201,7 @@ class PatternVoiceDisplay extends StatelessWidget {
     required List<String> separators,
     required List<_NotationTokenGeometry> tokenGeometry,
     required double separatorWidth,
+    required double tokenGap,
     required TextStyle patternStyle,
     required TextStyle voiceStyle,
   }) {
@@ -210,6 +217,7 @@ class PatternVoiceDisplay extends StatelessWidget {
         separators: separators,
         tokenGeometry: tokenGeometry,
         separatorWidth: separatorWidth,
+        tokenGap: tokenGap,
         cellHeight: patternCellHeight,
         noteCellFor: (int index) => _patternText(
           tokens[index],
@@ -227,6 +235,7 @@ class PatternVoiceDisplay extends StatelessWidget {
         separators: separators,
         tokenGeometry: tokenGeometry,
         separatorWidth: separatorWidth,
+        tokenGap: tokenGap,
         cellHeight: voiceCellHeight,
         noteCellFor: (int index) => _voiceText(
           label: tokens[index].isRest ? '' : voices[index].shortLabel,
@@ -268,27 +277,17 @@ class PatternVoiceDisplay extends StatelessWidget {
     );
   }
 
-  static double resolvedCellWidthForStyle(TextStyle style, double cellWidth) {
-    final double fontSize = style.fontSize ?? _patternFallbackFontSize;
-    final double minWidth = fontSize * _minimumCellWidthFontScale;
-    final double tightenedWidth = cellWidth * _resolvedCellWidthScale;
-    return tightenedWidth < minWidth ? minWidth : tightenedWidth;
-  }
-
   static double characterSlotWidthForStyle(TextStyle style, double cellWidth) {
-    final double resolvedCellWidth = resolvedCellWidthForStyle(
-      style,
-      cellWidth,
-    );
     final double fontSize = style.fontSize ?? _patternFallbackFontSize;
-    return math.max(
-      fontSize * _minimumCharacterSlotFontScale,
-      resolvedCellWidth * _characterSlotCellScale,
-    );
+    return fontSize * _characterSlotFontScale;
   }
 
   static double separatorWidthForStyle(TextStyle style, double cellWidth) {
     return characterSlotWidthForStyle(style, cellWidth);
+  }
+
+  static double tokenGapWidthForStyle(TextStyle style, double cellWidth) {
+    return characterSlotWidthForStyle(style, cellWidth) * _tokenGapScale;
   }
 
   static double tokenWidthForMarking(
@@ -315,9 +314,9 @@ class PatternVoiceDisplay extends StatelessWidget {
       noteWidth: noteWidth,
       accentWidth: noteWidth,
       parenWidth: noteWidth * _ghostParenSlotScale,
-      normalSidePadding: noteWidth * _normalTokenSidePaddingScale,
+      leftParenNoteGap: noteWidth * _ghostLeftInnerGapScale,
+      rightNoteParenGap: noteWidth * _ghostRightInnerGapScale,
       accentGap: 0,
-      parenGap: 0,
     );
   }
 
@@ -331,11 +330,10 @@ class PatternVoiceDisplay extends StatelessWidget {
         boxes: <_NotationBox>[
           _NotationBox(
             kind: _NotationBoxKind.note,
-            left: metrics.normalSidePadding,
+            left: 0,
             width: metrics.noteWidth,
           ),
         ],
-        trailingPadding: metrics.normalSidePadding,
       ),
       PatternNoteMarkingV1.accent => _NotationTokenGeometry(
         marking: marking,
@@ -362,16 +360,16 @@ class PatternVoiceDisplay extends StatelessWidget {
           ),
           _NotationBox(
             kind: _NotationBoxKind.note,
-            left: metrics.parenWidth + metrics.parenGap,
+            left: metrics.parenWidth + metrics.leftParenNoteGap,
             width: metrics.noteWidth,
           ),
           _NotationBox(
             kind: _NotationBoxKind.rightParen,
             left:
                 metrics.parenWidth +
-                metrics.parenGap +
+                metrics.leftParenNoteGap +
                 metrics.noteWidth +
-                metrics.parenGap,
+                metrics.rightNoteParenGap,
             width: metrics.parenWidth,
           ),
         ],
@@ -384,6 +382,7 @@ class PatternVoiceDisplay extends StatelessWidget {
     required List<String> separators,
     required List<_NotationTokenGeometry> tokenGeometry,
     required double separatorWidth,
+    required double tokenGap,
   }) {
     if (!maxWidth.isFinite || maxWidth <= 0) {
       return <_PatternVoiceChunk>[
@@ -395,6 +394,7 @@ class PatternVoiceDisplay extends StatelessWidget {
       tokenGeometry: tokenGeometry,
       separators: separators,
       separatorWidth: separatorWidth,
+      tokenGap: tokenGap,
     );
     final List<_PatternVoiceChunk> chunks = <_PatternVoiceChunk>[];
     int segmentIndex = 0;
@@ -409,6 +409,7 @@ class PatternVoiceDisplay extends StatelessWidget {
             separators: separators,
             tokenGeometry: tokenGeometry,
             separatorWidth: separatorWidth,
+            tokenGap: tokenGap,
           ),
         );
         segmentIndex += 1;
@@ -450,6 +451,7 @@ class PatternVoiceDisplay extends StatelessWidget {
     required List<String> separators,
     required List<_NotationTokenGeometry> tokenGeometry,
     required double separatorWidth,
+    required double tokenGap,
   }) {
     final List<_PatternVoiceChunk> chunks = <_PatternVoiceChunk>[];
     int chunkStart = start;
@@ -458,7 +460,8 @@ class PatternVoiceDisplay extends StatelessWidget {
     for (int index = start; index < end; index += 1) {
       final double tokenWidth =
           tokenGeometry[index].width +
-          (separators[index].isNotEmpty ? separatorWidth : 0);
+          (separators[index].isNotEmpty ? separatorWidth : 0) +
+          (index < end - 1 ? tokenGap : 0);
       if (index > chunkStart && width + tokenWidth > maxWidth) {
         chunks.add(_PatternVoiceChunk(start: chunkStart, end: index));
         chunkStart = index;
@@ -478,6 +481,7 @@ class PatternVoiceDisplay extends StatelessWidget {
     required List<_NotationTokenGeometry> tokenGeometry,
     required List<String> separators,
     required double separatorWidth,
+    required double tokenGap,
   }) {
     final List<_PatternVoiceSegment> segments = <_PatternVoiceSegment>[];
     int start = 0;
@@ -485,7 +489,8 @@ class PatternVoiceDisplay extends StatelessWidget {
     for (int index = 0; index < tokens.length; index += 1) {
       width +=
           tokenGeometry[index].width +
-          (separators[index].isNotEmpty ? separatorWidth : 0);
+          (separators[index].isNotEmpty ? separatorWidth : 0) +
+          (index < tokens.length - 1 ? tokenGap : 0);
       final bool closesSegment =
           separators[index].isNotEmpty || index == tokens.length - 1;
       if (closesSegment) {
@@ -501,11 +506,13 @@ class PatternVoiceDisplay extends StatelessWidget {
         _PatternVoiceSegment(
           start: 0,
           end: tokens.length,
-          width: tokenGeometry.fold<double>(
-            0,
-            (double sum, _NotationTokenGeometry geometry) =>
-                sum + geometry.width,
-          ),
+          width:
+              tokenGeometry.fold<double>(
+                0,
+                (double sum, _NotationTokenGeometry geometry) =>
+                    sum + geometry.width,
+              ) +
+              (tokens.length - 1) * tokenGap,
         ),
       );
     }
@@ -517,6 +524,7 @@ class PatternVoiceDisplay extends StatelessWidget {
     required List<String> separators,
     required List<_NotationTokenGeometry> tokenGeometry,
     required double separatorWidth,
+    required double tokenGap,
     required double cellHeight,
     required Widget Function(int index) noteCellFor,
     required TextStyle separatorStyle,
@@ -542,6 +550,8 @@ class PatternVoiceDisplay extends StatelessWidget {
               ),
             ),
           ),
+        if (index < chunk.end - 1)
+          SizedBox(width: tokenGap, height: cellHeight),
       ],
     ];
   }
@@ -661,8 +671,8 @@ class PatternVoiceDisplay extends StatelessWidget {
 
   double _glyphOffsetForBox(_NotationBox box) {
     return switch (box.kind) {
-      _NotationBoxKind.leftParen => box.width * _ghostParenInwardBias,
-      _NotationBoxKind.rightParen => -box.width * _ghostParenInwardBias,
+      _NotationBoxKind.leftParen => box.width * _ghostLeftParenOffsetScale,
+      _NotationBoxKind.rightParen => box.width * _ghostRightParenOffsetScale,
       _ => 0,
     };
   }
@@ -711,16 +721,10 @@ class _PatternVoiceSegment {
 class _NotationTokenGeometry {
   final PatternNoteMarkingV1 marking;
   final List<_NotationBox> boxes;
-  final double trailingPadding;
 
-  const _NotationTokenGeometry({
-    required this.marking,
-    required this.boxes,
-    this.trailingPadding = 0,
-  });
+  const _NotationTokenGeometry({required this.marking, required this.boxes});
 
-  double get width =>
-      boxes.isEmpty ? 0 : boxes.last.left + boxes.last.width + trailingPadding;
+  double get width => boxes.isEmpty ? 0 : boxes.last.left + boxes.last.width;
 
   _NotationBox get noteBox =>
       boxes.firstWhere((_NotationBox box) => box.kind == _NotationBoxKind.note);
@@ -732,17 +736,17 @@ class _NotationMetrics {
   final double noteWidth;
   final double accentWidth;
   final double parenWidth;
-  final double normalSidePadding;
+  final double leftParenNoteGap;
+  final double rightNoteParenGap;
   final double accentGap;
-  final double parenGap;
 
   const _NotationMetrics({
     required this.noteWidth,
     required this.accentWidth,
     required this.parenWidth,
-    required this.normalSidePadding,
+    required this.leftParenNoteGap,
+    required this.rightNoteParenGap,
     required this.accentGap,
-    required this.parenGap,
   });
 }
 

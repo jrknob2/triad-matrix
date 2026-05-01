@@ -31,10 +31,17 @@ void main() {
       cellWidth,
     );
 
-    expect(normalWidth, greaterThan(separatorWidth));
+    final double tokenGapWidth = PatternVoiceDisplay.tokenGapWidthForStyle(
+      style,
+      cellWidth,
+    );
+
+    expect(normalWidth, separatorWidth);
     expect(accentWidth, separatorWidth * 2);
     expect(ghostWidth, lessThan(separatorWidth * 3));
     expect(ghostWidth, greaterThan(separatorWidth * 2));
+    expect(tokenGapWidth, greaterThanOrEqualTo(0));
+    expect(tokenGapWidth, lessThan(separatorWidth));
   });
 
   testWidgets(
