@@ -140,7 +140,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                         Text(
                           'Tap positions to select them, then edit structure, dynamics, or voice.',
                           style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: DrumcabularyTheme.textSecondary),
+                              ?.copyWith(
+                                color: DrumcabularyTheme.textSecondary,
+                              ),
                         ),
                         const SizedBox(height: 12),
                         const DrumEyebrow(text: 'Filters'),
@@ -1328,7 +1330,6 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
 
 class _SelectableNotationBlock extends StatelessWidget {
   static const double _rendererCellWidthInput = 38;
-  static const double _selectionHaloWidth = 8;
 
   final List<String> tokens;
   final List<PatternNoteMarkingV1> markings;
@@ -1364,13 +1365,11 @@ class _SelectableNotationBlock extends StatelessWidget {
         const TextStyle(fontSize: 14, fontWeight: FontWeight.w800);
     final List<double> outerCellWidths = List<double>.generate(
       markings.length,
-      (int index) =>
-          PatternVoiceDisplay.tokenWidthForMarking(
-            markings[index],
-            patternStyle,
-            _rendererCellWidthInput,
-          ) +
-          _selectionHaloWidth,
+      (int index) => PatternVoiceDisplay.tokenWidthForMarking(
+        markings[index],
+        patternStyle,
+        _rendererCellWidthInput,
+      ),
       growable: false,
     );
     final double separatorSlotWidth =
@@ -1485,6 +1484,12 @@ class _SelectableNotationBlock extends StatelessWidget {
 }
 
 class _SelectableNotationCell extends StatelessWidget {
+  static const Duration _selectionAnimationDuration = Duration(
+    milliseconds: 120,
+  );
+  static const double _selectionVerticalPadding = 4;
+  static const double _selectionBorderRadius = 12;
+
   final String token;
   final PatternNoteMarkingV1 marking;
   final DrumVoiceV1 voice;
@@ -1516,15 +1521,17 @@ class _SelectableNotationCell extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(_selectionBorderRadius),
         onTap: enabled ? onTap : null,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 120),
+          duration: _selectionAnimationDuration,
           width: outerCellWidth,
-          padding: const EdgeInsets.symmetric(vertical: 4),
+          padding: const EdgeInsets.symmetric(
+            vertical: _selectionVerticalPadding,
+          ),
           decoration: BoxDecoration(
             color: selected ? const Color(0xFFE7D6A8) : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(_selectionBorderRadius),
             border: Border.all(
               color: selected
                   ? const Color(0xFF8E6B1F)

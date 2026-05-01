@@ -323,6 +323,15 @@ class _FocusSearchEmptyState extends StatelessWidget {
 }
 
 class _FocusItemCard extends StatelessWidget {
+  static const EdgeInsetsGeometry _cardPadding = EdgeInsets.fromLTRB(
+    12,
+    6,
+    12,
+    10,
+  );
+  static const BoxConstraints _actionButtonConstraints =
+      BoxConstraints.tightFor(width: 36, height: 34);
+
   final AppController controller;
   final PracticeItemV1 item;
   final ValueChanged<String> onOpenItem;
@@ -340,26 +349,18 @@ class _FocusItemCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DrumPanel(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      padding: _cardPadding,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          Expanded(
-            child: PracticeItemSummaryBlock(
-              controller: controller,
-              item: item,
-              metadataLines: <String>[
-                '${item.family.label} • ${controller.matrixProgressStateFor(item.id).label}',
-                '${formatDuration(controller.totalTime(itemId: item.id))} logged',
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Wrap(
-            spacing: 2,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
             children: <Widget>[
               IconButton(
                 tooltip: 'Practice',
                 visualDensity: VisualDensity.compact,
+                constraints: _actionButtonConstraints,
+                padding: EdgeInsets.zero,
                 icon: const Icon(Icons.play_arrow_rounded),
                 onPressed: () => onPracticeItemInMode(
                   item.id,
@@ -369,15 +370,27 @@ class _FocusItemCard extends StatelessWidget {
               IconButton(
                 tooltip: 'Edit',
                 visualDensity: VisualDensity.compact,
+                constraints: _actionButtonConstraints,
+                padding: EdgeInsets.zero,
                 icon: const Icon(Icons.edit_outlined),
                 onPressed: () => onOpenItem(item.id),
               ),
               IconButton(
                 tooltip: 'Remove from Working On',
                 visualDensity: VisualDensity.compact,
+                constraints: _actionButtonConstraints,
+                padding: EdgeInsets.zero,
                 icon: const Icon(Icons.remove_circle_outline),
                 onPressed: onRemoveItem,
               ),
+            ],
+          ),
+          PracticeItemSummaryBlock(
+            controller: controller,
+            item: item,
+            metadataLines: <String>[
+              '${item.family.label} • ${controller.matrixProgressStateFor(item.id).label}',
+              '${formatDuration(controller.totalTime(itemId: item.id))} logged',
             ],
           ),
         ],
@@ -387,6 +400,15 @@ class _FocusItemCard extends StatelessWidget {
 }
 
 class _SearchResultCard extends StatelessWidget {
+  static const EdgeInsetsGeometry _cardPadding = EdgeInsets.fromLTRB(
+    12,
+    6,
+    12,
+    10,
+  );
+  static const BoxConstraints _actionButtonConstraints =
+      BoxConstraints.tightFor(width: 36, height: 34);
+
   final AppController controller;
   final PracticeItemV1 item;
   final ValueChanged<String> onOpenItem;
@@ -402,33 +424,35 @@ class _SearchResultCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DrumPanel(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      padding: _cardPadding,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          Expanded(
-            child: PracticeItemSummaryBlock(
-              controller: controller,
-              item: item,
-              metadataLines: <String>[item.family.label],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Wrap(
-            spacing: 2,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
             children: <Widget>[
               IconButton(
                 tooltip: 'Open Item',
                 visualDensity: VisualDensity.compact,
+                constraints: _actionButtonConstraints,
+                padding: EdgeInsets.zero,
                 icon: const Icon(Icons.edit_outlined),
                 onPressed: () => onOpenItem(item.id),
               ),
               IconButton(
                 tooltip: 'Add to Working On',
                 visualDensity: VisualDensity.compact,
+                constraints: _actionButtonConstraints,
+                padding: EdgeInsets.zero,
                 icon: const Icon(Icons.add_circle_outline_rounded),
                 onPressed: onAddItem,
               ),
             ],
+          ),
+          PracticeItemSummaryBlock(
+            controller: controller,
+            item: item,
+            metadataLines: <String>[item.family.label],
           ),
         ],
       ),

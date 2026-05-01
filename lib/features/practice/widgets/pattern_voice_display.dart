@@ -7,6 +7,27 @@ import '../../app/drumcabulary_theme.dart';
 import '../../app/app_formatters.dart';
 
 class PatternVoiceDisplay extends StatelessWidget {
+  static const double defaultCellWidth = 46;
+  static const double defaultGhostOpacity = 0.62;
+
+  static const double _wrappedChunkSpacing = 10;
+  static const double _patternVoiceRowGap = 6;
+  static const double _repeatIndicatorTopPadding = 6;
+  static const double _repeatIndicatorFallbackFontSize = 20;
+  static const double _patternFallbackFontSize = 18;
+  static const double _voiceFallbackFontSize = 12;
+  static const double _repeatIndicatorIconScale = 1.05;
+  static const double _patternCellHeightScale = 1.35;
+  static const double _voiceCellHeightScale = 1.25;
+  static const double _minimumCellWidthFontScale = 1.04;
+  static const double _resolvedCellWidthScale = 0.84;
+  static const double _minimumCharacterSlotFontScale = 0.66;
+  static const double _characterSlotCellScale = 0.50;
+  static const double _normalTokenSidePaddingScale = 0.14;
+  static const double _ghostParenSlotScale = 0.72;
+  static const double _ghostParenInwardBias = 0.28;
+  static const double _textLineHeight = 1.0;
+
   final List<PatternTokenV1> tokens;
   final List<PatternNoteMarkingV1> markings;
   final List<DrumVoiceV1> voices;
@@ -33,8 +54,8 @@ class PatternVoiceDisplay extends StatelessWidget {
     required this.voices,
     this.patternStyle,
     this.voiceStyle,
-    this.cellWidth = 46,
-    this.ghostOpacity = 0.62,
+    this.cellWidth = defaultCellWidth,
+    this.ghostOpacity = defaultGhostOpacity,
     this.grouping = PatternGroupingV1.none,
     this.showRepeatIndicator = false,
     this.scrollable = true,
@@ -105,15 +126,21 @@ class PatternVoiceDisplay extends StatelessWidget {
                         patternStyle: resolvedPatternStyle,
                         voiceStyle: resolvedVoiceStyle,
                       ),
-                      if (i < chunks.length - 1) const SizedBox(height: 10),
+                      if (i < chunks.length - 1)
+                        const SizedBox(height: _wrappedChunkSpacing),
                     ],
                     if (showRepeatIndicator)
                       Center(
                         child: Padding(
-                          padding: const EdgeInsets.only(top: 6),
+                          padding: const EdgeInsets.only(
+                            top: _repeatIndicatorTopPadding,
+                          ),
                           child: Icon(
                             Icons.repeat_rounded,
-                            size: (resolvedPatternStyle.fontSize ?? 20) * 1.05,
+                            size:
+                                (resolvedPatternStyle.fontSize ??
+                                    _repeatIndicatorFallbackFontSize) *
+                                _repeatIndicatorIconScale,
                             color: resolvedPatternStyle.color,
                           ),
                         ),
@@ -137,10 +164,15 @@ class PatternVoiceDisplay extends StatelessWidget {
               ),
               if (showRepeatIndicator)
                 Padding(
-                  padding: const EdgeInsets.only(top: 6),
+                  padding: const EdgeInsets.only(
+                    top: _repeatIndicatorTopPadding,
+                  ),
                   child: Icon(
                     Icons.repeat_rounded,
-                    size: (resolvedPatternStyle.fontSize ?? 20) * 1.05,
+                    size:
+                        (resolvedPatternStyle.fontSize ??
+                            _repeatIndicatorFallbackFontSize) *
+                        _repeatIndicatorIconScale,
                     color: resolvedPatternStyle.color,
                   ),
                 ),
@@ -163,8 +195,11 @@ class PatternVoiceDisplay extends StatelessWidget {
     required TextStyle patternStyle,
     required TextStyle voiceStyle,
   }) {
-    final double patternCellHeight = (patternStyle.fontSize ?? 18) * 1.35;
-    final double voiceCellHeight = (voiceStyle.fontSize ?? 12) * 1.25;
+    final double patternCellHeight =
+        (patternStyle.fontSize ?? _patternFallbackFontSize) *
+        _patternCellHeightScale;
+    final double voiceCellHeight =
+        (voiceStyle.fontSize ?? _voiceFallbackFontSize) * _voiceCellHeightScale;
     final Widget patternRow = Row(
       mainAxisSize: MainAxisSize.min,
       children: _rowCellsForRange(
@@ -206,7 +241,7 @@ class PatternVoiceDisplay extends StatelessWidget {
       children: <Widget>[
         if (showPatternRow) _fitRowToBounds(patternRow),
         if (showVoiceRow) ...<Widget>[
-          if (showPatternRow) const SizedBox(height: 6),
+          if (showPatternRow) const SizedBox(height: _patternVoiceRowGap),
           _fitRowToBounds(voiceRow),
         ],
       ],
@@ -231,9 +266,9 @@ class PatternVoiceDisplay extends StatelessWidget {
   }
 
   static double resolvedCellWidthForStyle(TextStyle style, double cellWidth) {
-    final double fontSize = style.fontSize ?? 18;
-    final double minWidth = fontSize * 1.04;
-    final double tightenedWidth = cellWidth * 0.84;
+    final double fontSize = style.fontSize ?? _patternFallbackFontSize;
+    final double minWidth = fontSize * _minimumCellWidthFontScale;
+    final double tightenedWidth = cellWidth * _resolvedCellWidthScale;
     return tightenedWidth < minWidth ? minWidth : tightenedWidth;
   }
 
@@ -242,8 +277,11 @@ class PatternVoiceDisplay extends StatelessWidget {
       style,
       cellWidth,
     );
-    final double fontSize = style.fontSize ?? 18;
-    return math.max(fontSize * 0.72, resolvedCellWidth * 0.56);
+    final double fontSize = style.fontSize ?? _patternFallbackFontSize;
+    return math.max(
+      fontSize * _minimumCharacterSlotFontScale,
+      resolvedCellWidth * _characterSlotCellScale,
+    );
   }
 
   static double separatorWidthForStyle(TextStyle style, double cellWidth) {
@@ -272,10 +310,11 @@ class PatternVoiceDisplay extends StatelessWidget {
     final double noteWidth = characterSlotWidthForStyle(style, cellWidth);
     return _NotationMetrics(
       noteWidth: noteWidth,
-      accentWidth: noteWidth * 0.78,
-      parenWidth: noteWidth * 0.44,
-      accentGap: noteWidth * 0.28,
-      parenGap: noteWidth * 0.10,
+      accentWidth: noteWidth,
+      parenWidth: noteWidth * _ghostParenSlotScale,
+      normalSidePadding: noteWidth * _normalTokenSidePaddingScale,
+      accentGap: 0,
+      parenGap: 0,
     );
   }
 
@@ -289,10 +328,11 @@ class PatternVoiceDisplay extends StatelessWidget {
         boxes: <_NotationBox>[
           _NotationBox(
             kind: _NotationBoxKind.note,
-            left: 0,
+            left: metrics.normalSidePadding,
             width: metrics.noteWidth,
           ),
         ],
+        trailingPadding: metrics.normalSidePadding,
       ),
       PatternNoteMarkingV1.accent => _NotationTokenGeometry(
         marking: marking,
@@ -509,7 +549,7 @@ class PatternVoiceDisplay extends StatelessWidget {
     TextStyle baseStyle, {
     required bool isActive,
   }) {
-    final double fontSize = baseStyle.fontSize ?? 18;
+    final double fontSize = baseStyle.fontSize ?? _patternFallbackFontSize;
     final TextStyle activeBaseStyle = isActive
         ? baseStyle.copyWith(
             color: activePatternColor ?? DrumcabularyTheme.pulsePrimary,
@@ -517,7 +557,7 @@ class PatternVoiceDisplay extends StatelessWidget {
         : baseStyle;
     return SizedBox(
       width: geometry.width,
-      height: fontSize * 1.35,
+      height: fontSize * _patternCellHeightScale,
       child: Stack(
         clipBehavior: Clip.none,
         children: <Widget>[
@@ -528,25 +568,30 @@ class PatternVoiceDisplay extends StatelessWidget {
               bottom: 0,
               width: box.width,
               child: Center(
-                child: Text(
-                  switch (box.kind) {
-                    _NotationBoxKind.note => token.notationSymbol,
-                    _NotationBoxKind.accent => '^',
-                    _NotationBoxKind.leftParen => '(',
-                    _NotationBoxKind.rightParen => ')',
-                  },
-                  textAlign: TextAlign.center,
-                  softWrap: false,
-                  maxLines: 1,
-                  overflow: TextOverflow.visible,
-                  style: switch (box.kind) {
-                    _NotationBoxKind.note => activeBaseStyle,
-                    _NotationBoxKind.accent => activeBaseStyle.copyWith(
-                      height: 1.0,
-                    ),
-                    _NotationBoxKind.leftParen || _NotationBoxKind.rightParen =>
-                      _ghostParenStyle(activeBaseStyle),
-                  },
+                child: Transform.translate(
+                  offset: Offset(_glyphOffsetForBox(box), 0),
+                  child: Text(
+                    switch (box.kind) {
+                      _NotationBoxKind.note => token.notationSymbol,
+                      _NotationBoxKind.accent => '^',
+                      _NotationBoxKind.leftParen => '(',
+                      _NotationBoxKind.rightParen => ')',
+                    },
+                    textAlign: TextAlign.center,
+                    softWrap: false,
+                    maxLines: 1,
+                    overflow: TextOverflow.visible,
+                    style: switch (box.kind) {
+                      _NotationBoxKind.note => activeBaseStyle,
+                      _NotationBoxKind.accent => activeBaseStyle.copyWith(
+                        height: _textLineHeight,
+                      ),
+                      _NotationBoxKind.leftParen ||
+                      _NotationBoxKind.rightParen => _ghostParenStyle(
+                        activeBaseStyle,
+                      ),
+                    },
+                  ),
                 ),
               ),
             ),
@@ -587,8 +632,16 @@ class PatternVoiceDisplay extends StatelessWidget {
     final Color baseColor = baseStyle.color ?? const Color(0xFF101010);
     return baseStyle.copyWith(
       color: baseColor.withValues(alpha: ghostOpacity),
-      height: 1.0,
+      height: _textLineHeight,
     );
+  }
+
+  double _glyphOffsetForBox(_NotationBox box) {
+    return switch (box.kind) {
+      _NotationBoxKind.leftParen => box.width * _ghostParenInwardBias,
+      _NotationBoxKind.rightParen => -box.width * _ghostParenInwardBias,
+      _ => 0,
+    };
   }
 }
 
@@ -635,10 +688,16 @@ class _PatternVoiceSegment {
 class _NotationTokenGeometry {
   final PatternNoteMarkingV1 marking;
   final List<_NotationBox> boxes;
+  final double trailingPadding;
 
-  const _NotationTokenGeometry({required this.marking, required this.boxes});
+  const _NotationTokenGeometry({
+    required this.marking,
+    required this.boxes,
+    this.trailingPadding = 0,
+  });
 
-  double get width => boxes.isEmpty ? 0 : boxes.last.left + boxes.last.width;
+  double get width =>
+      boxes.isEmpty ? 0 : boxes.last.left + boxes.last.width + trailingPadding;
 
   _NotationBox get noteBox =>
       boxes.firstWhere((_NotationBox box) => box.kind == _NotationBoxKind.note);
@@ -650,6 +709,7 @@ class _NotationMetrics {
   final double noteWidth;
   final double accentWidth;
   final double parenWidth;
+  final double normalSidePadding;
   final double accentGap;
   final double parenGap;
 
@@ -657,6 +717,7 @@ class _NotationMetrics {
     required this.noteWidth,
     required this.accentWidth,
     required this.parenWidth,
+    required this.normalSidePadding,
     required this.accentGap,
     required this.parenGap,
   });

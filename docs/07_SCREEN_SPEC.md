@@ -268,7 +268,7 @@ Matrix grid cells are structural cells. They should use an in-memory structural 
 
 Matrix outputs should hand off generic token-sequence practice material downstream. No downstream practice, list, or session surface should require matrix-cell identity once the item exists.
 
-Shared notation geometry should remain renderer-owned across screens and should use a simple adjustable token-rectangle model: each visible notation character gets its own explicit box, ornament widths and internal gaps are direct constants, note spacing stays compact, ghost parens keep consistent breathing room and vertical centering around the note, accent marks sit in their own box before the note, and phrase separators keep a small clear gap from adjacent marked tokens.
+Shared notation geometry should remain renderer-owned across screens and should use a simple adjustable token-rectangle model: note letters get stable side room, ghost parenthesis slots stay compact enough to read as `(L)`, accent marks sit in their own slot before the note, and phrase separators keep a clear slot from adjacent marked tokens.
 
 If an item appears anywhere in the phrase, its matrix cell is selected.  
 Exact removal happens in the phrase editor, not inside the cell.

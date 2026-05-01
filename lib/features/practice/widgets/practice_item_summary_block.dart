@@ -6,6 +6,8 @@ import 'pattern_readout.dart';
 import '../../app/drumcabulary_theme.dart';
 
 class PracticeItemSummaryBlock extends StatelessWidget {
+  static const double _patternMetadataGap = 4;
+
   final AppController controller;
   final PracticeItemV1 item;
   final List<String> metadataLines;
@@ -19,9 +21,9 @@ class PracticeItemSummaryBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List<String> visibleMetadata = metadataLines
+    final String metadataText = metadataLines
         .where((String line) => line.trim().isNotEmpty)
-        .toList(growable: false);
+        .join(' • ');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -41,14 +43,12 @@ class PracticeItemSummaryBlock extends StatelessWidget {
           wrap: true,
           cellWidth: 32,
         ),
-        for (
-          int index = 0;
-          index < visibleMetadata.length;
-          index++
-        ) ...<Widget>[
-          SizedBox(height: index == 0 ? 6 : 2),
+        if (metadataText.isNotEmpty) ...<Widget>[
+          const SizedBox(height: _patternMetadataGap),
           Text(
-            visibleMetadata[index],
+            metadataText,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: DrumcabularyTheme.mutedInk,
               fontWeight: FontWeight.w700,

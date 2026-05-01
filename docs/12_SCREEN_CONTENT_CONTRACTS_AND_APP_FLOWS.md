@@ -66,6 +66,9 @@ List item rule:
 - do not use chips for list-item metadata unless the chip itself is the action the user is taking
 - list items should use one shared formatting model across screens by default
 - typography, spacing, metadata treatment, and action placement should stay consistent unless a specific exception is documented
+- Library practice-item cards should use a stacked rhythm: actions in their own top row, full-width notation in the next row, and concise metadata below the notation
+- action controls in Library cards must not share horizontal space with the notation readout
+- Library practice-item cards should stay compact: action rows should be short, vertical gaps should be minimal, and bottom metadata should render as one line
 
 Notation rule:
 
@@ -81,9 +84,9 @@ Notation rule:
 - the shared renderer owns notation token geometry; screens may size the overall readout, but they must not introduce local per-screen character spacing or ornament positioning rules
 - shared notation geometry should use a character-slot model rather than overlaying symbols inside one note box
 - each visible notation character should occupy its own padded slot in the rendered string, including `^`, `(`, `)`, note letters, and phrase separators
-- ornament character slots such as `^`, `(`, and `)` may be narrower than note-letter slots so the readout stays compact without collapsing the character order
-- ornament glyphs may be biased within their own slots to tune visual proximity: `^` should sit a little away from the note, while ghost parens should sit a little toward the note
-- implementation should stay simple and adjustable: each notation token should be a rectangle layout with explicit ornament widths, note width, and internal gaps, so spacing changes are direct and predictable
+- spacing should be visually even at the token level: single notes need a small amount of side room, `^R` should stay tight and balanced, and ghost notation should read as `(L)` rather than `( L )`
+- ghost parenthesis slots may be narrower than note slots to avoid excessive outside whitespace around `(L)`
+- implementation should stay simple and adjustable: each notation token should be a rectangle layout built from explicit note, accent, parenthesis, and padding constants, so spacing changes are direct and predictable
 - note cells should be visually compact enough that adjacent notes read as one pattern rather than isolated glyphs with oversized gaps
 - wrappers such as editable/selectable notation surfaces may expand tap targets, but they must not introduce a second independent note-spacing model on top of the shared renderer
 - the note glyph must remain horizontally centered in its own character slot regardless of accents, ghosts, voices, or phrase separators

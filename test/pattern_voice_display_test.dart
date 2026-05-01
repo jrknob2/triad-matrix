@@ -4,6 +4,39 @@ import 'package:drumcabulary/core/practice/practice_domain_v1.dart';
 import 'package:drumcabulary/features/practice/widgets/pattern_voice_display.dart';
 
 void main() {
+  test('uses stable measured slots for dynamic notation marks', () {
+    const TextStyle style = TextStyle(
+      fontSize: 18,
+      fontWeight: FontWeight.w900,
+    );
+    const double cellWidth = 32;
+
+    final double normalWidth = PatternVoiceDisplay.tokenWidthForMarking(
+      PatternNoteMarkingV1.normal,
+      style,
+      cellWidth,
+    );
+    final double accentWidth = PatternVoiceDisplay.tokenWidthForMarking(
+      PatternNoteMarkingV1.accent,
+      style,
+      cellWidth,
+    );
+    final double ghostWidth = PatternVoiceDisplay.tokenWidthForMarking(
+      PatternNoteMarkingV1.ghost,
+      style,
+      cellWidth,
+    );
+    final double separatorWidth = PatternVoiceDisplay.separatorWidthForStyle(
+      style,
+      cellWidth,
+    );
+
+    expect(normalWidth, greaterThan(separatorWidth));
+    expect(accentWidth, separatorWidth * 2);
+    expect(ghostWidth, lessThan(separatorWidth * 3));
+    expect(ghostWidth, greaterThan(separatorWidth * 2));
+  });
+
   testWidgets(
     'wraps long ungrouped notation in constrained summary-style widths',
     (WidgetTester tester) async {
