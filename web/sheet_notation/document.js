@@ -3,6 +3,7 @@ import { DRUM_VOICE_IDS } from './voice_mapping.js';
 
 const NOTE_VALUE_SET = new Set(DRUM_NOTE_VALUES);
 const VOICE_ID_SET = new Set(DRUM_VOICE_IDS);
+const DEFAULT_SUBDIVISION = '8n';
 
 export function parseDrumNotationDocument(input) {
   const raw = typeof input === 'string' ? JSON.parse(input) : input;
@@ -12,6 +13,7 @@ export function parseDrumNotationDocument(input) {
   }
 
   return {
+    subdivision: optionalNoteValue(raw.subdivision, 'subdivision') ?? DEFAULT_SUBDIVISION,
     measures: raw.measures.map(parseMeasure),
   };
 }
@@ -31,14 +33,12 @@ function parseMeasure(rawMeasure, measureIndex) {
 function parseNote(rawNote, measureIndex, noteIndex) {
   const path = `measures[${measureIndex}].notes[${noteIndex}]`;
   assertObject(rawNote, path);
-  if (!NOTE_VALUE_SET.has(rawNote.value)) {
-    throw new Error(`${path}.value is unsupported: ${String(rawNote.value)}`);
-  }
+  const value = optionalNoteValue(rawNote.value, `${path}.value`);
   const rest = rawNote.rest === true;
   const voices = rest ? [] : parseVoices(rawNote.voices, path);
 
   return {
-    value: rawNote.value,
+    value,
     voices,
     rest,
     sticking: optionalString(rawNote.sticking, `${path}.sticking`),
@@ -47,6 +47,14 @@ function parseNote(rawNote, measureIndex, noteIndex) {
     ghost: rawNote.ghost === true,
     tie: rawNote.tie === true,
   };
+}
+
+function optionalNoteValue(value, path) {
+  if (value == null) return undefined;
+  if (!NOTE_VALUE_SET.has(value)) {
+    throw new Error(`${path} is unsupported: ${String(value)}`);
+  }
+  return value;
 }
 
 function parseVoices(rawVoices, path) {

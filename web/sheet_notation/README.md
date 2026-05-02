@@ -16,6 +16,8 @@ The renderer accepts render-ready JSON and returns SVG markup.
 
 Accents are shown with the sticking label, for example `^R`, instead of as VexFlow articulations above the note. That keeps them readable when beams and stems are dense.
 
+The default rhythmic subdivision is eighth notes (`8n`). Individual notes can still provide `value`, and the demo pattern field supports bracketed duration overrides such as `[32:R L]` for short runs that should differ from the default subdivision.
+
 The default demo uses a shorter staff with compressed spacing:
 
 ```js
@@ -42,11 +44,12 @@ The demo uses that metadata to support note selection and print selected note de
 import { renderDrumNotationSvg } from './renderer.js';
 
 const svg = renderDrumNotationSvg({
+  subdivision: '8n',
   measures: [
     {
       notes: [
-        { value: '16n', voices: ['snare'], sticking: 'R' },
-        { value: '16n', voices: ['snare'], sticking: 'L' },
+        { voices: ['snare'], sticking: 'R' },
+        { voices: ['snare'], sticking: 'L' },
         { value: '16n', voices: ['kick'], sticking: 'K' },
       ],
     },

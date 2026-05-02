@@ -1,4 +1,5 @@
 export type DrumNotationDocument = {
+  subdivision?: DrumNoteValue;
   measures: DrumNotationMeasure[];
 };
 
@@ -7,7 +8,7 @@ export type DrumNotationMeasure = {
 };
 
 export type DrumNotationNote = {
-  value: DrumNoteValue;
+  value?: DrumNoteValue;
   voices?: DrumVoiceId[];
   rest?: boolean;
   sticking?: string;

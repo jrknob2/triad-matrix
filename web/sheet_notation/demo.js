@@ -5,23 +5,24 @@ export const DEFAULT_DEMO_PATTERN =
 
 export function demoDocument() {
   const wrappedMeasure = [
-    { value: '16n', voices: ['snare'], sticking: 'R', accent: true },
-    { value: '16n', voices: ['snare'], sticking: 'L', accent: true },
-    { value: '16n', voices: ['snare'], sticking: 'R', accent: true },
-    { value: '16n', voices: ['snare'], sticking: 'L', ghost: true },
-    { value: '16n', voices: ['snare'], sticking: 'L', ghost: true },
-    { value: '16n', voices: ['kick'], sticking: 'K' },
-    { value: '16n', voices: ['tom1'], sticking: 'R', accent: true },
-    { value: '16n', voices: ['tom1'], sticking: 'L', accent: true },
-    { value: '16n', voices: ['tom2'], sticking: 'R', accent: true },
-    { value: '16n', voices: ['snare'], sticking: 'L', ghost: true },
-    { value: '16n', voices: ['snare'], sticking: 'L', ghost: true },
-    { value: '16n', voices: ['floorTom'], sticking: 'FT' },
-    { value: '16n', voices: ['hihat'], sticking: 'HH' },
-    { value: '16n', voices: ['crash'], sticking: 'C', accent: true },
-    { value: '16n', voices: ['snare'], sticking: 'F', flam: true },
+    { voices: ['snare'], sticking: 'R', accent: true },
+    { voices: ['snare'], sticking: 'L', accent: true },
+    { voices: ['snare'], sticking: 'R', accent: true },
+    { voices: ['snare'], sticking: 'L', ghost: true },
+    { voices: ['snare'], sticking: 'L', ghost: true },
+    { voices: ['kick'], sticking: 'K' },
+    { voices: ['tom1'], sticking: 'R', accent: true },
+    { voices: ['tom1'], sticking: 'L', accent: true },
+    { voices: ['tom2'], sticking: 'R', accent: true },
+    { voices: ['snare'], sticking: 'L', ghost: true },
+    { voices: ['snare'], sticking: 'L', ghost: true },
+    { voices: ['floorTom'], sticking: 'FT' },
+    { voices: ['hihat'], sticking: 'HH' },
+    { voices: ['crash'], sticking: 'C', accent: true },
+    { voices: ['snare'], sticking: 'F', flam: true },
   ];
   return {
+    subdivision: '8n',
     measures: [
       { notes: wrappedMeasure },
       { notes: wrappedMeasure },
@@ -33,8 +34,9 @@ export function renderDemoDrumNotationSvg(options = {}) {
   return renderDrumNotationSvg(demoDocument(), options);
 }
 
-export function documentFromPattern(pattern) {
+export function documentFromPattern(pattern, options = {}) {
   return {
+    subdivision: options.subdivision ?? '8n',
     measures: [{ notes: notesFromPattern(pattern) }],
   };
 }
@@ -43,9 +45,10 @@ export function patternFromNotes(notes) {
   return notes.map(patternTokenForNote).join('');
 }
 
-export function notesFromPattern(pattern) {
+export function notesFromPattern(pattern, options = {}) {
   const notes = [];
   let accent = false;
+  const defaultValue = options.value;
   for (let index = 0; index < pattern.length; index += 1) {
     const char = pattern[index];
     if (/\s/.test(char)) continue;
@@ -58,22 +61,44 @@ export function notesFromPattern(pattern) {
       if (close < 0) throw new Error('Unclosed ghost note group.');
       const symbol = pattern.slice(index + 1, close).trim();
       if (symbol.length === 0) throw new Error('Empty ghost note group.');
-      notes.push(noteFromToken(symbol, { accent, ghost: true }));
+      notes.push(noteFromToken(symbol, { accent, ghost: true, value: defaultValue }));
+      accent = false;
+      index = close;
+      continue;
+    }
+    if (char === '[') {
+      const close = pattern.indexOf(']', index + 1);
+      if (close < 0) throw new Error('Unclosed duration override group.');
+      const body = pattern.slice(index + 1, close);
+      const separator = body.indexOf(':');
+      if (separator < 0) {
+        throw new Error('Duration override must use [duration: pattern].');
+      }
+      const value = durationValueFromLabel(body.slice(0, separator).trim());
+      notes.push(...notesFromPattern(body.slice(separator + 1), { value }));
       accent = false;
       index = close;
       continue;
     }
     const multi = multiCharacterTokenAt(pattern, index);
     if (multi != null) {
-      notes.push(noteFromToken(multi, { accent }));
+      notes.push(noteFromToken(multi, { accent, value: defaultValue }));
       accent = false;
       index += multi.length - 1;
       continue;
     }
-    notes.push(noteFromToken(char, { accent }));
+    notes.push(noteFromToken(char, { accent, value: defaultValue }));
     accent = false;
   }
   return notes;
+}
+
+function durationValueFromLabel(label) {
+  const normalized = label.endsWith('n') ? label : `${label}n`;
+  if (!['1n', '2n', '4n', '8n', '16n', '32n'].includes(normalized)) {
+    throw new Error(`Unsupported duration override: ${label}`);
+  }
+  return normalized;
 }
 
 function multiCharacterTokenAt(pattern, index) {
@@ -85,11 +110,11 @@ function multiCharacterTokenAt(pattern, index) {
 function noteFromToken(symbol, options = {}) {
   const token = symbol.toUpperCase();
   const common = {
-    value: '16n',
     sticking: token,
     accent: options.accent === true,
     ghost: options.ghost === true,
   };
+  if (options.value != null) common.value = options.value;
   switch (token) {
     case 'R':
     case 'L':
@@ -109,7 +134,7 @@ function noteFromToken(symbol, options = {}) {
       return { ...common, voices: ['floorTom'] };
     case '_':
     case '-':
-      return { value: '16n', rest: true, sticking: '-' };
+      return { value: options.value, rest: true, sticking: '-' };
     default:
       throw new Error(`Unsupported pattern token: ${symbol}`);
   }

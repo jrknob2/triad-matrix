@@ -66,7 +66,7 @@ export function renderDrumNotationSvgWithMetadata(documentJson, options = {}) {
     stave.setContext(context).draw();
 
     const notes = system.entries.map((entry) =>
-      createVexFlowNote(VF, entry.note, {
+      createVexFlowNote(VF, resolvedNoteForEntry(entry, document), {
         stemMode: renderOptions.stemMode,
         metadata: entry,
         standardAccents: renderOptions.standardAccents,
@@ -255,7 +255,7 @@ function createBeams(VF, vexNotes, system, options = {}) {
         : beamGroup[beamGroup.length - 1].options?.stem_direction;
     if (
       !system.entries[index].note.rest &&
-      isBeamableValue(system.entries[index].note.value) &&
+      isBeamableValue(system.entries[index].value) &&
       currentStemDirection === previousStemDirection
     ) {
       beamGroup.push(vexNotes[index]);
@@ -264,7 +264,7 @@ function createBeams(VF, vexNotes, system, options = {}) {
     addBeamGroup(VF, beams, beamGroup, options);
     beamGroup =
       !system.entries[index].note.rest &&
-      isBeamableValue(system.entries[index].note.value)
+      isBeamableValue(system.entries[index].value)
         ? [vexNotes[index]]
         : [];
   }
@@ -379,6 +379,7 @@ function noteEntriesForDocument(document) {
         index: entries.length,
         measureIndex,
         measureNoteIndex,
+        value: note.value ?? document.subdivision,
         note,
       });
     });
@@ -467,7 +468,7 @@ function noteMetadataForEntry(entry) {
     index: entry.index,
     measureIndex: entry.measureIndex,
     measureNoteIndex: entry.measureNoteIndex,
-    value: entry.note.value,
+    value: entry.value,
     voices: entry.note.voices,
     rest: entry.note.rest,
     sticking: entry.note.sticking,
@@ -487,10 +488,17 @@ function systemLayoutForIndex(index, options) {
 }
 
 function beatValueForSystem(system) {
-  const firstValue = system.entries[0]?.note.value;
+  const firstValue = system.entries[0]?.value;
   if (firstValue == null) return 4;
   const match = /^(\d+)n$/.exec(firstValue);
   return match == null ? 4 : Number(match[1]);
+}
+
+function resolvedNoteForEntry(entry, document) {
+  return {
+    ...entry.note,
+    value: entry.value ?? document.subdivision,
+  };
 }
 
 function createDetachedHost() {

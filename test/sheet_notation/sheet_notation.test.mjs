@@ -34,7 +34,7 @@ describe('sheet notation document parsing', () => {
   test('valid document parsing', () => {
     const parsed = parseDrumNotationDocument(VALID_DOCUMENT);
 
-    assert.equal('timeSignature' in parsed, false);
+    assert.equal(parsed.subdivision, '8n');
     assert.equal(parsed.measures.length, 1);
     assert.equal(parsed.measures[0].notes.length, 4);
     assert.deepEqual(parsed.measures[0].notes[0].voices, ['snare']);
@@ -125,7 +125,7 @@ describe('voice mapping and VexFlow conversion', () => {
   test('cymbal voices render with x noteheads', () => {
     const VF = createFakeVexFlow();
     const hihat = createVexFlowNote(VF, {
-      value: '16n',
+      value: '8n',
       voices: ['hihat'],
       sticking: 'HH',
     });
@@ -258,7 +258,7 @@ describe('svg rendering', () => {
         'snare',
       ],
     );
-    assert.ok(notes.every((note) => note.value === '16n'));
+    assert.ok(notes.every((note) => note.value == null));
     assert.equal(notes[14].flam, true);
   });
 
@@ -280,6 +280,19 @@ describe('svg rendering', () => {
         { sticking: 'L', voices: ['snare'], accent: false, ghost: true },
         { sticking: 'K', voices: ['kick'], accent: false, ghost: false },
       ],
+    );
+  });
+
+  test('pattern input supports bracketed duration overrides', () => {
+    const document = documentFromPattern('R L [32:R L] R L', {
+      subdivision: '8n',
+    });
+    const notes = document.measures[0].notes;
+
+    assert.equal(document.subdivision, '8n');
+    assert.deepEqual(
+      notes.map((note) => note.value ?? document.subdivision),
+      ['8n', '8n', '32n', '32n', '8n', '8n'],
     );
   });
 
@@ -403,7 +416,7 @@ describe('svg rendering', () => {
       index: 0,
       measureIndex: 0,
       measureNoteIndex: 0,
-      value: '16n',
+      value: '8n',
       voices: ['snare'],
       rest: false,
       sticking: 'R',

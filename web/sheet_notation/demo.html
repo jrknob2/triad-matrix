@@ -38,7 +38,8 @@
         font-weight: 700;
         gap: 4px;
       }
-      .controls input {
+      .controls input,
+      .controls select {
         font: inherit;
         padding: 6px 8px;
         width: 8rem;
@@ -91,6 +92,15 @@
         Beat grouping
         <input id="grouping" value="3535" inputmode="numeric" />
       </label>
+      <label>
+        Subdivision
+        <select id="subdivision">
+          <option value="4n">1/4</option>
+          <option value="8n" selected>1/8</option>
+          <option value="16n">1/16</option>
+          <option value="32n">1/32</option>
+        </select>
+      </label>
     </div>
     <label class="pattern-control">
       Pattern
@@ -106,6 +116,7 @@
 
       const notation = document.getElementById('notation');
       const grouping = document.getElementById('grouping');
+      const subdivision = document.getElementById('subdivision');
       const pattern = document.getElementById('pattern');
       const deleteSelected = document.getElementById('deleteSelected');
       const selection = document.getElementById('selection');
@@ -116,7 +127,9 @@
       function renderNotation() {
         try {
           const availableWidth = Math.floor(notation.clientWidth);
-          const result = renderDrumNotationSvgWithMetadata(documentFromPattern(pattern.value), {
+          const result = renderDrumNotationSvgWithMetadata(documentFromPattern(pattern.value, {
+            subdivision: subdivision.value,
+          }), {
             availableWidth,
             grouping: grouping.value,
             notesPerSystem: 'auto',
@@ -140,6 +153,7 @@
       renderNotation();
       window.addEventListener('resize', scheduleRender);
       grouping.addEventListener('input', scheduleRender);
+      subdivision.addEventListener('change', scheduleRender);
       pattern.addEventListener('input', scheduleRender);
       deleteSelected.addEventListener('click', () => {
         const selected = new Set(selectedIndexes);
@@ -165,19 +179,25 @@
             element.dataset.drumMeasureNoteIndex = String(note.measureNoteIndex);
           }
           element.classList.add('drum-note-selectable');
-          element.addEventListener('click', (event) => {
-            event.stopPropagation();
-            const noteIndex = Number(element.dataset.drumNoteIndex);
-            if (selectedIndexes.has(noteIndex)) {
-              selectedIndexes.delete(noteIndex);
-            } else {
-              selectedIndexes.add(noteIndex);
-            }
-            renderSelection();
-          });
         });
-        svg.addEventListener('click', () => {
-          selectedIndexes.clear();
+        svg.addEventListener('click', (event) => {
+          const element = event.target.closest(
+            '[data-drum-note-index], .vf-stavenote',
+          );
+          if (element == null || !svg.contains(element)) {
+            selectedIndexes.clear();
+            renderSelection();
+            return;
+          }
+
+          event.stopPropagation();
+          const noteIndex = Number(element.dataset.drumNoteIndex);
+          if (!Number.isInteger(noteIndex)) return;
+          if (selectedIndexes.has(noteIndex)) {
+            selectedIndexes.delete(noteIndex);
+          } else {
+            selectedIndexes.add(noteIndex);
+          }
           renderSelection();
         });
       }
