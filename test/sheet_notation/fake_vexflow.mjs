@@ -4,6 +4,8 @@ export function createFakeVexFlow() {
     annotations: [],
     articulations: [],
     beams: [],
+    events: [],
+    parentheses: [],
     voices: [],
     staves: [],
   };
@@ -78,7 +80,7 @@ export function createFakeVexFlow() {
   }
 
   class Annotation {
-    static VerticalJustify = { BOTTOM: 'bottom' };
+    static VerticalJustify = { BOTTOM: 'bottom', TOP: 'top' };
 
     constructor(text) {
       this.text = text;
@@ -108,6 +110,13 @@ export function createFakeVexFlow() {
     }
   }
 
+  class Parenthesis {
+    constructor(position) {
+      this.position = position;
+      calls.parentheses.push(this);
+    }
+  }
+
   class Voice {
     constructor(options) {
       this.options = options;
@@ -126,6 +135,7 @@ export function createFakeVexFlow() {
     }
 
     draw(context, stave) {
+      calls.events.push('voice:draw');
       this.context = context;
       this.stave = stave;
     }
@@ -139,6 +149,9 @@ export function createFakeVexFlow() {
 
     format(voices, width) {
       this.formatWidth = width;
+      voices.forEach((voice) => {
+        voice.formatterWidth = width;
+      });
       return this;
     }
   }
@@ -146,6 +159,11 @@ export function createFakeVexFlow() {
   class Beam {
     constructor(notes) {
       this.notes = notes;
+      this.render_options = { flat_beams: false };
+      for (const note of notes) {
+        note.beam = this;
+      }
+      calls.events.push('beam:create');
       calls.beams.push(this);
     }
 
@@ -155,6 +173,7 @@ export function createFakeVexFlow() {
     }
 
     draw() {
+      calls.events.push('beam:draw');
       this.drawn = true;
       return this;
     }
@@ -190,11 +209,12 @@ export function createFakeVexFlow() {
     StaveNote,
     Annotation,
     Articulation,
+    Parenthesis,
     Voice,
     Formatter,
     Beam,
     GraceNote,
     GraceNoteGroup,
-    Modifier: { Position: { ABOVE: 'above' } },
+    Modifier: { Position: { ABOVE: 'above', LEFT: 'left', RIGHT: 'right' } },
   };
 }

@@ -14,6 +14,20 @@ It intentionally excludes:
 
 The renderer accepts render-ready JSON and returns SVG markup.
 
+Accents are shown with the sticking label, for example `^R`, instead of as VexFlow articulations above the note. That keeps them readable when beams and stems are dense.
+
+The default demo uses a shorter staff with compressed spacing:
+
+```js
+renderDrumNotationSvg(documentJson, {
+  measureWidth: 640,
+  formatterWidth: 500,
+  paddingRight: 70,
+});
+```
+
+`measureWidth` controls staff length. `formatterWidth` controls note compression inside that staff. `paddingRight` gives trailing modifiers like flams and parentheses room so they do not clip.
+
 ```js
 import { renderDrumNotationSvg } from './renderer.js';
 
@@ -66,4 +80,16 @@ window.renderDrumNotationSvg(documentJson);
 
 Flams are isolated behind `attachFlam`. If the loaded VexFlow build does not expose `GraceNote` and `GraceNoteGroup`, the note is marked with an internal `__drumcabularyFlam` flag rather than failing.
 
-Ghost note rendering is isolated behind `attachGhost`. It currently marks the note with `__drumcabularyGhost`; final visual parentheses should be completed against the exact VexFlow version selected for production.
+Ghost note rendering is isolated behind `attachGhost`. When VexFlow exposes `Parenthesis`, `ghost: true` adds left and right parentheses around the notehead while keeping the sticking label plain, for example `L`. If `Parenthesis` is unavailable, the note is marked with `__drumcabularyGhost` rather than failing.
+
+## Stem Mode
+
+The renderer defaults to `stemMode: "single"` for this proof of concept. That renders the whole measure as one compact rhythmic voice, which keeps mixed hand/foot vocabulary readable and keeps sixteenth-note beaming continuous.
+
+If you want to inspect the raw voice mapping stem directions, pass:
+
+```js
+renderDrumNotationSvg(documentJson, { stemMode: 'mapped' });
+```
+
+`mapped` mode uses the `stemDirection` values in `voice_mapping.js`, which can create separate up/down visual groupings.

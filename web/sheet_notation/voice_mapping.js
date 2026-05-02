@@ -41,12 +41,12 @@ export const DRUM_VOICE_MAP = Object.freeze({
     stemDirection: 1,
   }),
   floorTom: Object.freeze({
-    key: 'f/4',
+    key: 'g/4',
     notehead: 'normal',
     stemDirection: -1,
   }),
   kick: Object.freeze({
-    key: 'f/3',
+    key: 'f/4',
     notehead: 'normal',
     stemDirection: -1,
   }),

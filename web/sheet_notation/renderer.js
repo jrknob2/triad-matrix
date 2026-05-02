@@ -3,12 +3,14 @@ import { isBeamableValue, toVexFlowDuration } from './duration.js';
 import { voiceMappingFor } from './voice_mapping.js';
 
 const DEFAULT_RENDER_OPTIONS = Object.freeze({
-  measureWidth: 760,
+  measureWidth: 640,
   staffX: 20,
   staffY: 36,
   staffHeight: 190,
-  paddingRight: 20,
-  formatterPadding: 90,
+  paddingRight: 70,
+  formatterWidth: 500,
+  stemMode: 'single',
+  flatBeams: true,
 });
 
 export function renderDrumNotationSvg(documentJson, options = {}) {
@@ -39,37 +41,53 @@ export function renderDrumNotationSvg(documentJson, options = {}) {
     stave.setContext(context).draw();
 
     const notes = document.measures[index].notes.map((note) =>
-      createVexFlowNote(VF, note),
+      createVexFlowNote(VF, note, { stemMode: renderOptions.stemMode }),
     );
     const voice = new VF.Voice({
       num_beats: beatsFromTimeSignature(document.timeSignature),
       beat_value: beatValueFromTimeSignature(document.timeSignature),
     }).setStrict(false);
     voice.addTickables(notes);
+    const formatterWidth =
+      renderOptions.formatterWidth ??
+      renderOptions.measureWidth - renderOptions.formatterPadding;
     new VF.Formatter()
       .joinVoices([voice])
-      .format([voice], renderOptions.measureWidth - renderOptions.formatterPadding);
+      .format([voice], formatterWidth);
+    const beams = createBeams(
+      VF,
+      notes,
+      document.measures[index].notes,
+      renderOptions,
+    );
     voice.draw(context, stave);
-    drawBeams(VF, context, notes, document.measures[index].notes);
+    drawBeams(context, beams);
     x += renderOptions.measureWidth;
   }
 
   return extractSvg(host);
 }
 
-export function createVexFlowNote(VF, note) {
+export function createVexFlowNote(VF, note, options = {}) {
   const duration = toVexFlowDuration(note.value, { rest: note.rest });
   const mappings = note.rest ? [] : note.voices.map(voiceMappingFor);
   const keys = note.rest ? ['b/4'] : mappings.map((mapping) => mapping.key);
-  const staveNote = new VF.StaveNote({
+  const noteOptions = {
     keys,
     duration,
-    stem_direction: stemDirectionForMappings(mappings),
-  });
+    stem_direction: stemDirectionForMappings(mappings, options.stemMode),
+  };
+  const noteheadType = noteheadTypeForMappings(mappings);
+  if (noteheadType != null) {
+    noteOptions.type = noteheadType;
+  }
+  const staveNote = new VF.StaveNote(noteOptions);
 
   applyNoteheads(VF, staveNote, mappings);
-  attachSticking(VF, staveNote, note.sticking);
-  attachAccent(VF, staveNote, note.accent);
+  attachSticking(VF, staveNote, stickingLabelFor(note));
+  if (note.accent && (note.sticking == null || note.sticking === '')) {
+    attachAccent(VF, staveNote, true);
+  }
   attachGhost(VF, staveNote, note.ghost);
   attachFlam(VF, staveNote, note);
   return staveNote;
@@ -85,18 +103,25 @@ export function attachSticking(VF, staveNote, sticking) {
 
 export function attachAccent(VF, staveNote, accent) {
   if (!accent) return;
-  const articulation = new VF.Articulation('a>').setPosition(
-    VF.Modifier.Position.ABOVE,
-  );
-  staveNote.addModifier(articulation, 0);
+  const annotation = new VF.Annotation('>')
+    .setFont('Arial', 14, 'bold')
+    .setVerticalJustification(VF.Annotation.VerticalJustify.TOP);
+  staveNote.addModifier(annotation, 0);
 }
 
 export function attachGhost(VF, staveNote, ghost) {
   if (!ghost) return;
-  if (typeof VF.NoteSubGroup !== 'function') {
+  if (typeof VF.Parenthesis !== 'function') {
     staveNote.__drumcabularyGhost = true;
     return;
   }
+  const modifierPosition = VF.ModifierPosition ?? VF.Modifier?.Position;
+  if (modifierPosition?.LEFT == null || modifierPosition?.RIGHT == null) {
+    staveNote.__drumcabularyGhost = true;
+    return;
+  }
+  staveNote.addModifier(new VF.Parenthesis(modifierPosition.LEFT), 0);
+  staveNote.addModifier(new VF.Parenthesis(modifierPosition.RIGHT), 0);
   staveNote.__drumcabularyGhost = true;
 }
 
@@ -113,7 +138,19 @@ export function attachFlam(VF, staveNote, note) {
     duration: '8',
     slash: true,
   });
-  new VF.GraceNoteGroup([grace], true).beamNotes().attach(staveNote);
+  const graceNoteGroup = new VF.GraceNoteGroup([grace], true);
+  if (typeof graceNoteGroup.beamNotes === 'function') {
+    graceNoteGroup.beamNotes();
+  }
+  if (typeof graceNoteGroup.attach === 'function') {
+    graceNoteGroup.attach(staveNote);
+  } else if (typeof staveNote.addModifier === 'function') {
+    staveNote.addModifier(graceNoteGroup, 0);
+  } else {
+    staveNote.__drumcabularyFlam = true;
+    return;
+  }
+  staveNote.graceNoteGroup = graceNoteGroup;
 }
 
 function applyNoteheads(VF, staveNote, mappings) {
@@ -128,14 +165,27 @@ function applyNoteheads(VF, staveNote, mappings) {
   });
 }
 
-function stemDirectionForMappings(mappings) {
+function noteheadTypeForMappings(mappings) {
+  if (mappings.length === 0) return null;
+  return mappings.every((mapping) => mapping.notehead === 'x') ? 'x' : null;
+}
+
+function stemDirectionForMappings(mappings, stemMode = 'single') {
+  if (stemMode === 'single') return 1;
   if (mappings.length === 0) return 1;
   const hasDownStem = mappings.some((mapping) => mapping.stemDirection < 0);
   return hasDownStem ? -1 : 1;
 }
 
-function drawBeams(VF, context, vexNotes, sourceNotes) {
-  if (typeof VF.Beam !== 'function') return;
+function stickingLabelFor(note) {
+  const accentPrefix = note.accent ? '^' : '';
+  if (note.sticking == null || note.sticking === '') return note.sticking;
+  return `${accentPrefix}${note.sticking}`;
+}
+
+function createBeams(VF, vexNotes, sourceNotes, options = {}) {
+  if (typeof VF.Beam !== 'function') return [];
+  const beams = [];
   let beamGroup = [];
   for (let index = 0; index < vexNotes.length; index += 1) {
     const currentStemDirection = vexNotes[index].options?.stem_direction;
@@ -151,18 +201,30 @@ function drawBeams(VF, context, vexNotes, sourceNotes) {
       beamGroup.push(vexNotes[index]);
       continue;
     }
-    drawBeamGroup(VF, context, beamGroup);
+    addBeamGroup(VF, beams, beamGroup, options);
     beamGroup =
       !sourceNotes[index].rest && isBeamableValue(sourceNotes[index].value)
         ? [vexNotes[index]]
         : [];
   }
-  drawBeamGroup(VF, context, beamGroup);
+  addBeamGroup(VF, beams, beamGroup, options);
+  return beams;
 }
 
-function drawBeamGroup(VF, context, beamGroup) {
+function addBeamGroup(VF, beams, beamGroup, options) {
   if (beamGroup.length < 2) return;
-  new VF.Beam(beamGroup).setContext(context).draw();
+  const beam = new VF.Beam(beamGroup);
+  if (options.flatBeams === true && beam.render_options != null) {
+    beam.render_options.flat_beams = true;
+  }
+  if (options.flatBeamOffset != null && beam.render_options != null) {
+    beam.render_options.flat_beam_offset = options.flatBeamOffset;
+  }
+  beams.push(beam);
+}
+
+function drawBeams(context, beams) {
+  beams.forEach((beam) => beam.setContext(context).draw());
 }
 
 function beatsFromTimeSignature(timeSignature) {

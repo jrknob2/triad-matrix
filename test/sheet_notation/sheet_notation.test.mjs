@@ -3,7 +3,7 @@ import { describe, test } from 'node:test';
 
 import { parseDrumNotationDocument } from '../../web/sheet_notation/document.js';
 import { toVexFlowDuration } from '../../web/sheet_notation/duration.js';
-import { renderDemoDrumNotationSvg } from '../../web/sheet_notation/demo.js';
+import { demoDocument, renderDemoDrumNotationSvg } from '../../web/sheet_notation/demo.js';
 import { createVexFlowNote, renderDrumNotationSvg } from '../../web/sheet_notation/renderer.js';
 import { voiceMappingFor } from '../../web/sheet_notation/voice_mapping.js';
 import { createFakeVexFlow } from './fake_vexflow.mjs';
@@ -78,7 +78,13 @@ describe('duration conversion', () => {
 describe('voice mapping and VexFlow conversion', () => {
   test('voice mapping lookup', () => {
     assert.equal(voiceMappingFor('crash').notehead, 'x');
+    assert.equal(voiceMappingFor('hihat').notehead, 'x');
+    assert.equal(voiceMappingFor('ride').notehead, 'x');
     assert.equal(voiceMappingFor('snare').key, 'c/5');
+    assert.equal(voiceMappingFor('tom1').key, 'd/5');
+    assert.equal(voiceMappingFor('tom2').key, 'a/4');
+    assert.equal(voiceMappingFor('floorTom').key, 'g/4');
+    assert.equal(voiceMappingFor('kick').key, 'f/4');
     assert.equal(voiceMappingFor('kick').stemDirection, -1);
   });
 
@@ -90,9 +96,47 @@ describe('voice mapping and VexFlow conversion', () => {
       sticking: 'RK',
     });
 
-    assert.deepEqual(note.options.keys, ['c/5', 'f/3']);
+    assert.deepEqual(note.options.keys, ['c/5', 'f/4']);
     assert.equal(note.options.duration, '16');
+    assert.equal(note.options.stem_direction, 1);
+  });
+
+  test('mapped stem mode can use the voice mapping directions', () => {
+    const VF = createFakeVexFlow();
+    const note = createVexFlowNote(
+      VF,
+      {
+        value: '16n',
+        voices: ['snare', 'kick'],
+        sticking: 'RK',
+      },
+      { stemMode: 'mapped' },
+    );
+
     assert.equal(note.options.stem_direction, -1);
+  });
+
+  test('cymbal voices render with x noteheads', () => {
+    const VF = createFakeVexFlow();
+    const hihat = createVexFlowNote(VF, {
+      value: '16n',
+      voices: ['hihat'],
+      sticking: 'HH',
+    });
+    const crash = createVexFlowNote(VF, {
+      value: '16n',
+      voices: ['crash'],
+      sticking: 'C',
+    });
+    const ride = createVexFlowNote(VF, {
+      value: '16n',
+      voices: ['ride'],
+      sticking: 'R',
+    });
+
+    assert.equal(hihat.options.type, 'x');
+    assert.equal(crash.options.type, 'x');
+    assert.equal(ride.options.type, 'x');
   });
 
   test('sticking label attachment', () => {
@@ -108,7 +152,7 @@ describe('voice mapping and VexFlow conversion', () => {
     assert.equal(VF.calls.annotations[0].verticalJustification, 'bottom');
   });
 
-  test('accent attachment', () => {
+  test('accent appears with the sticking label', () => {
     const VF = createFakeVexFlow();
     const note = createVexFlowNote(VF, {
       value: '16n',
@@ -117,9 +161,53 @@ describe('voice mapping and VexFlow conversion', () => {
       accent: true,
     });
 
-    assert.equal(note.modifiers.length, 2);
-    assert.equal(VF.calls.articulations[0].type, 'a>');
-    assert.equal(VF.calls.articulations[0].position, 'above');
+    assert.equal(note.modifiers.length, 1);
+    assert.equal(VF.calls.annotations[0].text, '^X');
+    assert.equal(VF.calls.articulations.length, 0);
+  });
+
+  test('ghost notes parenthesize the notehead, not the sticking label', () => {
+    const VF = createFakeVexFlow();
+    const note = createVexFlowNote(VF, {
+      value: '16n',
+      voices: ['snare'],
+      sticking: 'L',
+      ghost: true,
+    });
+
+    assert.equal(VF.calls.annotations[0].text, 'L');
+    assert.deepEqual(
+      VF.calls.parentheses.map((parenthesis) => parenthesis.position),
+      ['left', 'right'],
+    );
+    assert.equal(note.modifiers[1].modifier, VF.calls.parentheses[0]);
+    assert.equal(note.modifiers[2].modifier, VF.calls.parentheses[1]);
+    assert.equal(note.__drumcabularyGhost, true);
+  });
+
+  test('flam attachment supports VexFlow modifier fallback', () => {
+    const VF = createFakeVexFlow();
+    VF.GraceNoteGroup = class GraceNoteGroup {
+      constructor(notes, slur) {
+        this.notes = notes;
+        this.slur = slur;
+      }
+
+      beamNotes() {
+        this.beamed = true;
+      }
+    };
+
+    const note = createVexFlowNote(VF, {
+      value: '16n',
+      voices: ['snare'],
+      sticking: 'F',
+      flam: true,
+    });
+
+    assert.equal(note.graceNoteGroup.notes.length, 1);
+    assert.equal(note.graceNoteGroup.beamed, true);
+    assert.equal(note.modifiers.at(-1).modifier, note.graceNoteGroup);
   });
 });
 
@@ -133,18 +221,76 @@ describe('svg rendering', () => {
     assert.equal(VF.calls.notes.length, 4);
   });
 
+  test('demo document matches the requested phrase and voices', () => {
+    const notes = demoDocument().measures[0].notes;
+
+    assert.deepEqual(
+      notes.map((note) => notationLabelFor(note)).join(''),
+      '^R^L^R(L)(L)K^R^L^R(L)(L)FTHH^CF',
+    );
+    assert.deepEqual(
+      notes.map((note) => note.voices.join('+')),
+      [
+        'snare',
+        'snare',
+        'snare',
+        'snare',
+        'snare',
+        'kick',
+        'tom1',
+        'tom1',
+        'tom2',
+        'snare',
+        'snare',
+        'floorTom',
+        'hihat',
+        'crash',
+        'snare',
+      ],
+    );
+    assert.ok(notes.every((note) => note.value === '16n'));
+    assert.equal(notes[14].flam, true);
+  });
+
   test('demo renders sixteen-note phrase as svg', () => {
     const VF = createFakeVexFlow();
     const svg = renderDemoDrumNotationSvg({ vexFlow: VF });
 
     assert.match(svg, /^<svg /);
-    assert.equal(VF.calls.notes.length, 16);
-    assert.equal(VF.calls.annotations.length, 16);
+    assert.match(svg, /width="730"/);
+    assert.equal(VF.calls.notes.length, 15);
+    assert.equal(VF.calls.annotations.length, 15);
+    assert.equal(VF.calls.notes[14].graceNoteGroup.notes.length, 1);
+    assert.equal(VF.calls.staves[0].width, 640);
+    assert.equal(VF.calls.voices[0].formatterWidth, 500);
   });
 
-  test('beams do not cross mixed stem directions', () => {
+  test('default demo uses one compact rhythmic voice for sixteenth beaming', () => {
     const VF = createFakeVexFlow();
     renderDemoDrumNotationSvg({ vexFlow: VF });
+
+    assert.equal(VF.calls.beams.length, 1);
+    assert.equal(VF.calls.beams[0].notes.length, 15);
+    assert.equal(VF.calls.beams[0].render_options.flat_beams, true);
+    assert.ok(
+      VF.calls.events.indexOf('beam:create') <
+        VF.calls.events.indexOf('voice:draw'),
+    );
+    assert.ok(
+      VF.calls.events.indexOf('voice:draw') <
+        VF.calls.events.indexOf('beam:draw'),
+    );
+    for (const note of VF.calls.beams[0].notes) {
+      assert.equal(note.beam, VF.calls.beams[0]);
+    }
+    for (const note of VF.calls.notes) {
+      assert.equal(note.options.stem_direction, 1);
+    }
+  });
+
+  test('mapped stem mode beams do not cross mixed stem directions', () => {
+    const VF = createFakeVexFlow();
+    renderDemoDrumNotationSvg({ vexFlow: VF, stemMode: 'mapped' });
 
     assert.ok(VF.calls.beams.length > 1);
     for (const beam of VF.calls.beams) {
@@ -155,3 +301,9 @@ describe('svg rendering', () => {
     }
   });
 });
+
+function notationLabelFor(note) {
+  if (note.ghost) return `(${note.sticking})`;
+  if (note.accent) return `^${note.sticking}`;
+  return note.sticking;
+}
