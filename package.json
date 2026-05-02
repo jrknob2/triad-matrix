@@ -1,0 +1,11 @@
+{
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "demo:sheet-notation": "node web/sheet_notation/server.mjs",
+    "test:sheet-notation": "node --test test/sheet_notation/*.test.mjs"
+  },
+  "devDependencies": {
+    "vexflow": "^4.2.3"
+  }
+}

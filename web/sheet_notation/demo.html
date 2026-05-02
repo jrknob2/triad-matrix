@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Drumcabulary Sheet Notation POC</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        margin: 24px;
+      }
+      #notation {
+        border: 1px solid #ddd;
+        padding: 16px;
+        overflow-x: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Drumcabulary Sheet Notation POC</h1>
+    <p>This page renders SVG sheet music only. It has no tempo, playback, or practice logic.</p>
+    <div id="notation"></div>
+    <script src="https://cdn.jsdelivr.net/npm/vexflow@4.2.3/build/cjs/vexflow.js"></script>
+    <script type="module">
+      import { renderDemoDrumNotationSvg } from './demo.js';
+
+      const notation = document.getElementById('notation');
+      try {
+        notation.innerHTML = renderDemoDrumNotationSvg();
+      } catch (error) {
+        console.error(error);
+        notation.innerHTML = `<pre>${error.stack ?? error.message}</pre>`;
+      }
+    </script>
+  </body>
+</html>
