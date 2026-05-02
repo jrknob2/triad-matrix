@@ -68,6 +68,7 @@ export function createFakeVexFlow() {
   class StaveNote {
     constructor(options) {
       this.options = options;
+      this.attributes = {};
       this.modifiers = [];
       this.keyStyles = [];
       calls.notes.push(this);
@@ -80,6 +81,11 @@ export function createFakeVexFlow() {
 
     setKeyStyle(index, style) {
       this.keyStyles[index] = style;
+      return this;
+    }
+
+    setAttribute(name, value) {
+      this.attributes[name] = value;
       return this;
     }
   }

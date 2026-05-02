@@ -23,11 +23,20 @@ renderDrumNotationSvg(documentJson, {
   availableWidth: container.clientWidth,
   paddingRight: 12,
   notesPerSystem: 'auto',
-  systemGapY: 112,
+  grouping: '3535',
+  systemGapY: 140,
 });
 ```
 
-`availableWidth` makes the renderer fit the SVG to its container. `measureWidth` can still override staff length when fixed sizing is needed. `formatterWidth` controls note compression inside that staff; if omitted, it is derived from `formatterWidthScale`. `paddingRight` gives trailing modifiers like flams and parentheses room so they do not clip. `notesPerSystem: "auto"` wraps note chunks based on available width and `minNoteWidth`; pass a number to force a specific chunk size. `systemGapY` controls the vertical distance between wrapped staff rows.
+`availableWidth` makes the renderer fit the SVG to its container. `measureWidth` can still override staff length when fixed sizing is needed. `formatterWidth` controls note compression inside that staff; if omitted, it is derived from `formatterWidthScale`. `paddingRight` gives trailing modifiers like flams and parentheses room so they do not clip. `notesPerSystem: "auto"` wraps note chunks based on available width and `minNoteWidth`; pass a number to force a specific chunk size. `grouping` accepts strings such as `"3535"` and keeps beams and responsive system breaks aligned to those groups when possible. `systemGapY` controls the vertical distance between wrapped staff rows.
+
+For interactive browser/WebView use, call:
+
+```js
+const { svg, notes } = renderDrumNotationSvgWithMetadata(documentJson, options);
+```
+
+The demo uses that metadata to support note selection and print selected note details below the SVG.
 
 ```js
 import { renderDrumNotationSvg } from './renderer.js';

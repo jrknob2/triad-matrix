@@ -18,26 +18,86 @@
         display: block;
         max-width: 100%;
       }
+      .controls {
+        align-items: end;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin: 14px 0;
+      }
+      .controls label {
+        display: grid;
+        font-weight: 700;
+        gap: 4px;
+      }
+      .controls input {
+        font: inherit;
+        padding: 6px 8px;
+        width: 8rem;
+      }
+      .controls input#pattern {
+        width: min(32rem, 100%);
+      }
+      .drum-note-selectable {
+        cursor: pointer;
+      }
+      .drum-note-selected {
+        filter: drop-shadow(0 0 3px #b26a00);
+      }
+      .drum-note-selected path,
+      .drum-note-selected text {
+        fill: #b26a00;
+        stroke: #b26a00;
+      }
+      #selection {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 13px;
+        margin-top: 12px;
+        white-space: pre-wrap;
+      }
     </style>
   </head>
   <body>
     <h1>Drumcabulary Sheet Notation POC</h1>
     <p>This page renders SVG sheet music only. It has no tempo, playback, or practice logic.</p>
+    <div class="controls">
+      <label>
+        Beat grouping
+        <input id="grouping" value="3535" inputmode="numeric" />
+      </label>
+      <label>
+        Pattern
+        <input id="pattern" value="^R^L^R(L)(L)K" />
+      </label>
+    </div>
     <div id="notation"></div>
+    <div id="selection">Selected notes: none</div>
     <script src="https://cdn.jsdelivr.net/npm/vexflow@4.2.3/build/cjs/vexflow.js"></script>
     <script type="module">
-      import { renderDemoDrumNotationSvg } from './demo.js';
+      import { documentFromPattern } from './demo.js';
+      import { renderDrumNotationSvgWithMetadata } from './renderer.js';
 
       const notation = document.getElementById('notation');
+      const grouping = document.getElementById('grouping');
+      const pattern = document.getElementById('pattern');
+      const selection = document.getElementById('selection');
       let resizeFrame = 0;
+      let renderedNotes = [];
+      const selectedIndexes = new Set();
 
       function renderNotation() {
         try {
           const availableWidth = Math.floor(notation.clientWidth);
-          notation.innerHTML = renderDemoDrumNotationSvg({
+          const result = renderDrumNotationSvgWithMetadata(documentFromPattern(pattern.value), {
             availableWidth,
+            grouping: grouping.value,
             notesPerSystem: 'auto',
           });
+          renderedNotes = result.notes;
+          selectedIndexes.clear();
+          notation.innerHTML = result.svg;
+          attachNoteSelection();
+          renderSelection();
         } catch (error) {
           console.error(error);
           notation.innerHTML = `<pre>${error.stack ?? error.message}</pre>`;
@@ -51,6 +111,54 @@
 
       renderNotation();
       window.addEventListener('resize', scheduleRender);
+      grouping.addEventListener('input', scheduleRender);
+      pattern.addEventListener('input', scheduleRender);
+
+      function attachNoteSelection() {
+        const svg = notation.querySelector('svg');
+        if (!svg) return;
+        const attributed = [...svg.querySelectorAll('[data-drum-note-index]')];
+        const fallback = [...svg.querySelectorAll('.vf-stavenote')];
+        const noteElements = attributed.length > 0 ? attributed : fallback;
+        noteElements.forEach((element, index) => {
+          if (!element.dataset.drumNoteIndex) {
+            element.dataset.drumNoteIndex = String(index);
+          }
+          element.classList.add('drum-note-selectable');
+          element.addEventListener('click', (event) => {
+            event.stopPropagation();
+            const noteIndex = Number(element.dataset.drumNoteIndex);
+            if (selectedIndexes.has(noteIndex)) {
+              selectedIndexes.delete(noteIndex);
+            } else {
+              selectedIndexes.add(noteIndex);
+            }
+            renderSelection();
+          });
+        });
+        svg.addEventListener('click', () => {
+          selectedIndexes.clear();
+          renderSelection();
+        });
+      }
+
+      function renderSelection() {
+        const selected = [...selectedIndexes].sort((a, b) => a - b);
+        notation
+          .querySelectorAll('.drum-note-selected')
+          .forEach((element) => element.classList.remove('drum-note-selected'));
+        for (const index of selected) {
+          const element = notation.querySelector(`[data-drum-note-index="${index}"]`);
+          element?.classList.add('drum-note-selected');
+        }
+
+        if (selected.length === 0) {
+          selection.textContent = 'Selected notes: none';
+          return;
+        }
+        const selectedNotes = selected.map((index) => renderedNotes[index]);
+        selection.textContent = `Selected notes:\n${JSON.stringify(selectedNotes, null, 2)}`;
+      }
     </script>
   </body>
 </html>

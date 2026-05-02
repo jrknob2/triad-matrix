@@ -16,15 +16,21 @@ const DEFAULT_RENDER_OPTIONS = Object.freeze({
   minNoteWidth: 39,
   systemEndReserve: 28,
   noteSpacing: 34,
-  systemGapY: 112,
+  systemGapY: 140,
   finalRepeat: true,
+  grouping: null,
   repeatClefEverySystem: true,
   repeatTimeSignatureEverySystem: false,
+  standardAccents: true,
   stemMode: 'single',
   flatBeams: true,
 });
 
 export function renderDrumNotationSvg(documentJson, options = {}) {
+  return renderDrumNotationSvgWithMetadata(documentJson, options).svg;
+}
+
+export function renderDrumNotationSvgWithMetadata(documentJson, options = {}) {
   const document = parseDrumNotationDocument(documentJson);
   const VF = options.vexFlow ?? resolveVexFlow();
   const renderOptions = resolveRenderOptions({ ...DEFAULT_RENDER_OPTIONS, ...options });
@@ -66,8 +72,12 @@ export function renderDrumNotationSvg(documentJson, options = {}) {
     }
     stave.setContext(context).draw();
 
-    const notes = system.notes.map((note) =>
-      createVexFlowNote(VF, note, { stemMode: renderOptions.stemMode }),
+    const notes = system.entries.map((entry) =>
+      createVexFlowNote(VF, entry.note, {
+        stemMode: renderOptions.stemMode,
+        metadata: entry,
+        standardAccents: renderOptions.standardAccents,
+      }),
     );
     const voice = new VF.Voice({
       num_beats: beatsFromTimeSignature(document.timeSignature),
@@ -81,14 +91,17 @@ export function renderDrumNotationSvg(documentJson, options = {}) {
     const beams = createBeams(
       VF,
       notes,
-      system.notes,
+      system,
       renderOptions,
     );
     voice.draw(context, stave);
     drawBeams(context, beams);
   }
 
-  return extractSvg(host);
+  return {
+    svg: extractSvg(host),
+    notes: systems.flatMap((system) => system.entries.map(noteMetadataForEntry)),
+  };
 }
 
 export function createVexFlowNote(VF, note, options = {}) {
@@ -108,11 +121,14 @@ export function createVexFlowNote(VF, note, options = {}) {
 
   applyNoteheads(VF, staveNote, mappings);
   attachSticking(VF, staveNote, stickingLabelFor(note));
-  if (note.accent && (note.sticking == null || note.sticking === '')) {
-    attachAccent(VF, staveNote, true);
+  if (options.standardAccents !== false) {
+    attachAccent(VF, staveNote, note.accent);
+  } else if (note.accent && (note.sticking == null || note.sticking === '')) {
+    attachAccentAnnotation(VF, staveNote, true);
   }
   attachGhost(VF, staveNote, note.ghost);
   attachFlam(VF, staveNote, note);
+  attachNoteMetadata(staveNote, options.metadata);
   return staveNote;
 }
 
@@ -125,6 +141,11 @@ export function attachSticking(VF, staveNote, sticking) {
 }
 
 export function attachAccent(VF, staveNote, accent) {
+  if (!accent) return;
+  attachAccentAnnotation(VF, staveNote, accent);
+}
+
+export function attachAccentAnnotation(VF, staveNote, accent) {
   if (!accent) return;
   const annotation = new VF.Annotation('>')
     .setFont('Arial', 14, 'bold')
@@ -201,24 +222,47 @@ function stemDirectionForMappings(mappings, stemMode = 'single') {
 }
 
 function stickingLabelFor(note) {
-  const accentPrefix = note.accent ? '^' : '';
   if (note.sticking == null || note.sticking === '') return note.sticking;
-  return `${accentPrefix}${note.sticking}`;
+  return note.sticking;
 }
 
-function createBeams(VF, vexNotes, sourceNotes, options = {}) {
+function attachNoteMetadata(staveNote, metadata) {
+  if (metadata == null) return;
+  setElementAttribute(staveNote, 'data-drum-note-index', String(metadata.index));
+  setElementAttribute(staveNote, 'data-drum-measure-index', String(metadata.measureIndex));
+  setElementAttribute(
+    staveNote,
+    'data-drum-measure-note-index',
+    String(metadata.measureNoteIndex),
+  );
+}
+
+function setElementAttribute(element, name, value) {
+  if (typeof element.setAttribute === 'function') {
+    element.setAttribute(name, value);
+  } else {
+    element.attributes ??= {};
+    element.attributes[name] = value;
+  }
+}
+
+function createBeams(VF, vexNotes, system, options = {}) {
   if (typeof VF.Beam !== 'function') return [];
   const beams = [];
   let beamGroup = [];
   for (let index = 0; index < vexNotes.length; index += 1) {
+    if (index > 0 && system.beamBreaks.has(index)) {
+      addBeamGroup(VF, beams, beamGroup, options);
+      beamGroup = [];
+    }
     const currentStemDirection = vexNotes[index].options?.stem_direction;
     const previousStemDirection =
       beamGroup.length === 0
         ? currentStemDirection
         : beamGroup[beamGroup.length - 1].options?.stem_direction;
     if (
-      !sourceNotes[index].rest &&
-      isBeamableValue(sourceNotes[index].value) &&
+      !system.entries[index].note.rest &&
+      isBeamableValue(system.entries[index].note.value) &&
       currentStemDirection === previousStemDirection
     ) {
       beamGroup.push(vexNotes[index]);
@@ -226,7 +270,8 @@ function createBeams(VF, vexNotes, sourceNotes, options = {}) {
     }
     addBeamGroup(VF, beams, beamGroup, options);
     beamGroup =
-      !sourceNotes[index].rest && isBeamableValue(sourceNotes[index].value)
+      !system.entries[index].note.rest &&
+      isBeamableValue(system.entries[index].note.value)
         ? [vexNotes[index]]
         : [];
   }
@@ -252,7 +297,7 @@ function drawBeams(context, beams) {
 
 function formatterWidthForSystem(system, options) {
   const widthForNotes =
-    system.notes.length * options.noteSpacing + options.systemEndReserve;
+    system.entries.length * options.noteSpacing + options.systemEndReserve;
   const maxWidth = options.formatterWidth ?? options.measureWidth;
   return Math.min(maxWidth, widthForNotes);
 }
@@ -291,13 +336,22 @@ function resolveRenderOptions(options) {
 }
 
 function notationSystemsForDocument(document, options) {
+  const entries = noteEntriesForDocument(document);
+  const grouping = parseGrouping(options.grouping);
   const notesPerSystem = normalizedNotesPerSystem(options);
   if (notesPerSystem != null) {
-    const notes = document.measures.flatMap((measure) => measure.notes);
-    return chunksForNotes(notes, notesPerSystem);
+    return systemsForEntries(entries, {
+      grouping,
+      notesPerSystem,
+    });
   }
 
-  return document.measures.map((measure) => ({ notes: measure.notes }));
+  return document.measures.map((measure, measureIndex) => {
+    const measureEntries = entries.filter(
+      (entry) => entry.measureIndex === measureIndex,
+    );
+    return systemForEntries(measureEntries, grouping);
+  });
 }
 
 function normalizedNotesPerSystem(options) {
@@ -324,12 +378,111 @@ function autoNotesPerSystem(options) {
   return Math.max(4, Math.floor(safeSystemWidth / safeMinNoteWidth));
 }
 
-function chunksForNotes(notes, notesPerSystem) {
-  const chunks = [];
-  for (let index = 0; index < notes.length; index += notesPerSystem) {
-    chunks.push({ notes: notes.slice(index, index + notesPerSystem) });
+function noteEntriesForDocument(document) {
+  const entries = [];
+  document.measures.forEach((measure, measureIndex) => {
+    measure.notes.forEach((note, measureNoteIndex) => {
+      entries.push({
+        index: entries.length,
+        measureIndex,
+        measureNoteIndex,
+        note,
+      });
+    });
+  });
+  return entries;
+}
+
+function systemsForEntries(entries, options) {
+  if (entries.length === 0) return [];
+  if (options.grouping.length === 0) {
+    const systems = [];
+    for (let index = 0; index < entries.length; index += options.notesPerSystem) {
+      systems.push(
+        systemForEntries(entries.slice(index, index + options.notesPerSystem), []),
+      );
+    }
+    return systems;
   }
-  return chunks;
+
+  const groups = groupedEntries(entries, options.grouping);
+  const systems = [];
+  let current = [];
+  for (const group of groups) {
+    if (
+      current.length > 0 &&
+      current.length + group.length > options.notesPerSystem
+    ) {
+      systems.push(systemForEntries(current, options.grouping));
+      current = [];
+    }
+    current.push(...group);
+  }
+  if (current.length > 0) systems.push(systemForEntries(current, options.grouping));
+  return systems;
+}
+
+function groupedEntries(entries, grouping) {
+  const groups = [];
+  let index = 0;
+  let groupingIndex = 0;
+  while (index < entries.length) {
+    const size = grouping[groupingIndex % grouping.length];
+    groups.push(entries.slice(index, index + size));
+    index += size;
+    groupingIndex += 1;
+  }
+  return groups;
+}
+
+function systemForEntries(entries, grouping) {
+  return {
+    entries,
+    beamBreaks: beamBreaksForEntries(entries, grouping),
+  };
+}
+
+function beamBreaksForEntries(entries, grouping) {
+  const breaks = new Set();
+  if (grouping.length === 0) return breaks;
+  let consumed = 0;
+  let groupingIndex = 0;
+  while (consumed < entries.length) {
+    if (consumed > 0) breaks.add(consumed);
+    consumed += grouping[groupingIndex % grouping.length];
+    groupingIndex += 1;
+  }
+  return breaks;
+}
+
+function parseGrouping(grouping) {
+  if (Array.isArray(grouping)) {
+    return grouping
+      .map((value) => Number(value))
+      .filter((value) => Number.isInteger(value) && value > 0);
+  }
+  if (typeof grouping !== 'string') return [];
+  const trimmed = grouping.trim();
+  const parts = /^\d+$/.test(trimmed) ? [...trimmed] : trimmed.match(/\d+/g) ?? [];
+  return parts
+    .map((value) => Number(value))
+    .filter((value) => Number.isInteger(value) && value > 0);
+}
+
+function noteMetadataForEntry(entry) {
+  return {
+    index: entry.index,
+    measureIndex: entry.measureIndex,
+    measureNoteIndex: entry.measureNoteIndex,
+    value: entry.note.value,
+    voices: entry.note.voices,
+    rest: entry.note.rest,
+    sticking: entry.note.sticking,
+    accent: entry.note.accent,
+    flam: entry.note.flam,
+    ghost: entry.note.ghost,
+    tie: entry.note.tie,
+  };
 }
 
 function systemLayoutForIndex(index, options) {
@@ -383,4 +536,6 @@ function resolveVexFlow() {
 if (typeof window !== 'undefined') {
   window.renderDrumNotationSvg = (documentJson, options) =>
     renderDrumNotationSvg(documentJson, options);
+  window.renderDrumNotationSvgWithMetadata = (documentJson, options) =>
+    renderDrumNotationSvgWithMetadata(documentJson, options);
 }

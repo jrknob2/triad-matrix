@@ -31,9 +31,13 @@ export type DrumNotationRenderOptions = {
   notesPerSystem?: number | "auto";
   minNoteWidth?: number;
   systemEndReserve?: number;
+  noteSpacing?: number;
   systemGapY?: number;
+  finalRepeat?: boolean;
+  grouping?: string | number[];
   repeatClefEverySystem?: boolean;
   repeatTimeSignatureEverySystem?: boolean;
+  standardAccents?: boolean;
   stemMode?: "single" | "mapped";
   flatBeams?: boolean;
   flatBeamOffset?: number;
@@ -56,3 +60,22 @@ export function renderDrumNotationSvg(
   document: DrumNotationDocument | string,
   options?: DrumNotationRenderOptions,
 ): string;
+export function renderDrumNotationSvgWithMetadata(
+  document: DrumNotationDocument | string,
+  options?: DrumNotationRenderOptions,
+): {
+  svg: string;
+  notes: Array<{
+    index: number;
+    measureIndex: number;
+    measureNoteIndex: number;
+    value: DrumNoteValue;
+    voices?: DrumVoiceId[];
+    rest: boolean;
+    sticking?: string;
+    accent: boolean;
+    flam: boolean;
+    ghost: boolean;
+    tie: boolean;
+  }>;
+};
