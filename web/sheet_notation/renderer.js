@@ -3,12 +3,23 @@ import { isBeamableValue, toVexFlowDuration } from './duration.js';
 import { voiceMappingFor } from './voice_mapping.js';
 
 const DEFAULT_RENDER_OPTIONS = Object.freeze({
-  measureWidth: 640,
-  staffX: 20,
-  staffY: 36,
-  staffHeight: 190,
-  paddingRight: 70,
-  formatterWidth: 500,
+  baseMeasureWidth: 640,
+  measureWidth: null,
+  staffX: 8,
+  staffY: 10,
+  staffHeight: 126,
+  paddingRight: 12,
+  formatterWidth: null,
+  formatterWidthScale: 0.92,
+  availableWidth: null,
+  notesPerSystem: null,
+  minNoteWidth: 39,
+  systemEndReserve: 28,
+  noteSpacing: 34,
+  systemGapY: 112,
+  finalRepeat: true,
+  repeatClefEverySystem: true,
+  repeatTimeSignatureEverySystem: false,
   stemMode: 'single',
   flatBeams: true,
 });
@@ -16,31 +27,46 @@ const DEFAULT_RENDER_OPTIONS = Object.freeze({
 export function renderDrumNotationSvg(documentJson, options = {}) {
   const document = parseDrumNotationDocument(documentJson);
   const VF = options.vexFlow ?? resolveVexFlow();
-  const renderOptions = { ...DEFAULT_RENDER_OPTIONS, ...options };
+  const renderOptions = resolveRenderOptions({ ...DEFAULT_RENDER_OPTIONS, ...options });
+  const systems = notationSystemsForDocument(document, renderOptions);
+  const systemCount = systems.length;
   const width =
     renderOptions.staffX +
     renderOptions.paddingRight +
-    document.measures.length * renderOptions.measureWidth;
-  const height = renderOptions.staffY + renderOptions.staffHeight;
+    renderOptions.measureWidth;
+  const height =
+    renderOptions.staffY +
+    renderOptions.staffHeight +
+    Math.max(0, systemCount - 1) * renderOptions.systemGapY;
 
   const host = createDetachedHost();
   const renderer = new VF.Renderer(host, VF.Renderer.Backends.SVG);
   renderer.resize(width, height);
   const context = renderer.getContext();
 
-  let x = renderOptions.staffX;
-  for (let index = 0; index < document.measures.length; index += 1) {
+  for (let index = 0; index < systems.length; index += 1) {
+    const system = systems[index];
+    const layout = systemLayoutForIndex(index, renderOptions);
     const stave = new VF.Stave(
-      x,
-      renderOptions.staffY,
+      layout.x,
+      layout.y,
       renderOptions.measureWidth,
     );
-    if (index === 0) {
-      stave.addClef('percussion').addTimeSignature(document.timeSignature);
+    if (layout.isSystemStart && renderOptions.repeatClefEverySystem) {
+      stave.addClef('percussion');
+    }
+    if (
+      index === 0 ||
+      (layout.isSystemStart && renderOptions.repeatTimeSignatureEverySystem)
+    ) {
+      stave.addTimeSignature(document.timeSignature);
+    }
+    if (renderOptions.finalRepeat === true && index === systems.length - 1) {
+      setEndRepeatBar(VF, stave);
     }
     stave.setContext(context).draw();
 
-    const notes = document.measures[index].notes.map((note) =>
+    const notes = system.notes.map((note) =>
       createVexFlowNote(VF, note, { stemMode: renderOptions.stemMode }),
     );
     const voice = new VF.Voice({
@@ -48,21 +74,18 @@ export function renderDrumNotationSvg(documentJson, options = {}) {
       beat_value: beatValueFromTimeSignature(document.timeSignature),
     }).setStrict(false);
     voice.addTickables(notes);
-    const formatterWidth =
-      renderOptions.formatterWidth ??
-      renderOptions.measureWidth - renderOptions.formatterPadding;
+    const formatterWidth = formatterWidthForSystem(system, renderOptions);
     new VF.Formatter()
       .joinVoices([voice])
       .format([voice], formatterWidth);
     const beams = createBeams(
       VF,
       notes,
-      document.measures[index].notes,
+      system.notes,
       renderOptions,
     );
     voice.draw(context, stave);
     drawBeams(context, beams);
-    x += renderOptions.measureWidth;
   }
 
   return extractSvg(host);
@@ -227,6 +250,96 @@ function drawBeams(context, beams) {
   beams.forEach((beam) => beam.setContext(context).draw());
 }
 
+function formatterWidthForSystem(system, options) {
+  const widthForNotes =
+    system.notes.length * options.noteSpacing + options.systemEndReserve;
+  const maxWidth = options.formatterWidth ?? options.measureWidth;
+  return Math.min(maxWidth, widthForNotes);
+}
+
+function setEndRepeatBar(VF, stave) {
+  const repeatEnd =
+    VF.BarlineType?.REPEAT_END ??
+    VF.Barline?.type?.REPEAT_END ??
+    VF.Barline?.type?.repeatEnd ??
+    5;
+  if (typeof stave.setEndBarType === 'function') {
+    stave.setEndBarType(repeatEnd);
+  }
+}
+
+function resolveRenderOptions(options) {
+  const availableWidth = Number(options.availableWidth);
+  const hasAvailableWidth = Number.isFinite(availableWidth) && availableWidth > 0;
+  const usableWidth = hasAvailableWidth
+    ? Math.max(180, availableWidth - options.staffX - options.paddingRight)
+    : options.baseMeasureWidth;
+  const measureWidth =
+    options.measureWidth ??
+    Math.floor(usableWidth);
+  const formatterWidth =
+    options.formatterWidth ??
+    Math.floor(
+      Math.max(120, measureWidth - options.systemEndReserve),
+    );
+
+  return {
+    ...options,
+    measureWidth,
+    formatterWidth,
+  };
+}
+
+function notationSystemsForDocument(document, options) {
+  const notesPerSystem = normalizedNotesPerSystem(options);
+  if (notesPerSystem != null) {
+    const notes = document.measures.flatMap((measure) => measure.notes);
+    return chunksForNotes(notes, notesPerSystem);
+  }
+
+  return document.measures.map((measure) => ({ notes: measure.notes }));
+}
+
+function normalizedNotesPerSystem(options) {
+  if (options.notesPerSystem === 'auto') return autoNotesPerSystem(options);
+  if (options.notesPerSystem == null && options.availableWidth != null) {
+    return autoNotesPerSystem(options);
+  }
+  if (options.notesPerSystem == null) return null;
+
+  const value = Number(options.notesPerSystem);
+  if (!Number.isFinite(value) || value < 1) return null;
+  return Math.floor(value);
+}
+
+function autoNotesPerSystem(options) {
+  const minNoteWidth = Number(options.minNoteWidth);
+  const formatterWidth = Number(options.formatterWidth);
+  const safeMinNoteWidth =
+    Number.isFinite(minNoteWidth) && minNoteWidth > 0 ? minNoteWidth : 22;
+  const safeSystemWidth =
+    Number.isFinite(formatterWidth) && formatterWidth > 0
+      ? formatterWidth
+      : Math.max(120, options.measureWidth - options.systemEndReserve);
+  return Math.max(4, Math.floor(safeSystemWidth / safeMinNoteWidth));
+}
+
+function chunksForNotes(notes, notesPerSystem) {
+  const chunks = [];
+  for (let index = 0; index < notes.length; index += notesPerSystem) {
+    chunks.push({ notes: notes.slice(index, index + notesPerSystem) });
+  }
+  return chunks;
+}
+
+function systemLayoutForIndex(index, options) {
+  return {
+    x: options.staffX,
+    y: options.staffY + index * options.systemGapY,
+    isSystemStart: true,
+  };
+}
+
 function beatsFromTimeSignature(timeSignature) {
   return Number(timeSignature.split('/')[0]);
 }
@@ -268,5 +381,6 @@ function resolveVexFlow() {
 }
 
 if (typeof window !== 'undefined') {
-  window.renderDrumNotationSvg = (documentJson) => renderDrumNotationSvg(documentJson);
+  window.renderDrumNotationSvg = (documentJson, options) =>
+    renderDrumNotationSvg(documentJson, options);
 }

@@ -18,6 +18,27 @@ export type DrumNotationNote = {
   tie?: boolean;
 };
 
+export type DrumNotationRenderOptions = {
+  baseMeasureWidth?: number;
+  measureWidth?: number;
+  staffX?: number;
+  staffY?: number;
+  staffHeight?: number;
+  paddingRight?: number;
+  formatterWidth?: number;
+  formatterWidthScale?: number;
+  availableWidth?: number;
+  notesPerSystem?: number | "auto";
+  minNoteWidth?: number;
+  systemEndReserve?: number;
+  systemGapY?: number;
+  repeatClefEverySystem?: boolean;
+  repeatTimeSignatureEverySystem?: boolean;
+  stemMode?: "single" | "mapped";
+  flatBeams?: boolean;
+  flatBeamOffset?: number;
+};
+
 export type DrumNoteValue = "1n" | "2n" | "4n" | "8n" | "16n" | "32n";
 
 export type DrumVoiceId =
@@ -31,4 +52,7 @@ export type DrumVoiceId =
   | "kick";
 
 export function parseDrumNotationDocument(input: unknown): DrumNotationDocument;
-export function renderDrumNotationSvg(document: DrumNotationDocument | string): string;
+export function renderDrumNotationSvg(
+  document: DrumNotationDocument | string,
+  options?: DrumNotationRenderOptions,
+): string;

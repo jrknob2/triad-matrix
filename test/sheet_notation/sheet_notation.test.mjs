@@ -222,8 +222,10 @@ describe('svg rendering', () => {
   });
 
   test('demo document matches the requested phrase and voices', () => {
-    const notes = demoDocument().measures[0].notes;
+    const document = demoDocument();
+    const notes = document.measures[0].notes;
 
+    assert.equal(document.measures.length, 2);
     assert.deepEqual(
       notes.map((note) => notationLabelFor(note)).join(''),
       '^R^L^R(L)(L)K^R^L^R(L)(L)FTHH^CF',
@@ -257,20 +259,54 @@ describe('svg rendering', () => {
     const svg = renderDemoDrumNotationSvg({ vexFlow: VF });
 
     assert.match(svg, /^<svg /);
-    assert.match(svg, /width="730"/);
-    assert.equal(VF.calls.notes.length, 15);
-    assert.equal(VF.calls.annotations.length, 15);
+    assert.match(svg, /width="660"/);
+    assert.match(svg, /height="248"/);
+    assert.equal(VF.calls.notes.length, 30);
+    assert.equal(VF.calls.annotations.length, 30);
     assert.equal(VF.calls.notes[14].graceNoteGroup.notes.length, 1);
+    assert.equal(VF.calls.notes[29].graceNoteGroup.notes.length, 1);
+    assert.equal(VF.calls.staves.length, 2);
     assert.equal(VF.calls.staves[0].width, 640);
-    assert.equal(VF.calls.voices[0].formatterWidth, 500);
+    assert.equal(VF.calls.staves[0].x, 8);
+    assert.equal(VF.calls.staves[0].y, 10);
+    assert.equal(VF.calls.staves[1].x, 8);
+    assert.equal(VF.calls.staves[1].y, 122);
+    assert.equal(VF.calls.staves[0].clef, 'percussion');
+    assert.equal(VF.calls.staves[0].timeSignature, '4/4');
+    assert.equal(VF.calls.staves[1].clef, 'percussion');
+    assert.equal(VF.calls.staves[1].timeSignature, undefined);
+    assert.equal(VF.calls.staves[1].endBarType, 5);
+    assert.equal(VF.calls.voices[0].formatterWidth, 538);
+    assert.equal(VF.calls.voices[1].formatterWidth, 538);
+  });
+
+  test('availableWidth fits each wrapped system to a narrow container', () => {
+    const VF = createFakeVexFlow();
+    const svg = renderDemoDrumNotationSvg({ vexFlow: VF, availableWidth: 340 });
+
+    assert.match(svg, /width="340"/);
+    assert.equal(VF.calls.staves.length, 5);
+    for (const stave of VF.calls.staves) {
+      assert.equal(stave.x, 8);
+      assert.equal(stave.width, 320);
+    }
+    assert.equal(VF.calls.beams.length, 5);
+    assert.equal(VF.calls.beams[0].notes.length, 7);
+    assert.equal(VF.calls.beams[1].notes.length, 7);
+    assert.equal(VF.calls.beams[2].notes.length, 7);
+    assert.equal(VF.calls.beams[3].notes.length, 7);
+    assert.equal(VF.calls.beams[4].notes.length, 2);
+    assert.equal(VF.calls.voices[0].formatterWidth, 266);
+    assert.equal(VF.calls.voices[4].formatterWidth, 96);
   });
 
   test('default demo uses one compact rhythmic voice for sixteenth beaming', () => {
     const VF = createFakeVexFlow();
     renderDemoDrumNotationSvg({ vexFlow: VF });
 
-    assert.equal(VF.calls.beams.length, 1);
+    assert.equal(VF.calls.beams.length, 2);
     assert.equal(VF.calls.beams[0].notes.length, 15);
+    assert.equal(VF.calls.beams[1].notes.length, 15);
     assert.equal(VF.calls.beams[0].render_options.flat_beams, true);
     assert.ok(
       VF.calls.events.indexOf('beam:create') <
@@ -286,6 +322,18 @@ describe('svg rendering', () => {
     for (const note of VF.calls.notes) {
       assert.equal(note.options.stem_direction, 1);
     }
+  });
+
+  test('notesPerSystem can control responsive note chunks', () => {
+    const VF = createFakeVexFlow();
+    const svg = renderDemoDrumNotationSvg({ vexFlow: VF, notesPerSystem: 10 });
+
+    assert.match(svg, /width="660"/);
+    assert.match(svg, /height="360"/);
+    assert.equal(VF.calls.staves.length, 3);
+    assert.equal(VF.calls.beams[0].notes.length, 10);
+    assert.equal(VF.calls.beams[1].notes.length, 10);
+    assert.equal(VF.calls.beams[2].notes.length, 10);
   });
 
   test('mapped stem mode beams do not cross mixed stem directions', () => {

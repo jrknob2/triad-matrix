@@ -7,12 +7,16 @@
     <style>
       body {
         font-family: system-ui, sans-serif;
-        margin: 24px;
+        margin: 12px;
       }
       #notation {
         border: 1px solid #ddd;
-        padding: 16px;
-        overflow-x: auto;
+        padding: 6px;
+        overflow: hidden;
+      }
+      #notation svg {
+        display: block;
+        max-width: 100%;
       }
     </style>
   </head>
@@ -25,12 +29,28 @@
       import { renderDemoDrumNotationSvg } from './demo.js';
 
       const notation = document.getElementById('notation');
-      try {
-        notation.innerHTML = renderDemoDrumNotationSvg();
-      } catch (error) {
-        console.error(error);
-        notation.innerHTML = `<pre>${error.stack ?? error.message}</pre>`;
+      let resizeFrame = 0;
+
+      function renderNotation() {
+        try {
+          const availableWidth = Math.floor(notation.clientWidth);
+          notation.innerHTML = renderDemoDrumNotationSvg({
+            availableWidth,
+            notesPerSystem: 'auto',
+          });
+        } catch (error) {
+          console.error(error);
+          notation.innerHTML = `<pre>${error.stack ?? error.message}</pre>`;
+        }
       }
+
+      function scheduleRender() {
+        cancelAnimationFrame(resizeFrame);
+        resizeFrame = requestAnimationFrame(renderNotation);
+      }
+
+      renderNotation();
+      window.addEventListener('resize', scheduleRender);
     </script>
   </body>
 </html>

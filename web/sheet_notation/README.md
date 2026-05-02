@@ -20,13 +20,14 @@ The default demo uses a shorter staff with compressed spacing:
 
 ```js
 renderDrumNotationSvg(documentJson, {
-  measureWidth: 640,
-  formatterWidth: 500,
-  paddingRight: 70,
+  availableWidth: container.clientWidth,
+  paddingRight: 12,
+  notesPerSystem: 'auto',
+  systemGapY: 112,
 });
 ```
 
-`measureWidth` controls staff length. `formatterWidth` controls note compression inside that staff. `paddingRight` gives trailing modifiers like flams and parentheses room so they do not clip.
+`availableWidth` makes the renderer fit the SVG to its container. `measureWidth` can still override staff length when fixed sizing is needed. `formatterWidth` controls note compression inside that staff; if omitted, it is derived from `formatterWidthScale`. `paddingRight` gives trailing modifiers like flams and parentheses room so they do not clip. `notesPerSystem: "auto"` wraps note chunks based on available width and `minNoteWidth`; pass a number to force a specific chunk size. `systemGapY` controls the vertical distance between wrapped staff rows.
 
 ```js
 import { renderDrumNotationSvg } from './renderer.js';

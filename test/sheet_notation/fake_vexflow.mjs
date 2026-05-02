@@ -49,6 +49,11 @@ export function createFakeVexFlow() {
       return this;
     }
 
+    setEndBarType(type) {
+      this.endBarType = type;
+      return this;
+    }
+
     setContext(context) {
       this.context = context;
       return this;
@@ -215,6 +220,7 @@ export function createFakeVexFlow() {
     Beam,
     GraceNote,
     GraceNoteGroup,
+    BarlineType: { REPEAT_END: 5 },
     Modifier: { Position: { ABOVE: 'above', LEFT: 'left', RIGHT: 'right' } },
   };
 }
