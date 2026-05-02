@@ -49,6 +49,7 @@ export function notesFromPattern(pattern, options = {}) {
   const notes = [];
   let accent = false;
   const defaultValue = options.value;
+  const defaultVoices = options.voices;
   for (let index = 0; index < pattern.length; index += 1) {
     const char = pattern[index];
     if (/\s/.test(char)) continue;
@@ -71,7 +72,12 @@ export function notesFromPattern(pattern, options = {}) {
         }
         throw new Error('Empty ghost note group.');
       }
-      notes.push(noteFromToken(symbol, { accent, ghost: true, value: defaultValue }));
+      notes.push(noteFromToken(symbol, {
+        accent,
+        ghost: true,
+        value: defaultValue,
+        voices: defaultVoices,
+      }));
       accent = false;
       index = close;
       continue;
@@ -92,9 +98,9 @@ export function notesFromPattern(pattern, options = {}) {
         }
         throw new Error('Duration override must use [duration: pattern].');
       }
-      let value;
+      let override;
       try {
-        value = durationValueFromLabel(body.slice(0, separator).trim());
+        override = overrideFromLabel(body.slice(0, separator).trim());
       } catch (error) {
         if (options.lenient) {
           accent = false;
@@ -105,7 +111,8 @@ export function notesFromPattern(pattern, options = {}) {
       }
       notes.push(...notesFromPattern(body.slice(separator + 1), {
         lenient: options.lenient,
-        value,
+        value: override.value ?? defaultValue,
+        voices: override.voices ?? defaultVoices,
       }));
       accent = false;
       index = close;
@@ -113,13 +120,21 @@ export function notesFromPattern(pattern, options = {}) {
     }
     const multi = multiCharacterTokenAt(pattern, index);
     if (multi != null) {
-      notes.push(noteFromToken(multi, { accent, value: defaultValue }));
+      notes.push(noteFromToken(multi, {
+        accent,
+        value: defaultValue,
+        voices: defaultVoices,
+      }));
       accent = false;
       index += multi.length - 1;
       continue;
     }
     try {
-      notes.push(noteFromToken(char, { accent, value: defaultValue }));
+      notes.push(noteFromToken(char, {
+        accent,
+        value: defaultValue,
+        voices: defaultVoices,
+      }));
     } catch (error) {
       if (!options.lenient) throw error;
     }
@@ -128,12 +143,72 @@ export function notesFromPattern(pattern, options = {}) {
   return notes;
 }
 
+function overrideFromLabel(label) {
+  const parts = label
+    .split(/[,\s]+/)
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
+  if (parts.length === 0) {
+    throw new Error('Override label cannot be empty.');
+  }
+
+  const override = {};
+  for (const part of parts) {
+    const value = durationValueFromLabel(part);
+    if (value != null) {
+      override.value = value;
+      continue;
+    }
+    const voices = voicesFromLabel(part);
+    if (voices != null) {
+      override.voices = voices;
+      continue;
+    }
+    throw new Error(`Unsupported override: ${part}`);
+  }
+  return override;
+}
+
 function durationValueFromLabel(label) {
   const normalized = label.endsWith('n') ? label : `${label}n`;
-  if (!['1n', '2n', '4n', '8n', '16n', '32n'].includes(normalized)) {
-    throw new Error(`Unsupported duration override: ${label}`);
+  return ['1n', '2n', '4n', '8n', '16n', '32n'].includes(normalized)
+    ? normalized
+    : null;
+}
+
+function voicesFromLabel(label) {
+  switch (label.toUpperCase()) {
+    case 'S':
+    case 'SN':
+    case 'SNARE':
+      return ['snare'];
+    case 'T1':
+    case 'TOM1':
+      return ['tom1'];
+    case 'T2':
+    case 'TOM2':
+      return ['tom2'];
+    case 'FT':
+    case 'FLOORTOM':
+    case 'FLOOR_TOM':
+      return ['floorTom'];
+    case 'K':
+    case 'KICK':
+      return ['kick'];
+    case 'HH':
+    case 'HIHAT':
+    case 'HIGHHAT':
+      return ['hihat'];
+    case 'C':
+    case 'X':
+    case 'CRASH':
+      return ['crash'];
+    case 'RD':
+    case 'RIDE':
+      return ['ride'];
+    default:
+      return null;
   }
-  return normalized;
 }
 
 function multiCharacterTokenAt(pattern, index) {
@@ -150,23 +225,28 @@ function noteFromToken(symbol, options = {}) {
     ghost: options.ghost === true,
   };
   if (options.value != null) common.value = options.value;
+  const withVoices = (voices) => options.voices ?? voices;
   switch (token) {
     case 'R':
     case 'L':
-      return { ...common, voices: ['snare'] };
+      return { ...common, voices: withVoices(['snare']) };
     case 'K':
-      return { ...common, voices: ['kick'] };
+      return { ...common, voices: withVoices(['kick']) };
     case 'F':
-      return { ...common, voices: ['snare'], flam: true };
+      return { ...common, voices: withVoices(['snare']), flam: true };
     case 'B':
-      return { ...common, voices: ['hihat', 'snare'] };
+      return { ...common, voices: withVoices(['hihat', 'snare']) };
     case 'X':
     case 'C':
-      return { ...common, sticking: token === 'X' ? 'X' : 'C', voices: ['crash'] };
+      return {
+        ...common,
+        sticking: token === 'X' ? 'X' : 'C',
+        voices: withVoices(['crash']),
+      };
     case 'HH':
-      return { ...common, voices: ['hihat'] };
+      return { ...common, voices: withVoices(['hihat']) };
     case 'FT':
-      return { ...common, voices: ['floorTom'] };
+      return { ...common, voices: withVoices(['floorTom']) };
     case '_':
     case '-':
       return { value: options.value, rest: true, sticking: '-' };
@@ -179,19 +259,24 @@ function patternTokenForNote(note, options = {}) {
   const base = basePatternTokenForNote(note);
   const marked = note.ghost ? `(${base})` : base;
   const token = note.accent ? `^${marked}` : marked;
+  const overrides = [];
+  const voiceOverride = voiceOverrideLabelForNote(note);
+  if (voiceOverride != null) overrides.push(voiceOverride);
   if (
     options.subdivision != null &&
     note.value != null &&
     note.value !== options.subdivision
   ) {
-    return `[${note.value.replace('n', '')}:${token}]`;
+    overrides.push(note.value.replace('n', ''));
   }
+  if (overrides.length > 0) return `[${overrides.join(' ')}:${token}]`;
   return token;
 }
 
 function basePatternTokenForNote(note) {
   if (note.rest) return '-';
   if (note.flam) return 'F';
+  if (isLimbSticking(note.sticking)) return note.sticking;
   const voices = note.voices ?? [];
   if (voices.includes('kick')) return 'K';
   if (voices.includes('floorTom')) return 'FT';
@@ -199,4 +284,32 @@ function basePatternTokenForNote(note) {
   if (voices.includes('hihat')) return 'HH';
   if (voices.includes('crash')) return note.sticking === 'X' ? 'X' : 'C';
   return note.sticking ?? 'R';
+}
+
+function voiceOverrideLabelForNote(note) {
+  if (!isLimbSticking(note.sticking)) return null;
+  const voices = note.voices ?? [];
+  if (voices.length !== 1 || voices[0] === 'snare') return null;
+  switch (voices[0]) {
+    case 'tom1':
+      return 'T1';
+    case 'tom2':
+      return 'T2';
+    case 'floorTom':
+      return 'FT';
+    case 'kick':
+      return 'K';
+    case 'hihat':
+      return 'HH';
+    case 'crash':
+      return 'C';
+    case 'ride':
+      return 'RD';
+    default:
+      return null;
+  }
+}
+
+function isLimbSticking(sticking) {
+  return sticking === 'R' || sticking === 'L';
 }

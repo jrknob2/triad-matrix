@@ -16,7 +16,11 @@ The renderer accepts render-ready JSON and returns SVG markup.
 
 Accents are shown with the sticking label, for example `^R`, instead of as VexFlow articulations above the note. That keeps them readable when beams and stems are dense.
 
-The default rhythmic subdivision is eighth notes (`8n`). Individual notes can still provide `value`, and the demo pattern field supports bracketed duration overrides such as `[32:R L]` for short runs that should differ from the default subdivision. The demo also lets selected notes be assigned a duration override, which writes the same bracket syntax back into the pattern field.
+The default rhythmic subdivision is eighth notes (`8n`). Individual notes can still provide `value`, and the demo pattern field supports bracketed duration overrides such as `[32:R L]` for short runs that should differ from the default subdivision.
+
+Limb/sticking and drum voice are separate. `R` and `L` default to snare, but bracket overrides can assign another voice without changing the sticking label: `[T1:L]` renders left-hand sticking on tom 1. Duration and voice can be combined with the same syntax, for example `[T2 16:R]`.
+
+The demo also lets selected notes be assigned duration or voice overrides, which writes the same bracket syntax back into the pattern field.
 
 The browser demo includes an optional input legend for the current POC tokens.
 

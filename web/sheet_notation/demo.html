@@ -172,6 +172,8 @@
         <span><code>^R</code>: accent</span>
         <span><code>(L)</code>: ghost</span>
         <span><code>[32:R L]</code>: duration override</span>
+        <span><code>[T1:L]</code>: voice override</span>
+        <span><code>[T1 16:L]</code>: combined override</span>
       </div>
     </div>
     <div id="notation"></div>
@@ -184,6 +186,20 @@
           <option value="8n">1/8</option>
           <option value="16n">1/16</option>
           <option value="32n">1/32</option>
+        </select>
+      </label>
+      <label>
+        Selected voice
+        <select id="selectedVoice">
+          <option value="">Default</option>
+          <option value="snare">Snare</option>
+          <option value="tom1">Tom 1</option>
+          <option value="tom2">Tom 2</option>
+          <option value="floorTom">Floor tom</option>
+          <option value="kick">Kick</option>
+          <option value="hihat">Hi-hat</option>
+          <option value="crash">Crash</option>
+          <option value="ride">Ride</option>
         </select>
       </label>
       <button id="deleteSelected" type="button">Delete selected notes</button>
@@ -202,6 +218,7 @@
       const pattern = document.getElementById('pattern');
       const selectedControls = document.getElementById('selectedControls');
       const selectedSubdivision = document.getElementById('selectedSubdivision');
+      const selectedVoice = document.getElementById('selectedVoice');
       const deleteSelected = document.getElementById('deleteSelected');
       const selection = document.getElementById('selection');
       let resizeFrame = 0;
@@ -262,6 +279,18 @@
             return withoutValue;
           }
           return { ...note, value };
+        });
+        pattern.value = patternFromNotes(notes, { subdivision: subdivision.value });
+        scheduleRender();
+      });
+      selectedVoice.addEventListener('change', () => {
+        const selected = new Set(selectedIndexes);
+        if (selected.size === 0) return;
+        const voice = selectedVoice.value;
+        const notes = renderedNotes.map((note) => {
+          if (!selected.has(note.index)) return note;
+          if (voice === '') return { ...note, voices: defaultVoicesForNote(note) };
+          return { ...note, voices: [voice] };
         });
         pattern.value = patternFromNotes(notes, { subdivision: subdivision.value });
         scheduleRender();
@@ -337,7 +366,38 @@
           selectedValues.size === 1 && selectedValues.has(subdivision.value) === false
             ? [...selectedValues][0]
             : '';
+        const selectedVoiceValues = new Set(
+          selectedNotes.map((note) => voiceValueForSelection(note)),
+        );
+        selectedVoice.value =
+          selectedVoiceValues.size === 1 ? [...selectedVoiceValues][0] : '';
         selection.textContent = `Selected notes:\n${JSON.stringify(selectedNotes, null, 2)}`;
+      }
+
+      function voiceValueForSelection(note) {
+        const voices = note.voices ?? [];
+        if (voices.length !== 1) return '';
+        return voices[0] === defaultVoicesForNote(note)[0] ? '' : voices[0];
+      }
+
+      function defaultVoicesForNote(note) {
+        if (note.rest) return [];
+        if (note.flam) return ['snare'];
+        switch (note.sticking) {
+          case 'K':
+            return ['kick'];
+          case 'B':
+            return ['hihat', 'snare'];
+          case 'C':
+          case 'X':
+            return ['crash'];
+          case 'HH':
+            return ['hihat'];
+          case 'FT':
+            return ['floorTom'];
+          default:
+            return ['snare'];
+        }
       }
     </script>
   </body>

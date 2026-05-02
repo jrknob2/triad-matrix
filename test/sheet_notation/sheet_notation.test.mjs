@@ -296,6 +296,46 @@ describe('svg rendering', () => {
     );
   });
 
+  test('pattern input supports bracketed voice overrides separate from sticking', () => {
+    const document = documentFromPattern('^R[T1:L][16:R][16:L]R^L', {
+      subdivision: '8n',
+    });
+    const notes = document.measures[0].notes;
+
+    assert.deepEqual(
+      notes.map((note) => ({
+        sticking: note.sticking,
+        voices: note.voices,
+        value: note.value,
+        accent: note.accent,
+      })),
+      [
+        { sticking: 'R', voices: ['snare'], value: undefined, accent: true },
+        { sticking: 'L', voices: ['tom1'], value: undefined, accent: false },
+        { sticking: 'R', voices: ['snare'], value: '16n', accent: false },
+        { sticking: 'L', voices: ['snare'], value: '16n', accent: false },
+        { sticking: 'R', voices: ['snare'], value: undefined, accent: false },
+        { sticking: 'L', voices: ['snare'], value: undefined, accent: true },
+      ],
+    );
+  });
+
+  test('pattern input supports combined voice and duration overrides', () => {
+    const notes = documentFromPattern('[T2 16:R][FT,32:L]').measures[0].notes;
+
+    assert.deepEqual(
+      notes.map((note) => ({
+        sticking: note.sticking,
+        voices: note.voices,
+        value: note.value,
+      })),
+      [
+        { sticking: 'R', voices: ['tom2'], value: '16n' },
+        { sticking: 'L', voices: ['floorTom'], value: '32n' },
+      ],
+    );
+  });
+
   test('lenient pattern input tolerates incomplete editing states', () => {
     assert.deepEqual(
       documentFromPattern('^', { lenient: true }).measures[0].notes,
@@ -324,6 +364,30 @@ describe('svg rendering', () => {
     assert.equal(
       patternFromNotes(overridden, { subdivision: '8n' }),
       'R[16:L]',
+    );
+  });
+
+  test('pattern serialization writes non-default voice overrides', () => {
+    const notes = documentFromPattern('R L').measures[0].notes;
+    const overridden = notes.map((note, index) =>
+      index === 1 ? { ...note, voices: ['tom1'] } : note,
+    );
+
+    assert.equal(
+      patternFromNotes(overridden, { subdivision: '8n' }),
+      'R[T1:L]',
+    );
+  });
+
+  test('pattern serialization can combine voice and duration overrides', () => {
+    const notes = documentFromPattern('R L').measures[0].notes;
+    const overridden = notes.map((note, index) =>
+      index === 1 ? { ...note, voices: ['tom2'], value: '16n' } : note,
+    );
+
+    assert.equal(
+      patternFromNotes(overridden, { subdivision: '8n' }),
+      'R[T2 16:L]',
     );
   });
 
