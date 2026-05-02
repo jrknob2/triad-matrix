@@ -296,6 +296,37 @@ describe('svg rendering', () => {
     );
   });
 
+  test('lenient pattern input tolerates incomplete editing states', () => {
+    assert.deepEqual(
+      documentFromPattern('^', { lenient: true }).measures[0].notes,
+      [],
+    );
+    assert.deepEqual(
+      documentFromPattern('R(', { lenient: true }).measures[0].notes.map(
+        (note) => note.sticking,
+      ),
+      ['R'],
+    );
+    assert.deepEqual(
+      documentFromPattern('R[32:', { lenient: true }).measures[0].notes.map(
+        (note) => note.sticking,
+      ),
+      ['R'],
+    );
+  });
+
+  test('pattern serialization writes non-default duration overrides', () => {
+    const notes = documentFromPattern('R L').measures[0].notes;
+    const overridden = notes.map((note, index) =>
+      index === 1 ? { ...note, value: '16n' } : note,
+    );
+
+    assert.equal(
+      patternFromNotes(overridden, { subdivision: '8n' }),
+      'R[16:L]',
+    );
+  });
+
   test('notation notes can be serialized back to editable pattern text', () => {
     const notes = documentFromPattern('^R^L^R(L)(L)KHHCF-B').measures[0].notes;
 

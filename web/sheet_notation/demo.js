@@ -37,12 +37,12 @@ export function renderDemoDrumNotationSvg(options = {}) {
 export function documentFromPattern(pattern, options = {}) {
   return {
     subdivision: options.subdivision ?? '8n',
-    measures: [{ notes: notesFromPattern(pattern) }],
+    measures: [{ notes: notesFromPattern(pattern, { lenient: options.lenient }) }],
   };
 }
 
-export function patternFromNotes(notes) {
-  return notes.map(patternTokenForNote).join('');
+export function patternFromNotes(notes, options = {}) {
+  return notes.map((note) => patternTokenForNote(note, options)).join('');
 }
 
 export function notesFromPattern(pattern, options = {}) {
@@ -58,9 +58,19 @@ export function notesFromPattern(pattern, options = {}) {
     }
     if (char === '(') {
       const close = pattern.indexOf(')', index + 1);
-      if (close < 0) throw new Error('Unclosed ghost note group.');
+      if (close < 0) {
+        if (options.lenient) break;
+        throw new Error('Unclosed ghost note group.');
+      }
       const symbol = pattern.slice(index + 1, close).trim();
-      if (symbol.length === 0) throw new Error('Empty ghost note group.');
+      if (symbol.length === 0) {
+        if (options.lenient) {
+          accent = false;
+          index = close;
+          continue;
+        }
+        throw new Error('Empty ghost note group.');
+      }
       notes.push(noteFromToken(symbol, { accent, ghost: true, value: defaultValue }));
       accent = false;
       index = close;
@@ -68,14 +78,35 @@ export function notesFromPattern(pattern, options = {}) {
     }
     if (char === '[') {
       const close = pattern.indexOf(']', index + 1);
-      if (close < 0) throw new Error('Unclosed duration override group.');
+      if (close < 0) {
+        if (options.lenient) break;
+        throw new Error('Unclosed duration override group.');
+      }
       const body = pattern.slice(index + 1, close);
       const separator = body.indexOf(':');
       if (separator < 0) {
+        if (options.lenient) {
+          accent = false;
+          index = close;
+          continue;
+        }
         throw new Error('Duration override must use [duration: pattern].');
       }
-      const value = durationValueFromLabel(body.slice(0, separator).trim());
-      notes.push(...notesFromPattern(body.slice(separator + 1), { value }));
+      let value;
+      try {
+        value = durationValueFromLabel(body.slice(0, separator).trim());
+      } catch (error) {
+        if (options.lenient) {
+          accent = false;
+          index = close;
+          continue;
+        }
+        throw error;
+      }
+      notes.push(...notesFromPattern(body.slice(separator + 1), {
+        lenient: options.lenient,
+        value,
+      }));
       accent = false;
       index = close;
       continue;
@@ -87,7 +118,11 @@ export function notesFromPattern(pattern, options = {}) {
       index += multi.length - 1;
       continue;
     }
-    notes.push(noteFromToken(char, { accent, value: defaultValue }));
+    try {
+      notes.push(noteFromToken(char, { accent, value: defaultValue }));
+    } catch (error) {
+      if (!options.lenient) throw error;
+    }
     accent = false;
   }
   return notes;
@@ -140,10 +175,18 @@ function noteFromToken(symbol, options = {}) {
   }
 }
 
-function patternTokenForNote(note) {
+function patternTokenForNote(note, options = {}) {
   const base = basePatternTokenForNote(note);
   const marked = note.ghost ? `(${base})` : base;
-  return note.accent ? `^${marked}` : marked;
+  const token = note.accent ? `^${marked}` : marked;
+  if (
+    options.subdivision != null &&
+    note.value != null &&
+    note.value !== options.subdivision
+  ) {
+    return `[${note.value.replace('n', '')}:${token}]`;
+  }
+  return token;
 }
 
 function basePatternTokenForNote(note) {

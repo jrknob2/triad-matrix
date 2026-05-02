@@ -44,6 +44,11 @@
         padding: 6px 8px;
         width: 8rem;
       }
+      .controls input[type='checkbox'] {
+        height: 1.2rem;
+        padding: 0;
+        width: 1.2rem;
+      }
       .pattern-control {
         display: grid;
         font-weight: 700;
@@ -55,6 +60,29 @@
         font: inherit;
         padding: 6px 8px;
         width: 100%;
+      }
+      .legend {
+        border: 1px solid #ddd;
+        display: grid;
+        font-size: 14px;
+        gap: 6px;
+        margin: 0 0 14px;
+        padding: 8px;
+      }
+      .legend-title {
+        font-weight: 700;
+      }
+      .legend-items {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 14px;
+      }
+      .legend code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-weight: 700;
+      }
+      .legend.is-hidden {
+        display: none;
       }
       .drum-note-selectable {
         cursor: default;
@@ -82,6 +110,26 @@
       #deleteSelected.is-visible {
         display: inline-block;
       }
+      #selectedControls {
+        display: none;
+        gap: 12px;
+        margin-top: 12px;
+      }
+      #selectedControls.is-visible {
+        align-items: end;
+        display: flex;
+        flex-wrap: wrap;
+      }
+      #selectedControls label {
+        display: grid;
+        font-weight: 700;
+        gap: 4px;
+      }
+      #selectedControls select,
+      #selectedControls button {
+        font: inherit;
+        padding: 6px 8px;
+      }
     </style>
   </head>
   <body>
@@ -101,13 +149,45 @@
           <option value="32n">1/32</option>
         </select>
       </label>
+      <label>
+        Legend
+        <input id="showLegend" type="checkbox" checked />
+      </label>
     </div>
     <label class="pattern-control">
       Pattern
       <input id="pattern" value="^R^L^R(L)(L)K" />
     </label>
+    <div id="legend" class="legend" aria-label="Notation input legend">
+      <div class="legend-title">Input legend</div>
+      <div class="legend-items">
+        <span><code>R</code>/<code>L</code>: snare</span>
+        <span><code>K</code>: kick</span>
+        <span><code>HH</code>: hi-hat</span>
+        <span><code>C</code> or <code>X</code>: crash</span>
+        <span><code>FT</code>: floor tom</span>
+        <span><code>F</code>: flam</span>
+        <span><code>B</code>: hi-hat + snare</span>
+        <span><code>-</code> or <code>_</code>: rest</span>
+        <span><code>^R</code>: accent</span>
+        <span><code>(L)</code>: ghost</span>
+        <span><code>[32:R L]</code>: duration override</span>
+      </div>
+    </div>
     <div id="notation"></div>
-    <button id="deleteSelected" type="button">Delete selected notes</button>
+    <div id="selectedControls">
+      <label>
+        Selected duration
+        <select id="selectedSubdivision">
+          <option value="">Default</option>
+          <option value="4n">1/4</option>
+          <option value="8n">1/8</option>
+          <option value="16n">1/16</option>
+          <option value="32n">1/32</option>
+        </select>
+      </label>
+      <button id="deleteSelected" type="button">Delete selected notes</button>
+    </div>
     <div id="selection">Selected notes: none</div>
     <script src="https://cdn.jsdelivr.net/npm/vexflow@4.2.3/build/cjs/vexflow.js"></script>
     <script type="module">
@@ -117,7 +197,11 @@
       const notation = document.getElementById('notation');
       const grouping = document.getElementById('grouping');
       const subdivision = document.getElementById('subdivision');
+      const showLegend = document.getElementById('showLegend');
+      const legend = document.getElementById('legend');
       const pattern = document.getElementById('pattern');
+      const selectedControls = document.getElementById('selectedControls');
+      const selectedSubdivision = document.getElementById('selectedSubdivision');
       const deleteSelected = document.getElementById('deleteSelected');
       const selection = document.getElementById('selection');
       let resizeFrame = 0;
@@ -127,9 +211,18 @@
       function renderNotation() {
         try {
           const availableWidth = Math.floor(notation.clientWidth);
-          const result = renderDrumNotationSvgWithMetadata(documentFromPattern(pattern.value, {
+          const documentJson = documentFromPattern(pattern.value, {
+            lenient: true,
             subdivision: subdivision.value,
-          }), {
+          });
+          if (documentJson.measures[0].notes.length === 0) {
+            renderedNotes = [];
+            selectedIndexes.clear();
+            notation.innerHTML = '<div>Enter a pattern to render sheet notation.</div>';
+            renderSelection();
+            return;
+          }
+          const result = renderDrumNotationSvgWithMetadata(documentJson, {
             availableWidth,
             grouping: grouping.value,
             notesPerSystem: 'auto',
@@ -154,12 +247,30 @@
       window.addEventListener('resize', scheduleRender);
       grouping.addEventListener('input', scheduleRender);
       subdivision.addEventListener('change', scheduleRender);
+      showLegend.addEventListener('change', () => {
+        legend.classList.toggle('is-hidden', !showLegend.checked);
+      });
       pattern.addEventListener('input', scheduleRender);
+      selectedSubdivision.addEventListener('change', () => {
+        const selected = new Set(selectedIndexes);
+        if (selected.size === 0) return;
+        const value = selectedSubdivision.value;
+        const notes = renderedNotes.map((note) => {
+          if (!selected.has(note.index)) return note;
+          if (value === '') {
+            const { value: _value, ...withoutValue } = note;
+            return withoutValue;
+          }
+          return { ...note, value };
+        });
+        pattern.value = patternFromNotes(notes, { subdivision: subdivision.value });
+        scheduleRender();
+      });
       deleteSelected.addEventListener('click', () => {
         const selected = new Set(selectedIndexes);
         if (selected.size === 0) return;
         const remaining = renderedNotes.filter((note) => !selected.has(note.index));
-        pattern.value = patternFromNotes(remaining);
+        pattern.value = patternFromNotes(remaining, { subdivision: subdivision.value });
         scheduleRender();
       });
 
@@ -213,12 +324,19 @@
         }
 
         if (selected.length === 0) {
+          selectedControls.classList.remove('is-visible');
           deleteSelected.classList.remove('is-visible');
           selection.textContent = 'Selected notes: none';
           return;
         }
+        selectedControls.classList.add('is-visible');
         deleteSelected.classList.add('is-visible');
         const selectedNotes = selected.map((index) => renderedNotes[index]);
+        const selectedValues = new Set(selectedNotes.map((note) => note.value));
+        selectedSubdivision.value =
+          selectedValues.size === 1 && selectedValues.has(subdivision.value) === false
+            ? [...selectedValues][0]
+            : '';
         selection.textContent = `Selected notes:\n${JSON.stringify(selectedNotes, null, 2)}`;
       }
     </script>
