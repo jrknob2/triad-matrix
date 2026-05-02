@@ -11,12 +11,20 @@
       }
       #notation {
         border: 1px solid #ddd;
+        cursor: default;
         padding: 6px;
         overflow: hidden;
+        -webkit-tap-highlight-color: transparent;
       }
       #notation svg {
+        cursor: default;
         display: block;
         max-width: 100%;
+        -webkit-tap-highlight-color: transparent;
+      }
+      #notation * {
+        cursor: default !important;
+        -webkit-tap-highlight-color: transparent;
       }
       .controls {
         align-items: end;
@@ -35,11 +43,20 @@
         padding: 6px 8px;
         width: 8rem;
       }
-      .controls input#pattern {
-        width: min(32rem, 100%);
+      .pattern-control {
+        display: grid;
+        font-weight: 700;
+        gap: 4px;
+        margin: 0 0 14px;
+      }
+      .pattern-control input {
+        box-sizing: border-box;
+        font: inherit;
+        padding: 6px 8px;
+        width: 100%;
       }
       .drum-note-selectable {
-        cursor: pointer;
+        cursor: default;
       }
       .drum-note-selected {
         filter: drop-shadow(0 0 3px #b26a00);
@@ -55,6 +72,15 @@
         margin-top: 12px;
         white-space: pre-wrap;
       }
+      #deleteSelected {
+        display: none;
+        font: inherit;
+        margin-top: 12px;
+        padding: 6px 10px;
+      }
+      #deleteSelected.is-visible {
+        display: inline-block;
+      }
     </style>
   </head>
   <body>
@@ -65,21 +91,23 @@
         Beat grouping
         <input id="grouping" value="3535" inputmode="numeric" />
       </label>
-      <label>
-        Pattern
-        <input id="pattern" value="^R^L^R(L)(L)K" />
-      </label>
     </div>
+    <label class="pattern-control">
+      Pattern
+      <input id="pattern" value="^R^L^R(L)(L)K" />
+    </label>
     <div id="notation"></div>
+    <button id="deleteSelected" type="button">Delete selected notes</button>
     <div id="selection">Selected notes: none</div>
     <script src="https://cdn.jsdelivr.net/npm/vexflow@4.2.3/build/cjs/vexflow.js"></script>
     <script type="module">
-      import { documentFromPattern } from './demo.js';
+      import { documentFromPattern, patternFromNotes } from './demo.js';
       import { renderDrumNotationSvgWithMetadata } from './renderer.js';
 
       const notation = document.getElementById('notation');
       const grouping = document.getElementById('grouping');
       const pattern = document.getElementById('pattern');
+      const deleteSelected = document.getElementById('deleteSelected');
       const selection = document.getElementById('selection');
       let resizeFrame = 0;
       let renderedNotes = [];
@@ -113,6 +141,13 @@
       window.addEventListener('resize', scheduleRender);
       grouping.addEventListener('input', scheduleRender);
       pattern.addEventListener('input', scheduleRender);
+      deleteSelected.addEventListener('click', () => {
+        const selected = new Set(selectedIndexes);
+        if (selected.size === 0) return;
+        const remaining = renderedNotes.filter((note) => !selected.has(note.index));
+        pattern.value = patternFromNotes(remaining);
+        scheduleRender();
+      });
 
       function attachNoteSelection() {
         const svg = notation.querySelector('svg');
@@ -123,6 +158,11 @@
         noteElements.forEach((element, index) => {
           if (!element.dataset.drumNoteIndex) {
             element.dataset.drumNoteIndex = String(index);
+          }
+          const note = renderedNotes[Number(element.dataset.drumNoteIndex)];
+          if (note != null) {
+            element.dataset.drumMeasureIndex = String(note.measureIndex);
+            element.dataset.drumMeasureNoteIndex = String(note.measureNoteIndex);
           }
           element.classList.add('drum-note-selectable');
           element.addEventListener('click', (event) => {
@@ -153,9 +193,11 @@
         }
 
         if (selected.length === 0) {
+          deleteSelected.classList.remove('is-visible');
           selection.textContent = 'Selected notes: none';
           return;
         }
+        deleteSelected.classList.add('is-visible');
         const selectedNotes = selected.map((index) => renderedNotes[index]);
         selection.textContent = `Selected notes:\n${JSON.stringify(selectedNotes, null, 2)}`;
       }

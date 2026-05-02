@@ -42,7 +42,6 @@ The demo uses that metadata to support note selection and print selected note de
 import { renderDrumNotationSvg } from './renderer.js';
 
 const svg = renderDrumNotationSvg({
-  timeSignature: '4/4',
   measures: [
     {
       notes: [

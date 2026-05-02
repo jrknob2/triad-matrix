@@ -20,7 +20,6 @@ const DEFAULT_RENDER_OPTIONS = Object.freeze({
   finalRepeat: true,
   grouping: null,
   repeatClefEverySystem: true,
-  repeatTimeSignatureEverySystem: false,
   standardAccents: true,
   stemMode: 'single',
   flatBeams: true,
@@ -61,12 +60,6 @@ export function renderDrumNotationSvgWithMetadata(documentJson, options = {}) {
     if (layout.isSystemStart && renderOptions.repeatClefEverySystem) {
       stave.addClef('percussion');
     }
-    if (
-      index === 0 ||
-      (layout.isSystemStart && renderOptions.repeatTimeSignatureEverySystem)
-    ) {
-      stave.addTimeSignature(document.timeSignature);
-    }
     if (renderOptions.finalRepeat === true && index === systems.length - 1) {
       setEndRepeatBar(VF, stave);
     }
@@ -80,8 +73,8 @@ export function renderDrumNotationSvgWithMetadata(documentJson, options = {}) {
       }),
     );
     const voice = new VF.Voice({
-      num_beats: beatsFromTimeSignature(document.timeSignature),
-      beat_value: beatValueFromTimeSignature(document.timeSignature),
+      num_beats: system.entries.length,
+      beat_value: beatValueForSystem(system),
     }).setStrict(false);
     voice.addTickables(notes);
     const formatterWidth = formatterWidthForSystem(system, renderOptions);
@@ -493,12 +486,11 @@ function systemLayoutForIndex(index, options) {
   };
 }
 
-function beatsFromTimeSignature(timeSignature) {
-  return Number(timeSignature.split('/')[0]);
-}
-
-function beatValueFromTimeSignature(timeSignature) {
-  return Number(timeSignature.split('/')[1]);
+function beatValueForSystem(system) {
+  const firstValue = system.entries[0]?.note.value;
+  if (firstValue == null) return 4;
+  const match = /^(\d+)n$/.exec(firstValue);
+  return match == null ? 4 : Number(match[1]);
 }
 
 function createDetachedHost() {

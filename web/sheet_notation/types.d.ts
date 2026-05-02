@@ -1,5 +1,4 @@
 export type DrumNotationDocument = {
-  timeSignature: string;
   measures: DrumNotationMeasure[];
 };
 
@@ -36,7 +35,6 @@ export type DrumNotationRenderOptions = {
   finalRepeat?: boolean;
   grouping?: string | number[];
   repeatClefEverySystem?: boolean;
-  repeatTimeSignatureEverySystem?: boolean;
   standardAccents?: boolean;
   stemMode?: "single" | "mapped";
   flatBeams?: boolean;

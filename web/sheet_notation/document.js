@@ -7,13 +7,11 @@ const VOICE_ID_SET = new Set(DRUM_VOICE_IDS);
 export function parseDrumNotationDocument(input) {
   const raw = typeof input === 'string' ? JSON.parse(input) : input;
   assertObject(raw, 'document');
-  assertString(raw.timeSignature, 'timeSignature');
   if (!Array.isArray(raw.measures) || raw.measures.length === 0) {
     throw new Error('DrumNotationDocument.measures must be a non-empty array.');
   }
 
   return {
-    timeSignature: raw.timeSignature,
     measures: raw.measures.map(parseMeasure),
   };
 }

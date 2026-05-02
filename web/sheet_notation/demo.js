@@ -22,7 +22,6 @@ export function demoDocument() {
     { value: '16n', voices: ['snare'], sticking: 'F', flam: true },
   ];
   return {
-    timeSignature: '4/4',
     measures: [
       { notes: wrappedMeasure },
       { notes: wrappedMeasure },
@@ -36,9 +35,12 @@ export function renderDemoDrumNotationSvg(options = {}) {
 
 export function documentFromPattern(pattern) {
   return {
-    timeSignature: '4/4',
     measures: [{ notes: notesFromPattern(pattern) }],
   };
+}
+
+export function patternFromNotes(notes) {
+  return notes.map(patternTokenForNote).join('');
 }
 
 export function notesFromPattern(pattern) {
@@ -111,4 +113,22 @@ function noteFromToken(symbol, options = {}) {
     default:
       throw new Error(`Unsupported pattern token: ${symbol}`);
   }
+}
+
+function patternTokenForNote(note) {
+  const base = basePatternTokenForNote(note);
+  const marked = note.ghost ? `(${base})` : base;
+  return note.accent ? `^${marked}` : marked;
+}
+
+function basePatternTokenForNote(note) {
+  if (note.rest) return '-';
+  if (note.flam) return 'F';
+  const voices = note.voices ?? [];
+  if (voices.includes('kick')) return 'K';
+  if (voices.includes('floorTom')) return 'FT';
+  if (voices.includes('hihat') && voices.includes('snare')) return 'B';
+  if (voices.includes('hihat')) return 'HH';
+  if (voices.includes('crash')) return note.sticking === 'X' ? 'X' : 'C';
+  return note.sticking ?? 'R';
 }

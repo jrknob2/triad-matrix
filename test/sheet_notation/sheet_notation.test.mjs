@@ -6,6 +6,7 @@ import { toVexFlowDuration } from '../../web/sheet_notation/duration.js';
 import {
   demoDocument,
   documentFromPattern,
+  patternFromNotes,
   renderDemoDrumNotationSvg,
 } from '../../web/sheet_notation/demo.js';
 import {
@@ -17,7 +18,6 @@ import { voiceMappingFor } from '../../web/sheet_notation/voice_mapping.js';
 import { createFakeVexFlow } from './fake_vexflow.mjs';
 
 const VALID_DOCUMENT = {
-  timeSignature: '4/4',
   measures: [
     {
       notes: [
@@ -34,7 +34,7 @@ describe('sheet notation document parsing', () => {
   test('valid document parsing', () => {
     const parsed = parseDrumNotationDocument(VALID_DOCUMENT);
 
-    assert.equal(parsed.timeSignature, '4/4');
+    assert.equal('timeSignature' in parsed, false);
     assert.equal(parsed.measures.length, 1);
     assert.equal(parsed.measures[0].notes.length, 4);
     assert.deepEqual(parsed.measures[0].notes[0].voices, ['snare']);
@@ -44,7 +44,6 @@ describe('sheet notation document parsing', () => {
     assert.throws(
       () =>
         parseDrumNotationDocument({
-          timeSignature: '4/4',
           measures: [{ notes: [{ value: '16n', voices: ['cowbell'] }] }],
         }),
       /unknown: cowbell/,
@@ -55,7 +54,6 @@ describe('sheet notation document parsing', () => {
     assert.throws(
       () =>
         parseDrumNotationDocument({
-          timeSignature: '4/4',
           measures: [{ notes: [{ value: '64n', voices: ['snare'] }] }],
         }),
       /unsupported: 64n/,
@@ -227,7 +225,7 @@ describe('svg rendering', () => {
     const svg = renderDrumNotationSvg(VALID_DOCUMENT, { vexFlow: VF });
 
     assert.match(svg, /^<svg /);
-    assert.equal(VF.calls.staves[0].timeSignature, '4/4');
+    assert.equal(VF.calls.staves[0].timeSignature, undefined);
     assert.equal(VF.calls.notes.length, 4);
   });
 
@@ -285,6 +283,16 @@ describe('svg rendering', () => {
     );
   });
 
+  test('notation notes can be serialized back to editable pattern text', () => {
+    const notes = documentFromPattern('^R^L^R(L)(L)KHHCF-B').measures[0].notes;
+
+    assert.equal(patternFromNotes(notes), '^R^L^R(L)(L)KHHCF-B');
+    assert.equal(
+      patternFromNotes(notes.filter((_, index) => !new Set([1, 3]).has(index))),
+      '^R^R(L)KHHCF-B',
+    );
+  });
+
   test('demo renders sixteen-note phrase as svg', () => {
     const VF = createFakeVexFlow();
     const svg = renderDemoDrumNotationSvg({ vexFlow: VF });
@@ -303,7 +311,7 @@ describe('svg rendering', () => {
     assert.equal(VF.calls.staves[1].x, 8);
     assert.equal(VF.calls.staves[1].y, 150);
     assert.equal(VF.calls.staves[0].clef, 'percussion');
-    assert.equal(VF.calls.staves[0].timeSignature, '4/4');
+    assert.equal(VF.calls.staves[0].timeSignature, undefined);
     assert.equal(VF.calls.staves[1].clef, 'percussion');
     assert.equal(VF.calls.staves[1].timeSignature, undefined);
     assert.equal(VF.calls.staves[1].endBarType, 5);
