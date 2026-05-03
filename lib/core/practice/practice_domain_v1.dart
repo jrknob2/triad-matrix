@@ -26,7 +26,7 @@ enum PatternTimingModeV1 { autoByGrouping, explicitSpans }
 
 enum PatternPulseRoleV1 { normal, tag }
 
-enum DrumVoiceV1 { snare, rackTom, tom2, floorTom, hihat, kick }
+enum DrumVoiceV1 { snare, rackTom, tom2, floorTom, hihat, crash, ride, kick }
 
 enum AccentVoiceV1 { snare, crash, ride }
 

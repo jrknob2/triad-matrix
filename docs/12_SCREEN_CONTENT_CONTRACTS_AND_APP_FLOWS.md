@@ -76,6 +76,12 @@ List item rule:
 Notation rule:
 
 - the app should use one canonical notation renderer everywhere notation is shown
+- the sheet-music renderer is the replacement path for practice notation surfaces that need staff notation; it consumes a render-ready document made of measures, note values, drum voices, sticking labels, and visual note flags
+- sheet-music rendering must remain display/edit notation only; it must not include tempo, BPM, metronome, playback, audio sample, practice-session, or app-state behavior
+- sheet-music limb/sticking and drum voice are separate concepts: `R` and `L` are sticking labels, while `snare`, `tom1`, `tom2`, `floorTom`, `hihat`, `crash`, `ride`, and `kick` are rendered voices
+- sheet-music pattern text may use bracket overrides for duration and voice, such as `[16:R]`, `[T1:L]`, and `[T2 16:R]`
+- sheet-music accent and ghost decorations may be placed inside or outside bracket overrides when valid, but accented ghost notes such as `^(L)` are invalid
+- the sheet-music widget must not include the notation-input legend; app screens should own any modal/dialog that explains notation syntax
 - screens may wrap that renderer for selection or editing, but they should not fork the visual notation language
 - the canonical renderer must support independent display options for authored dynamics and authored voices
 - notation readouts should be center-justified everywhere by default

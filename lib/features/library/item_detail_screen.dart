@@ -7,38 +7,21 @@ import '../../features/app/drumcabulary_theme.dart';
 import '../../features/app/drumcabulary_ui.dart';
 import '../../features/app/unsaved_changes_dialog.dart';
 import '../../state/app_controller.dart';
-import '../matrix/widgets/triad_matrix_grid.dart';
 import '../practice/widgets/session_setup_controls.dart';
-import '../practice/widgets/pattern_voice_display.dart';
+import '../practice/widgets/sheet_notation_display.dart';
 
-enum _ItemDetailControlSet { append, dynamics, voices }
+enum _StructureToolOption { right, left, kick, flam, both, accent, rest }
 
-enum _StructureToolOption {
-  right,
-  left,
-  kick,
-  flam,
-  both,
-  accent,
-  rest,
-  triad,
-  fourNote,
-}
-
-enum _StructureActionKind { append, insertBefore, insertAfter, replace }
-
-enum _StructureGroupingRule { triads, fourNote }
-
-class _RecordedStructureAction {
-  final _StructureActionKind kind;
-  final List<PatternTokenV1> tokens;
-  final _StructureGroupingRule? groupingRule;
-
-  const _RecordedStructureAction({
-    required this.kind,
-    required this.tokens,
-    required this.groupingRule,
-  });
+String _labelForTool(_StructureToolOption tool) {
+  return switch (tool) {
+    _StructureToolOption.right => 'R',
+    _StructureToolOption.left => 'L',
+    _StructureToolOption.kick => 'K',
+    _StructureToolOption.flam => 'F',
+    _StructureToolOption.both => 'B',
+    _StructureToolOption.accent => 'X',
+    _StructureToolOption.rest => 'Rest',
+  };
 }
 
 class ItemDetailScreen extends StatefulWidget {
@@ -66,14 +49,19 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   late int _sessionBpm;
   late TimerPresetV1 _timerPreset;
   late Set<int> _selectedNoteIndices;
-  _ItemDetailControlSet _activeControlSet = _ItemDetailControlSet.append;
-  _StructureToolOption? _pendingStructureTool;
-  _RecordedStructureAction? _lastStructureAction;
+  late final TextEditingController _patternController;
 
   @override
   void initState() {
     super.initState();
     _loadDraftFromController();
+    _patternController = TextEditingController(text: _draftPatternText());
+  }
+
+  @override
+  void dispose() {
+    _patternController.dispose();
+    super.dispose();
   }
 
   @override
@@ -100,10 +88,6 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         final int sessionCount = widget.controller.sessionCount(
           itemId: item.id,
         );
-        final List<String> tokens = _draftTokens
-            .map((PatternTokenV1 token) => token.symbol)
-            .toList(growable: false);
-        final bool flowCapable = _hasDraftFlowVoices(tokens, _voiceAssignments);
         final List<PatternNoteMarkingV1> draftMarkings = _draftMarkingsFor(
           _draftTokens.length,
         );
@@ -129,139 +113,78 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        _SelectableNotationBlock(
-                          tokens: tokens,
-                          markings: draftMarkings,
-                          voices: _voiceAssignments,
-                          grouping: _draftGrouping,
-                          selectedIndices: _selectedNoteIndices,
-                          showVoices: flowCapable,
-                          onSelect: (int index) {
-                            setState(() {
-                              if (_selectedNoteIndices.contains(index)) {
-                                _selectedNoteIndices.remove(index);
-                              } else {
-                                _selectedNoteIndices.add(index);
-                              }
-                            });
+                        DrumSheetNotationDisplay(
+                          document: _draftSheetNotationDocument(draftMarkings),
+                          grouping: _sheetGroupingText(_draftGrouping),
+                          selectedIndexes: _selectedNoteIndices,
+                          onSelectionChanged: (Set<int> next) {
+                            setState(() => _selectedNoteIndices = next);
                           },
+                          minNoteWidth: 40,
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Tap positions to select them, then edit structure, dynamics, or voice.',
+                          'Tap notes to select them, or edit the pattern text directly.',
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(
                                 color: DrumcabularyTheme.textSecondary,
                               ),
                         ),
                         const SizedBox(height: 12),
-                        const DrumEyebrow(text: 'Filters'),
+                        TextField(
+                          controller: _patternController,
+                          decoration: const InputDecoration(
+                            labelText: 'Pattern',
+                            border: OutlineInputBorder(),
+                          ),
+                          onChanged: _handlePatternTextChanged,
+                        ),
+                        const SizedBox(height: 12),
+                        _SelectedSheetNoteEditor(
+                          notes: _draftSheetNotes(draftMarkings),
+                          selectedIndices: _selectedNoteIndices,
+                          subdivision: DrumSheetNoteValue.eighth,
+                          onDurationChanged: _setDurationForSelection,
+                          onVoiceChanged: _setSheetVoiceForSelection,
+                          onToggleAccent: _toggleAccentForSelection,
+                          onToggleGhost: _toggleGhostForSelection,
+                          onDeleteSelection: _deleteSelection,
+                        ),
+                        const SizedBox(height: 12),
+                        _GroupingControl(
+                          tokenCount: _draftTokens.length,
+                          grouping: _draftGrouping,
+                          onChanged: (PatternGroupingV1 next) {
+                            setState(() {
+                              _draftGrouping = next;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        const DrumEyebrow(text: 'Append'),
                         const SizedBox(height: 8),
                         DrumHorizontalControlStrip(
                           child: Row(
-                            children: _ItemDetailControlSet.values
+                            children: _StructureToolOption.values
                                 .map(
-                                  (_ItemDetailControlSet controlSet) => Padding(
+                                  (_StructureToolOption option) => Padding(
                                     padding: const EdgeInsets.only(right: 8),
                                     child: DrumSelectablePill(
                                       label: Text(
-                                        _labelForControlSet(controlSet),
-                                        style: TextStyle(
-                                          color: _activeControlSet == controlSet
-                                              ? Colors.white
-                                              : null,
+                                        _labelForTool(option),
+                                        style: const TextStyle(
                                           fontWeight: FontWeight.w900,
                                         ),
                                       ),
-                                      selected: _activeControlSet == controlSet,
-                                      onPressed: () {
-                                        setState(() {
-                                          _activeControlSet = controlSet;
-                                        });
-                                      },
+                                      selected: false,
+                                      onPressed: () =>
+                                          _appendStructureTool(option),
                                     ),
                                   ),
                                 )
                                 .toList(growable: false),
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        if (_activeControlSet ==
-                            _ItemDetailControlSet.append) ...<Widget>[
-                          Text(
-                            'Pattern Structure',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          const SizedBox(height: 8),
-                          _StructureEditor(
-                            tokens: _draftTokens,
-                            selectedIndices: _selectedNoteIndices,
-                            selectedTool: _pendingStructureTool,
-                            lastAction: _lastStructureAction,
-                            onToolChanged: _handleStructureToolChanged,
-                            onAppend: _applyPendingAppend,
-                            onInsertBefore: _applyPendingInsertBefore,
-                            onInsertAfter: _applyPendingInsertAfter,
-                            onReplaceSelection: _applyPendingReplaceSelection,
-                            onDeleteSelection: _deleteSelection,
-                            onClearPattern: _clearPatternDraft,
-                            onRepeatLastAction: _repeatLastStructureAction,
-                          ),
-                          const SizedBox(height: 12),
-                          _GroupingControl(
-                            tokenCount: _draftTokens.length,
-                            grouping: _draftGrouping,
-                            onChanged: (PatternGroupingV1 next) {
-                              setState(() {
-                                _draftGrouping = next;
-                              });
-                            },
-                          ),
-                        ],
-                        if (_activeControlSet ==
-                            _ItemDetailControlSet.dynamics) ...<Widget>[
-                          Text(
-                            'Accents & Ghosts',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          const SizedBox(height: 8),
-                          _SelectedMarkingEditor(
-                            tokens: tokens,
-                            markings: draftMarkings,
-                            selectedIndices: _selectedNoteIndices,
-                            onChanged: (PatternNoteMarkingV1 next) {
-                              _setMarkingForSelection(next);
-                            },
-                          ),
-                        ],
-                        if (_activeControlSet ==
-                            _ItemDetailControlSet.voices) ...<Widget>[
-                          Text(
-                            'Flow Voices',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          const SizedBox(height: 8),
-                          _SelectedVoiceEditor(
-                            tokens: tokens,
-                            voices: _voiceAssignments,
-                            selectedIndices: _selectedNoteIndices,
-                            onChanged: (DrumVoiceV1 next) {
-                              _setVoiceForSelection(next);
-                            },
-                          ),
-                          if (flowCapable) ...<Widget>[
-                            const SizedBox(height: 8),
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: OutlinedButton(
-                                onPressed: _clearVoices,
-                                child: const Text('Clear Voices'),
-                              ),
-                            ),
-                          ],
-                          const SizedBox(height: 12),
-                          _FlowReadinessNote(ready: flowCapable),
-                        ],
                       ],
                     ),
                   ),
@@ -383,6 +306,248 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     _selectedNoteIndices = <int>{};
   }
 
+  DrumSheetNotationDocument _draftSheetNotationDocument(
+    List<PatternNoteMarkingV1> markings,
+  ) {
+    return DrumSheetNotationDocument(
+      measures: <DrumSheetNotationMeasure>[
+        DrumSheetNotationMeasure(notes: _draftSheetNotes(markings)),
+      ],
+    );
+  }
+
+  List<DrumSheetNotationNote> _draftSheetNotes(
+    List<PatternNoteMarkingV1> markings,
+  ) {
+    return List<DrumSheetNotationNote>.generate(_draftTokens.length, (
+      int index,
+    ) {
+      return _sheetNoteForDraftIndex(index, markings[index]);
+    }, growable: false);
+  }
+
+  String _draftPatternText() {
+    return DrumSheetPatternParser.serialize(
+      _draftSheetNotes(_draftMarkingsFor(_draftTokens.length)),
+      subdivision: DrumSheetNoteValue.eighth,
+    );
+  }
+
+  void _syncPatternTextFromDraft() {
+    final String next = _draftPatternText();
+    if (_patternController.text == next) return;
+    _patternController.value = TextEditingValue(
+      text: next,
+      selection: TextSelection.collapsed(offset: next.length),
+    );
+  }
+
+  DrumSheetNotationNote _sheetNoteForDraftIndex(
+    int index,
+    PatternNoteMarkingV1 marking,
+  ) {
+    final PatternTokenV1 token = _draftTokens[index];
+    final DrumVoiceV1 oldVoice = index < _voiceAssignments.length
+        ? _voiceAssignments[index]
+        : _defaultVoiceForDraftToken(token);
+    return DrumSheetNotationNote(
+      voices: token.isRest
+          ? const <DrumSheetVoice>[]
+          : _sheetVoicesForDraftToken(token, oldVoice),
+      rest: token.isRest,
+      sticking: _sheetStickingForDraftToken(token),
+      accent: marking == PatternNoteMarkingV1.accent,
+      ghost: marking == PatternNoteMarkingV1.ghost,
+      flam: token.kind == PatternTokenKindV1.flam,
+    );
+  }
+
+  List<DrumSheetVoice> _sheetVoicesForDraftToken(
+    PatternTokenV1 token,
+    DrumVoiceV1 oldVoice,
+  ) {
+    return switch (token.kind) {
+      PatternTokenKindV1.kick => const <DrumSheetVoice>[DrumSheetVoice.kick],
+      PatternTokenKindV1.both => const <DrumSheetVoice>[
+        DrumSheetVoice.hihat,
+        DrumSheetVoice.snare,
+      ],
+      PatternTokenKindV1.accent => const <DrumSheetVoice>[DrumSheetVoice.crash],
+      PatternTokenKindV1.flam => const <DrumSheetVoice>[DrumSheetVoice.snare],
+      PatternTokenKindV1.rest => const <DrumSheetVoice>[],
+      PatternTokenKindV1.right || PatternTokenKindV1.left => <DrumSheetVoice>[
+        _sheetVoiceForLegacyVoice(oldVoice),
+      ],
+    };
+  }
+
+  DrumSheetVoice _sheetVoiceForLegacyVoice(DrumVoiceV1 voice) {
+    return switch (voice) {
+      DrumVoiceV1.snare => DrumSheetVoice.snare,
+      DrumVoiceV1.rackTom => DrumSheetVoice.tom1,
+      DrumVoiceV1.tom2 => DrumSheetVoice.tom2,
+      DrumVoiceV1.floorTom => DrumSheetVoice.floorTom,
+      DrumVoiceV1.hihat => DrumSheetVoice.hihat,
+      DrumVoiceV1.crash => DrumSheetVoice.crash,
+      DrumVoiceV1.ride => DrumSheetVoice.ride,
+      DrumVoiceV1.kick => DrumSheetVoice.kick,
+    };
+  }
+
+  String _sheetStickingForDraftToken(PatternTokenV1 token) {
+    return switch (token.kind) {
+      PatternTokenKindV1.right => 'R',
+      PatternTokenKindV1.left => 'L',
+      PatternTokenKindV1.kick => 'K',
+      PatternTokenKindV1.both => 'B',
+      PatternTokenKindV1.flam => 'F',
+      PatternTokenKindV1.accent => 'X',
+      PatternTokenKindV1.rest => '-',
+    };
+  }
+
+  String? _sheetGroupingText(PatternGroupingV1 grouping) {
+    final int? groupSize = grouping.groupSize;
+    if (groupSize == null || groupSize <= 0) return null;
+    return '$groupSize';
+  }
+
+  void _handlePatternTextChanged(String value) {
+    try {
+      final List<DrumSheetNotationNote> notes = DrumSheetPatternParser.parse(
+        value,
+        lenient: true,
+      );
+      setState(() {
+        _applySheetNotesToDraft(notes, clearSelection: false);
+      });
+    } on FormatException {
+      // Keep the current rendered draft while the user has an invalid token.
+    } on ArgumentError {
+      // Keep the current rendered draft while the user has an invalid token.
+    }
+  }
+
+  void _applySheetNotesToDraft(
+    List<DrumSheetNotationNote> notes, {
+    bool clearSelection = true,
+  }) {
+    _draftTokens = notes.map(_legacyTokenForSheetNote).toList(growable: false);
+    _accentedNoteIndices = <int>[
+      for (int index = 0; index < notes.length; index += 1)
+        if (notes[index].accent) index,
+    ];
+    _ghostNoteIndices = <int>[
+      for (int index = 0; index < notes.length; index += 1)
+        if (notes[index].ghost) index,
+    ];
+    _voiceAssignments = notes
+        .map(_legacyVoiceForSheetNote)
+        .toList(growable: false);
+    if (clearSelection) _selectedNoteIndices = <int>{};
+    _normalizeDraftStructure();
+  }
+
+  PatternTokenV1 _legacyTokenForSheetNote(DrumSheetNotationNote note) {
+    if (note.rest) return PatternTokenV1.rest;
+    if (note.flam) return PatternTokenV1.flam;
+    return switch (note.sticking.toUpperCase()) {
+      'R' => PatternTokenV1.right,
+      'L' => PatternTokenV1.left,
+      'K' => PatternTokenV1.kick,
+      'B' => PatternTokenV1.both,
+      'F' => PatternTokenV1.flam,
+      'C' || 'X' => PatternTokenV1.accent,
+      'HH' => PatternTokenV1.accent,
+      'FT' => PatternTokenV1.left,
+      _ =>
+        note.voices.contains(DrumSheetVoice.kick)
+            ? PatternTokenV1.kick
+            : PatternTokenV1.right,
+    };
+  }
+
+  DrumVoiceV1 _legacyVoiceForSheetNote(DrumSheetNotationNote note) {
+    if (note.rest) return DrumVoiceV1.snare;
+    if (note.voices.isEmpty) return DrumVoiceV1.snare;
+    return _legacyVoiceForSheetVoice(note.voices.first);
+  }
+
+  DrumVoiceV1 _legacyVoiceForSheetVoice(DrumSheetVoice voice) {
+    return switch (voice) {
+      DrumSheetVoice.snare => DrumVoiceV1.snare,
+      DrumSheetVoice.tom1 => DrumVoiceV1.rackTom,
+      DrumSheetVoice.tom2 => DrumVoiceV1.tom2,
+      DrumSheetVoice.floorTom => DrumVoiceV1.floorTom,
+      DrumSheetVoice.hihat => DrumVoiceV1.hihat,
+      DrumSheetVoice.crash => DrumVoiceV1.crash,
+      DrumSheetVoice.ride => DrumVoiceV1.ride,
+      DrumSheetVoice.kick => DrumVoiceV1.kick,
+    };
+  }
+
+  void _setDurationForSelection(DrumSheetNoteValue? value) {
+    if (_selectedNoteIndices.isEmpty) return;
+    final List<DrumSheetNotationNote> notes =
+        DrumSheetPatternParser.applyValueOverride(
+          _draftSheetNotes(_draftMarkingsFor(_draftTokens.length)),
+          _selectedNoteIndices,
+          value,
+        );
+    setState(() {
+      _applySheetNotesToDraft(notes);
+      _syncPatternTextFromDraft();
+    });
+  }
+
+  void _setSheetVoiceForSelection(DrumSheetVoice? voice) {
+    if (_selectedNoteIndices.isEmpty) return;
+    final List<DrumSheetNotationNote> notes =
+        DrumSheetPatternParser.applyVoiceOverride(
+          _draftSheetNotes(_draftMarkingsFor(_draftTokens.length)),
+          _selectedNoteIndices,
+          voice,
+        );
+    setState(() {
+      _applySheetNotesToDraft(notes);
+      _syncPatternTextFromDraft();
+    });
+  }
+
+  void _toggleAccentForSelection() {
+    if (_selectedNoteIndices.isEmpty) return;
+    final List<DrumSheetNotationNote> notes =
+        DrumSheetPatternParser.toggleAccent(
+          _draftSheetNotes(_draftMarkingsFor(_draftTokens.length)),
+          _selectedNoteIndices,
+        );
+    setState(() {
+      _applySheetNotesToDraft(notes);
+      _syncPatternTextFromDraft();
+    });
+  }
+
+  void _toggleGhostForSelection() {
+    if (_selectedNoteIndices.isEmpty) return;
+    final List<DrumSheetNotationNote> notes =
+        DrumSheetPatternParser.toggleGhost(
+          _draftSheetNotes(_draftMarkingsFor(_draftTokens.length)),
+          _selectedNoteIndices,
+        );
+    setState(() {
+      _applySheetNotesToDraft(notes);
+      _syncPatternTextFromDraft();
+    });
+  }
+
+  Future<void> _appendStructureTool(_StructureToolOption option) async {
+    final List<PatternTokenV1>? appended = await _tokensForStructureTool(
+      option,
+    );
+    if (!mounted || appended == null || appended.isEmpty) return;
+    _appendTokens(appended);
+  }
+
   List<PatternNoteMarkingV1> _draftMarkingsFor(int noteCount) {
     final Set<int> accents = _accentedNoteIndices.toSet();
     final Set<int> ghosts = _ghostNoteIndices.toSet();
@@ -391,80 +556,6 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       if (accents.contains(index)) return PatternNoteMarkingV1.accent;
       return PatternNoteMarkingV1.normal;
     });
-  }
-
-  void _setMarkingForSelection(PatternNoteMarkingV1 next) {
-    final List<int> editableIndices = _selectedNoteIndices
-        .where(
-          (int index) =>
-              index >= 0 &&
-              index < _draftTokens.length &&
-              !_draftTokens[index].isKick &&
-              !_draftTokens[index].isRest,
-        )
-        .toList(growable: false);
-    if (editableIndices.isEmpty) return;
-    setState(() {
-      final Set<int> accents = _accentedNoteIndices.toSet();
-      final Set<int> ghosts = _ghostNoteIndices.toSet();
-      for (final int noteIndex in editableIndices) {
-        accents.remove(noteIndex);
-        ghosts.remove(noteIndex);
-        switch (next) {
-          case PatternNoteMarkingV1.normal:
-            break;
-          case PatternNoteMarkingV1.accent:
-            accents.add(noteIndex);
-            break;
-          case PatternNoteMarkingV1.ghost:
-            ghosts.add(noteIndex);
-            break;
-        }
-      }
-      _accentedNoteIndices = accents.toList()..sort();
-      _ghostNoteIndices = ghosts.toList()..sort();
-      _selectedNoteIndices = <int>{};
-    });
-  }
-
-  void _setVoiceForSelection(DrumVoiceV1 next) {
-    final List<int> editableIndices = _selectedNoteIndices
-        .where(
-          (int index) =>
-              index >= 0 &&
-              index < _draftTokens.length &&
-              _draftTokens[index].allowsAuthoredVoice,
-        )
-        .toList(growable: false);
-    if (editableIndices.isEmpty) return;
-    setState(() {
-      final List<DrumVoiceV1> nextAssignments = List<DrumVoiceV1>.from(
-        _voiceAssignments,
-      );
-      for (final int index in editableIndices) {
-        nextAssignments[index] = next;
-      }
-      _voiceAssignments = nextAssignments;
-      _selectedNoteIndices = <int>{};
-    });
-  }
-
-  String _labelForControlSet(_ItemDetailControlSet controlSet) {
-    return switch (controlSet) {
-      _ItemDetailControlSet.append => 'Build',
-      _ItemDetailControlSet.dynamics => 'Dynamics',
-      _ItemDetailControlSet.voices => 'Voices',
-    };
-  }
-
-  bool _hasDraftFlowVoices(List<String> tokens, List<DrumVoiceV1> voices) {
-    for (int index = 0; index < tokens.length; index++) {
-      if (!PatternTokenV1.fromSymbol(tokens[index]).allowsAuthoredVoice) {
-        continue;
-      }
-      if (voices[index] != DrumVoiceV1.snare) return true;
-    }
-    return false;
   }
 
   bool _supportsMatrixEditingDraft() {
@@ -476,62 +567,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     return token.isKick ? DrumVoiceV1.kick : DrumVoiceV1.snare;
   }
 
-  void _insertTokens(
-    List<PatternTokenV1> inserted, {
-    required bool beforeSelection,
-    PatternGroupingV1? groupingOverride,
-    _StructureGroupingRule? groupingRule,
-    bool recordAction = true,
-  }) {
-    if (inserted.isEmpty) return;
-    final List<int> sortedIndices = _selectedNoteIndices.toList()..sort();
-    final int insertAt = sortedIndices.isEmpty
-        ? _draftTokens.length
-        : (beforeSelection ? sortedIndices.first : sortedIndices.last + 1);
-    final List<PatternTokenV1> nextTokens = List<PatternTokenV1>.from(
-      _draftTokens,
-    )..insertAll(insertAt, inserted);
-    final int shift = inserted.length;
-
-    setState(() {
-      _draftTokens = nextTokens;
-      _accentedNoteIndices =
-          _accentedNoteIndices
-              .map((int index) => index >= insertAt ? index + shift : index)
-              .toList(growable: false)
-            ..sort();
-      _ghostNoteIndices =
-          _ghostNoteIndices
-              .map((int index) => index >= insertAt ? index + shift : index)
-              .toList(growable: false)
-            ..sort();
-      final List<DrumVoiceV1> nextVoices = List<DrumVoiceV1>.from(
-        _voiceAssignments,
-      )..insertAll(insertAt, inserted.map(_defaultVoiceForDraftToken));
-      _voiceAssignments = nextVoices;
-      if (groupingOverride != null) {
-        _draftGrouping = groupingOverride;
-      }
-      _normalizeDraftStructure();
-      _selectedNoteIndices = <int>{};
-      if (recordAction) {
-        _lastStructureAction = _RecordedStructureAction(
-          kind: beforeSelection
-              ? _StructureActionKind.insertBefore
-              : _StructureActionKind.insertAfter,
-          tokens: List<PatternTokenV1>.unmodifiable(inserted),
-          groupingRule: groupingRule,
-        );
-      }
-    });
-  }
-
-  void _appendTokens(
-    List<PatternTokenV1> appended, {
-    PatternGroupingV1? groupingOverride,
-    _StructureGroupingRule? groupingRule,
-    bool recordAction = true,
-  }) {
+  void _appendTokens(List<PatternTokenV1> appended) {
     if (appended.isEmpty) return;
     final int insertAt = _draftTokens.length;
     final List<PatternTokenV1> nextTokens = List<PatternTokenV1>.from(
@@ -546,77 +582,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         _voiceAssignments,
       )..insertAll(insertAt, appended.map(_defaultVoiceForDraftToken));
       _voiceAssignments = nextVoices;
-      if (groupingOverride != null) {
-        _draftGrouping = groupingOverride;
-      }
       _normalizeDraftStructure();
+      _syncPatternTextFromDraft();
       _selectedNoteIndices = <int>{};
-      if (recordAction) {
-        _lastStructureAction = _RecordedStructureAction(
-          kind: _StructureActionKind.append,
-          tokens: List<PatternTokenV1>.unmodifiable(appended),
-          groupingRule: groupingRule,
-        );
-      }
-    });
-  }
-
-  void _replaceSelectionWithTokens(
-    List<PatternTokenV1> replacement, {
-    PatternGroupingV1? groupingOverride,
-    _StructureGroupingRule? groupingRule,
-    bool recordAction = true,
-  }) {
-    final List<int> sortedSelection = _selectedNoteIndices.toList()..sort();
-    if (sortedSelection.isEmpty) return;
-    final Set<int> selected = sortedSelection.toSet();
-    final int insertAt = sortedSelection.first;
-    final List<PatternTokenV1> nextTokens = <PatternTokenV1>[];
-    final List<DrumVoiceV1> nextVoices = <DrumVoiceV1>[];
-    final Map<int, int> nextIndexByOld = <int, int>{};
-
-    for (int index = 0; index < _draftTokens.length; index++) {
-      if (index == insertAt) {
-        nextTokens.addAll(replacement);
-        nextVoices.addAll(replacement.map(_defaultVoiceForDraftToken));
-      }
-      if (selected.contains(index)) continue;
-      nextIndexByOld[index] = nextTokens.length;
-      nextTokens.add(_draftTokens[index]);
-      nextVoices.add(
-        index < _voiceAssignments.length
-            ? _voiceAssignments[index]
-            : _defaultVoiceForDraftToken(_draftTokens[index]),
-      );
-    }
-
-    setState(() {
-      _draftTokens = nextTokens;
-      _voiceAssignments = nextVoices;
-      _accentedNoteIndices =
-          _accentedNoteIndices
-              .where(nextIndexByOld.containsKey)
-              .map((int index) => nextIndexByOld[index]!)
-              .toList(growable: false)
-            ..sort();
-      _ghostNoteIndices =
-          _ghostNoteIndices
-              .where(nextIndexByOld.containsKey)
-              .map((int index) => nextIndexByOld[index]!)
-              .toList(growable: false)
-            ..sort();
-      if (groupingOverride != null) {
-        _draftGrouping = groupingOverride;
-      }
-      _normalizeDraftStructure();
-      _selectedNoteIndices = <int>{};
-      if (recordAction) {
-        _lastStructureAction = _RecordedStructureAction(
-          kind: _StructureActionKind.replace,
-          tokens: List<PatternTokenV1>.unmodifiable(replacement),
-          groupingRule: groupingRule,
-        );
-      }
     });
   }
 
@@ -654,297 +622,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
               .toList(growable: false)
             ..sort();
       _normalizeDraftStructure();
+      _syncPatternTextFromDraft();
       _selectedNoteIndices = <int>{};
     });
-  }
-
-  void _clearPatternDraft() {
-    if (_draftTokens.isEmpty) return;
-    setState(() {
-      _draftTokens = <PatternTokenV1>[];
-      _draftGrouping = PatternGroupingV1.none;
-      _accentedNoteIndices = <int>[];
-      _ghostNoteIndices = <int>[];
-      _voiceAssignments = <DrumVoiceV1>[];
-      _selectedNoteIndices = <int>{};
-      _lastStructureAction = null;
-    });
-  }
-
-  Future<List<PatternTokenV1>?> _showTriadInsertDialog() async {
-    final List<String>? selectedItemIds = await showDialog<List<String>>(
-      context: context,
-      builder: (BuildContext context) {
-        final List<String> localSelectedItemIds = <String>[];
-        return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setModalState) {
-            return Dialog(
-              backgroundColor: Colors.transparent,
-              insetPadding: const EdgeInsets.symmetric(horizontal: 24),
-              child: DrumPanel(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        'Insert Triad',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Pick one or more triads from the shared matrix grid, then insert them into the pattern in selection order.',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: DrumcabularyTheme.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 360),
-                        child: TriadMatrixGrid(
-                          controller: widget.controller,
-                          filters: const MatrixFiltersV1(
-                            lane: null,
-                            filters: <TriadMatrixFilterV1>{},
-                            selectedRows: <String>{},
-                            selectedColumns: <String>{},
-                          ),
-                          selection: MatrixSelectionStateV1(
-                            orderedItemIds: List<String>.unmodifiable(
-                              localSelectedItemIds,
-                            ),
-                          ),
-                          showProgressColors: false,
-                          axisSelectionEnabled: false,
-                          onToggleRow: (_) {},
-                          onToggleColumn: (_) {},
-                          onTapItem: (String itemId) {
-                            setModalState(() {
-                              if (localSelectedItemIds.contains(itemId)) {
-                                localSelectedItemIds.remove(itemId);
-                              } else {
-                                localSelectedItemIds.add(itemId);
-                              }
-                            });
-                          },
-                        ),
-                      ),
-                      if (localSelectedItemIds.isNotEmpty) ...<Widget>[
-                        const SizedBox(height: 10),
-                        Text(
-                          '${localSelectedItemIds.length} triad${localSelectedItemIds.length == 1 ? '' : 's'} selected',
-                          style: Theme.of(context).textTheme.labelLarge
-                              ?.copyWith(
-                                color: DrumcabularyTheme.textSecondary,
-                                fontWeight: FontWeight.w800,
-                              ),
-                        ),
-                      ],
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: <Widget>[
-                          TextButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            child: const Text('Cancel'),
-                          ),
-                          const SizedBox(width: 8),
-                          FilledButton(
-                            onPressed: localSelectedItemIds.isEmpty
-                                ? null
-                                : () => Navigator.of(context).pop(
-                                    List<String>.from(localSelectedItemIds),
-                                  ),
-                            child: const Text('Insert'),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-    if (!mounted || selectedItemIds == null || selectedItemIds.isEmpty) {
-      return null;
-    }
-    return selectedItemIds
-        .expand((String itemId) => widget.controller.itemById(itemId).tokens)
-        .toList(growable: false);
-  }
-
-  Future<List<PatternTokenV1>?> _showFourNoteInsertDialog() async {
-    return showDialog<List<PatternTokenV1>>(
-      context: context,
-      builder: (BuildContext context) {
-        String? selectedItemId;
-        PatternTokenV1? appendedToken;
-        return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setModalState) {
-            final bool canInsert =
-                selectedItemId != null && appendedToken != null;
-            return Dialog(
-              backgroundColor: Colors.transparent,
-              insetPadding: const EdgeInsets.symmetric(horizontal: 24),
-              child: DrumPanel(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        'Build 4-Note',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Pick one triad, then choose one stroke to append.',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: DrumcabularyTheme.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 360),
-                        child: TriadMatrixGrid(
-                          controller: widget.controller,
-                          filters: const MatrixFiltersV1(
-                            lane: null,
-                            filters: <TriadMatrixFilterV1>{},
-                            selectedRows: <String>{},
-                            selectedColumns: <String>{},
-                          ),
-                          selection: MatrixSelectionStateV1(
-                            orderedItemIds: selectedItemId == null
-                                ? const <String>[]
-                                : <String>[selectedItemId!],
-                          ),
-                          showProgressColors: false,
-                          axisSelectionEnabled: false,
-                          onToggleRow: (_) {},
-                          onToggleColumn: (_) {},
-                          onTapItem: (String itemId) {
-                            setModalState(() {
-                              selectedItemId = selectedItemId == itemId
-                                  ? null
-                                  : itemId;
-                            });
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      const DrumEyebrow(text: 'Append'),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children:
-                            <PatternTokenV1>[
-                                  PatternTokenV1.right,
-                                  PatternTokenV1.left,
-                                  PatternTokenV1.kick,
-                                ]
-                                .map((PatternTokenV1 token) {
-                                  return DrumSelectablePill(
-                                    label: Text('+${token.symbol}'),
-                                    selected: appendedToken == token,
-                                    onPressed: () {
-                                      setModalState(() {
-                                        appendedToken = token;
-                                      });
-                                    },
-                                  );
-                                })
-                                .toList(growable: false),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: <Widget>[
-                          TextButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            child: const Text('Cancel'),
-                          ),
-                          const SizedBox(width: 8),
-                          FilledButton(
-                            onPressed: !canInsert
-                                ? null
-                                : () {
-                                    final List<PatternTokenV1> triadTokens =
-                                        widget.controller
-                                            .itemById(selectedItemId!)
-                                            .tokens;
-                                    Navigator.of(context).pop(<PatternTokenV1>[
-                                      ...triadTokens,
-                                      appendedToken!,
-                                    ]);
-                                  },
-                            child: const Text('Insert'),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  PatternGroupingV1 _groupingAfterTriadStructureChange(
-    List<PatternTokenV1> nextTokens,
-  ) {
-    final bool canKeepTriadGrouping =
-        nextTokens.isNotEmpty &&
-        !nextTokens.any((PatternTokenV1 token) => token.isRest) &&
-        nextTokens.length % 3 == 0;
-    return canKeepTriadGrouping ? PatternGroupingV1.triads : _draftGrouping;
-  }
-
-  PatternGroupingV1 _groupingAfterFourNoteStructureChange(
-    List<PatternTokenV1> nextTokens,
-  ) {
-    final bool canKeepFourNoteGrouping =
-        nextTokens.isNotEmpty &&
-        !nextTokens.any((PatternTokenV1 token) => token.isRest) &&
-        nextTokens.length % 4 == 0;
-    return canKeepFourNoteGrouping
-        ? PatternGroupingV1.fourNote
-        : _draftGrouping;
-  }
-
-  _StructureGroupingRule? _groupingRuleForTool(_StructureToolOption? tool) {
-    return switch (tool) {
-      _StructureToolOption.triad => _StructureGroupingRule.triads,
-      _StructureToolOption.fourNote => _StructureGroupingRule.fourNote,
-      _ => null,
-    };
-  }
-
-  PatternGroupingV1 _groupingAfterStructureRule(
-    _StructureGroupingRule rule,
-    List<PatternTokenV1> nextTokens,
-  ) {
-    return switch (rule) {
-      _StructureGroupingRule.triads => _groupingAfterTriadStructureChange(
-        nextTokens,
-      ),
-      _StructureGroupingRule.fourNote => _groupingAfterFourNoteStructureChange(
-        nextTokens,
-      ),
-    };
   }
 
   Future<List<PatternTokenV1>?> _tokensForStructureTool(
@@ -962,240 +642,8 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         PatternTokenV1.accent,
       ],
       _StructureToolOption.rest => const <PatternTokenV1>[PatternTokenV1.rest],
-      _StructureToolOption.triad => _showTriadInsertDialog(),
-      _StructureToolOption.fourNote => _showFourNoteInsertDialog(),
       null => null,
     };
-  }
-
-  Future<void> _handleStructureToolChanged(_StructureToolOption? next) async {
-    if (next == null) {
-      setState(() {
-        _pendingStructureTool = null;
-      });
-      return;
-    }
-    if (_selectedNoteIndices.isEmpty) {
-      setState(() {
-        _pendingStructureTool = null;
-      });
-      final List<PatternTokenV1>? inserted = await _tokensForStructureTool(
-        next,
-      );
-      if (!mounted || inserted == null || inserted.isEmpty) return;
-      final _StructureGroupingRule? groupingRule = _groupingRuleForTool(next);
-      if (groupingRule != null) {
-        final List<PatternTokenV1> nextTokens = List<PatternTokenV1>.from(
-          _draftTokens,
-        )..addAll(inserted);
-        _appendTokens(
-          inserted,
-          groupingOverride: _groupingAfterStructureRule(
-            groupingRule,
-            nextTokens,
-          ),
-          groupingRule: groupingRule,
-        );
-      } else {
-        _appendTokens(inserted);
-      }
-      return;
-    }
-    setState(() {
-      _pendingStructureTool = next;
-    });
-  }
-
-  Future<void> _applyPendingAppend() async {
-    final List<PatternTokenV1>? appended = await _tokensForStructureTool(
-      _pendingStructureTool,
-    );
-    if (!mounted || appended == null || appended.isEmpty) return;
-    final _StructureGroupingRule? groupingRule = _groupingRuleForTool(
-      _pendingStructureTool,
-    );
-    if (groupingRule != null) {
-      final List<PatternTokenV1> nextTokens = List<PatternTokenV1>.from(
-        _draftTokens,
-      )..addAll(appended);
-      _appendTokens(
-        appended,
-        groupingOverride: _groupingAfterStructureRule(groupingRule, nextTokens),
-        groupingRule: groupingRule,
-      );
-      return;
-    }
-    _appendTokens(appended);
-  }
-
-  Future<void> _applyPendingInsertBefore() async {
-    final List<PatternTokenV1>? inserted = await _tokensForStructureTool(
-      _pendingStructureTool,
-    );
-    if (!mounted || inserted == null || inserted.isEmpty) return;
-    final _StructureGroupingRule? groupingRule = _groupingRuleForTool(
-      _pendingStructureTool,
-    );
-    if (groupingRule != null) {
-      final List<int> sortedSelection = _selectedNoteIndices.toList()..sort();
-      final int insertAt = sortedSelection.isEmpty
-          ? _draftTokens.length
-          : sortedSelection.first;
-      final List<PatternTokenV1> nextTokens = List<PatternTokenV1>.from(
-        _draftTokens,
-      )..insertAll(insertAt, inserted);
-      _insertTokens(
-        inserted,
-        beforeSelection: true,
-        groupingOverride: _groupingAfterStructureRule(groupingRule, nextTokens),
-        groupingRule: groupingRule,
-      );
-      return;
-    }
-    _insertTokens(inserted, beforeSelection: true);
-  }
-
-  Future<void> _applyPendingInsertAfter() async {
-    final List<PatternTokenV1>? inserted = await _tokensForStructureTool(
-      _pendingStructureTool,
-    );
-    if (!mounted || inserted == null || inserted.isEmpty) return;
-    final _StructureGroupingRule? groupingRule = _groupingRuleForTool(
-      _pendingStructureTool,
-    );
-    if (groupingRule != null) {
-      final List<int> sortedSelection = _selectedNoteIndices.toList()..sort();
-      final int insertAt = sortedSelection.isEmpty
-          ? _draftTokens.length
-          : sortedSelection.last + 1;
-      final List<PatternTokenV1> nextTokens = List<PatternTokenV1>.from(
-        _draftTokens,
-      )..insertAll(insertAt, inserted);
-      _insertTokens(
-        inserted,
-        beforeSelection: false,
-        groupingOverride: _groupingAfterStructureRule(groupingRule, nextTokens),
-        groupingRule: groupingRule,
-      );
-      return;
-    }
-    _insertTokens(inserted, beforeSelection: false);
-  }
-
-  Future<void> _applyPendingReplaceSelection() async {
-    if (_selectedNoteIndices.isEmpty) return;
-    final List<PatternTokenV1>? replacement = await _tokensForStructureTool(
-      _pendingStructureTool,
-    );
-    if (!mounted || replacement == null || replacement.isEmpty) return;
-    final _StructureGroupingRule? groupingRule = _groupingRuleForTool(
-      _pendingStructureTool,
-    );
-    final PatternGroupingV1? groupingOverride = groupingRule == null
-        ? null
-        : _groupingAfterStructureRule(
-            groupingRule,
-            _tokensAfterReplacingSelection(replacement),
-          );
-    _replaceSelectionWithTokens(
-      replacement,
-      groupingOverride: groupingOverride,
-      groupingRule: groupingRule,
-    );
-  }
-
-  Future<void> _repeatLastStructureAction() async {
-    final _RecordedStructureAction? lastAction = _lastStructureAction;
-    if (lastAction == null || lastAction.tokens.isEmpty) return;
-    final PatternGroupingV1? groupingOverride = lastAction.groupingRule == null
-        ? null
-        : _groupingAfterStructureRule(
-            lastAction.groupingRule!,
-            switch (lastAction.kind) {
-              _StructureActionKind.append => List<PatternTokenV1>.from(
-                _draftTokens,
-              )..addAll(lastAction.tokens),
-              _StructureActionKind.insertBefore => (() {
-                final List<int> sortedSelection = _selectedNoteIndices.toList()
-                  ..sort();
-                final int insertAt = sortedSelection.isEmpty
-                    ? _draftTokens.length
-                    : sortedSelection.first;
-                return List<PatternTokenV1>.from(_draftTokens)
-                  ..insertAll(insertAt, lastAction.tokens);
-              })(),
-              _StructureActionKind.insertAfter => (() {
-                final List<int> sortedSelection = _selectedNoteIndices.toList()
-                  ..sort();
-                final int insertAt = sortedSelection.isEmpty
-                    ? _draftTokens.length
-                    : sortedSelection.last + 1;
-                return List<PatternTokenV1>.from(_draftTokens)
-                  ..insertAll(insertAt, lastAction.tokens);
-              })(),
-              _StructureActionKind.replace => _tokensAfterReplacingSelection(
-                lastAction.tokens,
-              ),
-            },
-          );
-
-    switch (lastAction.kind) {
-      case _StructureActionKind.append:
-        _appendTokens(
-          lastAction.tokens,
-          groupingOverride: groupingOverride,
-          groupingRule: lastAction.groupingRule,
-          recordAction: false,
-        );
-        break;
-      case _StructureActionKind.insertBefore:
-        if (_selectedNoteIndices.isEmpty) return;
-        _insertTokens(
-          lastAction.tokens,
-          beforeSelection: true,
-          groupingOverride: groupingOverride,
-          groupingRule: lastAction.groupingRule,
-          recordAction: false,
-        );
-        break;
-      case _StructureActionKind.insertAfter:
-        if (_selectedNoteIndices.isEmpty) return;
-        _insertTokens(
-          lastAction.tokens,
-          beforeSelection: false,
-          groupingOverride: groupingOverride,
-          groupingRule: lastAction.groupingRule,
-          recordAction: false,
-        );
-        break;
-      case _StructureActionKind.replace:
-        if (_selectedNoteIndices.isEmpty) return;
-        _replaceSelectionWithTokens(
-          lastAction.tokens,
-          groupingOverride: groupingOverride,
-          groupingRule: lastAction.groupingRule,
-          recordAction: false,
-        );
-        break;
-    }
-  }
-
-  List<PatternTokenV1> _tokensAfterReplacingSelection(
-    List<PatternTokenV1> replacement,
-  ) {
-    final List<int> sortedSelection = _selectedNoteIndices.toList()..sort();
-    if (sortedSelection.isEmpty) return List<PatternTokenV1>.from(_draftTokens);
-    final Set<int> selected = sortedSelection.toSet();
-    final int insertAt = sortedSelection.first;
-    final List<PatternTokenV1> nextTokens = <PatternTokenV1>[];
-    for (int index = 0; index < _draftTokens.length; index++) {
-      if (index == insertAt) {
-        nextTokens.addAll(replacement);
-      }
-      if (selected.contains(index)) continue;
-      nextTokens.add(_draftTokens[index]);
-    }
-    return nextTokens;
   }
 
   void _normalizeDraftStructure() {
@@ -1243,17 +691,6 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       growable: false,
     );
     _voiceAssignments = nextVoices;
-  }
-
-  void _clearVoices() {
-    setState(() {
-      _voiceAssignments = List<DrumVoiceV1>.generate(_draftTokens.length, (
-        int index,
-      ) {
-        return _defaultVoiceForDraftToken(_draftTokens[index]);
-      });
-      _selectedNoteIndices = <int>{};
-    });
   }
 
   bool _hasUnsavedChanges(PracticeItemV1 item) {
@@ -1314,6 +751,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       timerPreset: _timerPreset,
     );
     _loadDraftFromController();
+    _syncPatternTextFromDraft();
     setState(() {});
   }
 
@@ -1344,464 +782,168 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   }
 }
 
-class _SelectableNotationBlock extends StatelessWidget {
-  static const double _rendererCellWidthInput = 38;
-
-  final List<String> tokens;
-  final List<PatternNoteMarkingV1> markings;
-  final List<DrumVoiceV1> voices;
-  final PatternGroupingV1 grouping;
+class _SelectedSheetNoteEditor extends StatelessWidget {
+  final List<DrumSheetNotationNote> notes;
   final Set<int> selectedIndices;
-  final bool showVoices;
-  final ValueChanged<int> onSelect;
-
-  const _SelectableNotationBlock({
-    required this.tokens,
-    required this.markings,
-    required this.voices,
-    required this.grouping,
-    required this.selectedIndices,
-    required this.showVoices,
-    required this.onSelect,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final TextStyle patternStyle =
-        Theme.of(context).textTheme.headlineMedium?.copyWith(
-          fontWeight: FontWeight.w900,
-          letterSpacing: -0.5,
-        ) ??
-        const TextStyle(fontSize: 28, fontWeight: FontWeight.w900);
-    final TextStyle voiceStyle =
-        Theme.of(context).textTheme.titleSmall?.copyWith(
-          fontWeight: FontWeight.w800,
-          color: DrumcabularyTheme.textSecondary,
-        ) ??
-        const TextStyle(fontSize: 14, fontWeight: FontWeight.w800);
-    final List<double> outerCellWidths = List<double>.generate(
-      markings.length,
-      (int index) => PatternVoiceDisplay.tokenWidthForMarking(
-        markings[index],
-        patternStyle,
-        _rendererCellWidthInput,
-      ),
-      growable: false,
-    );
-    final double separatorSlotWidth =
-        PatternVoiceDisplay.separatorWidthForStyle(
-          patternStyle,
-          _rendererCellWidthInput,
-        );
-    final double tokenGapWidth = PatternVoiceDisplay.tokenGapWidthForStyle(
-      patternStyle,
-      _rendererCellWidthInput,
-    );
-    final List<String> separators = List<String>.generate(
-      tokens.length,
-      (int index) => grouping.separatorAfter(index, tokens.length),
-      growable: false,
-    );
-
-    return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-        final double maxWidth = constraints.maxWidth.isFinite
-            ? constraints.maxWidth
-            : double.infinity;
-        if (tokens.isEmpty) {
-          final double patternRowHeight = (patternStyle.fontSize ?? 28) * 1.35;
-          return Align(
-            alignment: Alignment.centerLeft,
-            child: Container(
-              width: maxWidth.isFinite ? maxWidth : 180,
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0x1F000000)),
-              ),
-              child: SizedBox(height: patternRowHeight),
-            ),
-          );
-        }
-        final List<_NotationChunk> chunks = _chunksForWidth(
-          maxWidth,
-          outerCellWidths,
-          separators,
-          separatorSlotWidth: separatorSlotWidth,
-          tokenGapWidth: tokenGapWidth,
-        );
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            for (int i = 0; i < chunks.length; i++) ...<Widget>[
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  for (
-                    int index = chunks[i].start;
-                    index < chunks[i].end;
-                    index++
-                  ) ...<Widget>[
-                    _SelectableNotationCell(
-                      token: tokens[index],
-                      marking: markings[index],
-                      voice: voices[index],
-                      selected: selectedIndices.contains(index),
-                      enabled: true,
-                      showVoice: showVoices,
-                      patternStyle: patternStyle,
-                      voiceStyle: voiceStyle,
-                      outerCellWidth: outerCellWidths[index],
-                      innerCellWidth: _rendererCellWidthInput,
-                      onTap: () => onSelect(index),
-                    ),
-                    if (separators[index].isNotEmpty)
-                      _SelectableSeparatorCell(
-                        separator: separators[index],
-                        showVoice: showVoices,
-                        patternStyle: patternStyle,
-                        voiceStyle: voiceStyle,
-                        width: separatorSlotWidth,
-                      ),
-                    if (index < chunks[i].end - 1)
-                      SizedBox(width: tokenGapWidth),
-                  ],
-                ],
-              ),
-              if (i < chunks.length - 1) const SizedBox(height: 10),
-            ],
-          ],
-        );
-      },
-    );
-  }
-
-  List<_NotationChunk> _chunksForWidth(
-    double maxWidth,
-    List<double> outerCellWidths,
-    List<String> separators, {
-    required double separatorSlotWidth,
-    required double tokenGapWidth,
-  }) {
-    if (!maxWidth.isFinite || maxWidth <= 0) {
-      return <_NotationChunk>[_NotationChunk(start: 0, end: tokens.length)];
-    }
-    final List<_NotationChunk> chunks = <_NotationChunk>[];
-    int start = 0;
-    while (start < tokens.length) {
-      double width = 0;
-      int end = start;
-      while (end < tokens.length) {
-        final double nextWidth =
-            outerCellWidths[end] +
-            (separators[end].isNotEmpty ? separatorSlotWidth : 0) +
-            (end < tokens.length - 1 ? tokenGapWidth : 0);
-        if (end > start && width + nextWidth > maxWidth) break;
-        width += nextWidth;
-        end++;
-      }
-      if (end == start) end++;
-      chunks.add(_NotationChunk(start: start, end: end));
-      start = end;
-    }
-    return chunks;
-  }
-}
-
-class _SelectableNotationCell extends StatelessWidget {
-  static const Duration _selectionAnimationDuration = Duration(
-    milliseconds: 120,
-  );
-  static const double _selectionVerticalPadding = 4;
-  static const double _selectionBorderRadius = 12;
-
-  final String token;
-  final PatternNoteMarkingV1 marking;
-  final DrumVoiceV1 voice;
-  final bool selected;
-  final bool enabled;
-  final bool showVoice;
-  final TextStyle patternStyle;
-  final TextStyle voiceStyle;
-  final double outerCellWidth;
-  final double innerCellWidth;
-  final VoidCallback onTap;
-
-  const _SelectableNotationCell({
-    required this.token,
-    required this.marking,
-    required this.voice,
-    required this.selected,
-    required this.enabled,
-    required this.showVoice,
-    required this.patternStyle,
-    required this.voiceStyle,
-    required this.outerCellWidth,
-    required this.innerCellWidth,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(_selectionBorderRadius),
-        onTap: enabled ? onTap : null,
-        child: AnimatedContainer(
-          duration: _selectionAnimationDuration,
-          width: outerCellWidth,
-          padding: const EdgeInsets.symmetric(
-            vertical: _selectionVerticalPadding,
-          ),
-          decoration: BoxDecoration(
-            color: selected ? const Color(0xFFE7D6A8) : Colors.transparent,
-            borderRadius: BorderRadius.circular(_selectionBorderRadius),
-            border: Border.all(
-              color: selected
-                  ? const Color(0xFF8E6B1F)
-                  : (enabled ? Colors.transparent : const Color(0x14000000)),
-            ),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              PatternVoiceDisplay(
-                tokens: <PatternTokenV1>[PatternTokenV1.fromSymbol(token)],
-                markings: <PatternNoteMarkingV1>[marking],
-                voices: <DrumVoiceV1>[voice],
-                patternStyle: patternStyle,
-                voiceStyle: voiceStyle,
-                cellWidth: innerCellWidth,
-                scrollable: false,
-                wrap: false,
-                grouping: PatternGroupingV1.none,
-                showVoiceRow: showVoice,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SelectableSeparatorCell extends StatelessWidget {
-  final String separator;
-  final bool showVoice;
-  final TextStyle patternStyle;
-  final TextStyle voiceStyle;
-  final double width;
-
-  const _SelectableSeparatorCell({
-    required this.separator,
-    required this.showVoice,
-    required this.patternStyle,
-    required this.voiceStyle,
-    required this.width,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final double patternRowHeight = (patternStyle.fontSize ?? 28) * 1.35;
-    final double voiceRowHeight = (voiceStyle.fontSize ?? 14) * 1.25;
-
-    return SizedBox(
-      width: width,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            SizedBox(
-              height: patternRowHeight,
-              child: Center(
-                child: Text(
-                  separator,
-                  style: patternStyle.copyWith(color: const Color(0xFF6B6254)),
-                ),
-              ),
-            ),
-            if (showVoice) ...<Widget>[
-              const SizedBox(height: 6),
-              SizedBox(height: voiceRowHeight),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _StructureEditor extends StatelessWidget {
-  final List<PatternTokenV1> tokens;
-  final Set<int> selectedIndices;
-  final _StructureToolOption? selectedTool;
-  final _RecordedStructureAction? lastAction;
-  final ValueChanged<_StructureToolOption?> onToolChanged;
-  final Future<void> Function() onAppend;
-  final Future<void> Function() onInsertBefore;
-  final Future<void> Function() onInsertAfter;
-  final Future<void> Function() onReplaceSelection;
+  final DrumSheetNoteValue subdivision;
+  final ValueChanged<DrumSheetNoteValue?> onDurationChanged;
+  final ValueChanged<DrumSheetVoice?> onVoiceChanged;
+  final VoidCallback onToggleAccent;
+  final VoidCallback onToggleGhost;
   final VoidCallback onDeleteSelection;
-  final VoidCallback onClearPattern;
-  final Future<void> Function() onRepeatLastAction;
 
-  const _StructureEditor({
-    required this.tokens,
+  const _SelectedSheetNoteEditor({
+    required this.notes,
     required this.selectedIndices,
-    required this.selectedTool,
-    required this.lastAction,
-    required this.onToolChanged,
-    required this.onAppend,
-    required this.onInsertBefore,
-    required this.onInsertAfter,
-    required this.onReplaceSelection,
+    required this.subdivision,
+    required this.onDurationChanged,
+    required this.onVoiceChanged,
+    required this.onToggleAccent,
+    required this.onToggleGhost,
     required this.onDeleteSelection,
-    required this.onClearPattern,
-    required this.onRepeatLastAction,
   });
 
   @override
   Widget build(BuildContext context) {
-    final List<int> sortedSelection = selectedIndices.toList()..sort();
-    final bool hasSelection = sortedSelection.isNotEmpty;
-    final bool hasTool = selectedTool != null;
-    final bool canAppend = hasTool;
-    final bool canInsert = hasSelection && hasTool;
-    final bool canDelete = hasSelection && !hasTool;
-    final bool canClearPattern = tokens.isNotEmpty;
-    final bool canReplace = hasSelection && hasTool;
-    final bool canRepeat = switch (lastAction?.kind) {
-      _StructureActionKind.append => true,
-      _StructureActionKind.insertBefore ||
-      _StructureActionKind.insertAfter ||
-      _StructureActionKind.replace => hasSelection,
-      null => false,
-    };
-    final String summary = switch ((hasSelection, selectedTool)) {
-      (false, null) =>
-        'No position selected. Tap a stroke to append it to the pattern.',
-      (false, _) =>
-        'No position selected. Tapping a stroke appends it automatically.',
-      (true, null) =>
-        sortedSelection.length == 1
-            ? 'Position ${sortedSelection.first + 1} selected · ${tokens[sortedSelection.first].symbol}. Choose a stroke source or delete the selection.'
-            : '${sortedSelection.length} positions selected. Choose a stroke source or delete the selected positions.',
-      (true, _) =>
-        '${sortedSelection.length} position${sortedSelection.length == 1 ? '' : 's'} selected · ${_labelForTool(selectedTool!)} ready.',
-    };
+    final List<int> selected = selectedIndices.toList()..sort();
+    final bool hasSelection = selected.isNotEmpty;
+    final List<DrumSheetNotationNote> selectedNotes = selected
+        .where((int index) => index >= 0 && index < notes.length)
+        .map((int index) => notes[index])
+        .toList(growable: false);
+    final DrumSheetNoteValue? selectedDuration = _singleSelectedDuration(
+      selectedNotes,
+    );
+    final DrumSheetVoice? selectedVoice = _singleSelectedVoice(selectedNotes);
+    final bool allAccented =
+        selectedNotes.isNotEmpty &&
+        selectedNotes.every((DrumSheetNotationNote note) => note.accent);
+    final bool allGhosted =
+        selectedNotes.isNotEmpty &&
+        selectedNotes.every((DrumSheetNotationNote note) => note.ghost);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Text(
-          summary,
+          hasSelection
+              ? '${selected.length} note${selected.length == 1 ? '' : 's'} selected'
+              : 'Select notes to edit duration, voice, accent, ghost, or delete.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: DrumcabularyTheme.textSecondary,
             fontWeight: FontWeight.w700,
           ),
         ),
-        const SizedBox(height: 12),
-        const DrumEyebrow(text: 'Strokes'),
-        const SizedBox(height: 8),
-        DrumHorizontalControlStrip(
-          child: Row(
-            children: _StructureToolOption.values
-                .map(
-                  (_StructureToolOption tool) => Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: DrumSelectablePill(
-                      label: Text(
-                        _labelForTool(tool),
-                        style: TextStyle(
-                          color: selectedTool == tool ? Colors.white : null,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      selected: selectedTool == tool,
-                      onPressed: () {
-                        onToolChanged(selectedTool == tool ? null : tool);
-                      },
-                    ),
+        if (hasSelection) ...<Widget>[
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: <Widget>[
+              DropdownButton<DrumSheetNoteValue?>(
+                value: selectedDuration,
+                hint: const Text('Duration'),
+                onChanged: onDurationChanged,
+                items: <DropdownMenuItem<DrumSheetNoteValue?>>[
+                  const DropdownMenuItem<DrumSheetNoteValue?>(
+                    value: null,
+                    child: Text('Default'),
                   ),
-                )
-                .toList(growable: false),
+                  for (final DrumSheetNoteValue value
+                      in DrumSheetNoteValue.values)
+                    DropdownMenuItem<DrumSheetNoteValue?>(
+                      value: value,
+                      child: Text('1/${value.patternLabel}'),
+                    ),
+                ],
+              ),
+              DropdownButton<DrumSheetVoice?>(
+                value: selectedVoice,
+                hint: const Text('Voice'),
+                onChanged: onVoiceChanged,
+                items: const <DropdownMenuItem<DrumSheetVoice?>>[
+                  DropdownMenuItem<DrumSheetVoice?>(
+                    value: null,
+                    child: Text('Default'),
+                  ),
+                  DropdownMenuItem<DrumSheetVoice?>(
+                    value: DrumSheetVoice.snare,
+                    child: Text('Snare'),
+                  ),
+                  DropdownMenuItem<DrumSheetVoice?>(
+                    value: DrumSheetVoice.tom1,
+                    child: Text('Tom 1'),
+                  ),
+                  DropdownMenuItem<DrumSheetVoice?>(
+                    value: DrumSheetVoice.tom2,
+                    child: Text('Tom 2'),
+                  ),
+                  DropdownMenuItem<DrumSheetVoice?>(
+                    value: DrumSheetVoice.floorTom,
+                    child: Text('Floor tom'),
+                  ),
+                  DropdownMenuItem<DrumSheetVoice?>(
+                    value: DrumSheetVoice.hihat,
+                    child: Text('Hi-hat'),
+                  ),
+                  DropdownMenuItem<DrumSheetVoice?>(
+                    value: DrumSheetVoice.crash,
+                    child: Text('Crash'),
+                  ),
+                  DropdownMenuItem<DrumSheetVoice?>(
+                    value: DrumSheetVoice.ride,
+                    child: Text('Ride'),
+                  ),
+                  DropdownMenuItem<DrumSheetVoice?>(
+                    value: DrumSheetVoice.kick,
+                    child: Text('Kick'),
+                  ),
+                ],
+              ),
+              OutlinedButton(
+                onPressed: onToggleAccent,
+                child: Text(allAccented ? 'Remove Accent' : 'Accent'),
+              ),
+              OutlinedButton(
+                onPressed: onToggleGhost,
+                child: Text(allGhosted ? 'Remove Ghost' : 'Ghost'),
+              ),
+              OutlinedButton(
+                onPressed: onDeleteSelection,
+                child: const Text('Delete'),
+              ),
+            ],
           ),
-        ),
-        const SizedBox(height: 8),
-        const DrumEyebrow(text: 'Actions'),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: <Widget>[
-            _TokenActionPill(
-              label: 'Append',
-              onPressed: canAppend
-                  ? () {
-                      onAppend();
-                    }
-                  : null,
-            ),
-            _TokenActionPill(
-              label: 'Repeat',
-              onPressed: canRepeat
-                  ? () {
-                      onRepeatLastAction();
-                    }
-                  : null,
-            ),
-            _TokenActionPill(
-              label: 'Insert Before',
-              onPressed: canInsert
-                  ? () {
-                      onInsertBefore();
-                    }
-                  : null,
-            ),
-            _TokenActionPill(
-              label: 'Insert After',
-              onPressed: canInsert
-                  ? () {
-                      onInsertAfter();
-                    }
-                  : null,
-            ),
-            _TokenActionPill(
-              label: 'Replace',
-              onPressed: canReplace
-                  ? () {
-                      onReplaceSelection();
-                    }
-                  : null,
-            ),
-            _TokenActionPill(
-              label: 'Delete',
-              onPressed: canDelete ? onDeleteSelection : null,
-            ),
-            _TokenActionPill(
-              label: 'Clear Pattern',
-              onPressed: canClearPattern ? onClearPattern : null,
-            ),
-          ],
-        ),
+        ],
       ],
     );
   }
 
-  String _labelForTool(_StructureToolOption tool) {
-    return switch (tool) {
-      _StructureToolOption.right => 'R',
-      _StructureToolOption.left => 'L',
-      _StructureToolOption.kick => 'K',
-      _StructureToolOption.flam => 'F',
-      _StructureToolOption.both => 'B',
-      _StructureToolOption.accent => 'X',
-      _StructureToolOption.rest => 'Rest',
-      _StructureToolOption.triad => 'Triad',
-      _StructureToolOption.fourNote => '4-Note',
-    };
+  DrumSheetNoteValue? _singleSelectedDuration(
+    List<DrumSheetNotationNote> selectedNotes,
+  ) {
+    if (selectedNotes.isEmpty) return null;
+    final Set<DrumSheetNoteValue?> values = selectedNotes
+        .map((DrumSheetNotationNote note) => note.value)
+        .toSet();
+    if (values.length != 1) return null;
+    final DrumSheetNoteValue? value = values.single;
+    return value == subdivision ? null : value;
+  }
+
+  DrumSheetVoice? _singleSelectedVoice(
+    List<DrumSheetNotationNote> selectedNotes,
+  ) {
+    if (selectedNotes.isEmpty) return null;
+    final Set<DrumSheetVoice?> values = selectedNotes.map((
+      DrumSheetNotationNote note,
+    ) {
+      if (note.voices.length != 1) return null;
+      return note.voices.single;
+    }).toSet();
+    if (values.length != 1) return null;
+    return values.single;
   }
 }
 
@@ -1881,235 +1023,4 @@ class _GroupingOption {
     required this.grouping,
     required this.enabled,
   });
-}
-
-class _TokenActionPill extends StatelessWidget {
-  final String label;
-  final VoidCallback? onPressed;
-
-  const _TokenActionPill({required this.label, this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    return DrumSelectablePill(
-      label: Text(label),
-      selected: false,
-      onPressed: onPressed,
-    );
-  }
-}
-
-class _SelectedMarkingEditor extends StatelessWidget {
-  final List<String> tokens;
-  final List<PatternNoteMarkingV1> markings;
-  final Set<int> selectedIndices;
-  final ValueChanged<PatternNoteMarkingV1> onChanged;
-
-  const _SelectedMarkingEditor({
-    required this.tokens,
-    required this.markings,
-    required this.selectedIndices,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final List<int> editableIndices = selectedIndices
-        .where((int index) => tokens[index] != 'K' && tokens[index] != '_')
-        .toList(growable: false);
-    final List<int> sortedIndices = editableIndices..sort();
-    final Set<PatternNoteMarkingV1> currentValues = sortedIndices
-        .map((int index) => markings[index])
-        .toSet();
-    final PatternNoteMarkingV1? current = currentValues.length == 1
-        ? currentValues.first
-        : null;
-    final bool enabled = sortedIndices.isNotEmpty;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(
-          _selectionLabel(selectedIndices, sortedIndices, tokens, current),
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: DrumcabularyTheme.textSecondary,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: PatternNoteMarkingV1.values
-              .map(
-                (PatternNoteMarkingV1 option) => DrumSelectablePill(
-                  label: Text(_markingOptionLabel(option)),
-                  selected: current != null && current == option,
-                  onPressed: enabled ? () => onChanged(option) : null,
-                ),
-              )
-              .toList(growable: false),
-        ),
-      ],
-    );
-  }
-
-  static String _markingOptionLabel(PatternNoteMarkingV1 marking) {
-    return switch (marking) {
-      PatternNoteMarkingV1.normal => 'Normal',
-      PatternNoteMarkingV1.accent => 'Accent',
-      PatternNoteMarkingV1.ghost => 'Ghost',
-    };
-  }
-
-  static String _markingLabel(String token, PatternNoteMarkingV1 marking) {
-    return switch (marking) {
-      PatternNoteMarkingV1.normal => token,
-      PatternNoteMarkingV1.accent => '^$token',
-      PatternNoteMarkingV1.ghost => '($token)',
-    };
-  }
-
-  static String _selectionLabel(
-    Set<int> allSelectedIndices,
-    List<int> indices,
-    List<String> tokens,
-    PatternNoteMarkingV1? current,
-  ) {
-    if (allSelectedIndices.isEmpty) {
-      return 'No hand notes selected';
-    }
-    if (indices.isEmpty) {
-      return 'Selection has no editable hand notes';
-    }
-    final String positions = indices
-        .map((int index) => '${index + 1}')
-        .join(', ');
-    if (indices.length == 1) {
-      final String token = tokens[indices.first];
-      return current == null
-          ? 'Note ${indices.first + 1} · $token'
-          : 'Note ${indices.first + 1} · ${_markingLabel(token, current)}';
-    }
-    if (current == null) {
-      return '${indices.length} notes selected · $positions';
-    }
-    return '${indices.length} notes selected · ${_markingOptionLabel(current)}';
-  }
-}
-
-class _SelectedVoiceEditor extends StatelessWidget {
-  final List<String> tokens;
-  final List<DrumVoiceV1> voices;
-  final Set<int> selectedIndices;
-  final ValueChanged<DrumVoiceV1> onChanged;
-
-  const _SelectedVoiceEditor({
-    required this.tokens,
-    required this.voices,
-    required this.selectedIndices,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final List<int> editableIndices = selectedIndices
-        .where(
-          (int index) =>
-              PatternTokenV1.fromSymbol(tokens[index]).allowsAuthoredVoice,
-        )
-        .toList(growable: false);
-    final List<int> sortedIndices = editableIndices..sort();
-    final Set<DrumVoiceV1> currentValues = sortedIndices
-        .map((int index) => voices[index])
-        .toSet();
-    final DrumVoiceV1? current = currentValues.length == 1
-        ? currentValues.first
-        : null;
-    final bool enabled = sortedIndices.isNotEmpty;
-
-    const List<DrumVoiceV1> options = <DrumVoiceV1>[
-      DrumVoiceV1.snare,
-      DrumVoiceV1.rackTom,
-      DrumVoiceV1.tom2,
-      DrumVoiceV1.floorTom,
-      DrumVoiceV1.hihat,
-    ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(
-          _selectionLabel(selectedIndices, sortedIndices, current),
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: DrumcabularyTheme.textSecondary,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: options
-              .map(
-                (DrumVoiceV1 option) => DrumSelectablePill(
-                  label: Text(option.shortLabel),
-                  selected: current != null && current == option,
-                  onPressed: enabled ? () => onChanged(option) : null,
-                ),
-              )
-              .toList(growable: false),
-        ),
-      ],
-    );
-  }
-
-  static String _selectionLabel(
-    Set<int> allSelectedIndices,
-    List<int> editableIndices,
-    DrumVoiceV1? current,
-  ) {
-    if (allSelectedIndices.isEmpty) {
-      return 'No hand notes selected';
-    }
-    if (editableIndices.isEmpty) {
-      return 'Selection has no editable hand notes';
-    }
-    return current == null
-        ? '${editableIndices.length} notes selected'
-        : '${editableIndices.length} notes selected · ${current.shortLabel}';
-  }
-}
-
-class _NotationChunk {
-  final int start;
-  final int end;
-
-  const _NotationChunk({required this.start, required this.end});
-}
-
-class _FlowReadinessNote extends StatelessWidget {
-  final bool ready;
-
-  const _FlowReadinessNote({required this.ready});
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: ready ? const Color(0xFFDDEDDD) : const Color(0xFFF1ECE3),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0x22000000)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Text(
-          ready
-              ? 'The voices are set. Keep the sticking the same and let the voices do the moving.'
-              : 'Set at least one note off the snare before you treat this as flow.',
-          style: Theme.of(context).textTheme.bodyMedium,
-        ),
-      ),
-    );
-  }
 }

@@ -332,6 +332,8 @@ class PatternAudioService {
       DrumVoiceV1.rackTom => PatternAudioSampleV1.rackTom,
       DrumVoiceV1.tom2 => PatternAudioSampleV1.tom2,
       DrumVoiceV1.floorTom => PatternAudioSampleV1.floorTom,
+      DrumVoiceV1.crash => PatternAudioSampleV1.accentCrash,
+      DrumVoiceV1.ride => PatternAudioSampleV1.accentRide,
       DrumVoiceV1.kick => PatternAudioSampleV1.kick,
       DrumVoiceV1.snare => switch (marking) {
         PatternNoteMarkingV1.accent => PatternAudioSampleV1.snareAccent,
