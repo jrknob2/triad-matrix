@@ -6,7 +6,9 @@ import { toVexFlowDuration } from '../../web/sheet_notation/duration.js';
 import {
   demoDocument,
   documentFromPattern,
+  groupingFromPattern,
   patternFromNotes,
+  patternWithGrouping,
   renderDemoDrumNotationSvg,
 } from '../../web/sheet_notation/demo.js';
 import {
@@ -293,6 +295,26 @@ describe('svg rendering', () => {
     assert.deepEqual(
       notes.map((note) => note.value ?? document.subdivision),
       ['8n', '8n', '32n', '32n', '8n', '8n'],
+    );
+  });
+
+  test('top-level spaces define grouping without counting override spaces', () => {
+    assert.equal(groupingFromPattern('RLR LK'), '32');
+    assert.equal(groupingFromPattern('R [32:R L] KL'), '122');
+    assert.equal(groupingFromPattern('[T1:R L]'), null);
+  });
+
+  test('grouping labels rewrite pattern spaces', () => {
+    assert.equal(patternWithGrouping('RLRLK', '32'), 'RLR LK');
+    assert.equal(
+      patternWithGrouping('R[32:R L]KL', '122', { subdivision: '8n' }),
+      'R [32:R][32:L] KL',
+    );
+    assert.equal(
+      patternFromNotes(documentFromPattern('RLRLK').measures[0].notes, {
+        grouping: '23',
+      }),
+      'RL RLK',
     );
   });
 

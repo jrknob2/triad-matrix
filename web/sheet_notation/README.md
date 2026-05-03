@@ -24,6 +24,8 @@ Accent and ghost decorations can be placed inside or outside brackets when the r
 
 The demo also lets selected notes be assigned duration or voice overrides, which writes the same bracket syntax back into the pattern field.
 
+Top-level spaces in the demo pattern field define grouping for beaming and wrapping. For example, `RLR LK` renders as groups of 3 and 2 and updates the Beat grouping field to `32`. Editing the Beat grouping field rewrites the pattern spaces to match. Spaces inside override brackets, such as `[32:R L]`, remain part of the override expression and do not create top-level grouping.
+
 The browser demo includes an optional input legend for the current POC tokens.
 
 The default demo uses a shorter staff with compressed spacing:

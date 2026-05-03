@@ -41,8 +41,23 @@ export function documentFromPattern(pattern, options = {}) {
   };
 }
 
+export function groupingFromPattern(pattern, options = {}) {
+  const groups = topLevelPatternGroups(pattern)
+    .map((group) => notesFromPattern(group, { lenient: options.lenient }).length)
+    .filter((count) => count > 0);
+  return groups.length > 1 ? groupingLabelFor(groups) : null;
+}
+
 export function patternFromNotes(notes, options = {}) {
-  return notes.map((note) => patternTokenForNote(note, options)).join('');
+  const tokens = notes.map((note) => patternTokenForNote(note, options));
+  return joinTokensWithGrouping(tokens, options.grouping);
+}
+
+export function patternWithGrouping(pattern, grouping, options = {}) {
+  return patternFromNotes(
+    notesFromPattern(pattern, { lenient: options.lenient }),
+    { ...options, grouping },
+  );
 }
 
 export function notesFromPattern(pattern, options = {}) {
@@ -156,6 +171,68 @@ export function notesFromPattern(pattern, options = {}) {
     accent = false;
   }
   return notes;
+}
+
+function topLevelPatternGroups(pattern) {
+  const groups = [];
+  let current = '';
+  let bracketDepth = 0;
+  let parenDepth = 0;
+
+  for (let index = 0; index < pattern.length; index += 1) {
+    const char = pattern[index];
+    if (char === '[' && parenDepth === 0) bracketDepth += 1;
+    if (char === ']' && bracketDepth > 0 && parenDepth === 0) bracketDepth -= 1;
+    if (char === '(' && bracketDepth === 0) parenDepth += 1;
+    if (char === ')' && parenDepth > 0 && bracketDepth === 0) parenDepth -= 1;
+
+    if (/\s/.test(char) && bracketDepth === 0 && parenDepth === 0) {
+      if (current.trim().length > 0) groups.push(current);
+      current = '';
+      continue;
+    }
+    current += char;
+  }
+
+  if (current.trim().length > 0) groups.push(current);
+  return groups;
+}
+
+function joinTokensWithGrouping(tokens, grouping) {
+  const groups = groupingValuesFromLabel(grouping);
+  if (groups.length === 0 || tokens.length === 0) return tokens.join('');
+
+  const parts = [];
+  let index = 0;
+  let groupIndex = 0;
+  while (index < tokens.length) {
+    const size = groups[groupIndex % groups.length];
+    parts.push(tokens.slice(index, index + size).join(''));
+    index += size;
+    groupIndex += 1;
+  }
+  return parts.join(' ');
+}
+
+function groupingValuesFromLabel(grouping) {
+  if (Array.isArray(grouping)) {
+    return grouping
+      .map((value) => Number(value))
+      .filter((value) => Number.isInteger(value) && value > 0);
+  }
+  if (typeof grouping !== 'string') return [];
+  const trimmed = grouping.trim();
+  if (trimmed.length === 0) return [];
+  const parts = /^\d+$/.test(trimmed) ? [...trimmed] : trimmed.match(/\d+/g) ?? [];
+  return parts
+    .map((value) => Number(value))
+    .filter((value) => Number.isInteger(value) && value > 0);
+}
+
+function groupingLabelFor(groups) {
+  return groups.every((count) => count > 0 && count < 10)
+    ? groups.join('')
+    : groups.join(' ');
 }
 
 function overrideFromLabel(label) {
