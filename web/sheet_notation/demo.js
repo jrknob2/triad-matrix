@@ -47,7 +47,7 @@ export function patternFromNotes(notes, options = {}) {
 
 export function notesFromPattern(pattern, options = {}) {
   const notes = [];
-  let accent = false;
+  let accent = options.initialAccent === true;
   const defaultValue = options.value;
   const defaultVoices = options.voices;
   for (let index = 0; index < pattern.length; index += 1) {
@@ -72,12 +72,26 @@ export function notesFromPattern(pattern, options = {}) {
         }
         throw new Error('Empty ghost note group.');
       }
-      notes.push(noteFromToken(symbol, {
-        accent,
-        ghost: true,
+      if (accent) {
+        throw new Error('Ghost notes cannot be accented.');
+      }
+      const ghostNotes = notesFromPattern(symbol, {
+        lenient: options.lenient,
         value: defaultValue,
         voices: defaultVoices,
-      }));
+      });
+      if (ghostNotes.length !== 1) {
+        if (options.lenient) {
+          accent = false;
+          index = close;
+          continue;
+        }
+        throw new Error('Ghost note groups must contain exactly one note.');
+      }
+      if (ghostNotes[0].accent) {
+        throw new Error('Ghost notes cannot be accented.');
+      }
+      notes.push({ ...ghostNotes[0], ghost: true });
       accent = false;
       index = close;
       continue;
@@ -110,6 +124,7 @@ export function notesFromPattern(pattern, options = {}) {
         throw error;
       }
       notes.push(...notesFromPattern(body.slice(separator + 1), {
+        initialAccent: accent,
         lenient: options.lenient,
         value: override.value ?? defaultValue,
         voices: override.voices ?? defaultVoices,
@@ -256,6 +271,9 @@ function noteFromToken(symbol, options = {}) {
 }
 
 function patternTokenForNote(note, options = {}) {
+  if (note.ghost && note.accent) {
+    throw new Error('Ghost notes cannot be accented.');
+  }
   const base = basePatternTokenForNote(note);
   const marked = note.ghost ? `(${base})` : base;
   const token = note.accent ? `^${marked}` : marked;

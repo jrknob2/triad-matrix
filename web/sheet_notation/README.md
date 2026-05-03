@@ -20,6 +20,8 @@ The default rhythmic subdivision is eighth notes (`8n`). Individual notes can st
 
 Limb/sticking and drum voice are separate. `R` and `L` default to snare, but bracket overrides can assign another voice without changing the sticking label: `[T1:L]` renders left-hand sticking on tom 1. Duration and voice can be combined with the same syntax, for example `[T2 16:R]`.
 
+Accent and ghost decorations can be placed inside or outside brackets when the result is musically valid: `^[T1:R]`, `[T1:^R]`, `[T1:(L)]`, and `([T1:L])` are valid. Accented ghost notes are intentionally invalid, so `^(L)`, `^[T1:(L)]`, and `[T1:^(L)]` are rejected.
+
 The demo also lets selected notes be assigned duration or voice overrides, which writes the same bracket syntax back into the pattern field.
 
 The browser demo includes an optional input legend for the current POC tokens.

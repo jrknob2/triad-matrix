@@ -320,6 +320,53 @@ describe('svg rendering', () => {
     );
   });
 
+  test('accent decoration works inside or outside brackets', () => {
+    const notes = documentFromPattern('^[T1:R][T2:^L]').measures[0].notes;
+
+    assert.deepEqual(
+      notes.map((note) => ({
+        sticking: note.sticking,
+        voices: note.voices,
+        accent: note.accent,
+      })),
+      [
+        { sticking: 'R', voices: ['tom1'], accent: true },
+        { sticking: 'L', voices: ['tom2'], accent: true },
+      ],
+    );
+  });
+
+  test('ghost decoration works inside or outside brackets', () => {
+    const notes = documentFromPattern('[T1:(L)]([T2:R])').measures[0].notes;
+
+    assert.deepEqual(
+      notes.map((note) => ({
+        sticking: note.sticking,
+        voices: note.voices,
+        ghost: note.ghost,
+      })),
+      [
+        { sticking: 'L', voices: ['tom1'], ghost: true },
+        { sticking: 'R', voices: ['tom2'], ghost: true },
+      ],
+    );
+  });
+
+  test('accented ghost notes are invalid', () => {
+    assert.throws(
+      () => documentFromPattern('^(L)'),
+      /Ghost notes cannot be accented/,
+    );
+    assert.throws(
+      () => documentFromPattern('[T1:^(L)]'),
+      /Ghost notes cannot be accented/,
+    );
+    assert.throws(
+      () => documentFromPattern('^[T1:(L)]'),
+      /Ghost notes cannot be accented/,
+    );
+  });
+
   test('pattern input supports combined voice and duration overrides', () => {
     const notes = documentFromPattern('[T2 16:R][FT,32:L]').measures[0].notes;
 
@@ -376,6 +423,30 @@ describe('svg rendering', () => {
     assert.equal(
       patternFromNotes(overridden, { subdivision: '8n' }),
       'R[T1:L]',
+    );
+  });
+
+  test('pattern serialization writes accent and ghost decorations with overrides', () => {
+    const notes = documentFromPattern('R L').measures[0].notes;
+
+    assert.equal(
+      patternFromNotes(
+        [
+          { ...notes[0], voices: ['tom1'], accent: true },
+          { ...notes[1], voices: ['tom2'], ghost: true },
+        ],
+        { subdivision: '8n' },
+      ),
+      '[T1:^R][T2:(L)]',
+    );
+  });
+
+  test('pattern serialization rejects accented ghost notes', () => {
+    const notes = documentFromPattern('R').measures[0].notes;
+
+    assert.throws(
+      () => patternFromNotes([{ ...notes[0], accent: true, ghost: true }]),
+      /Ghost notes cannot be accented/,
     );
   });
 
