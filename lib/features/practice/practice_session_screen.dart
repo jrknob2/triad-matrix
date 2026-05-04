@@ -12,7 +12,7 @@ import '../../core/practice/practice_domain_v1.dart';
 import 'metronome_service.dart';
 import 'pattern_audio_service.dart';
 import 'pattern_playback_scheduler.dart';
-import 'widgets/pattern_voice_display.dart';
+import 'widgets/sheet_notation_display.dart';
 import 'session_summary_screen.dart';
 
 class PracticeSessionScreen extends StatefulWidget {
@@ -426,6 +426,14 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: <Widget>[
+                                if (!isWarmup) ...<Widget>[
+                                  _PatternAudioToggle(
+                                    patternAudioEnabled: _patternAudioEnabled,
+                                    onPatternAudioChanged:
+                                        _updatePatternAudioEnabled,
+                                  ),
+                                  const SizedBox(width: 10),
+                                ],
                                 if (_running) ...<Widget>[
                                   SizedBox(
                                     height: 48,
@@ -579,6 +587,13 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: <Widget>[
+                      if (!isWarmup) ...<Widget>[
+                        _PatternAudioToggle(
+                          patternAudioEnabled: _patternAudioEnabled,
+                          onPatternAudioChanged: _updatePatternAudioEnabled,
+                        ),
+                        const SizedBox(width: 10),
+                      ],
                       if (_running) ...<Widget>[
                         SizedBox(
                           height: 48,
@@ -671,22 +686,13 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     return Column(
       children: <Widget>[
         _PlayerNotation(
-          setup: _setup,
           isWarmup: isWarmup,
-          showVoices: widget.controller.hasNonSnareVoice(currentItemId),
-          grouping: widget.controller.displayGroupingFor(currentItemId),
+          item: widget.controller.itemById(currentItemId),
           tokens: tokens,
           markings: markings,
           voices: voices,
           activeTokenIndex: _patternHighlightEnabled ? activeTokenIndex : null,
         ),
-        if (!isWarmup) ...<Widget>[
-          const SizedBox(height: 10),
-          _PatternAudioToggle(
-            patternAudioEnabled: _patternAudioEnabled,
-            onPatternAudioChanged: _updatePatternAudioEnabled,
-          ),
-        ],
       ],
     );
   }
@@ -1708,20 +1714,16 @@ class _PulseGaugeRing extends StatelessWidget {
 }
 
 class _PlayerNotation extends StatelessWidget {
-  final PracticeSessionSetupV1 setup;
   final bool isWarmup;
-  final bool showVoices;
-  final PatternGroupingV1 grouping;
+  final PracticeItemV1 item;
   final List<PatternTokenV1> tokens;
   final List<PatternNoteMarkingV1> markings;
   final List<DrumVoiceV1> voices;
   final int? activeTokenIndex;
 
   const _PlayerNotation({
-    required this.setup,
     required this.isWarmup,
-    required this.showVoices,
-    required this.grouping,
+    required this.item,
     required this.tokens,
     required this.markings,
     required this.voices,
@@ -1730,64 +1732,141 @@ class _PlayerNotation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double fontSize = switch (tokens.length) {
-      >= 24 => 20,
-      >= 16 => 25,
-      >= 12 => 28,
-      _ => 31,
-    };
-    final TextStyle patternStyle =
-        Theme.of(context).textTheme.displaySmall?.copyWith(
-          color: DrumcabularyTheme.creamText,
-          fontWeight: FontWeight.w900,
-          fontSize: fontSize,
-          letterSpacing: 0.1,
-          fontFamily: 'Courier',
-          height: 1.0,
-        ) ??
-        const TextStyle(
-          color: DrumcabularyTheme.creamText,
-          fontWeight: FontWeight.w900,
-          fontSize: 31,
-          letterSpacing: 0.1,
-          fontFamily: 'Courier',
-          height: 1.0,
-        );
+    final DrumSheetNotationDocument document = DrumSheetNotationDocument(
+      subdivision: _sheetNoteValueForStoredValue(item.notationSubdivision),
+      measures: <DrumSheetNotationMeasure>[
+        DrumSheetNotationMeasure(
+          notes: List<DrumSheetNotationNote>.generate(tokens.length, (
+            int index,
+          ) {
+            return _sheetNoteForIndex(index);
+          }, growable: false),
+        ),
+      ],
+    );
+    final Set<int> selectedIndexes = activeTokenIndex == null
+        ? const <int>{}
+        : <int>{activeTokenIndex!};
+    final String? grouping = item.beatGrouping.trim().isNotEmpty
+        ? item.beatGrouping.trim()
+        : _sheetGroupingText(item.groupingHint);
 
-    final TextStyle voiceStyle =
-        Theme.of(context).textTheme.titleMedium?.copyWith(
-          color: DrumcabularyTheme.line,
-          fontWeight: FontWeight.w800,
-          fontFamily: 'Courier',
-        ) ??
-        const TextStyle(
-          color: DrumcabularyTheme.line,
-          fontWeight: FontWeight.w800,
-          fontSize: 16,
-          fontFamily: 'Courier',
-        );
-
-    return SizedBox(
-      width: double.infinity,
-      child: Center(
-        child: PatternVoiceDisplay(
-          tokens: tokens,
-          markings: markings,
-          voices: voices,
-          grouping: grouping,
-          showRepeatIndicator: false,
-          scrollable: false,
-          showPatternRow: true,
-          showVoiceRow: showVoices,
-          wrap: true,
-          cellWidth: tokens.length >= 24 ? 34 : (isWarmup ? 44 : 42),
-          patternStyle: patternStyle,
-          voiceStyle: voiceStyle,
-          activeIndex: activeTokenIndex,
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: ColoredBox(
+        color: DrumcabularyTheme.paper,
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: isWarmup ? 8 : 10,
+            vertical: 8,
+          ),
+          child: DrumSheetNotationDisplay(
+            document: document,
+            grouping: grouping,
+            selectedIndexes: selectedIndexes,
+            selectable: false,
+            finalRepeat: false,
+            minNoteWidth: tokens.length >= 24 ? 32 : 38,
+          ),
         ),
       ),
     );
   }
+
+  DrumSheetNotationNote _sheetNoteForIndex(int index) {
+    final PatternTokenV1 token = tokens[index];
+    final PatternNoteMarkingV1 marking = index < markings.length
+        ? markings[index]
+        : PatternNoteMarkingV1.normal;
+    final DrumVoiceV1 voice = index < voices.length
+        ? voices[index]
+        : _defaultVoiceForToken(token);
+    return DrumSheetNotationNote(
+      value: index < item.noteValueOverrides.length
+          ? _nullableSheetNoteValueForStoredValue(
+              item.noteValueOverrides[index],
+            )
+          : null,
+      voices: token.isRest
+          ? const <DrumSheetVoice>[]
+          : _sheetVoicesForToken(token, voice),
+      rest: token.isRest,
+      sticking: _stickingForToken(token),
+      accent: marking == PatternNoteMarkingV1.accent,
+      ghost: marking == PatternNoteMarkingV1.ghost,
+      flam: token.kind == PatternTokenKindV1.flam,
+    );
+  }
+}
+
+String? _sheetGroupingText(PatternGroupingV1 grouping) {
+  final int? groupSize = grouping.groupSize;
+  if (groupSize == null || groupSize <= 0) return null;
+  return '$groupSize';
+}
+
+DrumVoiceV1 _defaultVoiceForToken(PatternTokenV1 token) {
+  return token.isKick ? DrumVoiceV1.kick : DrumVoiceV1.snare;
+}
+
+String _stickingForToken(PatternTokenV1 token) {
+  return switch (token.kind) {
+    PatternTokenKindV1.right => 'R',
+    PatternTokenKindV1.left => 'L',
+    PatternTokenKindV1.kick => 'K',
+    PatternTokenKindV1.both => 'B',
+    PatternTokenKindV1.flam => 'F',
+    PatternTokenKindV1.accent => 'X',
+    PatternTokenKindV1.rest => '-',
+  };
+}
+
+List<DrumSheetVoice> _sheetVoicesForToken(
+  PatternTokenV1 token,
+  DrumVoiceV1 voice,
+) {
+  return switch (token.kind) {
+    PatternTokenKindV1.kick => const <DrumSheetVoice>[DrumSheetVoice.kick],
+    PatternTokenKindV1.both => const <DrumSheetVoice>[
+      DrumSheetVoice.hihat,
+      DrumSheetVoice.snare,
+    ],
+    PatternTokenKindV1.accent => const <DrumSheetVoice>[DrumSheetVoice.crash],
+    PatternTokenKindV1.flam => const <DrumSheetVoice>[DrumSheetVoice.snare],
+    PatternTokenKindV1.rest => const <DrumSheetVoice>[],
+    PatternTokenKindV1.right ||
+    PatternTokenKindV1.left => <DrumSheetVoice>[_sheetVoiceForDrumVoice(voice)],
+  };
+}
+
+DrumSheetVoice _sheetVoiceForDrumVoice(DrumVoiceV1 voice) {
+  return switch (voice) {
+    DrumVoiceV1.snare => DrumSheetVoice.snare,
+    DrumVoiceV1.rackTom => DrumSheetVoice.tom1,
+    DrumVoiceV1.tom2 => DrumSheetVoice.tom2,
+    DrumVoiceV1.floorTom => DrumSheetVoice.floorTom,
+    DrumVoiceV1.hihat => DrumSheetVoice.hihat,
+    DrumVoiceV1.crash => DrumSheetVoice.crash,
+    DrumVoiceV1.ride => DrumSheetVoice.ride,
+    DrumVoiceV1.kick => DrumSheetVoice.kick,
+  };
+}
+
+DrumSheetNoteValue? _nullableSheetNoteValueForStoredValue(
+  PatternNoteValueV1? value,
+) {
+  return value == null ? null : _sheetNoteValueForStoredValue(value);
+}
+
+DrumSheetNoteValue _sheetNoteValueForStoredValue(PatternNoteValueV1 value) {
+  return switch (value) {
+    PatternNoteValueV1.whole => DrumSheetNoteValue.whole,
+    PatternNoteValueV1.half => DrumSheetNoteValue.half,
+    PatternNoteValueV1.quarter => DrumSheetNoteValue.quarter,
+    PatternNoteValueV1.eighth => DrumSheetNoteValue.eighth,
+    PatternNoteValueV1.sixteenth => DrumSheetNoteValue.sixteenth,
+    PatternNoteValueV1.thirtySecond => DrumSheetNoteValue.thirtySecond,
+  };
 }
 
 class _PatternAudioToggle extends StatelessWidget {
