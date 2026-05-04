@@ -1754,7 +1754,7 @@ class _PlayerNotation extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(10),
       child: ColoredBox(
-        color: Colors.black,
+        color: DrumcabularyTheme.ink,
         child: Padding(
           padding: EdgeInsets.symmetric(
             horizontal: isWarmup ? 4 : 6,
@@ -1769,6 +1769,7 @@ class _PlayerNotation extends StatelessWidget {
             minNoteWidth: tokens.length >= 24 ? 28 : 32,
             compactLayout: true,
             darkTheme: true,
+            backgroundColor: DrumcabularyTheme.ink,
           ),
         ),
       ),

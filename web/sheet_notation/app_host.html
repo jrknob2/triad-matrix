@@ -14,14 +14,14 @@
       }
 
       #notation {
-        background: transparent;
+        background: var(--sheet-background-color, transparent);
         cursor: default;
         overflow: hidden;
         -webkit-tap-highlight-color: transparent;
       }
 
       #notation.dark {
-        background: #000;
+        background: var(--sheet-background-color, #17130f);
       }
 
       #notation svg {
@@ -32,7 +32,7 @@
       }
 
       #notation.dark svg {
-        background: #000;
+        background: var(--sheet-background-color, #17130f);
       }
 
       #notation.dark svg path,
@@ -86,7 +86,12 @@
             const selected = Array.isArray(payload.selectedIndexes)
               ? payload.selectedIndexes
               : [];
-            notation.classList.toggle('dark', payload.options?.theme === 'dark');
+            const isDark = payload.options?.theme === 'dark';
+            const backgroundColor =
+              payload.options?.backgroundColor ?? (isDark ? '#17130f' : 'transparent');
+            notation.classList.toggle('dark', isDark);
+            notation.style.setProperty('--sheet-background-color', backgroundColor);
+            document.body.style.background = backgroundColor;
             if (typeof globalThis.renderDrumNotationSvgWithMetadata !== 'function') {
               throw new Error('Drumcabulary sheet notation renderer did not load.');
             }
@@ -140,9 +145,24 @@
           }
         });
 
-        const nonRestNotes = renderedNotes.filter((note) => !note.rest);
+        const noteTargets = noteElements
+          .map((element) => {
+            const note = renderedNotes[Number(element.dataset.drumNoteIndex)];
+            if (note == null || note.rest) return null;
+            const bounds = svgBoundsFor(element);
+            if (bounds == null) return null;
+            return {
+              element,
+              note,
+              x: bounds.x + bounds.width / 2,
+              y: bounds.y + bounds.height / 2,
+            };
+          })
+          .filter(Boolean);
+
         [...svg.querySelectorAll('.vf-stem')].forEach((element, index) => {
-          const note = nonRestNotes[index];
+          const target = nearestNoteTarget(element, noteTargets);
+          const note = target?.note;
           if (note == null) return;
           element.dataset.drumNoteIndex = String(note.index);
           element.dataset.drumMeasureIndex = String(note.measureIndex);
@@ -171,6 +191,33 @@
           renderSelection();
           postSelection();
         });
+      }
+
+      function svgBoundsFor(element) {
+        try {
+          return element.getBBox();
+        } catch (_) {
+          return null;
+        }
+      }
+
+      function nearestNoteTarget(element, noteTargets) {
+        const bounds = svgBoundsFor(element);
+        if (bounds == null || noteTargets.length === 0) return null;
+        const x = bounds.x + bounds.width / 2;
+        const y = bounds.y + bounds.height / 2;
+        let nearest = null;
+        let nearestScore = Number.POSITIVE_INFINITY;
+        for (const target of noteTargets) {
+          const dx = x - target.x;
+          const dy = y - target.y;
+          const score = dx * dx + dy * dy * 4;
+          if (score < nearestScore) {
+            nearest = target;
+            nearestScore = score;
+          }
+        }
+        return nearest;
       }
 
       function renderSelection() {

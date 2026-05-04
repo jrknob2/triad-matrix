@@ -244,6 +244,7 @@ class DrumSheetNotationDisplay extends StatefulWidget {
   final double minNoteWidth;
   final bool compactLayout;
   final bool darkTheme;
+  final Color? backgroundColor;
   final bool debugUseNativeFallback;
 
   const DrumSheetNotationDisplay({
@@ -262,6 +263,7 @@ class DrumSheetNotationDisplay extends StatefulWidget {
     this.minNoteWidth = defaultMinNoteWidth,
     this.compactLayout = false,
     this.darkTheme = false,
+    this.backgroundColor,
     this.debugUseNativeFallback = false,
   });
 
@@ -498,6 +500,8 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay> {
         'grouping': widget.grouping,
         'minNoteWidth': widget.minNoteWidth,
         'theme': widget.darkTheme ? 'dark' : 'light',
+        if (widget.backgroundColor != null)
+          'backgroundColor': _cssColor(widget.backgroundColor!),
         if (widget.compactLayout) ...<String, Object?>{
           'staffY': 0,
           'staffHeight': 104,
@@ -527,6 +531,19 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay> {
     }
     return 10 + 126 + math.max(0, systems - 1) * 140;
   }
+}
+
+String _cssColor(Color color) {
+  final int argb = color.toARGB32();
+  final int alpha = (argb >> 24) & 0xff;
+  final int red = (argb >> 16) & 0xff;
+  final int green = (argb >> 8) & 0xff;
+  final int blue = argb & 0xff;
+  if (alpha == 0xff) {
+    final int rgb = argb & 0xffffff;
+    return '#${rgb.toRadixString(16).padLeft(6, '0')}';
+  }
+  return 'rgba($red, $green, $blue, ${(alpha / 255).toStringAsFixed(3)})';
 }
 
 Map<String, Object?> _documentJson(DrumSheetNotationDocument document) {
