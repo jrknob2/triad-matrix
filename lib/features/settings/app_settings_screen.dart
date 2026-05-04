@@ -158,6 +158,19 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                 });
               },
             ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Dark Sheet Music in Player'),
+              subtitle: const Text(
+                'Use white engraving on the dark practice player background.',
+              ),
+              value: _draft.darkPracticeSheetNotation,
+              onChanged: (bool value) {
+                setState(() {
+                  _draft = _draft.copyWith(darkPracticeSheetNotation: value);
+                });
+              },
+            ),
             const SizedBox(height: 12),
             DropdownButtonFormField<AccentVoiceV1>(
               initialValue: _draft.accentVoice,
@@ -292,7 +305,8 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
         _draft.defaultBpm != current.defaultBpm ||
         _draft.defaultTimerPreset != current.defaultTimerPreset ||
         _draft.clickEnabledByDefault != current.clickEnabledByDefault ||
-        _draft.accentVoice != current.accentVoice;
+        _draft.accentVoice != current.accentVoice ||
+        _draft.darkPracticeSheetNotation != current.darkPracticeSheetNotation;
   }
 
   void _saveDraft() {

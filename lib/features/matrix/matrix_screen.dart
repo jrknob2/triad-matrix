@@ -6,7 +6,7 @@ import '../../features/app/drumcabulary_theme.dart';
 import '../../features/app/drumcabulary_ui.dart';
 import '../app/app_viewport.dart';
 import '../../state/app_controller.dart';
-import '../practice/widgets/pattern_voice_display.dart';
+import '../practice/widgets/pattern_readout.dart';
 import '../practice/widgets/pattern_sequence_editor.dart';
 import 'widgets/triad_matrix_grid.dart';
 
@@ -782,7 +782,6 @@ class _MatrixPhrasePanel extends StatelessWidget {
           editingItemId: editingItemId,
         );
     final bool isEditingAuthoredItem = editingItemId != null;
-    final bool showPhraseVoices = phraseReadout.showVoices;
     final List<MatrixPhraseReadoutDataV1> phraseSegmentReadouts = controller
         .matrixPhraseSegmentReadoutsForSelection(
           selectedItemIds: selectedItemIds,
@@ -817,24 +816,25 @@ class _MatrixPhrasePanel extends StatelessWidget {
                   ),
                 )
               else ...<Widget>[
-                PatternVoiceDisplay(
-                  tokens: phraseReadout.tokens,
-                  markings: phraseReadout.markings,
-                  voices: phraseReadout.voices,
-                  grouping: PatternGroupingV1.triads,
+                PatternTextReadout(
+                  patternText: markedPatternTextForNotes(
+                    phraseReadout.tokens,
+                    phraseReadout.markings,
+                    grouping: PatternGroupingV1.none,
+                  ),
+                  metadataText: 'Grouping: Triads • Subdivision: 1/8',
                   scrollable: false,
                   wrap: true,
-                  showVoiceRow: showPhraseVoices,
-                  cellWidth: 28,
                   patternStyle: Theme.of(context).textTheme.titleLarge
                       ?.copyWith(
                         fontWeight: FontWeight.w900,
                         letterSpacing: -0.4,
                       ),
-                  voiceStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: DrumcabularyTheme.mutedInk,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  metadataStyle: Theme.of(context).textTheme.bodySmall
+                      ?.copyWith(
+                        color: DrumcabularyTheme.mutedInk,
+                        fontWeight: FontWeight.w700,
+                      ),
                 ),
                 const SizedBox(height: 10),
                 phraseSequenceEditor,

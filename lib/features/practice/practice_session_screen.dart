@@ -692,6 +692,8 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
           markings: markings,
           voices: voices,
           activeTokenIndex: _patternHighlightEnabled ? activeTokenIndex : null,
+          darkSheetNotation:
+              widget.controller.profile.darkPracticeSheetNotation,
         ),
       ],
     );
@@ -1720,6 +1722,7 @@ class _PlayerNotation extends StatelessWidget {
   final List<PatternNoteMarkingV1> markings;
   final List<DrumVoiceV1> voices;
   final int? activeTokenIndex;
+  final bool darkSheetNotation;
 
   const _PlayerNotation({
     required this.isWarmup,
@@ -1728,6 +1731,7 @@ class _PlayerNotation extends StatelessWidget {
     required this.markings,
     required this.voices,
     required this.activeTokenIndex,
+    required this.darkSheetNotation,
   });
 
   @override
@@ -1750,11 +1754,14 @@ class _PlayerNotation extends StatelessWidget {
     final String? grouping = item.beatGrouping.trim().isNotEmpty
         ? item.beatGrouping.trim()
         : _sheetGroupingText(item.groupingHint);
+    final Color backgroundColor = darkSheetNotation
+        ? DrumcabularyTheme.ink
+        : DrumcabularyTheme.surface;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(10),
       child: ColoredBox(
-        color: DrumcabularyTheme.ink,
+        color: backgroundColor,
         child: Padding(
           padding: EdgeInsets.symmetric(
             horizontal: isWarmup ? 4 : 6,
@@ -1768,8 +1775,8 @@ class _PlayerNotation extends StatelessWidget {
             finalRepeat: false,
             minNoteWidth: tokens.length >= 24 ? 28 : 32,
             compactLayout: true,
-            darkTheme: true,
-            backgroundColor: DrumcabularyTheme.ink,
+            darkTheme: darkSheetNotation,
+            backgroundColor: backgroundColor,
           ),
         ),
       ),

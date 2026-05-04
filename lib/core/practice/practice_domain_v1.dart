@@ -129,6 +129,7 @@ class UserProfileV1 {
   final TimerPresetV1 defaultTimerPreset;
   final bool clickEnabledByDefault;
   final AccentVoiceV1 accentVoice;
+  final bool darkPracticeSheetNotation;
 
   const UserProfileV1({
     required this.handedness,
@@ -136,6 +137,7 @@ class UserProfileV1 {
     required this.defaultTimerPreset,
     required this.clickEnabledByDefault,
     required this.accentVoice,
+    required this.darkPracticeSheetNotation,
   });
 
   UserProfileV1 copyWith({
@@ -144,6 +146,7 @@ class UserProfileV1 {
     TimerPresetV1? defaultTimerPreset,
     bool? clickEnabledByDefault,
     AccentVoiceV1? accentVoice,
+    bool? darkPracticeSheetNotation,
   }) {
     return UserProfileV1(
       handedness: handedness ?? this.handedness,
@@ -152,6 +155,8 @@ class UserProfileV1 {
       clickEnabledByDefault:
           clickEnabledByDefault ?? this.clickEnabledByDefault,
       accentVoice: accentVoice ?? this.accentVoice,
+      darkPracticeSheetNotation:
+          darkPracticeSheetNotation ?? this.darkPracticeSheetNotation,
     );
   }
 
@@ -161,6 +166,7 @@ class UserProfileV1 {
     defaultTimerPreset: TimerPresetV1.minutes10,
     clickEnabledByDefault: true,
     accentVoice: AccentVoiceV1.snare,
+    darkPracticeSheetNotation: false,
   );
 }
 

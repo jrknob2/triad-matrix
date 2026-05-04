@@ -60,6 +60,10 @@
         stroke: #b26a00;
       }
 
+      .empty-notation {
+        min-height: 96px;
+      }
+
       .error {
         color: #7c1d1d;
         font: 12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -92,6 +96,14 @@
             notation.classList.toggle('dark', isDark);
             notation.style.setProperty('--sheet-background-color', backgroundColor);
             document.body.style.background = backgroundColor;
+            if (!hasRenderableNotes(documentJson)) {
+              renderedNotes = [];
+              selectedIndexes.clear();
+              notation.innerHTML = '<div class="empty-notation"></div>';
+              renderSelection();
+              postHeight();
+              return;
+            }
             if (typeof globalThis.renderDrumNotationSvgWithMetadata !== 'function') {
               throw new Error('Drumcabulary sheet notation renderer did not load.');
             }
@@ -121,6 +133,12 @@
           postSelection();
         },
       };
+
+      function hasRenderableNotes(documentJson) {
+        return documentJson?.measures?.some(
+          (measure) => Array.isArray(measure?.notes) && measure.notes.length > 0,
+        ) === true;
+      }
 
       if (globalThis.__pendingDrumcabularySheetNotationPayload != null) {
         const pendingPayload = globalThis.__pendingDrumcabularySheetNotationPayload;

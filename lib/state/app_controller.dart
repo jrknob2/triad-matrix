@@ -1115,17 +1115,11 @@ class AppController extends ChangeNotifier {
     String itemId, {
     PatternGroupingV1 grouping = PatternGroupingV1.spaced,
   }) {
-    final List<String> tokens = noteTokensFor(itemId);
-    final List<PatternNoteMarkingV1> markings = noteMarkingsFor(itemId);
-    return List<String>.generate(tokens.length, (index) {
-      final String token = tokens[index];
-      final String marked = switch (markings[index]) {
-        PatternNoteMarkingV1.normal => token,
-        PatternNoteMarkingV1.accent => '^$token',
-        PatternNoteMarkingV1.ghost => '($token)',
-      };
-      return '$marked${grouping.separatorAfter(index, tokens.length)}';
-    }).join();
+    return markedPatternTextForNotes(
+      patternTokensFor(itemId),
+      noteMarkingsFor(itemId),
+      grouping: grouping,
+    );
   }
 
   List<DrumVoiceV1> noteVoicesFor(String itemId) {

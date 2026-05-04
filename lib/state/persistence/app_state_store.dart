@@ -240,6 +240,7 @@ class IsarAppStateStore implements AppStateStore {
       'defaultTimerPreset': profile.defaultTimerPreset.name,
       'clickEnabledByDefault': profile.clickEnabledByDefault,
       'accentVoice': profile.accentVoice.name,
+      'darkPracticeSheetNotation': profile.darkPracticeSheetNotation,
     };
   }
 
@@ -254,6 +255,8 @@ class IsarAppStateStore implements AppStateStore {
       accentVoice: AccentVoiceV1.values.byName(
         map['accentVoice'] as String? ?? AccentVoiceV1.snare.name,
       ),
+      darkPracticeSheetNotation:
+          map['darkPracticeSheetNotation'] as bool? ?? false,
     );
   }
 

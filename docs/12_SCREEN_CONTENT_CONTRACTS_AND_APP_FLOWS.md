@@ -1124,6 +1124,7 @@ Practice Session is execution only.
 - the pattern-audio toggle should live directly beneath the notation readout as a dedicated ear button, not in the settings modal
 - when the ear toggle is turned on, the current pattern should begin sounding immediately and continue looping until the ear toggle is turned off
 - pattern highlighting should use the same switch treatment and settings location as click and pulse, not a separate notation-row button
+- sheet music in the Practice Session player should default to standard light engraving; white engraving on the dark player background is an app setting, not the default
 - grouping may supply a default simple timing interpretation for straightforward drills, but explicit timing metadata must be able to override grouping cleanly for advanced phrases or fills without creating a new runtime mode
 - default simple timing interpretation:
   - compatible grouping size -> one grouping per beat
@@ -1302,6 +1303,7 @@ Must not show:
 - `New` from Library should open a new `Practice Item` draft rather than opening Matrix directly
 - that draft should start as a blank generic token-sequence item and expose triad insertion as a helper from inside the editor
 - flow voice assignments remain user-authored item data and must not add extra list-level per-item launch buttons
+- compact item rows should display the authored pattern as plain text, with grouping and subdivision as secondary metadata, rather than using the sheet-music renderer or the retired shared notation renderer
 - any `Flow` filter on this screen must be derived from authored off-snare voices on non-kick notes
 - `Single Surface` may appear as a derived list filter and must mean the item has no authored off-snare voices on non-kick notes
 - do not present `Single Surface / Flow` as an authored item mode toggle; they are derived list states

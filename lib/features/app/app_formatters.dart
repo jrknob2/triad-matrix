@@ -111,6 +111,51 @@ extension PracticeModeLabel on PracticeModeV1 {
   };
 }
 
+extension PatternNoteValueLabel on PatternNoteValueV1 {
+  String get denominatorLabel => switch (this) {
+    PatternNoteValueV1.whole => '1',
+    PatternNoteValueV1.half => '2',
+    PatternNoteValueV1.quarter => '4',
+    PatternNoteValueV1.eighth => '8',
+    PatternNoteValueV1.sixteenth => '16',
+    PatternNoteValueV1.thirtySecond => '32',
+  };
+
+  String get subdivisionLabel => '1/$denominatorLabel';
+}
+
+String markedPatternTextForNotes(
+  List<PatternTokenV1> tokens,
+  List<PatternNoteMarkingV1> markings, {
+  PatternGroupingV1 grouping = PatternGroupingV1.none,
+}) {
+  return List<String>.generate(tokens.length, (int index) {
+    final String token = tokens[index].symbol;
+    final PatternNoteMarkingV1 marking = index < markings.length
+        ? markings[index]
+        : PatternNoteMarkingV1.normal;
+    final String marked = switch (marking) {
+      PatternNoteMarkingV1.normal => token,
+      PatternNoteMarkingV1.accent => '^$token',
+      PatternNoteMarkingV1.ghost => '($token)',
+    };
+    return '$marked${grouping.separatorAfter(index, tokens.length)}';
+  }).join();
+}
+
+String notationInfoForPracticeItem(PracticeItemV1 item) {
+  final String grouping = item.beatGrouping.trim().isNotEmpty
+      ? item.beatGrouping.trim()
+      : _groupingInfoFor(item.groupingHint);
+  return 'Grouping: $grouping • Subdivision: ${item.notationSubdivision.subdivisionLabel}';
+}
+
+String _groupingInfoFor(PatternGroupingV1 grouping) {
+  final int? groupSize = grouping.groupSize;
+  if (groupSize == null) return 'None';
+  return '$groupSize';
+}
+
 extension MatrixProgressStateLabel on MatrixProgressStateV1 {
   String get label => switch (this) {
     MatrixProgressStateV1.notTrained => 'Not Practiced',
