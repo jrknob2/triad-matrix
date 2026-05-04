@@ -152,6 +152,7 @@ void main() {
                   onSelectionChanged: (Set<int> next) {
                     setState(() => selected = next);
                   },
+                  debugUseNativeFallback: true,
                 ),
               ),
             );

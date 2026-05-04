@@ -39,6 +39,7 @@ dependencies:
   isar_flutter_libs: ^3.1.0+1
   just_audio: ^0.10.5
   path_provider: ^2.1.5
+  webview_flutter: ^4.13.1
 
 dev_dependencies:
   flutter_test:
@@ -73,6 +74,8 @@ flutter:
     - assets/audio/
     - assets/icons/app_icon_1024.png
     - assets/icons/app_icon_splash.png
+    - web/sheet_notation/
+    - web/sheet_notation/vendor/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

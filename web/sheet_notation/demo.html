@@ -39,7 +39,8 @@
         gap: 4px;
       }
       .controls input,
-      .controls select {
+      .controls select,
+      .controls button {
         font: inherit;
         padding: 6px 8px;
         width: 8rem;
@@ -153,6 +154,7 @@
         Legend
         <input id="showLegend" type="checkbox" checked />
       </label>
+      <button id="undoEdit" type="button" disabled>Undo</button>
     </div>
     <label class="pattern-control">
       Pattern
@@ -218,8 +220,8 @@
         groupingFromPattern,
         patternFromNotes,
         patternWithGrouping,
-      } from './demo.js';
-      import { renderDrumNotationSvgWithMetadata } from './renderer.js';
+      } from './demo.js?v=space-grouping-3';
+      import { renderDrumNotationSvgWithMetadata } from './renderer.js?v=space-grouping-3';
 
       const notation = document.getElementById('notation');
       const grouping = document.getElementById('grouping');
@@ -233,9 +235,13 @@
       const toggleAccent = document.getElementById('toggleAccent');
       const toggleGhost = document.getElementById('toggleGhost');
       const deleteSelected = document.getElementById('deleteSelected');
+      const undoEdit = document.getElementById('undoEdit');
       const selection = document.getElementById('selection');
       let resizeFrame = 0;
       let renderedNotes = [];
+      let groupingSource = 'field';
+      let lastSnapshot = null;
+      const undoStack = [];
       const selectedIndexes = new Set();
 
       function renderNotation() {
@@ -253,12 +259,12 @@
             return;
           }
           const patternGrouping = groupingFromPattern(pattern.value, { lenient: true });
-          if (patternGrouping != null && grouping.value !== patternGrouping) {
-            grouping.value = patternGrouping;
-          }
+          const renderGrouping = groupingSource === 'pattern'
+            ? patternGrouping ?? grouping.value
+            : grouping.value;
           const result = renderDrumNotationSvgWithMetadata(documentJson, {
             availableWidth,
-            grouping: patternGrouping ?? grouping.value,
+            grouping: renderGrouping,
             notesPerSystem: 'auto',
           });
           renderedNotes = result.notes;
@@ -278,22 +284,38 @@
       }
 
       renderNotation();
+      markCurrentSnapshot();
       window.addEventListener('resize', scheduleRender);
       grouping.addEventListener('input', () => {
+        pushUndoSnapshot(lastSnapshot);
+        groupingSource = 'field';
         pattern.value = patternWithGrouping(pattern.value, grouping.value, {
           lenient: true,
           subdivision: subdivision.value,
         });
+        markCurrentSnapshot();
         scheduleRender();
       });
-      subdivision.addEventListener('change', scheduleRender);
+      subdivision.addEventListener('change', () => {
+        pushUndoSnapshot(lastSnapshot);
+        markCurrentSnapshot();
+        scheduleRender();
+      });
       showLegend.addEventListener('change', () => {
         legend.classList.toggle('is-hidden', !showLegend.checked);
       });
-      pattern.addEventListener('input', scheduleRender);
+      pattern.addEventListener('input', () => {
+        pushUndoSnapshot(lastSnapshot);
+        groupingSource = 'pattern';
+        const patternGrouping = groupingFromPattern(pattern.value, { lenient: true });
+        if (patternGrouping != null) grouping.value = patternGrouping;
+        markCurrentSnapshot();
+        scheduleRender();
+      });
       selectedSubdivision.addEventListener('change', () => {
         const selected = new Set(selectedIndexes);
         if (selected.size === 0) return;
+        pushUndoSnapshot(lastSnapshot);
         const value = selectedSubdivision.value;
         const notes = renderedNotes.map((note) => {
           if (!selected.has(note.index)) return note;
@@ -307,11 +329,14 @@
           grouping: grouping.value,
           subdivision: subdivision.value,
         });
+        groupingSource = 'field';
+        markCurrentSnapshot();
         scheduleRender();
       });
       selectedVoice.addEventListener('change', () => {
         const selected = new Set(selectedIndexes);
         if (selected.size === 0) return;
+        pushUndoSnapshot(lastSnapshot);
         const voice = selectedVoice.value;
         const notes = renderedNotes.map((note) => {
           if (!selected.has(note.index)) return note;
@@ -322,11 +347,14 @@
           grouping: grouping.value,
           subdivision: subdivision.value,
         });
+        groupingSource = 'field';
+        markCurrentSnapshot();
         scheduleRender();
       });
       toggleAccent.addEventListener('click', () => {
         const selected = new Set(selectedIndexes);
         if (selected.size === 0) return;
+        pushUndoSnapshot(lastSnapshot);
         const selectedNotes = renderedNotes.filter((note) => selected.has(note.index));
         const shouldAccent = !selectedNotes.every((note) => note.accent);
         const notes = renderedNotes.map((note) => {
@@ -339,11 +367,14 @@
           grouping: grouping.value,
           subdivision: subdivision.value,
         });
+        groupingSource = 'field';
+        markCurrentSnapshot();
         scheduleRender();
       });
       toggleGhost.addEventListener('click', () => {
         const selected = new Set(selectedIndexes);
         if (selected.size === 0) return;
+        pushUndoSnapshot(lastSnapshot);
         const selectedNotes = renderedNotes.filter((note) => selected.has(note.index));
         const shouldGhost = !selectedNotes.every((note) => note.ghost);
         const notes = renderedNotes.map((note) => {
@@ -356,18 +387,64 @@
           grouping: grouping.value,
           subdivision: subdivision.value,
         });
+        groupingSource = 'field';
+        markCurrentSnapshot();
         scheduleRender();
       });
       deleteSelected.addEventListener('click', () => {
         const selected = new Set(selectedIndexes);
         if (selected.size === 0) return;
+        pushUndoSnapshot(lastSnapshot);
         const remaining = renderedNotes.filter((note) => !selected.has(note.index));
         pattern.value = patternFromNotes(remaining, {
           grouping: grouping.value,
           subdivision: subdivision.value,
         });
+        groupingSource = 'field';
+        markCurrentSnapshot();
         scheduleRender();
       });
+      undoEdit.addEventListener('click', () => {
+        const snapshot = undoStack.pop();
+        if (snapshot == null) return;
+        pattern.value = snapshot.pattern;
+        grouping.value = snapshot.grouping;
+        subdivision.value = snapshot.subdivision;
+        groupingSource = snapshot.groupingSource;
+        selectedIndexes.clear();
+        markCurrentSnapshot();
+        scheduleRender();
+      });
+
+      function currentSnapshot() {
+        return {
+          grouping: grouping.value,
+          groupingSource,
+          pattern: pattern.value,
+          subdivision: subdivision.value,
+        };
+      }
+
+      function markCurrentSnapshot() {
+        lastSnapshot = currentSnapshot();
+        undoEdit.disabled = undoStack.length === 0;
+      }
+
+      function pushUndoSnapshot(snapshot) {
+        if (snapshot == null || sameSnapshot(snapshot, currentSnapshot())) return;
+        const lastUndo = undoStack[undoStack.length - 1];
+        if (sameSnapshot(snapshot, lastUndo)) return;
+        undoStack.push({ ...snapshot });
+        undoEdit.disabled = false;
+      }
+
+      function sameSnapshot(left, right) {
+        if (left == null || right == null) return false;
+        return left.pattern === right.pattern &&
+          left.grouping === right.grouping &&
+          left.subdivision === right.subdivision &&
+          left.groupingSource === right.groupingSource;
+      }
 
       function attachNoteSelection() {
         const svg = notation.querySelector('svg');
@@ -386,9 +463,18 @@
           }
           element.classList.add('drum-note-selectable');
         });
+        const nonRestNotes = renderedNotes.filter((note) => !note.rest);
+        [...svg.querySelectorAll('.vf-stem')].forEach((element, index) => {
+          const note = nonRestNotes[index];
+          if (note == null) return;
+          element.dataset.drumNoteIndex = String(note.index);
+          element.dataset.drumMeasureIndex = String(note.measureIndex);
+          element.dataset.drumMeasureNoteIndex = String(note.measureNoteIndex);
+          element.classList.add('drum-note-selectable');
+        });
         svg.addEventListener('click', (event) => {
           const element = event.target.closest(
-            '[data-drum-note-index], .vf-stavenote',
+            '[data-drum-note-index], .vf-stavenote, .vf-stem',
           );
           if (element == null || !svg.contains(element)) {
             selectedIndexes.clear();
@@ -414,8 +500,9 @@
           .querySelectorAll('.drum-note-selected')
           .forEach((element) => element.classList.remove('drum-note-selected'));
         for (const index of selected) {
-          const element = notation.querySelector(`[data-drum-note-index="${index}"]`);
-          element?.classList.add('drum-note-selected');
+          notation
+            .querySelectorAll(`[data-drum-note-index="${index}"]`)
+            .forEach((element) => element.classList.add('drum-note-selected'));
         }
 
         if (selected.length === 0) {
@@ -427,9 +514,13 @@
         selectedControls.classList.add('is-visible');
         deleteSelected.classList.add('is-visible');
         const selectedNotes = selected.map((index) => renderedNotes[index]);
-        const selectedValues = new Set(selectedNotes.map((note) => note.value));
+        const selectedValues = new Set(
+          selectedNotes
+            .map((note) => note.value)
+            .filter((value) => value != null && value !== subdivision.value),
+        );
         selectedSubdivision.value =
-          selectedValues.size === 1 && selectedValues.has(subdivision.value) === false
+          selectedValues.size === 1
             ? [...selectedValues][0]
             : '';
         const selectedVoiceValues = new Set(

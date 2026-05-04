@@ -306,6 +306,8 @@ describe('svg rendering', () => {
 
   test('grouping labels rewrite pattern spaces', () => {
     assert.equal(patternWithGrouping('RLRLK', '32'), 'RLR LK');
+    assert.equal(patternWithGrouping('RLRKLR', '33'), 'RLR KLR');
+    assert.equal(patternWithGrouping('RLRKLR', '3'), 'RLR KLR');
     assert.equal(
       patternWithGrouping('R[32:R L]KL', '122', { subdivision: '8n' }),
       'R [32:R][32:L] KL',

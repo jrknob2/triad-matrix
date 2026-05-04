@@ -77,6 +77,7 @@ Notation rule:
 
 - the app should use one canonical notation renderer everywhere notation is shown
 - the sheet-music renderer is the replacement path for practice notation surfaces that need staff notation; it consumes a render-ready document made of measures, note values, drum voices, sticking labels, and visual note flags
+- sheet-music staff notation should use the VexFlow renderer from the sheet-notation POC inside an app WebView; Flutter must not maintain a separate hand-drawn staff layout for the same notation surface
 - sheet-music rendering must remain display/edit notation only; it must not include tempo, BPM, metronome, playback, audio sample, practice-session, or app-state behavior
 - sheet-music limb/sticking and drum voice are separate concepts: `R` and `L` are sticking labels, while `snare`, `tom1`, `tom2`, `floorTom`, `hihat`, `crash`, `ride`, and `kick` are rendered voices
 - sheet-music pattern text may use bracket overrides for duration and voice, such as `[16:R]`, `[T1:L]`, and `[T2 16:R]`

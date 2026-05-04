@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      html,
+      body {
+        background: transparent;
+        margin: 0;
+        overflow: hidden;
+        padding: 0;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      #notation {
+        background: transparent;
+        cursor: default;
+        overflow: hidden;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      #notation svg {
+        cursor: default;
+        display: block;
+        max-width: 100%;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      #notation * {
+        cursor: default !important;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      .drum-note-selected {
+        filter: drop-shadow(0 0 3px #b26a00);
+      }
+
+      .drum-note-selected path,
+      .drum-note-selected text {
+        fill: #b26a00;
+        stroke: #b26a00;
+      }
+
+      .error {
+        color: #7c1d1d;
+        font: 12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="notation"></div>
+    <script src="./vendor/vexflow.js"></script>
+    <script>
+      globalThis.VexFlow = globalThis.VexFlow || globalThis.Vex?.Flow || globalThis.Vex;
+    </script>
+    <script type="module">
+      import { renderDrumNotationSvgWithMetadata } from './renderer.js';
+
+      const notation = document.getElementById('notation');
+      let renderedNotes = [];
+      const selectedIndexes = new Set();
+
+      globalThis.DrumcabularySheetNotation = {
+        render(payload) {
+          try {
+            const documentJson = payload.document;
+            const selected = Array.isArray(payload.selectedIndexes)
+              ? payload.selectedIndexes
+              : [];
+            selectedIndexes.clear();
+            selected.forEach((index) => selectedIndexes.add(Number(index)));
+            const result = renderDrumNotationSvgWithMetadata(documentJson, {
+              ...(payload.options ?? {}),
+              notesPerSystem: 'auto',
+            });
+            renderedNotes = result.notes;
+            notation.innerHTML = result.svg;
+            attachNoteSelection();
+            renderSelection();
+            postHeight();
+          } catch (error) {
+            console.error(error);
+            notation.innerHTML = `<pre class="error">${error.stack ?? error.message}</pre>`;
+            postHeight();
+          }
+        },
+      };
+
+      function attachNoteSelection() {
+        const svg = notation.querySelector('svg');
+        if (!svg) return;
+        const attributed = [...svg.querySelectorAll('[data-drum-note-index]')];
+        const fallback = [...svg.querySelectorAll('.vf-stavenote')];
+        const noteElements = attributed.length > 0 ? attributed : fallback;
+        noteElements.forEach((element, index) => {
+          if (!element.dataset.drumNoteIndex) {
+            element.dataset.drumNoteIndex = String(index);
+          }
+          const note = renderedNotes[Number(element.dataset.drumNoteIndex)];
+          if (note != null) {
+            element.dataset.drumMeasureIndex = String(note.measureIndex);
+            element.dataset.drumMeasureNoteIndex = String(note.measureNoteIndex);
+          }
+        });
+
+        const nonRestNotes = renderedNotes.filter((note) => !note.rest);
+        [...svg.querySelectorAll('.vf-stem')].forEach((element, index) => {
+          const note = nonRestNotes[index];
+          if (note == null) return;
+          element.dataset.drumNoteIndex = String(note.index);
+          element.dataset.drumMeasureIndex = String(note.measureIndex);
+          element.dataset.drumMeasureNoteIndex = String(note.measureNoteIndex);
+        });
+
+        svg.addEventListener('click', (event) => {
+          const element = event.target.closest(
+            '[data-drum-note-index], .vf-stavenote, .vf-stem',
+          );
+          if (element == null || !svg.contains(element)) {
+            selectedIndexes.clear();
+            renderSelection();
+            postSelection();
+            return;
+          }
+
+          event.stopPropagation();
+          const noteIndex = Number(element.dataset.drumNoteIndex);
+          if (!Number.isInteger(noteIndex)) return;
+          if (selectedIndexes.has(noteIndex)) {
+            selectedIndexes.delete(noteIndex);
+          } else {
+            selectedIndexes.add(noteIndex);
+          }
+          renderSelection();
+          postSelection();
+        });
+      }
+
+      function renderSelection() {
+        notation
+          .querySelectorAll('.drum-note-selected')
+          .forEach((element) => element.classList.remove('drum-note-selected'));
+        for (const index of selectedIndexes) {
+          notation
+            .querySelectorAll(`[data-drum-note-index="${index}"]`)
+            .forEach((element) => element.classList.add('drum-note-selected'));
+        }
+      }
+
+      function postSelection() {
+        globalThis.SheetSelection?.postMessage(
+          JSON.stringify([...selectedIndexes].sort((a, b) => a - b)),
+        );
+      }
+
+      function postHeight() {
+        const height = Math.ceil(document.documentElement.scrollHeight);
+        globalThis.SheetHeight?.postMessage(String(height));
+      }
+    </script>
+  </body>
+</html>

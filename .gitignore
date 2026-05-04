@@ -49,3 +49,6 @@ DerivedData/
 
 # Logs
 *.log
+
+# Node tooling for sheet-notation POC tests/assets
+node_modules/

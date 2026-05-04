@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 enum DrumSheetNoteValue {
   whole,
@@ -240,6 +242,7 @@ class DrumSheetNotationDisplay extends StatefulWidget {
   final Color? noteColor;
   final Color? selectedColor;
   final double minNoteWidth;
+  final bool debugUseNativeFallback;
 
   const DrumSheetNotationDisplay({
     super.key,
@@ -255,6 +258,7 @@ class DrumSheetNotationDisplay extends StatefulWidget {
     this.noteColor,
     this.selectedColor,
     this.minNoteWidth = defaultMinNoteWidth,
+    this.debugUseNativeFallback = false,
   });
 
   @override
@@ -263,10 +267,98 @@ class DrumSheetNotationDisplay extends StatefulWidget {
 }
 
 class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay> {
+  static const String _hostAsset = 'web/sheet_notation/app_host.html';
+
   List<Rect> _hitRects = <Rect>[];
+  WebViewController? _controller;
+  bool _hostLoaded = false;
+  double _webViewHeight = 160;
+  String? _lastPayloadJson;
+
+  @override
+  void initState() {
+    super.initState();
+    if (!widget.debugUseNativeFallback) {
+      _ensureWebViewController();
+    }
+  }
+
+  WebViewController _ensureWebViewController() {
+    final WebViewController? existing = _controller;
+    if (existing != null) return existing;
+
+    _hostLoaded = false;
+    final WebViewController controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(Colors.transparent)
+      ..addJavaScriptChannel(
+        'SheetSelection',
+        onMessageReceived: (JavaScriptMessage message) {
+          final Object? decoded = jsonDecode(message.message);
+          if (decoded is! List) return;
+          widget.onSelectionChanged?.call(
+            decoded.whereType<num>().map((num value) => value.toInt()).toSet(),
+          );
+        },
+      )
+      ..addJavaScriptChannel(
+        'SheetHeight',
+        onMessageReceived: (JavaScriptMessage message) {
+          final double? nextHeight = double.tryParse(message.message);
+          if (nextHeight == null || nextHeight <= 0 || !mounted) return;
+          if ((_webViewHeight - nextHeight).abs() < 1) return;
+          setState(() => _webViewHeight = nextHeight);
+        },
+      )
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onPageFinished: (_) {
+            _hostLoaded = true;
+            _lastPayloadJson = null;
+            _renderToWebView();
+          },
+        ),
+      )
+      ..loadFlutterAsset(_hostAsset);
+    _controller = controller;
+    return controller;
+  }
+
+  @override
+  void didUpdateWidget(covariant DrumSheetNotationDisplay oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!widget.debugUseNativeFallback) {
+      _ensureWebViewController();
+      _lastPayloadJson = null;
+      _renderToWebView();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (widget.debugUseNativeFallback) return _buildNativeFallback(context);
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final WebViewController controller = _ensureWebViewController();
+        final double width = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : 640;
+        final double estimatedHeight = _estimatedHeightForWidth(width);
+        if ((_webViewHeight - estimatedHeight).abs() > 1 &&
+            _webViewHeight < estimatedHeight) {
+          _webViewHeight = estimatedHeight;
+        }
+        _renderToWebView(width: width);
+        return SizedBox(
+          height: _webViewHeight,
+          width: width,
+          child: WebViewWidget(controller: controller),
+        );
+      },
+    );
+  }
+
+  Widget _buildNativeFallback(BuildContext context) {
     final ColorScheme colorScheme = Theme.of(context).colorScheme;
     final Color noteColor = widget.noteColor ?? colorScheme.onSurface;
     final TextStyle stickingStyle =
@@ -338,6 +430,76 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay> {
     }
     return null;
   }
+
+  void _renderToWebView({double? width}) {
+    if (!_hostLoaded) return;
+    final double resolvedWidth = width ?? context.size?.width ?? 640;
+    final String payloadJson = jsonEncode(
+      _webViewPayloadForWidth(resolvedWidth),
+    );
+    if (_lastPayloadJson == payloadJson) return;
+    _lastPayloadJson = payloadJson;
+    final String encodedPayload = jsonEncode(payloadJson);
+    _controller?.runJavaScript(
+      'window.DrumcabularySheetNotation.render(JSON.parse($encodedPayload));',
+    );
+  }
+
+  Map<String, Object?> _webViewPayloadForWidth(double width) {
+    return <String, Object?>{
+      'document': _documentJson(widget.document),
+      'selectedIndexes': widget.selectedIndexes.toList()..sort(),
+      'options': <String, Object?>{
+        'availableWidth': width.floor(),
+        'finalRepeat': widget.finalRepeat,
+        'grouping': widget.grouping,
+        'minNoteWidth': widget.minNoteWidth,
+      },
+    };
+  }
+
+  double _estimatedHeightForWidth(double width) {
+    final int noteCount = widget.document.flattenedNotes.length;
+    if (noteCount == 0) return 140;
+    final double formatterWidth = math.max(120, width - 48);
+    final int notesPerSystem = math.max(
+      4,
+      (formatterWidth / widget.minNoteWidth).floor(),
+    );
+    final int systems = (noteCount / notesPerSystem).ceil();
+    return 10 + 126 + math.max(0, systems - 1) * 140;
+  }
+}
+
+Map<String, Object?> _documentJson(DrumSheetNotationDocument document) {
+  return <String, Object?>{
+    'subdivision': document.subdivision.noteValueLabel,
+    'measures': <Object?>[
+      for (final DrumSheetNotationMeasure measure in document.measures)
+        <String, Object?>{
+          'notes': <Object?>[
+            for (final DrumSheetNotationNote note in measure.notes)
+              _noteJson(note),
+          ],
+        },
+    ],
+  };
+}
+
+Map<String, Object?> _noteJson(DrumSheetNotationNote note) {
+  return <String, Object?>{
+    if (note.value != null) 'value': note.value!.noteValueLabel,
+    if (!note.rest)
+      'voices': <String>[
+        for (final DrumSheetVoice voice in note.voices) voice.id,
+      ],
+    if (note.rest) 'rest': true,
+    if (note.sticking.isNotEmpty) 'sticking': note.sticking,
+    if (note.accent) 'accent': true,
+    if (note.flam) 'flam': true,
+    if (note.ghost) 'ghost': true,
+    if (note.tie) 'tie': true,
+  };
 }
 
 @immutable
@@ -684,12 +846,29 @@ extension DrumSheetNoteValueSyntax on DrumSheetNoteValue {
     };
   }
 
+  String get noteValueLabel => '${patternLabel}n';
+
   bool get beamable {
     return switch (this) {
       DrumSheetNoteValue.eighth ||
       DrumSheetNoteValue.sixteenth ||
       DrumSheetNoteValue.thirtySecond => true,
       _ => false,
+    };
+  }
+}
+
+extension DrumSheetVoiceSyntax on DrumSheetVoice {
+  String get id {
+    return switch (this) {
+      DrumSheetVoice.hihat => 'hihat',
+      DrumSheetVoice.ride => 'ride',
+      DrumSheetVoice.crash => 'crash',
+      DrumSheetVoice.snare => 'snare',
+      DrumSheetVoice.tom1 => 'tom1',
+      DrumSheetVoice.tom2 => 'tom2',
+      DrumSheetVoice.floorTom => 'floorTom',
+      DrumSheetVoice.kick => 'kick',
     };
   }
 }
