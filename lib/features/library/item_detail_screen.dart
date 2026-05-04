@@ -42,7 +42,6 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   final List<_DraftSnapshot> _undoStack = <_DraftSnapshot>[];
   String _lastPatternText = '';
   String _lastGroupingText = '';
-  bool _showLegend = false;
 
   @override
   void initState() {
@@ -111,6 +110,73 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
+                        TextField(
+                          controller: _patternController,
+                          decoration: const InputDecoration(
+                            labelText: 'Pattern',
+                            border: OutlineInputBorder(),
+                          ),
+                          onChanged: _handlePatternTextChanged,
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Expanded(
+                              child:
+                                  DropdownButtonFormField<DrumSheetNoteValue>(
+                                    key: ValueKey<DrumSheetNoteValue>(
+                                      _draftSubdivision,
+                                    ),
+                                    initialValue: _draftSubdivision,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Subdivision',
+                                      border: OutlineInputBorder(),
+                                    ),
+                                    items:
+                                        <DropdownMenuItem<DrumSheetNoteValue>>[
+                                          for (final DrumSheetNoteValue value
+                                              in DrumSheetNoteValue.values)
+                                            DropdownMenuItem<
+                                              DrumSheetNoteValue
+                                            >(
+                                              value: value,
+                                              child: Text(
+                                                '1/${value.patternLabel}',
+                                              ),
+                                            ),
+                                        ],
+                                    onChanged: (DrumSheetNoteValue? next) {
+                                      if (next == null) return;
+                                      _recordUndo();
+                                      setState(() {
+                                        _draftSubdivision = next;
+                                        _syncPatternTextFromDraft();
+                                      });
+                                    },
+                                  ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: TextField(
+                                controller: _groupingController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Grouping',
+                                  hintText: '4, 3535, 3 5 3 5',
+                                  border: OutlineInputBorder(),
+                                ),
+                                onChanged: _handleGroupingTextChanged,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        _SheetNotationControls(
+                          canUndo: _undoStack.isNotEmpty,
+                          onUndo: _undoStack.isEmpty ? null : _undoDraftEdit,
+                          onShowLegend: _showSheetNotationLegend,
+                        ),
+                        const SizedBox(height: 12),
                         DrumSheetNotationDisplay(
                           document: _draftSheetNotationDocument(draftMarkings),
                           grouping: _effectiveGroupingText(),
@@ -121,52 +187,12 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                           minNoteWidth: 40,
                         ),
                         const SizedBox(height: 8),
-                        _SheetNotationControls(
-                          subdivision: _draftSubdivision,
-                          canUndo: _undoStack.isNotEmpty,
-                          showLegend: _showLegend,
-                          onSubdivisionChanged: (DrumSheetNoteValue next) {
-                            _recordUndo();
-                            setState(() {
-                              _draftSubdivision = next;
-                              _syncPatternTextFromDraft();
-                            });
-                          },
-                          onUndo: _undoStack.isEmpty ? null : _undoDraftEdit,
-                          onShowLegendChanged: (bool next) {
-                            setState(() => _showLegend = next);
-                          },
-                        ),
-                        if (_showLegend) ...<Widget>[
-                          const SizedBox(height: 8),
-                          const _SheetNotationLegend(),
-                        ],
-                        const SizedBox(height: 8),
                         Text(
                           'Tap notes to select them, or edit the pattern text directly.',
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(
                                 color: DrumcabularyTheme.textSecondary,
                               ),
-                        ),
-                        const SizedBox(height: 12),
-                        TextField(
-                          controller: _patternController,
-                          decoration: const InputDecoration(
-                            labelText: 'Pattern',
-                            border: OutlineInputBorder(),
-                          ),
-                          onChanged: _handlePatternTextChanged,
-                        ),
-                        const SizedBox(height: 12),
-                        TextField(
-                          controller: _groupingController,
-                          decoration: const InputDecoration(
-                            labelText: 'Beat grouping',
-                            hintText: 'Examples: 4, 3535, 3 5 3 5',
-                            border: OutlineInputBorder(),
-                          ),
-                          onChanged: _handleGroupingTextChanged,
                         ),
                         const SizedBox(height: 12),
                         _SelectedSheetNoteEditor(
@@ -967,23 +993,35 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       _ => false,
     };
   }
+
+  Future<void> _showSheetNotationLegend() {
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Input legend'),
+          content: const _SheetNotationLegend(),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 }
 
 class _SheetNotationControls extends StatelessWidget {
-  final DrumSheetNoteValue subdivision;
   final bool canUndo;
-  final bool showLegend;
-  final ValueChanged<DrumSheetNoteValue> onSubdivisionChanged;
   final VoidCallback? onUndo;
-  final ValueChanged<bool> onShowLegendChanged;
+  final VoidCallback onShowLegend;
 
   const _SheetNotationControls({
-    required this.subdivision,
     required this.canUndo,
-    required this.showLegend,
-    required this.onSubdivisionChanged,
     required this.onUndo,
-    required this.onShowLegendChanged,
+    required this.onShowLegend,
   });
 
   @override
@@ -993,39 +1031,15 @@ class _SheetNotationControls extends StatelessWidget {
       runSpacing: 8,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: <Widget>[
-        SizedBox(
-          width: 170,
-          child: DropdownButtonFormField<DrumSheetNoteValue>(
-            key: ValueKey<DrumSheetNoteValue>(subdivision),
-            initialValue: subdivision,
-            decoration: const InputDecoration(
-              labelText: 'Subdivision',
-              border: OutlineInputBorder(),
-            ),
-            items: <DropdownMenuItem<DrumSheetNoteValue>>[
-              for (final DrumSheetNoteValue value in DrumSheetNoteValue.values)
-                DropdownMenuItem<DrumSheetNoteValue>(
-                  value: value,
-                  child: Text('1/${value.patternLabel}'),
-                ),
-            ],
-            onChanged: (DrumSheetNoteValue? next) {
-              if (next == null) return;
-              onSubdivisionChanged(next);
-            },
-          ),
-        ),
         OutlinedButton.icon(
           onPressed: canUndo ? onUndo : null,
           icon: const Icon(Icons.undo),
           label: const Text('Undo'),
         ),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            const Text('Show legend'),
-            Switch(value: showLegend, onChanged: onShowLegendChanged),
-          ],
+        OutlinedButton.icon(
+          onPressed: onShowLegend,
+          icon: const Icon(Icons.help_outline),
+          label: const Text('Input legend'),
         ),
       ],
     );
@@ -1037,12 +1051,56 @@ class _SheetNotationLegend extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final TextStyle? style = Theme.of(
-      context,
-    ).textTheme.bodySmall?.copyWith(color: DrumcabularyTheme.textSecondary);
-    return Text(
-      'Pattern: R L K F B X HH C FT _  |  Accent: ^R  |  Ghost: (L)  |  Override: [T1:L], [16:R], [T2 16:R]',
+    final TextStyle? style = Theme.of(context).textTheme.bodyMedium;
+    return DefaultTextStyle.merge(
       style: style,
+      child: Wrap(
+        spacing: 14,
+        runSpacing: 10,
+        children: const <Widget>[
+          _LegendEntry(token: 'R/L', text: 'snare'),
+          _LegendEntry(token: 'K', text: 'kick'),
+          _LegendEntry(token: 'HH', text: 'hi-hat'),
+          _LegendEntry(token: 'C or X', text: 'crash'),
+          _LegendEntry(token: 'FT', text: 'floor tom'),
+          _LegendEntry(token: 'F', text: 'flam'),
+          _LegendEntry(token: 'B', text: 'hi-hat + snare'),
+          _LegendEntry(token: '- or _', text: 'rest'),
+          _LegendEntry(token: '^R', text: 'accent'),
+          _LegendEntry(token: '(L)', text: 'ghost'),
+          _LegendEntry(token: '[32:R L]', text: 'duration override'),
+          _LegendEntry(token: '[T1:L]', text: 'voice override'),
+          _LegendEntry(token: '[T1 16:L]', text: 'combined override'),
+          _LegendEntry(token: 'RLR LK', text: 'space-defined grouping'),
+          _LegendEntry(token: '^[T1:R] or [T1:^R]', text: 'accented override'),
+          _LegendEntry(token: '[T1:(L)] or ([T1:L])', text: 'ghosted override'),
+          _LegendEntry(token: '^(L)', text: 'invalid'),
+        ],
+      ),
+    );
+  }
+}
+
+class _LegendEntry extends StatelessWidget {
+  final String token;
+  final String text;
+
+  const _LegendEntry({required this.token, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    final TextStyle baseStyle = DefaultTextStyle.of(context).style;
+    return RichText(
+      text: TextSpan(
+        style: baseStyle,
+        children: <InlineSpan>[
+          TextSpan(
+            text: '$token: ',
+            style: baseStyle.copyWith(fontWeight: FontWeight.w900),
+          ),
+          TextSpan(text: text),
+        ],
+      ),
     );
   }
 }
