@@ -2,6 +2,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build:sheet-notation-app": "node web/sheet_notation/build_app_renderer_bundle.mjs",
     "demo:sheet-notation": "node web/sheet_notation/server.mjs",
     "test:sheet-notation": "node --test test/sheet_notation/*.test.mjs"
   },

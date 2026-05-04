@@ -83,6 +83,10 @@ Notation rule:
 - sheet-music pattern text may use bracket overrides for duration and voice, such as `[16:R]`, `[T1:L]`, and `[T2 16:R]`
 - sheet-music accent and ghost decorations may be placed inside or outside bracket overrides when valid, but accented ghost notes such as `^(L)` are invalid
 - the sheet-music widget must not include the notation-input legend; app screens should own any modal/dialog that explains notation syntax
+- Practice Item sheet-notation editing should expose beat grouping as an editable text field, not as fixed grouping pills; spaces entered in the pattern field should update this grouping metadata and immediately affect the rendered SVG grouping
+- Practice Item sheet-notation editing should expose default subdivision as a screen-level dropdown; selected-note duration controls are overrides and must not replace the default subdivision control
+- Practice Item sheet-notation editing should provide undo for pattern, grouping, subdivision, and selected-note edits
+- Practice Item should not show the legacy `Grouping` pill row or `Append` pill row when the sheet-notation pattern field is the editing surface
 - screens may wrap that renderer for selection or editing, but they should not fork the visual notation language
 - the canonical renderer must support independent display options for authored dynamics and authored voices
 - notation readouts should be center-justified everywhere by default

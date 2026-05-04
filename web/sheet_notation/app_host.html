@@ -55,9 +55,8 @@
     <script>
       globalThis.VexFlow = globalThis.VexFlow || globalThis.Vex?.Flow || globalThis.Vex;
     </script>
-    <script type="module">
-      import { renderDrumNotationSvgWithMetadata } from './renderer.js';
-
+    <script src="./app_renderer.js"></script>
+    <script>
       const notation = document.getElementById('notation');
       let renderedNotes = [];
       const selectedIndexes = new Set();
@@ -69,9 +68,12 @@
             const selected = Array.isArray(payload.selectedIndexes)
               ? payload.selectedIndexes
               : [];
+            if (typeof globalThis.renderDrumNotationSvgWithMetadata !== 'function') {
+              throw new Error('Drumcabulary sheet notation renderer did not load.');
+            }
             selectedIndexes.clear();
             selected.forEach((index) => selectedIndexes.add(Number(index)));
-            const result = renderDrumNotationSvgWithMetadata(documentJson, {
+            const result = globalThis.renderDrumNotationSvgWithMetadata(documentJson, {
               ...(payload.options ?? {}),
               notesPerSystem: 'auto',
             });
@@ -87,6 +89,12 @@
           }
         },
       };
+
+      if (globalThis.__pendingDrumcabularySheetNotationPayload != null) {
+        const pendingPayload = globalThis.__pendingDrumcabularySheetNotationPayload;
+        globalThis.__pendingDrumcabularySheetNotationPayload = null;
+        globalThis.DrumcabularySheetNotation.render(pendingPayload);
+      }
 
       function attachNoteSelection() {
         const svg = notation.querySelector('svg');

@@ -273,6 +273,7 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay> {
   WebViewController? _controller;
   bool _hostLoaded = false;
   double _webViewHeight = 160;
+  double? _lastLayoutWidth;
   String? _lastPayloadJson;
 
   @override
@@ -315,7 +316,7 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay> {
           onPageFinished: (_) {
             _hostLoaded = true;
             _lastPayloadJson = null;
-            _renderToWebView();
+            _renderToWebView(width: _lastLayoutWidth);
           },
         ),
       )
@@ -330,7 +331,6 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay> {
     if (!widget.debugUseNativeFallback) {
       _ensureWebViewController();
       _lastPayloadJson = null;
-      _renderToWebView();
     }
   }
 
@@ -343,6 +343,7 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay> {
         final double width = constraints.maxWidth.isFinite
             ? constraints.maxWidth
             : 640;
+        _lastLayoutWidth = width;
         final double estimatedHeight = _estimatedHeightForWidth(width);
         if ((_webViewHeight - estimatedHeight).abs() > 1 &&
             _webViewHeight < estimatedHeight) {
@@ -433,16 +434,27 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay> {
 
   void _renderToWebView({double? width}) {
     if (!_hostLoaded) return;
-    final double resolvedWidth = width ?? context.size?.width ?? 640;
+    final double resolvedWidth = width ?? _lastLayoutWidth ?? 640;
     final String payloadJson = jsonEncode(
       _webViewPayloadForWidth(resolvedWidth),
     );
     if (_lastPayloadJson == payloadJson) return;
     _lastPayloadJson = payloadJson;
     final String encodedPayload = jsonEncode(payloadJson);
-    _controller?.runJavaScript(
-      'window.DrumcabularySheetNotation.render(JSON.parse($encodedPayload));',
-    );
+    _controller
+        ?.runJavaScript('''
+(() => {
+  const payload = JSON.parse($encodedPayload);
+  if (window.DrumcabularySheetNotation == null) {
+    window.__pendingDrumcabularySheetNotationPayload = payload;
+    return;
+  }
+  window.DrumcabularySheetNotation.render(payload);
+})();
+''')
+        .catchError((Object error) {
+          debugPrint('Drum sheet notation JavaScript render failed: $error');
+        });
   }
 
   Map<String, Object?> _webViewPayloadForWidth(double width) {
