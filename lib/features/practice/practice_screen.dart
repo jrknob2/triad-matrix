@@ -28,9 +28,10 @@ class PracticeScreen extends StatefulWidget {
   State<PracticeScreen> createState() => _PracticeScreenState();
 }
 
+enum _PracticeSource { workingOn, previousSessions }
+
 class _PracticeScreenState extends State<PracticeScreen> {
-  bool _showWorkingOnSetup = false;
-  bool _showPreviousSessionBrowser = false;
+  _PracticeSource _selectedSource = _PracticeSource.workingOn;
   int _visiblePreviousSessionCount = 5;
   int _visibleWorkingOnItemCount = 5;
   String _previousSessionQuery = '';
@@ -55,25 +56,6 @@ class _PracticeScreenState extends State<PracticeScreen> {
     return AnimatedBuilder(
       animation: widget.controller,
       builder: (BuildContext context, _) {
-        void openPreviousSessionBrowser() {
-          setState(() {
-            _showPreviousSessionBrowser = !_showPreviousSessionBrowser;
-            if (_showPreviousSessionBrowser) {
-              _showWorkingOnSetup = false;
-            }
-          });
-        }
-
-        void openWorkingOnSetup() {
-          setState(() {
-            _showWorkingOnSetup = !_showWorkingOnSetup;
-            if (_showWorkingOnSetup) {
-              _showPreviousSessionBrowser = false;
-              _visibleWorkingOnItemCount = 5;
-            }
-          });
-        }
-
         final bool isTablet = AppViewport.isTablet(context);
         final List<PracticeSessionLogV1> recentSessions =
             widget.controller.trackedRecentSessions;
@@ -102,181 +84,121 @@ class _PracticeScreenState extends State<PracticeScreen> {
         final bool canStart = selectedItemIds.isNotEmpty;
         final bool broadRotation = workingOn.length > 8;
 
-        final Widget launchPane = DrumPanel(
-          tone: DrumPanelTone.warm,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              const DrumSectionTitle(text: 'Practice'),
-              const SizedBox(height: 8),
-              Text(
-                'Choose your material, then start.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: DrumcabularyTheme.textSecondary,
-                  height: 1.35,
-                ),
-              ),
-              const SizedBox(height: 16),
-              _PracticeLaunchTile(
-                title: 'Repeat a Previous Session',
-                subtitle: recentSessions.isEmpty
-                    ? 'No tracked session yet. Start one from Working On first.'
-                    : 'Pick from your recent tracked sessions.',
-                icon: Icons.replay_rounded,
-                onTap: recentSessions.isEmpty
-                    ? null
-                    : openPreviousSessionBrowser,
-                fallbackActionLabel: recentSessions.isEmpty
-                    ? (workingOn.isNotEmpty ? 'Choose Patterns' : 'Open Matrix')
-                    : null,
-                onFallbackAction: recentSessions.isEmpty
-                    ? (workingOn.isNotEmpty
-                          ? openWorkingOnSetup
-                          : widget.onOpenMatrix)
-                    : null,
-                trailing: Icon(
-                  _showPreviousSessionBrowser
-                      ? Icons.expand_less_rounded
-                      : Icons.expand_more_rounded,
-                ),
-              ),
-              const SizedBox(height: 10),
-              _PracticeLaunchTile(
-                title: 'Choose Patterns to Practice',
-                subtitle: workingOn.isEmpty
-                    ? 'Nothing is in Working On yet. Add a few items first.'
-                    : _showWorkingOnSetup
-                    ? 'Pick today\'s slice from Working On.'
-                    : 'Choose what you want to work on from Working On.',
-                icon: Icons.play_circle_outline_rounded,
-                onTap: workingOn.isEmpty ? null : openWorkingOnSetup,
-                fallbackActionLabel: workingOn.isEmpty ? 'Open Matrix' : null,
-                onFallbackAction: workingOn.isEmpty
-                    ? widget.onOpenMatrix
-                    : null,
-                trailing: Icon(
-                  _showWorkingOnSetup
-                      ? Icons.expand_less_rounded
-                      : Icons.expand_more_rounded,
-                ),
-              ),
-              const SizedBox(height: 10),
-              _PracticeLaunchTile(
-                title: 'Warm Up',
-                subtitle:
-                    'Singles, doubles, paradiddles, and paradiddle-diddles. Not logged.',
-                icon: Icons.local_fire_department_outlined,
-                onTap: widget.onPracticeWarmup,
-              ),
-              if (workingOn.isEmpty) ...<Widget>[
-                const SizedBox(height: 14),
-                DrumActionRow(
-                  children: <Widget>[
-                    OutlinedButton(
-                      onPressed: widget.onOpenMatrix,
-                      child: const Text('Open Matrix'),
-                    ),
-                  ],
-                ),
-              ],
-            ],
-          ),
+        void selectSource(_PracticeSource source) {
+          setState(() {
+            _selectedSource = source;
+            if (source == _PracticeSource.workingOn) {
+              _visibleWorkingOnItemCount = 5;
+            } else {
+              _visiblePreviousSessionCount = 5;
+            }
+          });
+        }
+
+        final Widget sourcePane = _PracticeSourcePane(
+          selectedSource: _selectedSource,
+          onSelectWorkingOn: () => selectSource(_PracticeSource.workingOn),
+          onSelectPreviousSessions: () =>
+              selectSource(_PracticeSource.previousSessions),
+          onWarmup: widget.onPracticeWarmup,
         );
 
+        Widget workingOnPane() {
+          if (workingOn.isEmpty) {
+            return _PracticeSourceEmptyPane(
+              title: 'From Working On',
+              message: 'Nothing is in Working On yet. Add a few items first.',
+              actionLabel: 'Open Matrix',
+              onAction: widget.onOpenMatrix,
+            );
+          }
+          return _WorkingOnSessionSetup(
+            controller: widget.controller,
+            visibleItems: visibleItems,
+            selectedItemIds: selectedItemIds,
+            filters: _filters,
+            broadRotation: broadRotation,
+            onToggleFilter: (WorkingOnSessionFilterV1 filter) {
+              setState(() {
+                _filters = _toggleFilter(_filters, filter);
+                _visibleWorkingOnItemCount = 5;
+              });
+            },
+            onToggleItem: (String itemId) {
+              setState(() {
+                if (_selectedItemIds.contains(itemId)) {
+                  _selectedItemIds = <String>[..._selectedItemIds]
+                    ..remove(itemId);
+                } else {
+                  _selectedItemIds = <String>[..._selectedItemIds, itemId];
+                }
+              });
+            },
+            onSelectVisible: visibleItems.isEmpty
+                ? null
+                : () => setState(() {
+                    _selectedItemIds = <String>[
+                      ..._selectedItemIds,
+                      for (final PracticeItemV1 item in visibleItems)
+                        if (!_selectedItemIds.contains(item.id)) item.id,
+                    ];
+                  }),
+            visibleItemCount: _visibleWorkingOnItemCount,
+            onShowMore: visibleItems.length > _visibleWorkingOnItemCount
+                ? () => setState(() {
+                    _visibleWorkingOnItemCount += 5;
+                  })
+                : null,
+            onClearSelection: _selectedItemIds.isEmpty
+                ? null
+                : () => setState(() {
+                    _selectedItemIds = <String>[];
+                  }),
+            onStart: canStart
+                ? () => widget.onStartWorkingOnSession(
+                    selectedItemIds,
+                    effectivePracticeMode,
+                  )
+                : null,
+          );
+        }
+
+        Widget previousSessionsPane() {
+          if (recentSessions.isEmpty) {
+            return _PracticeSourceEmptyPane(
+              title: 'From Practice Sessions',
+              message:
+                  'No tracked session yet. Start from Working On first, then previous sessions will appear here.',
+              actionLabel: workingOn.isEmpty
+                  ? 'Open Matrix'
+                  : 'From Working On',
+              onAction: workingOn.isEmpty
+                  ? widget.onOpenMatrix
+                  : () => selectSource(_PracticeSource.workingOn),
+            );
+          }
+          return _PreviousSessionBrowser(
+            controller: widget.controller,
+            searchController: _previousSessionSearchController,
+            onQueryChanged: (String value) => setState(() {
+              _previousSessionQuery = value;
+              _visiblePreviousSessionCount = 5;
+            }),
+            totalCount: filteredRecentSessions.length,
+            sessions: filteredRecentSessions
+                .take(_visiblePreviousSessionCount)
+                .toList(growable: false),
+            onLoadMore: () => setState(() {
+              _visiblePreviousSessionCount += 5;
+            }),
+            onRepeatSession: widget.onRepeatPreviousSession,
+          );
+        }
+
         final Widget activePane =
-            _showPreviousSessionBrowser && recentSessions.isNotEmpty
-            ? _PreviousSessionBrowser(
-                controller: widget.controller,
-                searchController: _previousSessionSearchController,
-                onQueryChanged: (String value) => setState(() {
-                  _previousSessionQuery = value;
-                  _visiblePreviousSessionCount = 5;
-                }),
-                totalCount: filteredRecentSessions.length,
-                sessions: filteredRecentSessions
-                    .take(_visiblePreviousSessionCount)
-                    .toList(growable: false),
-                onLoadMore: () => setState(() {
-                  _visiblePreviousSessionCount += 5;
-                }),
-                onRepeatSession: widget.onRepeatPreviousSession,
-              )
-            : _showWorkingOnSetup && workingOn.isNotEmpty
-            ? _WorkingOnSessionSetup(
-                controller: widget.controller,
-                visibleItems: visibleItems,
-                selectedItemIds: selectedItemIds,
-                filters: _filters,
-                broadRotation: broadRotation,
-                onToggleFilter: (WorkingOnSessionFilterV1 filter) {
-                  setState(() {
-                    _filters = _toggleFilter(_filters, filter);
-                    _visibleWorkingOnItemCount = 5;
-                  });
-                },
-                onToggleItem: (String itemId) {
-                  setState(() {
-                    if (_selectedItemIds.contains(itemId)) {
-                      _selectedItemIds = <String>[..._selectedItemIds]
-                        ..remove(itemId);
-                    } else {
-                      _selectedItemIds = <String>[..._selectedItemIds, itemId];
-                    }
-                  });
-                },
-                onSelectVisible: visibleItems.isEmpty
-                    ? null
-                    : () => setState(() {
-                        _selectedItemIds = <String>[
-                          ..._selectedItemIds,
-                          for (final PracticeItemV1 item in visibleItems)
-                            if (!_selectedItemIds.contains(item.id)) item.id,
-                        ];
-                      }),
-                visibleItemCount: _visibleWorkingOnItemCount,
-                onShowMore: visibleItems.length > _visibleWorkingOnItemCount
-                    ? () => setState(() {
-                        _visibleWorkingOnItemCount += 5;
-                      })
-                    : null,
-                onClearSelection: _selectedItemIds.isEmpty
-                    ? null
-                    : () => setState(() {
-                        _selectedItemIds = <String>[];
-                      }),
-                onStart: canStart
-                    ? () => widget.onStartWorkingOnSession(
-                        selectedItemIds,
-                        effectivePracticeMode,
-                      )
-                    : null,
-              )
-            : DrumPanel(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    const DrumSectionTitle(text: 'Session Setup'),
-                    const SizedBox(height: 8),
-                    Text(
-                      workingOn.isEmpty
-                          ? 'Add items to Working On, then choose a practice source.'
-                          : 'Choose a source on the left. On iPad the browser or setup stays here so you can keep both in view.',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: DrumcabularyTheme.mutedInk,
-                        height: 1.35,
-                      ),
-                    ),
-                    if (workingOn.isNotEmpty) ...<Widget>[
-                      const SizedBox(height: 14),
-                      Text(
-                        '${workingOn.length} items in Working On',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w900),
-                      ),
-                    ],
-                  ],
-                ),
-              );
+            _selectedSource == _PracticeSource.previousSessions
+            ? previousSessionsPane()
+            : workingOnPane();
 
         if (isTablet) {
           return DrumScreen(
@@ -287,7 +209,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
                 children: <Widget>[
                   SizedBox(
                     width: 360,
-                    child: ListView(children: <Widget>[launchPane]),
+                    child: ListView(children: <Widget>[sourcePane]),
                   ),
                   const SizedBox(width: AppViewport.splitPaneGap),
                   Expanded(child: ListView(children: <Widget>[activePane])),
@@ -301,169 +223,9 @@ class _PracticeScreenState extends State<PracticeScreen> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
             children: <Widget>[
-              DrumPanel(
-                tone: DrumPanelTone.warm,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    const DrumSectionTitle(text: 'Practice'),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Choose your material, then start.',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: DrumcabularyTheme.textSecondary,
-                        height: 1.35,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    _PracticeLaunchTile(
-                      title: 'Repeat a Previous Session',
-                      subtitle: recentSessions.isEmpty
-                          ? 'No tracked session yet. Start one from Working On first.'
-                          : 'Pick from your recent tracked sessions.',
-                      icon: Icons.replay_rounded,
-                      onTap: recentSessions.isEmpty
-                          ? null
-                          : openPreviousSessionBrowser,
-                      fallbackActionLabel: recentSessions.isEmpty
-                          ? (workingOn.isNotEmpty
-                                ? 'Choose Patterns'
-                                : 'Open Matrix')
-                          : null,
-                      onFallbackAction: recentSessions.isEmpty
-                          ? (workingOn.isNotEmpty
-                                ? openWorkingOnSetup
-                                : widget.onOpenMatrix)
-                          : null,
-                      trailing: Icon(
-                        _showPreviousSessionBrowser
-                            ? Icons.expand_less_rounded
-                            : Icons.expand_more_rounded,
-                      ),
-                    ),
-                    if (_showPreviousSessionBrowser &&
-                        recentSessions.isNotEmpty) ...<Widget>[
-                      const SizedBox(height: 14),
-                      _PreviousSessionBrowser(
-                        controller: widget.controller,
-                        searchController: _previousSessionSearchController,
-                        onQueryChanged: (String value) => setState(() {
-                          _previousSessionQuery = value;
-                          _visiblePreviousSessionCount = 5;
-                        }),
-                        totalCount: filteredRecentSessions.length,
-                        sessions: filteredRecentSessions
-                            .take(_visiblePreviousSessionCount)
-                            .toList(growable: false),
-                        onLoadMore: () => setState(() {
-                          _visiblePreviousSessionCount += 5;
-                        }),
-                        onRepeatSession: widget.onRepeatPreviousSession,
-                      ),
-                    ],
-                    const SizedBox(height: 10),
-                    _PracticeLaunchTile(
-                      title: 'Choose Patterns to Practice',
-                      subtitle: workingOn.isEmpty
-                          ? 'Nothing is in Working On yet. Add a few items first.'
-                          : _showWorkingOnSetup
-                          ? 'Pick today\'s slice from Working On.'
-                          : 'Choose what you want to work on from Working On.',
-                      icon: Icons.play_circle_outline_rounded,
-                      onTap: workingOn.isEmpty ? null : openWorkingOnSetup,
-                      fallbackActionLabel: workingOn.isEmpty
-                          ? 'Open Matrix'
-                          : null,
-                      onFallbackAction: workingOn.isEmpty
-                          ? widget.onOpenMatrix
-                          : null,
-                      trailing: Icon(
-                        _showWorkingOnSetup
-                            ? Icons.expand_less_rounded
-                            : Icons.expand_more_rounded,
-                      ),
-                    ),
-                    if (_showWorkingOnSetup &&
-                        workingOn.isNotEmpty) ...<Widget>[
-                      const SizedBox(height: 14),
-                      _WorkingOnSessionSetup(
-                        controller: widget.controller,
-                        visibleItems: visibleItems,
-                        selectedItemIds: selectedItemIds,
-                        filters: _filters,
-                        broadRotation: broadRotation,
-                        onToggleFilter: (WorkingOnSessionFilterV1 filter) {
-                          setState(() {
-                            _filters = _toggleFilter(_filters, filter);
-                            _visibleWorkingOnItemCount = 5;
-                          });
-                        },
-                        onToggleItem: (String itemId) {
-                          setState(() {
-                            if (_selectedItemIds.contains(itemId)) {
-                              _selectedItemIds = <String>[..._selectedItemIds]
-                                ..remove(itemId);
-                            } else {
-                              _selectedItemIds = <String>[
-                                ..._selectedItemIds,
-                                itemId,
-                              ];
-                            }
-                          });
-                        },
-                        onSelectVisible: visibleItems.isEmpty
-                            ? null
-                            : () => setState(() {
-                                _selectedItemIds = <String>[
-                                  ..._selectedItemIds,
-                                  for (final PracticeItemV1 item
-                                      in visibleItems)
-                                    if (!_selectedItemIds.contains(item.id))
-                                      item.id,
-                                ];
-                              }),
-                        visibleItemCount: _visibleWorkingOnItemCount,
-                        onShowMore:
-                            visibleItems.length > _visibleWorkingOnItemCount
-                            ? () => setState(() {
-                                _visibleWorkingOnItemCount += 5;
-                              })
-                            : null,
-                        onClearSelection: _selectedItemIds.isEmpty
-                            ? null
-                            : () => setState(() {
-                                _selectedItemIds = <String>[];
-                              }),
-                        onStart: canStart
-                            ? () => widget.onStartWorkingOnSession(
-                                selectedItemIds,
-                                effectivePracticeMode,
-                              )
-                            : null,
-                      ),
-                    ],
-                    const SizedBox(height: 10),
-                    _PracticeLaunchTile(
-                      title: 'Warm Up',
-                      subtitle:
-                          'Singles, doubles, paradiddles, and paradiddle-diddles. Not logged.',
-                      icon: Icons.local_fire_department_outlined,
-                      onTap: widget.onPracticeWarmup,
-                    ),
-                    if (workingOn.isEmpty) ...<Widget>[
-                      const SizedBox(height: 14),
-                      DrumActionRow(
-                        children: <Widget>[
-                          OutlinedButton(
-                            onPressed: widget.onOpenMatrix,
-                            child: const Text('Open Matrix'),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ],
-                ),
-              ),
+              sourcePane,
+              const SizedBox(height: 14),
+              activePane,
             ],
           ),
         );
@@ -502,81 +264,101 @@ class _PracticeScreenState extends State<PracticeScreen> {
   }
 }
 
-class _PracticeLaunchTile extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final VoidCallback? onTap;
-  final String? fallbackActionLabel;
-  final VoidCallback? onFallbackAction;
-  final Widget? trailing;
+class _PracticeSourcePane extends StatelessWidget {
+  final _PracticeSource selectedSource;
+  final VoidCallback onSelectWorkingOn;
+  final VoidCallback onSelectPreviousSessions;
+  final VoidCallback onWarmup;
 
-  const _PracticeLaunchTile({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.onTap,
-    this.fallbackActionLabel,
-    this.onFallbackAction,
-    this.trailing,
+  const _PracticeSourcePane({
+    required this.selectedSource,
+    required this.onSelectWorkingOn,
+    required this.onSelectPreviousSessions,
+    required this.onWarmup,
   });
 
   @override
   Widget build(BuildContext context) {
-    final bool interactive = onTap != null;
-    final bool hasFallbackAction =
-        fallbackActionLabel != null && onFallbackAction != null;
-    final Color muted = interactive
-        ? DrumcabularyTheme.mutedInk
-        : DrumcabularyTheme.mutedInk;
-    return Material(
-      color: const Color(0xFFFFFCF5),
-      borderRadius: BorderRadius.circular(18),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: <Widget>[
-              Icon(icon, color: interactive ? null : muted),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      title,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w900,
-                        color: interactive ? null : DrumcabularyTheme.mutedInk,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: muted,
-                        height: 1.3,
-                      ),
-                    ),
-                    if (hasFallbackAction) ...<Widget>[
-                      const SizedBox(height: 10),
-                      OutlinedButton(
-                        onPressed: onFallbackAction,
-                        child: Text(fallbackActionLabel!),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              if (interactive) ...<Widget>[
-                const SizedBox(width: 12),
-                trailing ?? const Icon(Icons.arrow_forward_rounded),
-              ],
-            ],
+    return DrumPanel(
+      tone: DrumPanelTone.warm,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const DrumSectionTitle(text: 'Practice'),
+          const SizedBox(height: 8),
+          Text(
+            'Choose where today\'s material comes from.',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: DrumcabularyTheme.textSecondary,
+              height: 1.35,
+            ),
           ),
-        ),
+          const SizedBox(height: 14),
+          DrumHorizontalControlStrip(
+            child: Row(
+              children: <Widget>[
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: DrumSelectablePill(
+                    label: const Text('From Working On'),
+                    selected: selectedSource == _PracticeSource.workingOn,
+                    onPressed: onSelectWorkingOn,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: DrumSelectablePill(
+                    label: const Text('From Practice Sessions'),
+                    selected:
+                        selectedSource == _PracticeSource.previousSessions,
+                    onPressed: onSelectPreviousSessions,
+                  ),
+                ),
+                DrumSelectablePill(
+                  label: const Text('Warmup'),
+                  selected: false,
+                  onPressed: onWarmup,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PracticeSourceEmptyPane extends StatelessWidget {
+  final String title;
+  final String message;
+  final String actionLabel;
+  final VoidCallback onAction;
+
+  const _PracticeSourceEmptyPane({
+    required this.title,
+    required this.message,
+    required this.actionLabel,
+    required this.onAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return DrumPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          DrumSectionTitle(text: title),
+          const SizedBox(height: 8),
+          Text(
+            message,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: DrumcabularyTheme.mutedInk,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 14),
+          OutlinedButton(onPressed: onAction, child: Text(actionLabel)),
+        ],
       ),
     );
   }
@@ -923,9 +705,7 @@ class _SelectableWorkingOnRow extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
-              color: selected
-                  ? DrumcabularyTheme.ink
-                  : const Color(0xFFE2D8C6),
+              color: selected ? DrumcabularyTheme.ink : const Color(0xFFE2D8C6),
               width: selected ? 1.4 : 1,
             ),
           ),

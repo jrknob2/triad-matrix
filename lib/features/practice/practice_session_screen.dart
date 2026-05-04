@@ -848,7 +848,9 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
         _running = false;
         _stopwatch.stop();
         _elapsedTicker?.cancel();
+        _stopPatternPreviewClock(clearElapsed: false);
         unawaited(_metronome.stop());
+        unawaited(_patternAudio.stop());
       }
     });
     widget.onFocusModeChanged?.call(shouldStart);
@@ -862,6 +864,9 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
             pulseSchedule: _pulseScheduleForCurrentItem(),
           ),
         );
+      }
+      if (_patternAudioEnabled) {
+        unawaited(_startPatternAudioForCurrentItem());
       }
     }
   }
@@ -985,9 +990,8 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
     }
     _elapsedTicker?.cancel();
     unawaited(_metronome.stop());
-    if (!_patternAudioEnabled) {
-      _stopPatternPreviewClock(clearElapsed: true);
-    }
+    _stopPatternPreviewClock(clearElapsed: clearElapsed);
+    unawaited(_patternAudio.stop());
     _running = false;
     if (clearFlags) {
       _warmupComplete = false;
@@ -1772,8 +1776,8 @@ class _PlayerNotation extends StatelessWidget {
             grouping: grouping,
             selectedIndexes: selectedIndexes,
             selectable: false,
-            finalRepeat: false,
-            minNoteWidth: tokens.length >= 24 ? 28 : 32,
+            finalRepeat: isWarmup,
+            minNoteWidth: isWarmup ? 36 : (tokens.length >= 24 ? 28 : 32),
             compactLayout: true,
             darkTheme: darkSheetNotation,
             backgroundColor: backgroundColor,

@@ -184,24 +184,18 @@ class _TriadCellButton extends StatelessWidget {
             ),
           ),
           child: Center(
-            child: PatternReadout(
-              controller: controller,
-              itemId: itemId,
-              grouping: PatternGroupingV1.none,
+            child: PatternTextReadout(
+              patternText: controller.markedPatternTextFor(
+                itemId,
+                grouping: PatternGroupingV1.none,
+              ),
               patternStyle: Theme.of(context).textTheme.titleMedium?.copyWith(
                 color: style.textColor,
                 fontWeight: FontWeight.w900,
                 letterSpacing: 0.1,
               ),
-              voiceStyle: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: style.textColor.withValues(alpha: 0.78),
-                fontWeight: FontWeight.w800,
-              ),
               scrollable: false,
               wrap: false,
-              cellWidth: 16,
-              showDynamics: false,
-              showVoiceRow: false,
             ),
           ),
         ),

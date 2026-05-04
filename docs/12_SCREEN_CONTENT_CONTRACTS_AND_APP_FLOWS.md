@@ -14,6 +14,8 @@ This is the missing contract between product structure and UI structure.
 
 If a control or block cannot be justified by a defined flow in this document, it should not exist.
 
+Fixes must bring the relevant screen or flow back into contract compliance rather than layering local patches over drift. Once behavior is contract-compliant, temporary compatibility branches, selector hacks, stale fallback widgets, and superseded render paths must be removed unless a current contract explicitly requires them. If a defensive path remains, this contract must name why it exists and what user state it protects.
+
 The bottom app navigation must remain visible across primary and detail flows.
 Detail screens and session flows should live inside the shell, not cover it.
 
@@ -57,7 +59,7 @@ Canonical pattern-model rule:
 - non-warmup sessions are generic pattern sessions; they should not become different runtime species based on whether the current item reads as triad, phrase, 4-note, 5-note, flow, or single-surface
 - `Flow` and `Single Surface` should be treated as derived orchestration metadata for labels, filters, and recommendations, not as separate session engines
 - when a session is explicitly launched in `Flow` or `Single Surface`, that chosen session-mode metadata should be preserved in setup, logging, replay, and history rather than being recomputed later from changed item state
-- the shared notation renderer should consume canonical token data directly
+- pattern text and staff-notation documents should be derived from canonical token data directly
 - rest/pause must render explicitly as a timed position in normal notation readouts
 - `_` must remain the canonical stored rest token while rendering as `•`
 - voice rows should omit labels for rest positions even when the surrounding pattern shows voices
@@ -73,9 +75,30 @@ List item rule:
 - action controls in Library cards must not share horizontal space with the notation readout
 - Library practice-item cards should stay compact: action rows should be short, vertical gaps should be minimal, and bottom metadata should render as one line
 
-Notation rule:
+Dynamic control organization rule:
 
-- the app should use one canonical notation renderer everywhere notation is shown
+- screens or panels with more controls than can be understood at a glance should organize controls with the same filter-style segmented row pattern used elsewhere in the app
+- source-selection screens should use context pills when the primary choice is which source of material is being acted on
+- the standard organization model is `Build`, `Dynamics`, and `Voices` when a screen edits pattern structure, note markings, and drum voices
+- `Build`, `Dynamics`, and `Voices` are actual filter pills/segments, not just conceptual headings
+- only the active control set should be visible; inactive control sets should be hidden rather than mixed into the same vertical stack
+- switching control sets must not hide the pattern text input or the staff notation surface, because those are the shared editing context
+- controls that apply to selected notes should remain in the relevant `Dynamics` or `Voices` control set and disable when the current selection is incompatible
+- global helpers such as undo and input legend should not interrupt the main editing hierarchy; they should live in a compact utility row or header area for the editor section
+- new cleanup work must restore this organization before adjusting local spacing or button placement
+
+Settings modal rule:
+
+- secondary controls that tune the current screen but are not the screen's main content should live in a settings modal rather than permanently expanding the main screen
+- global preferences belong in the app settings modal; player-only runtime controls belong in the Practice Session settings modal
+- a screen should add its own settings modal only when the settings are contextual, persistent enough to revisit, and would otherwise crowd the primary flow
+- settings modals must use the app's own paper/surface motif, border, and button styling
+
+Notation and pattern text rules:
+
+- pattern text means the literal authored pattern string, such as `^R(L)K`, including bracket overrides when present; it is not a renderer and must not be treated as the retired shared notation renderer
+- compact list, card, chip, and summary readouts should use pattern text plus secondary grouping/subdivision metadata unless the screen contract explicitly calls for staff notation
+- staff notation means the VexFlow sheet-music SVG renderer
 - the sheet-music renderer is the replacement path for practice notation surfaces that need staff notation; it consumes a render-ready document made of measures, note values, drum voices, sticking labels, and visual note flags
 - sheet-music staff notation should use the VexFlow renderer from the sheet-notation POC inside an app WebView; Flutter must not maintain a separate hand-drawn staff layout for the same notation surface
 - sheet-music rendering must remain display/edit notation only; it must not include tempo, BPM, metronome, playback, audio sample, practice-session, or app-state behavior
@@ -90,26 +113,25 @@ Notation rule:
 - persisted practice item data must include the sheet-notation fields needed to reopen the same notation view: exact beat grouping text, default notation subdivision, and per-note duration overrides; transient controls such as undo history and legend visibility are screen state and should not be persisted
 - Practice Session should use the same sheet-music SVG notation surface for the active item instead of the legacy shared text renderer; the pattern-audio action belongs with the bottom transport controls alongside Play/Pause and End, not under the notation
 - Practice Session sheet notation should use a compact layout so the notation and transport controls remain visible together; active-note highlighting must update without forcing a full VexFlow SVG re-render on every playback tick
-- screens may wrap that renderer for selection or editing, but they should not fork the visual notation language
-- the canonical renderer must support independent display options for authored dynamics and authored voices
-- notation readouts should be center-justified everywhere by default
-- if a notation surface also wraps, each wrapped line group should remain visually centered
+- built-in warmup items should store the shortest repeating rudiment cycle needed to identify the exercise; the repeat bar communicates repetition
+- Warmup Session sheet notation should display that stored warmup cycle on one compact staff with the final repeat bar visible
+- screens may wrap the staff renderer for selection or editing, but they should not fork the staff-notation visual language
+- the staff renderer must support independent display options for authored dynamics and authored voices
+- staff notation readouts should be center-justified everywhere by default
+- if a staff notation surface also wraps, each wrapped line group should remain visually centered
 - left alignment for notation needs an explicit exception, not ad hoc local styling
 - notation may wrap only between note cells or documented group boundaries, never inside a marked token
 - marked tokens like `^R` and `(R)` must remain visually intact as one unit
 - `R`, `L`, and `K` are the anchor glyphs and must always render at the exact same size within a notation readout
 - `F`, `B`, and `X` should use light visual differentiation only: `F` may be subtly italicized, `B` slightly bolder, and `X` highlighted with the pulse/accent color
-- the shared renderer owns notation token geometry; screens may size the overall readout, but they must not introduce local per-screen character spacing or ornament positioning rules
-- shared notation geometry should use a character-slot model rather than overlaying symbols inside one note box
-- each visible notation character should occupy its own padded slot in the rendered string, including `^`, `(`, `)`, note letters, and phrase separators
-- spacing should be visually even at the token level: single notes need a small amount of side room, `^R` should stay tight and balanced, and ghost notation should read as `(L)` rather than `( L )`
-- ghost parenthesis slots may be narrower than note slots to avoid excessive outside whitespace around `(L)`
-- implementation should stay simple and adjustable: each notation token should be a rectangle layout built from explicit note, accent, parenthesis, and padding constants, so spacing changes are direct and predictable
-- note cells should be visually compact enough that adjacent notes read as one pattern rather than isolated glyphs with oversized gaps
-- wrappers such as editable/selectable notation surfaces may expand tap targets, but they must not introduce a second independent note-spacing model on top of the shared renderer
-- the note glyph must remain horizontally centered in its own character slot regardless of accents, ghosts, voices, or phrase separators
-- all non-accent notation characters should align to the same note-row centerline
-- `^` should render in its own slot immediately before the accented note rather than being overlaid on the note slot
+- pattern text should use a bold monospaced text style wherever it is editable or acting as the primary compact readout
+- pattern text spacing is controlled by the text style and string content; screens must not reintroduce per-character renderer geometry, local character-slot constants, or ornament-positioning code for compact pattern text
+- pattern text must preserve marked tokens like `^R` and `(R)` as literal authored text
+- staff-notation spacing, wrapping, stems, beams, noteheads, accents, ghosts, and sticking labels belong to the VexFlow staff renderer
+- wrappers such as editable/selectable staff notation surfaces may expand tap targets or add selection styling, but they must not change VexFlow note spacing, staff wrapping, or beam geometry
+- selected staff-note styling must apply to every rendered SVG part that belongs to that timed position: notehead or rest glyph, sticking label, stem, beam-owned stem geometry when VexFlow separates it, and all noteheads in a multi-voice note
+- staff-note selection metadata should be assigned from renderer/VexFlow geometry or renderer metadata, not by fragile DOM order assumptions
+- once selection metadata is reliable, temporary selector fallbacks must be removed unless a named browser/WebView state still requires them
 - ghost notation should keep the note letter at normal size and weight; only the parentheses should step back visually
 - ghost parentheses must render in their own slots around the note, leave a small consistent breathing gap, and stay vertically centered with the note, with the same visual amount above and below
 - dynamics are part of the pattern token presentation; accent marks should render beside the note, not over the note
@@ -118,10 +140,13 @@ Notation rule:
 - voice rows should align to the same note-slot centers as the pattern row, without changing the pattern token rendering
 - phrase separators like `-` belong to the notes row and must align with that row's centerline, not visually drift between the notes row and the voice row
 - if a pattern has authored dynamics or authored voices, that authored state should render consistently everywhere the pattern is shown
-- screens that need a compact structural view, such as the Matrix grid, may suppress dynamics and voices while still using the canonical renderer
+- screens that need a compact structural view, such as the Matrix grid, should use pattern text without grouping/subdivision metadata inside each cell unless the screen contract explicitly calls for metadata there
 - suppressing dynamics or voices is a display choice only; it must not mutate or discard authored item data
 - when grouped phrase notation wraps, the group separator should stay at the end of the row it belongs to
 - long player phrases may wrap on phone, but that wrapping must occur on practical group boundaries rather than by raw character position
+- pattern text fields should render the typed pattern in a larger bold monospaced style than ordinary form text; field chrome can remain standard, but the pattern value itself must not look weak or secondary
+- selected-note duration and voice controls should use labeled form fields or equivalent visible labels, not unlabeled dropdowns with only the current value showing
+- phone layouts must not allow `RenderFlex` overflow; if vertical space is tight, reduce section spacing and nonessential vertical padding before making primary controls unreachable
 
 Pattern editing source-of-truth rule:
 
@@ -268,8 +293,8 @@ Goal:
 Path:
 
 1. `Practice`
-2. `Choose Patterns to Practice` or `Repeat a Previous Session`
-3. choose source, previous session, or session scope
+2. choose `From Working On`, `From Practice Sessions`, or `Warmup`
+3. choose previous session or session scope, unless `Warmup` launches directly
 4. `Practice Session`
 5. `Session Summary`
 
@@ -282,19 +307,17 @@ Screens involved:
 
 Required controls:
 
-- `Repeat a Previous Session`
-- `Choose Patterns to Practice`
-- `Warm Up`
 - `From Working On`
+- `From Practice Sessions`
+- `Warmup`
 
 Rules:
 
-- `From Working On` belongs inside `Choose Patterns to Practice`, not as a separate top-level reason to use Practice
 - `Working On` may be broader than one day's session
 - session setup is where the player narrows that broader pool into today's slice
-- the current Practice setup flow remains valid; experience-layer work should make it feel more guided, not replace it with a different top-level flow
-- guided default behavior belongs inside the existing Practice setup flow
-- `Repeat a Previous Session` should browse recent sessions, not only repeat the single most recent one
+- `From Working On` opens session-slice setup directly
+- `From Practice Sessions` should browse recent sessions, not only repeat the single most recent one
+- `Warmup` launches directly into warmup mode
 - previous-session rows must show enough session content to be recognizable, including the patterns practiced
 - low-value metadata like practice mode should not appear there unless it changes a real choice
 - previous-session browsing may start short and offer `Load More`
@@ -468,7 +491,7 @@ Goal:
 Path:
 
 1. `Practice`
-2. `Warm Up`
+2. `Warmup`
 3. `Warmup Session`
 4. return to `Practice`
 
@@ -479,9 +502,15 @@ Screens involved:
 
 Required controls:
 
-- `Warm Up`
+- `Warmup`
 - prev/next
-- `End Warmup`
+- `End`
+
+Rules:
+
+- warmup entry from `Practice` is a direct launch action, not a setup browser
+- warmup items should store the shortest repeating cycle needed to identify the rudiment, with a repeat bar on the staff
+- shortening the warmup pattern must not shorten the actual warmup deck timer or elapsed-minute stepping
 
 ---
 
@@ -905,9 +934,9 @@ Practice answers:
 
 ### Required Entry Options
 
-- `Repeat a Previous Session`
-- `Choose Patterns to Practice`
-- `Warm Up`
+- `From Working On`
+- `From Practice Sessions`
+- `Warmup`
 
 Optional later:
 
@@ -917,17 +946,19 @@ Optional later:
 ### Direct-Entry Rules
 
 - this screen must exist as a primary tab
-- each entry option must clearly indicate what session source it uses
+- session source selection must be organized as a compact context-pill row
+- the source pills are `From Working On`, `From Practice Sessions`, and `Warmup`
+- `From Working On` opens the Working On session-slice setup
+- `From Practice Sessions` opens the recent-session browser
+- `Warmup` launches the warmup session immediately and does not reveal a setup pane
 - this screen should reduce choice friction, not add setup friction
 - `Guided` should be the default emphasis inside Practice, not a replacement for Practice setup
 - the player may still manually narrow or customize the session inside the current setup flow
 - this does not create a separate user-facing `Advanced Mode` unless a later contract explicitly adds one
-- `Choose Patterns to Practice` is the entry into normal tracked practice
-- `From Working On` belongs inside `Choose Patterns to Practice`, not as a separate peer card
-- if a direct-entry Practice source is unavailable, its entry tile should stay informative and should offer the next valid action instead of rendering as a dead disabled block
+- if a direct-entry Practice source is unavailable, its active pane should stay informative and should offer the next valid action instead of rendering as a dead disabled block
 - single-item practice should use saved BPM and duration defaults without storing them as authored notation/item data
-- `Warm Up` remains separate because it is a distinct prep mode, not a slice of current work
-- `Repeat a Previous Session` should open a recent-session browser, not silently assume the last session is the right one
+- `Warmup` remains separate because it is a distinct prep mode, not a slice of current work
+- `From Practice Sessions` should open a recent-session browser, not silently assume the last session is the right one
 - `Practice` should not contain helper navigation actions that bounce the user sideways into `Focus`
 
 ### Session Setup From `Working On`
@@ -1058,6 +1089,7 @@ Practice Session is execution only.
 - focus mode should apply only while the player is running and should return to the default stopped layout on pause or end
 - when `Play` is pressed, the session header and phone bottom nav should fade/collapse out while the player region expands into the reclaimed space
 - when `Pause` is pressed, the same transition should reverse smoothly back to the default session layout
+- when `Pause` is pressed, click audio, pulse animation, and optional pattern audio must stop immediately while preserving elapsed time
 - it is acceptable for focus mode to use a distinct running layout as long as the transition feels continuous and the default stopped layout is left intact
 - focus-mode transition timing should stay subtle and smooth, around `280–340ms`, with no bouncy or playful motion
 - focus-mode transitions should read as regions sliding and settling into place, not as a flip, pop, or abrupt subtree swap
@@ -1102,6 +1134,7 @@ Practice Session is execution only.
 - warmup is entered from `Practice` only
 - warmup is not launched from inside an active session
 - manual prev/next in warmup should change the visible exercise without rewriting the deck timer elapsed value
+- warmup notation should show the stored repeating cycle for the current rudiment and a repeat bar, while the warmup session continues to run the full built-in exercise duration
 
 ### Normal Session Rules
 
@@ -1303,7 +1336,7 @@ Must not show:
 - `New` from Library should open a new `Practice Item` draft rather than opening Matrix directly
 - that draft should start as a blank generic token-sequence item and expose triad insertion as a helper from inside the editor
 - flow voice assignments remain user-authored item data and must not add extra list-level per-item launch buttons
-- compact item rows should display the authored pattern as plain text, with grouping and subdivision as secondary metadata, rather than using the sheet-music renderer or the retired shared notation renderer
+- compact item rows should display the authored pattern text, with grouping and subdivision as secondary metadata, rather than using the sheet-music renderer or the retired shared notation renderer
 - any `Flow` filter on this screen must be derived from authored off-snare voices on non-kick notes
 - `Single Surface` may appear as a derived list filter and must mean the item has no authored off-snare voices on non-kick notes
 - do not present `Single Surface / Flow` as an authored item mode toggle; they are derived list states
@@ -1417,7 +1450,8 @@ Practice Item lets the user inspect and edit one item cleanly.
 
 ### Allowed Content
 
-- pattern display
+- pattern text input
+- staff notation preview/editor
 - concise work summary
 - accent/ghost controls
 - flow voice controls
@@ -1445,17 +1479,21 @@ Practice Item lets the user inspect and edit one item cleanly.
 - base material enters the app plain unless the user has explicitly edited it
 - no voice assignments and all-default voices must collapse to the same single-surface state
 - voice displays outside the editor should only appear when the item has authored off-snare voices on non-kick notes
-- Practice Item should have one primary notation block at the top of the screen
-- when flow voices exist, that top block should become the unified two-row pattern/voice display
+- Practice Item should have one primary sheet-notation block near the top of the screen
+- pattern text is the direct text-editing input for that sheet notation, not a separate rendered notation surface
 - the `Flow Voices` section should contain voice editing controls only, not a second notation preview
 - rest positions should keep `_` as the canonical stored token but render as `•` in user-facing notation
-- `Practice Item` may wrap the shared notation renderer with selection affordances, but it should not introduce a separate notation rendering style
-- the `Practice Item` selection wrapper may add only a small tap-target halo around each rendered note; it must not widen note slots or separator spacing into a second independent layout model
-- any `Practice Item` note-selection wrapper must derive its slot and separator measurements from the shared renderer geometry rather than fixed local spacing constants
+- `Practice Item` may wrap the VexFlow staff renderer with selection affordances, but it should not introduce a separate staff-notation rendering style
+- the `Practice Item` selection wrapper may add only selection styling around each rendered note; it must not change note spacing, staff wrapping, or beam geometry
+- any `Practice Item` note-selection wrapper must derive selection targets from VexFlow-rendered SVG geometry rather than fixed local spacing constants
 - the notation block should be the note-selection surface, so the screen does not need a per-note chip grid for editing
 - `Practice Item` should use a filter-style control row with `Build`, `Dynamics`, and `Voices`, with `Build` as the default active set
+- the `Build`, `Dynamics`, and `Voices` controls should behave as show/hide filter pills: only the active control group is visible at a time
+- `Build` owns structure-editing controls for append, insert, replace, delete, rest insertion, and triad-helper insertion
+- `Dynamics` owns selected-note accent and ghost controls
+- `Voices` owns selected-note drum voice assignment controls
 - `Dynamics` and `Voices` should keep their available controls visible even when no editable hand-note selection is present; incompatible states should disable those controls instead of replacing them with instructional placeholder text
-- `Practice Item` should also contain a `Pattern Structure` section for direct token-sequence editing
+- `Practice Item` should use the pattern text field as the direct token-sequence editing surface
 - `Practice Item` should contain an explicit `Grouping` control for visible separator metadata
 - a new blank `Practice Item` draft should open with a stable empty notation row already visible so the layout does not jump on first insertion
 - when entering voice editing, effective default voices remain `snare` for hand notes and `kick` for `K` notes unless the user assigns something else

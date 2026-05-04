@@ -4281,37 +4281,37 @@ class AppController extends ChangeNotifier {
       _warmupItem(
         id: 'warmup_right_hand_singles',
         name: 'Right-Hand Singles',
-        sticking: 'RRRRRRRRRRRRRRRR',
+        sticking: 'RRRR',
         tags: const <String>['warmup', 'rudiment', 'singles', 'right-hand'],
       ),
       _warmupItem(
         id: 'warmup_left_hand_singles',
         name: 'Left-Hand Singles',
-        sticking: 'LLLLLLLLLLLLLLLL',
+        sticking: 'LLLL',
         tags: const <String>['warmup', 'rudiment', 'singles', 'left-hand'],
       ),
       _warmupItem(
         id: 'warmup_singles',
         name: 'Singles',
-        sticking: 'RLRLRLRLRLRLRLRL',
+        sticking: 'RLRL',
         tags: const <String>['warmup', 'rudiment', 'singles'],
       ),
       _warmupItem(
         id: 'warmup_doubles',
         name: 'Doubles',
-        sticking: 'RRLLRRLLRRLLRRLL',
+        sticking: 'RRLL',
         tags: const <String>['warmup', 'rudiment', 'doubles'],
       ),
       _warmupItem(
         id: 'warmup_paradiddles',
         name: 'Paradiddles',
-        sticking: 'RLRRLRLLRLRRLRLL',
+        sticking: 'RLRRLRLL',
         tags: const <String>['warmup', 'rudiment', 'paradiddle'],
       ),
       _warmupItem(
         id: 'warmup_paradiddle_diddles',
         name: 'Right Paradiddle-Diddle',
-        sticking: 'RLRRLLRLRRLLRLRRLLRLRRLL',
+        sticking: 'RLRRLL',
         tags: const <String>[
           'warmup',
           'rudiment',
@@ -4322,7 +4322,7 @@ class AppController extends ChangeNotifier {
       _warmupItem(
         id: 'warmup_left_paradiddle_diddles',
         name: 'Left Paradiddle-Diddle',
-        sticking: 'LRLLRRLRLLRRLRLLRRLRLLRR',
+        sticking: 'LRLLRR',
         tags: const <String>['warmup', 'rudiment', 'paradiddle-diddle', 'left'],
       ),
     ];
