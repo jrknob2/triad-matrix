@@ -1754,11 +1754,11 @@ class _PlayerNotation extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(10),
       child: ColoredBox(
-        color: DrumcabularyTheme.paper,
+        color: Colors.black,
         child: Padding(
           padding: EdgeInsets.symmetric(
-            horizontal: isWarmup ? 8 : 10,
-            vertical: 8,
+            horizontal: isWarmup ? 4 : 6,
+            vertical: 4,
           ),
           child: DrumSheetNotationDisplay(
             document: document,
@@ -1766,7 +1766,9 @@ class _PlayerNotation extends StatelessWidget {
             selectedIndexes: selectedIndexes,
             selectable: false,
             finalRepeat: false,
-            minNoteWidth: tokens.length >= 24 ? 32 : 38,
+            minNoteWidth: tokens.length >= 24 ? 28 : 32,
+            compactLayout: true,
+            darkTheme: true,
           ),
         ),
       ),

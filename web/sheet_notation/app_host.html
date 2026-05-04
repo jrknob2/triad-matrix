@@ -20,11 +20,29 @@
         -webkit-tap-highlight-color: transparent;
       }
 
+      #notation.dark {
+        background: #000;
+      }
+
       #notation svg {
         cursor: default;
         display: block;
         max-width: 100%;
         -webkit-tap-highlight-color: transparent;
+      }
+
+      #notation.dark svg {
+        background: #000;
+      }
+
+      #notation.dark svg path,
+      #notation.dark svg line,
+      #notation.dark svg rect,
+      #notation.dark svg text,
+      #notation.dark svg polygon,
+      #notation.dark svg polyline {
+        fill: #fff;
+        stroke: #fff;
       }
 
       #notation * {
@@ -68,6 +86,7 @@
             const selected = Array.isArray(payload.selectedIndexes)
               ? payload.selectedIndexes
               : [];
+            notation.classList.toggle('dark', payload.options?.theme === 'dark');
             if (typeof globalThis.renderDrumNotationSvgWithMetadata !== 'function') {
               throw new Error('Drumcabulary sheet notation renderer did not load.');
             }
@@ -87,6 +106,14 @@
             notation.innerHTML = `<pre class="error">${error.stack ?? error.message}</pre>`;
             postHeight();
           }
+        },
+        setSelection(selected) {
+          selectedIndexes.clear();
+          if (Array.isArray(selected)) {
+            selected.forEach((index) => selectedIndexes.add(Number(index)));
+          }
+          renderSelection();
+          postSelection();
         },
       };
 

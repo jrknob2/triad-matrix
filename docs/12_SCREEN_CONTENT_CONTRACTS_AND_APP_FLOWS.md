@@ -89,6 +89,7 @@ Notation rule:
 - Practice Item should not show the legacy `Grouping` pill row or `Append` pill row when the sheet-notation pattern field is the editing surface
 - persisted practice item data must include the sheet-notation fields needed to reopen the same notation view: exact beat grouping text, default notation subdivision, and per-note duration overrides; transient controls such as undo history and legend visibility are screen state and should not be persisted
 - Practice Session should use the same sheet-music SVG notation surface for the active item instead of the legacy shared text renderer; the pattern-audio action belongs with the bottom transport controls alongside Play/Pause and End, not under the notation
+- Practice Session sheet notation should use a compact layout so the notation and transport controls remain visible together; active-note highlighting must update without forcing a full VexFlow SVG re-render on every playback tick
 - screens may wrap that renderer for selection or editing, but they should not fork the visual notation language
 - the canonical renderer must support independent display options for authored dynamics and authored voices
 - notation readouts should be center-justified everywhere by default

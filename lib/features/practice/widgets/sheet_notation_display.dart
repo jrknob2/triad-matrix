@@ -242,6 +242,8 @@ class DrumSheetNotationDisplay extends StatefulWidget {
   final Color? noteColor;
   final Color? selectedColor;
   final double minNoteWidth;
+  final bool compactLayout;
+  final bool darkTheme;
   final bool debugUseNativeFallback;
 
   const DrumSheetNotationDisplay({
@@ -258,6 +260,8 @@ class DrumSheetNotationDisplay extends StatefulWidget {
     this.noteColor,
     this.selectedColor,
     this.minNoteWidth = defaultMinNoteWidth,
+    this.compactLayout = false,
+    this.darkTheme = false,
     this.debugUseNativeFallback = false,
   });
 
@@ -275,6 +279,8 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay> {
   double _webViewHeight = 160;
   double? _lastLayoutWidth;
   String? _lastPayloadJson;
+  String? _lastRenderPayloadJson;
+  String? _lastSelectionJson;
 
   @override
   void initState() {
@@ -316,6 +322,8 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay> {
           onPageFinished: (_) {
             _hostLoaded = true;
             _lastPayloadJson = null;
+            _lastRenderPayloadJson = null;
+            _lastSelectionJson = null;
             _renderToWebView(width: _lastLayoutWidth);
           },
         ),
@@ -330,7 +338,6 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay> {
     super.didUpdateWidget(oldWidget);
     if (!widget.debugUseNativeFallback) {
       _ensureWebViewController();
-      _lastPayloadJson = null;
     }
   }
 
@@ -435,12 +442,36 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay> {
   void _renderToWebView({double? width}) {
     if (!_hostLoaded) return;
     final double resolvedWidth = width ?? _lastLayoutWidth ?? 640;
-    final String payloadJson = jsonEncode(
-      _webViewPayloadForWidth(resolvedWidth),
-    );
-    if (_lastPayloadJson == payloadJson) return;
-    _lastPayloadJson = payloadJson;
-    final String encodedPayload = jsonEncode(payloadJson);
+    final Map<String, Object?> payload = _webViewPayloadForWidth(resolvedWidth);
+    final String renderPayloadJson = jsonEncode(<String, Object?>{
+      'document': payload['document'],
+      'options': payload['options'],
+    });
+    final String selectionJson = jsonEncode(payload['selectedIndexes']);
+    final bool shouldRender = _lastRenderPayloadJson != renderPayloadJson;
+    final bool shouldUpdateSelection = _lastSelectionJson != selectionJson;
+    if (!shouldRender && !shouldUpdateSelection) return;
+    _lastPayloadJson = jsonEncode(payload);
+    _lastRenderPayloadJson = renderPayloadJson;
+    _lastSelectionJson = selectionJson;
+    final String encodedPayload = jsonEncode(_lastPayloadJson);
+    final String encodedSelection = jsonEncode(selectionJson);
+    if (!shouldRender) {
+      _controller
+          ?.runJavaScript('''
+(() => {
+  const selected = JSON.parse($encodedSelection);
+  if (window.DrumcabularySheetNotation == null) {
+    return;
+  }
+  window.DrumcabularySheetNotation.setSelection(selected);
+})();
+''')
+          .catchError((Object error) {
+            debugPrint('Drum sheet notation selection update failed: $error');
+          });
+      return;
+    }
     _controller
         ?.runJavaScript('''
 (() => {
@@ -466,19 +497,34 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay> {
         'finalRepeat': widget.finalRepeat,
         'grouping': widget.grouping,
         'minNoteWidth': widget.minNoteWidth,
+        'theme': widget.darkTheme ? 'dark' : 'light',
+        if (widget.compactLayout) ...<String, Object?>{
+          'staffY': 0,
+          'staffHeight': 104,
+          'systemGapY': 108,
+          'paddingRight': 4,
+          'systemEndReserve': 16,
+          'noteSpacing': 30,
+        },
       },
     };
   }
 
   double _estimatedHeightForWidth(double width) {
     final int noteCount = widget.document.flattenedNotes.length;
-    if (noteCount == 0) return 140;
-    final double formatterWidth = math.max(120, width - 48);
+    if (noteCount == 0) return widget.compactLayout ? 112 : 140;
+    final double formatterWidth = math.max(
+      120,
+      width - (widget.compactLayout ? 20 : 48),
+    );
     final int notesPerSystem = math.max(
       4,
       (formatterWidth / widget.minNoteWidth).floor(),
     );
     final int systems = (noteCount / notesPerSystem).ceil();
+    if (widget.compactLayout) {
+      return 104 + math.max(0, systems - 1) * 108;
+    }
     return 10 + 126 + math.max(0, systems - 1) * 140;
   }
 }
