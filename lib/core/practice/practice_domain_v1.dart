@@ -28,6 +28,15 @@ enum PatternPulseRoleV1 { normal, tag }
 
 enum DrumVoiceV1 { snare, rackTom, tom2, floorTom, hihat, crash, ride, kick }
 
+enum PatternNoteValueV1 {
+  whole,
+  half,
+  quarter,
+  eighth,
+  sixteenth,
+  thirtySecond,
+}
+
 enum AccentVoiceV1 { snare, crash, ride }
 
 enum LearningLaneV1 { control, balance, dynamics, integration, phrasing, flow }
@@ -517,6 +526,22 @@ class PracticeItemV1 {
   /// Flow is derived from authored off-snare movement on non-kick notes.
   final List<DrumVoiceV1> voiceAssignments;
 
+  /// Sheet-notation grouping text, such as `4`, `3535`, or `3 5 3 5`.
+  ///
+  /// This preserves the editable sheet-music grouping exactly. Legacy
+  /// `groupingHint` remains available for older display surfaces and simple
+  /// equal-size group metadata.
+  final String beatGrouping;
+
+  /// Default rendered sheet-note value.
+  final PatternNoteValueV1 notationSubdivision;
+
+  /// Per-position sheet-note value overrides.
+  ///
+  /// `null` means use [notationSubdivision]. The list is position-aligned with
+  /// [sequence] and may be empty for legacy/default items.
+  final List<PatternNoteValueV1?> noteValueOverrides;
+
   final PracticeItemSourceV1 source;
   final List<String> tags;
   final bool saved;
@@ -533,6 +558,9 @@ class PracticeItemV1 {
     required this.accentedNoteIndices,
     required this.ghostNoteIndices,
     required this.voiceAssignments,
+    this.beatGrouping = '',
+    this.notationSubdivision = PatternNoteValueV1.eighth,
+    List<PatternNoteValueV1?>? noteValueOverrides,
     required this.source,
     required this.tags,
     required this.saved,
@@ -540,6 +568,9 @@ class PracticeItemV1 {
        sequence = sequence ?? PatternSequenceV1.parse(sticking ?? ''),
        groupingHint = groupingHint ?? PatternGroupingV1.none,
        timing = timing ?? const PatternTimingV1.auto(),
+       noteValueOverrides = List<PatternNoteValueV1?>.unmodifiable(
+         noteValueOverrides ?? const <PatternNoteValueV1?>[],
+       ),
        assert(
          noteCount == null ||
              (sequence ?? PatternSequenceV1.parse(sticking ?? ''))
@@ -579,6 +610,9 @@ class PracticeItemV1 {
     List<int>? accentedNoteIndices,
     List<int>? ghostNoteIndices,
     List<DrumVoiceV1>? voiceAssignments,
+    String? beatGrouping,
+    PatternNoteValueV1? notationSubdivision,
+    List<PatternNoteValueV1?>? noteValueOverrides,
     PracticeItemSourceV1? source,
     List<String>? tags,
     bool? saved,
@@ -601,6 +635,9 @@ class PracticeItemV1 {
       accentedNoteIndices: accentedNoteIndices ?? this.accentedNoteIndices,
       ghostNoteIndices: ghostNoteIndices ?? this.ghostNoteIndices,
       voiceAssignments: voiceAssignments ?? this.voiceAssignments,
+      beatGrouping: beatGrouping ?? this.beatGrouping,
+      notationSubdivision: notationSubdivision ?? this.notationSubdivision,
+      noteValueOverrides: noteValueOverrides ?? this.noteValueOverrides,
       source: source ?? this.source,
       tags: tags ?? this.tags,
       saved: saved ?? this.saved,

@@ -273,6 +273,11 @@ class IsarAppStateStore implements AppStateStore {
       'accentedNoteIndices': item.accentedNoteIndices,
       'ghostNoteIndices': item.ghostNoteIndices,
       'voiceAssignments': item.voiceAssignments.map((v) => v.name).toList(),
+      'beatGrouping': item.beatGrouping,
+      'notationSubdivision': item.notationSubdivision.name,
+      'noteValueOverrides': item.noteValueOverrides
+          .map((PatternNoteValueV1? value) => value?.name)
+          .toList(growable: false),
       'source': item.source.name,
       'tags': item.tags,
       'saved': item.saved,
@@ -309,6 +314,18 @@ class IsarAppStateStore implements AppStateStore {
       voiceAssignments: (map['voiceAssignments'] as List<dynamic>)
           .map((dynamic value) => DrumVoiceV1.values.byName(value as String))
           .toList(growable: false),
+      beatGrouping: map['beatGrouping'] as String? ?? '',
+      notationSubdivision: PatternNoteValueV1.values.byName(
+        map['notationSubdivision'] as String? ?? PatternNoteValueV1.eighth.name,
+      ),
+      noteValueOverrides:
+          ((map['noteValueOverrides'] as List<dynamic>?) ?? const <dynamic>[])
+              .map(
+                (dynamic value) => value == null
+                    ? null
+                    : PatternNoteValueV1.values.byName(value as String),
+              )
+              .toList(growable: false),
       source: PracticeItemSourceV1.values.byName(map['source'] as String),
       tags: (map['tags'] as List<dynamic>).cast<String>(),
       saved: map['saved'] as bool,

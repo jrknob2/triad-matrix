@@ -1924,6 +1924,9 @@ class AppController extends ChangeNotifier {
     PatternSequenceV1? sequence,
     PatternGroupingV1? groupingHint,
     PatternTimingV1? timing,
+    String? beatGrouping,
+    PatternNoteValueV1? notationSubdivision,
+    List<PatternNoteValueV1?>? noteValueOverrides,
     bool saveToWorkingOn = false,
   }) {
     final PracticeItemV1 existingItem = _sanitizedItem(itemById(itemId));
@@ -1933,6 +1936,10 @@ class AppController extends ChangeNotifier {
     final List<DrumVoiceV1> sanitizedVoices = List<DrumVoiceV1>.from(
       voiceAssignments,
     );
+    final List<PatternNoteValueV1?> sanitizedValueOverrides =
+        List<PatternNoteValueV1?>.from(
+          noteValueOverrides ?? existingItem.noteValueOverrides,
+        );
     final PatternSequenceV1 nextSequence = sequence ?? existingItem.sequence;
     final bool sequenceChanged = !listEquals(
       nextSequence.tokens,
@@ -1975,6 +1982,10 @@ class AppController extends ChangeNotifier {
               accentedNoteIndices: sanitizedAccents,
               ghostNoteIndices: sanitizedGhosts,
               voiceAssignments: sanitizedVoices,
+              beatGrouping: beatGrouping ?? existingItem.beatGrouping,
+              notationSubdivision:
+                  notationSubdivision ?? existingItem.notationSubdivision,
+              noteValueOverrides: sanitizedValueOverrides,
               tags: nextTags,
               saved: saveToWorkingOn ? true : entry.saved,
             ),
@@ -3248,10 +3259,19 @@ class AppController extends ChangeNotifier {
             .toList()
           ..sort();
     final List<DrumVoiceV1> voices = _storedVoicesForItem(item);
+    final List<PatternNoteValueV1?> noteValueOverrides =
+        List<PatternNoteValueV1?>.generate(
+          tokens.length,
+          (int index) => index < item.noteValueOverrides.length
+              ? item.noteValueOverrides[index]
+              : null,
+          growable: false,
+        );
 
     if (listEquals(accented, item.accentedNoteIndices) &&
         listEquals(ghosted, item.ghostNoteIndices) &&
-        listEquals(voices, item.voiceAssignments)) {
+        listEquals(voices, item.voiceAssignments) &&
+        listEquals(noteValueOverrides, item.noteValueOverrides)) {
       return item;
     }
 
@@ -3259,6 +3279,7 @@ class AppController extends ChangeNotifier {
       accentedNoteIndices: accented,
       ghostNoteIndices: ghosted,
       voiceAssignments: voices,
+      noteValueOverrides: noteValueOverrides,
     );
   }
 

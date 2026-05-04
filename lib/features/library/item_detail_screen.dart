@@ -48,8 +48,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   void initState() {
     super.initState();
     _loadDraftFromController();
+    final PracticeItemV1 item = widget.controller.itemById(widget.itemId);
     _lastPatternText = _draftPatternText();
-    _lastGroupingText = _sheetGroupingText(_draftGrouping) ?? '';
+    _lastGroupingText = _initialGroupingTextForItem(item);
     _patternController = TextEditingController(text: _lastPatternText);
     _groupingController = TextEditingController(text: _lastGroupingText);
   }
@@ -294,11 +295,11 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     _voiceAssignments = List<DrumVoiceV1>.from(
       widget.controller.noteVoicesFor(item.id),
     );
-    _durationOverrides = List<DrumSheetNoteValue?>.filled(
+    _durationOverrides = _sheetNoteValuesForStoredOverrides(
+      item.noteValueOverrides,
       _draftTokens.length,
-      null,
     );
-    _draftSubdivision = DrumSheetNoteValue.eighth;
+    _draftSubdivision = _sheetNoteValueForStoredValue(item.notationSubdivision);
     _sessionBpm = widget.controller.launchBpmForItem(item.id);
     _timerPreset = widget.controller.launchTimerPresetForItem(item.id);
     _selectedNoteIndices = <int>{};
@@ -417,6 +418,12 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     final int? groupSize = grouping.groupSize;
     if (groupSize == null || groupSize <= 0) return null;
     return '$groupSize';
+  }
+
+  String _initialGroupingTextForItem(PracticeItemV1 item) {
+    final String beatGrouping = item.beatGrouping.trim();
+    if (beatGrouping.isNotEmpty) return beatGrouping;
+    return _sheetGroupingText(item.groupingHint) ?? '';
   }
 
   void _handlePatternTextChanged(String value) {
@@ -587,6 +594,50 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       DrumSheetVoice.crash => DrumVoiceV1.crash,
       DrumSheetVoice.ride => DrumVoiceV1.ride,
       DrumSheetVoice.kick => DrumVoiceV1.kick,
+    };
+  }
+
+  List<DrumSheetNoteValue?> _sheetNoteValuesForStoredOverrides(
+    List<PatternNoteValueV1?> values,
+    int noteCount,
+  ) {
+    return List<DrumSheetNoteValue?>.generate(noteCount, (int index) {
+      if (index >= values.length) return null;
+      final PatternNoteValueV1? value = values[index];
+      return value == null ? null : _sheetNoteValueForStoredValue(value);
+    }, growable: false);
+  }
+
+  List<PatternNoteValueV1?> _storedNoteValuesForSheetValues(
+    List<DrumSheetNoteValue?> values,
+  ) {
+    return values
+        .map(
+          (DrumSheetNoteValue? value) =>
+              value == null ? null : _storedNoteValueForSheetValue(value),
+        )
+        .toList(growable: false);
+  }
+
+  DrumSheetNoteValue _sheetNoteValueForStoredValue(PatternNoteValueV1 value) {
+    return switch (value) {
+      PatternNoteValueV1.whole => DrumSheetNoteValue.whole,
+      PatternNoteValueV1.half => DrumSheetNoteValue.half,
+      PatternNoteValueV1.quarter => DrumSheetNoteValue.quarter,
+      PatternNoteValueV1.eighth => DrumSheetNoteValue.eighth,
+      PatternNoteValueV1.sixteenth => DrumSheetNoteValue.sixteenth,
+      PatternNoteValueV1.thirtySecond => DrumSheetNoteValue.thirtySecond,
+    };
+  }
+
+  PatternNoteValueV1 _storedNoteValueForSheetValue(DrumSheetNoteValue value) {
+    return switch (value) {
+      DrumSheetNoteValue.whole => PatternNoteValueV1.whole,
+      DrumSheetNoteValue.half => PatternNoteValueV1.half,
+      DrumSheetNoteValue.quarter => PatternNoteValueV1.quarter,
+      DrumSheetNoteValue.eighth => PatternNoteValueV1.eighth,
+      DrumSheetNoteValue.sixteenth => PatternNoteValueV1.sixteenth,
+      DrumSheetNoteValue.thirtySecond => PatternNoteValueV1.thirtySecond,
     };
   }
 
@@ -775,6 +826,13 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         !listEquals(item.tokens, _draftTokens) ||
         item.groupingHint != _draftGrouping ||
         !listEquals(currentMarkings, draftMarkings) ||
+        item.beatGrouping.trim() != _groupingController.text.trim() ||
+        item.notationSubdivision !=
+            _storedNoteValueForSheetValue(_draftSubdivision) ||
+        !listEquals(
+          item.noteValueOverrides,
+          _storedNoteValuesForSheetValues(_durationOverrides),
+        ) ||
         !listEquals(
           widget.controller.noteVoicesFor(item.id),
           _voiceAssignments,
@@ -844,6 +902,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       competency: widget.controller.competencyFor(widget.itemId),
       sequence: PatternSequenceV1(tokens: _draftTokens),
       groupingHint: _draftGrouping,
+      beatGrouping: _groupingController.text.trim(),
+      notationSubdivision: _storedNoteValueForSheetValue(_draftSubdivision),
+      noteValueOverrides: _storedNoteValuesForSheetValues(_durationOverrides),
       saveToWorkingOn: saveToWorkingOn,
     );
     ScaffoldMessenger.of(context).showSnackBar(
@@ -871,7 +932,8 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     );
     _loadDraftFromController();
     _syncPatternTextFromDraft();
-    final String groupingText = _sheetGroupingText(_draftGrouping) ?? '';
+    final PracticeItemV1 item = widget.controller.itemById(originalItemId);
+    final String groupingText = _initialGroupingTextForItem(item);
     _groupingController.value = TextEditingValue(
       text: groupingText,
       selection: TextSelection.collapsed(offset: groupingText.length),

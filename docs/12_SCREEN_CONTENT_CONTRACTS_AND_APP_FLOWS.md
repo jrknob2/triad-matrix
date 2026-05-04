@@ -87,6 +87,7 @@ Notation rule:
 - Practice Item sheet-notation editing should expose default subdivision as a screen-level dropdown; selected-note duration controls are overrides and must not replace the default subdivision control
 - Practice Item sheet-notation editing should provide undo for pattern, grouping, subdivision, and selected-note edits
 - Practice Item should not show the legacy `Grouping` pill row or `Append` pill row when the sheet-notation pattern field is the editing surface
+- persisted practice item data must include the sheet-notation fields needed to reopen the same notation view: exact beat grouping text, default notation subdivision, and per-note duration overrides; transient controls such as undo history and legend visibility are screen state and should not be persisted
 - screens may wrap that renderer for selection or editing, but they should not fork the visual notation language
 - the canonical renderer must support independent display options for authored dynamics and authored voices
 - notation readouts should be center-justified everywhere by default

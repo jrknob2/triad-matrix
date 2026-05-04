@@ -225,6 +225,41 @@ void main() {
     );
 
     test(
+      'saving sheet notation metadata persists grouping and note values',
+      () async {
+        final FakeAppStateStore store = FakeAppStateStore();
+        final AppController controller = await AppController.createForTesting(
+          store,
+        );
+        final String itemId = controller.recommendedStartingTriadItemIds.first;
+
+        controller.savePracticeItemEdits(
+          itemId: itemId,
+          accentedNoteIndices: const <int>[],
+          ghostNoteIndices: const <int>[],
+          voiceAssignments: const <DrumVoiceV1>[],
+          competency: CompetencyLevelV1.learning,
+          beatGrouping: '3 5 3 5',
+          notationSubdivision: PatternNoteValueV1.eighth,
+          noteValueOverrides: const <PatternNoteValueV1?>[
+            null,
+            PatternNoteValueV1.sixteenth,
+            PatternNoteValueV1.thirtySecond,
+          ],
+        );
+
+        final PracticeItemV1 item = controller.itemById(itemId);
+        expect(item.beatGrouping, '3 5 3 5');
+        expect(item.notationSubdivision, PatternNoteValueV1.eighth);
+        expect(item.noteValueOverrides, const <PatternNoteValueV1?>[
+          null,
+          PatternNoteValueV1.sixteenth,
+          PatternNoteValueV1.thirtySecond,
+        ]);
+      },
+    );
+
+    test(
       'explicit single-surface session mode is preserved for orchestrated items and history',
       () async {
         final FakeAppStateStore store = FakeAppStateStore();
