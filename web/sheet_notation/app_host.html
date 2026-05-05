@@ -51,11 +51,17 @@
       }
 
       .drum-note-selected {
+        fill: #b26a00;
         filter: drop-shadow(0 0 3px #b26a00);
+        stroke: #b26a00;
       }
 
       .drum-note-selected path,
-      .drum-note-selected text {
+      .drum-note-selected line,
+      .drum-note-selected rect,
+      .drum-note-selected text,
+      .drum-note-selected polygon,
+      .drum-note-selected polyline {
         fill: #b26a00;
         stroke: #b26a00;
       }
@@ -178,7 +184,7 @@
           })
           .filter(Boolean);
 
-        [...svg.querySelectorAll('.vf-stem')].forEach((element, index) => {
+        [...svg.querySelectorAll('.vf-stem, [class*="stem"]')].forEach((element) => {
           const target = nearestNoteTarget(element, noteTargets);
           const note = target?.note;
           if (note == null) return;

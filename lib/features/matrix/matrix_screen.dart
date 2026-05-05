@@ -8,6 +8,7 @@ import '../app/app_viewport.dart';
 import '../../state/app_controller.dart';
 import '../practice/widgets/pattern_readout.dart';
 import '../practice/widgets/pattern_sequence_editor.dart';
+import '../practice/widgets/pattern_text_styles.dart';
 import 'widgets/triad_matrix_grid.dart';
 
 enum _MatrixPrimaryView { progress, traits }
@@ -825,11 +826,7 @@ class _MatrixPhrasePanel extends StatelessWidget {
                   metadataText: 'Grouping: Triads • Subdivision: 1/8',
                   scrollable: false,
                   wrap: true,
-                  patternStyle: Theme.of(context).textTheme.titleLarge
-                      ?.copyWith(
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -0.4,
-                      ),
+                  patternStyle: PatternTextStyles.card(context),
                   metadataStyle: Theme.of(context).textTheme.bodySmall
                       ?.copyWith(
                         color: DrumcabularyTheme.mutedInk,

@@ -81,9 +81,12 @@ Dynamic control organization rule:
 - source-selection screens should use context pills when the primary choice is which source of material is being acted on
 - the standard organization model is `Build`, `Dynamics`, and `Voices` when a screen edits pattern structure, note markings, and drum voices
 - `Build`, `Dynamics`, and `Voices` are actual filter pills/segments, not just conceptual headings
-- only the active control set should be visible; inactive control sets should be hidden rather than mixed into the same vertical stack
+- context pills show one active control set and hide inactive control sets
+- controls inside the active control set should remain visible even when they cannot currently run
+- unavailable controls inside the active set should be disabled with stable labels, not hidden or replaced by a different layout
+- a control is available only when the current flow state satisfies that control's prerequisites; selection-dependent controls require a compatible selected note set
 - switching control sets must not hide the pattern text input or the staff notation surface, because those are the shared editing context
-- controls that apply to selected notes should remain in the relevant `Dynamics` or `Voices` control set and disable when the current selection is incompatible
+- controls that apply to selected notes should remain in their relevant control set and disable when the current selection is missing or incompatible
 - global helpers such as undo and input legend should not interrupt the main editing hierarchy; they should live in a compact utility row or header area for the editor section
 - new cleanup work must restore this organization before adjusting local spacing or button placement
 
@@ -124,7 +127,9 @@ Notation and pattern text rules:
 - marked tokens like `^R` and `(R)` must remain visually intact as one unit
 - `R`, `L`, and `K` are the anchor glyphs and must always render at the exact same size within a notation readout
 - `F`, `B`, and `X` should use light visual differentiation only: `F` may be subtly italicized, `B` slightly bolder, and `X` highlighted with the pulse/accent color
-- pattern text should use a bold monospaced text style wherever it is editable or acting as the primary compact readout
+- pattern text should use shared role-based styles instead of per-screen ad hoc font sizes
+- compact pattern text readouts should use the shared compact pattern style unless a screen contract explicitly calls for card or summary emphasis
+- editable pattern text fields are the only default place where the pattern value should scale larger than adjacent ordinary controls
 - pattern text spacing is controlled by the text style and string content; screens must not reintroduce per-character renderer geometry, local character-slot constants, or ornament-positioning code for compact pattern text
 - pattern text must preserve marked tokens like `^R` and `(R)` as literal authored text
 - staff-notation spacing, wrapping, stems, beams, noteheads, accents, ghosts, and sticking labels belong to the VexFlow staff renderer
@@ -144,7 +149,7 @@ Notation and pattern text rules:
 - suppressing dynamics or voices is a display choice only; it must not mutate or discard authored item data
 - when grouped phrase notation wraps, the group separator should stay at the end of the row it belongs to
 - long player phrases may wrap on phone, but that wrapping must occur on practical group boundaries rather than by raw character position
-- pattern text fields should render the typed pattern in a larger bold monospaced style than ordinary form text; field chrome can remain standard, but the pattern value itself must not look weak or secondary
+- editable pattern text fields should render the typed pattern in the shared editable pattern style: larger, bold, monospaced, and at least as visually prominent as adjacent subdivision/grouping values; increase the value text size and tune dense internal padding rather than making the whole field visibly taller or heavier
 - selected-note duration and voice controls should use labeled form fields or equivalent visible labels, not unlabeled dropdowns with only the current value showing
 - phone layouts must not allow `RenderFlex` overflow; if vertical space is tight, reduce section spacing and nonessential vertical padding before making primary controls unreachable
 
@@ -1492,7 +1497,11 @@ Practice Item lets the user inspect and edit one item cleanly.
 - `Build` owns structure-editing controls for append, insert, replace, delete, rest insertion, and triad-helper insertion
 - `Dynamics` owns selected-note accent and ghost controls
 - `Voices` owns selected-note drum voice assignment controls
-- `Dynamics` and `Voices` should keep their available controls visible even when no editable hand-note selection is present; incompatible states should disable those controls instead of replacing them with instructional placeholder text
+- every visible control inside the active `Build`, `Dynamics`, or `Voices` set should keep a stable position and label across compatible and incompatible selection states
+- selected-note controls must disable rather than disappear when no notes are selected
+- `Build` selected-note actions such as duration override and delete require at least one selected note
+- `Dynamics` accent requires at least one selected non-rest, non-kick note; ghost requires at least one selected non-rest note
+- `Voices` voice override requires a selected set made only of authored hand notes that can accept voice assignment
 - `Practice Item` should use the pattern text field as the direct token-sequence editing surface
 - `Practice Item` should contain an explicit `Grouping` control for visible separator metadata
 - a new blank `Practice Item` draft should open with a stable empty notation row already visible so the layout does not jump on first insertion

@@ -4,6 +4,7 @@ import '../../../core/pattern/triad_matrix.dart';
 import '../../../core/practice/practice_domain_v1.dart';
 import '../../../state/app_controller.dart';
 import '../../practice/widgets/pattern_readout.dart';
+import '../../practice/widgets/pattern_text_styles.dart';
 
 class TriadMatrixGrid extends StatelessWidget {
   final AppController controller;
@@ -189,10 +190,9 @@ class _TriadCellButton extends StatelessWidget {
                 itemId,
                 grouping: PatternGroupingV1.none,
               ),
-              patternStyle: Theme.of(context).textTheme.titleMedium?.copyWith(
+              patternStyle: PatternTextStyles.compact(
+                context,
                 color: style.textColor,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0.1,
               ),
               scrollable: false,
               wrap: false,

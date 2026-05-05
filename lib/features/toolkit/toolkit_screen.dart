@@ -237,9 +237,6 @@ class _FocusScreenState extends State<FocusScreen> {
               PatternReadout(
                 controller: widget.controller,
                 itemId: item.id,
-                patternStyle: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
                 voiceStyle: Theme.of(context).textTheme.bodySmall,
                 scrollable: false,
                 wrap: true,

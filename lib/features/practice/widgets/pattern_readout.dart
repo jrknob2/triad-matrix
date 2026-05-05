@@ -4,6 +4,7 @@ import '../../../core/practice/practice_domain_v1.dart';
 import '../../app/app_formatters.dart';
 import '../../app/drumcabulary_theme.dart';
 import '../../../state/app_controller.dart';
+import 'pattern_text_styles.dart';
 
 class PatternReadout extends StatelessWidget {
   final AppController controller;
@@ -54,8 +55,6 @@ class PatternReadout extends StatelessWidget {
 }
 
 class PatternTextReadout extends StatelessWidget {
-  static const String _notationFontFamily = 'Courier';
-
   final String patternText;
   final String? metadataText;
   final TextStyle? patternStyle;
@@ -75,11 +74,9 @@ class PatternTextReadout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final TextStyle resolvedPatternStyle =
-        (patternStyle ?? DefaultTextStyle.of(context).style).copyWith(
-          fontFamily: _notationFontFamily,
-          letterSpacing: 0,
-        );
+    final TextStyle resolvedPatternStyle = patternStyle == null
+        ? PatternTextStyles.compact(context)
+        : PatternTextStyles.applyNotationFace(patternStyle!);
     final TextStyle resolvedMetadataStyle =
         metadataStyle ??
         Theme.of(context).textTheme.bodySmall?.copyWith(

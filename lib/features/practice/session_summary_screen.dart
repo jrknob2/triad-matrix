@@ -5,6 +5,7 @@ import '../../features/app/app_formatters.dart';
 import '../../features/app/drumcabulary_ui.dart';
 import '../../state/app_controller.dart';
 import 'widgets/pattern_readout.dart';
+import 'widgets/pattern_text_styles.dart';
 
 class SessionSummaryScreen extends StatefulWidget {
   final AppController controller;
@@ -120,11 +121,7 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                   PatternReadout(
                     controller: widget.controller,
                     itemId: currentItemId,
-                    patternStyle: Theme.of(context).textTheme.headlineMedium
-                        ?.copyWith(
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: -0.8,
-                        ),
+                    patternStyle: PatternTextStyles.summary(context),
                     voiceStyle: Theme.of(context).textTheme.titleMedium,
                     scrollable: false,
                     wrap: true,

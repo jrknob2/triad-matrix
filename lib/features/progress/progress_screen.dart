@@ -9,6 +9,7 @@ import '../../features/app/app_viewport.dart';
 import '../../features/app/drumcabulary_ui.dart';
 import '../../state/app_controller.dart';
 import '../practice/widgets/pattern_readout.dart';
+import '../practice/widgets/pattern_text_styles.dart';
 
 enum _ProgressView { overview, byItem, byGroup, trend }
 
@@ -787,11 +788,7 @@ class _ItemAssessmentPanel extends StatelessWidget {
                 child: PatternReadout(
                   controller: controller,
                   itemId: item.id,
-                  patternStyle: Theme.of(context).textTheme.headlineSmall
-                      ?.copyWith(
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -0.5,
-                      ),
+                  patternStyle: PatternTextStyles.card(context),
                   voiceStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DrumcabularyTheme.mutedInk,
                     fontWeight: FontWeight.w700,
@@ -1026,11 +1023,6 @@ class _ProgressItemRow extends StatelessWidget {
                   PatternReadout(
                     controller: controller,
                     itemId: item.id,
-                    patternStyle: Theme.of(context).textTheme.titleMedium
-                        ?.copyWith(
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: -0.5,
-                        ),
                     voiceStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: DrumcabularyTheme.mutedInk,
                       fontWeight: FontWeight.w700,
@@ -1173,9 +1165,9 @@ class _CoverageSnapshotRow extends StatelessWidget {
             const SizedBox(height: 2),
             Text(
               'of $total total',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: DrumcabularyTheme.mutedInk),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: DrumcabularyTheme.mutedInk,
+              ),
             ),
           ],
         ),

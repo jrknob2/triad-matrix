@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/practice/practice_domain_v1.dart';
 import '../../../state/app_controller.dart';
 import 'pattern_readout.dart';
+import 'pattern_text_styles.dart';
 import '../../app/drumcabulary_theme.dart';
 
 class PracticeItemSummaryBlock extends StatelessWidget {
@@ -31,10 +32,7 @@ class PracticeItemSummaryBlock extends StatelessWidget {
         PatternReadout(
           controller: controller,
           itemId: item.id,
-          patternStyle: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w900,
-            letterSpacing: -0.4,
-          ),
+          patternStyle: PatternTextStyles.card(context),
           voiceStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
             color: DrumcabularyTheme.mutedInk,
             fontWeight: FontWeight.w700,

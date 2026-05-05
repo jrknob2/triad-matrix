@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/practice/practice_domain_v1.dart';
 import '../../../state/app_controller.dart';
 import 'pattern_readout.dart';
+import 'pattern_text_styles.dart';
 import '../../app/drumcabulary_theme.dart';
 import '../../app/app_formatters.dart';
 
@@ -42,11 +43,7 @@ class PatternSequenceEditor extends StatelessWidget {
               ? PatternReadout(
                   controller: controller,
                   itemId: itemId,
-                  patternStyle: Theme.of(context).textTheme.titleMedium
-                      ?.copyWith(
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -0.4,
-                      ),
+                  patternStyle: PatternTextStyles.compact(context),
                   voiceStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w700,
                     color: DrumcabularyTheme.mutedInk,
@@ -63,11 +60,7 @@ class PatternSequenceEditor extends StatelessWidget {
                     readout.markings,
                     grouping: PatternGroupingV1.none,
                   ),
-                  patternStyle: Theme.of(context).textTheme.titleMedium
-                      ?.copyWith(
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -0.4,
-                      ),
+                  patternStyle: PatternTextStyles.compact(context),
                   metadataStyle: Theme.of(context).textTheme.bodySmall
                       ?.copyWith(
                         fontWeight: FontWeight.w700,

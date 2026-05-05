@@ -9,6 +9,9 @@ import '../../features/app/unsaved_changes_dialog.dart';
 import '../../state/app_controller.dart';
 import '../practice/widgets/sheet_notation_display.dart';
 import '../practice/widgets/session_setup_controls.dart';
+import '../practice/widgets/pattern_text_styles.dart';
+
+enum _ItemEditorControlSet { build, dynamics, voices }
 
 class ItemDetailScreen extends StatefulWidget {
   final AppController controller;
@@ -42,6 +45,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   final List<_DraftSnapshot> _undoStack = <_DraftSnapshot>[];
   String _lastPatternText = '';
   String _lastGroupingText = '';
+  _ItemEditorControlSet _activeControlSet = _ItemEditorControlSet.build;
 
   @override
   void initState() {
@@ -112,9 +116,18 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                       children: <Widget>[
                         TextField(
                           controller: _patternController,
+                          textAlignVertical: TextAlignVertical.center,
+                          style: PatternTextStyles.editableInput(context),
+                          strutStyle: const StrutStyle(
+                            fontSize: PatternTextStyles.editableInputFontSize,
+                            height: PatternTextStyles.editableInputLineHeight,
+                          ),
                           decoration: const InputDecoration(
                             labelText: 'Pattern',
                             border: OutlineInputBorder(),
+                            isDense: true,
+                            contentPadding:
+                                PatternTextStyles.editableInputPadding,
                           ),
                           onChanged: _handlePatternTextChanged,
                         ),
@@ -196,9 +209,14 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                         ),
                         const SizedBox(height: 12),
                         _SelectedSheetNoteEditor(
+                          activeControlSet: _activeControlSet,
                           notes: _draftSheetNotes(draftMarkings),
                           selectedIndices: _selectedNoteIndices,
                           subdivision: _draftSubdivision,
+                          onControlSetChanged: (_ItemEditorControlSet next) =>
+                              setState(() {
+                                _activeControlSet = next;
+                              }),
                           onDurationChanged: _setDurationForSelection,
                           onVoiceChanged: _setSheetVoiceForSelection,
                           onToggleAccent: _toggleAccentForSelection,
@@ -1133,9 +1151,11 @@ class _DraftSnapshot {
 }
 
 class _SelectedSheetNoteEditor extends StatelessWidget {
+  final _ItemEditorControlSet activeControlSet;
   final List<DrumSheetNotationNote> notes;
   final Set<int> selectedIndices;
   final DrumSheetNoteValue subdivision;
+  final ValueChanged<_ItemEditorControlSet> onControlSetChanged;
   final ValueChanged<DrumSheetNoteValue?> onDurationChanged;
   final ValueChanged<DrumSheetVoice?> onVoiceChanged;
   final VoidCallback onToggleAccent;
@@ -1143,9 +1163,11 @@ class _SelectedSheetNoteEditor extends StatelessWidget {
   final VoidCallback onDeleteSelection;
 
   const _SelectedSheetNoteEditor({
+    required this.activeControlSet,
     required this.notes,
     required this.selectedIndices,
     required this.subdivision,
+    required this.onControlSetChanged,
     required this.onDurationChanged,
     required this.onVoiceChanged,
     required this.onToggleAccent,
@@ -1171,103 +1193,91 @@ class _SelectedSheetNoteEditor extends StatelessWidget {
     final bool allGhosted =
         selectedNotes.isNotEmpty &&
         selectedNotes.every((DrumSheetNotationNote note) => note.ghost);
+    final bool canApplyBuildSelection = selectedNotes.isNotEmpty;
+    final bool canApplyAccent = selectedNotes.any(_canAccent);
+    final bool canApplyGhost = selectedNotes.any(_canGhost);
+    final bool canApplyVoice =
+        selectedNotes.isNotEmpty && selectedNotes.every(_canAssignVoice);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
+        DrumHorizontalControlStrip(
+          child: Row(
+            children: <Widget>[
+              _ControlSetPill(
+                label: 'Build',
+                selected: activeControlSet == _ItemEditorControlSet.build,
+                onPressed: () =>
+                    onControlSetChanged(_ItemEditorControlSet.build),
+              ),
+              _ControlSetPill(
+                label: 'Dynamics',
+                selected: activeControlSet == _ItemEditorControlSet.dynamics,
+                onPressed: () =>
+                    onControlSetChanged(_ItemEditorControlSet.dynamics),
+              ),
+              _ControlSetPill(
+                label: 'Voices',
+                selected: activeControlSet == _ItemEditorControlSet.voices,
+                onPressed: () =>
+                    onControlSetChanged(_ItemEditorControlSet.voices),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
         Text(
           hasSelection
               ? '${selected.length} note${selected.length == 1 ? '' : 's'} selected'
-              : 'Select notes to edit duration, voice, accent, ghost, or delete.',
+              : _emptySelectionMessage(activeControlSet),
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: DrumcabularyTheme.textSecondary,
             fontWeight: FontWeight.w700,
           ),
         ),
-        if (hasSelection) ...<Widget>[
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: <Widget>[
-              DropdownButton<DrumSheetNoteValue?>(
-                value: selectedDuration,
-                hint: const Text('Duration'),
-                onChanged: onDurationChanged,
-                items: <DropdownMenuItem<DrumSheetNoteValue?>>[
-                  const DropdownMenuItem<DrumSheetNoteValue?>(
-                    value: null,
-                    child: Text('Default'),
-                  ),
-                  for (final DrumSheetNoteValue value
-                      in DrumSheetNoteValue.values)
-                    DropdownMenuItem<DrumSheetNoteValue?>(
-                      value: value,
-                      child: Text('1/${value.patternLabel}'),
-                    ),
-                ],
-              ),
-              DropdownButton<DrumSheetVoice?>(
-                value: selectedVoice,
-                hint: const Text('Voice'),
-                onChanged: onVoiceChanged,
-                items: const <DropdownMenuItem<DrumSheetVoice?>>[
-                  DropdownMenuItem<DrumSheetVoice?>(
-                    value: null,
-                    child: Text('Default'),
-                  ),
-                  DropdownMenuItem<DrumSheetVoice?>(
-                    value: DrumSheetVoice.snare,
-                    child: Text('Snare'),
-                  ),
-                  DropdownMenuItem<DrumSheetVoice?>(
-                    value: DrumSheetVoice.tom1,
-                    child: Text('Tom 1'),
-                  ),
-                  DropdownMenuItem<DrumSheetVoice?>(
-                    value: DrumSheetVoice.tom2,
-                    child: Text('Tom 2'),
-                  ),
-                  DropdownMenuItem<DrumSheetVoice?>(
-                    value: DrumSheetVoice.floorTom,
-                    child: Text('Floor tom'),
-                  ),
-                  DropdownMenuItem<DrumSheetVoice?>(
-                    value: DrumSheetVoice.hihat,
-                    child: Text('Hi-hat'),
-                  ),
-                  DropdownMenuItem<DrumSheetVoice?>(
-                    value: DrumSheetVoice.crash,
-                    child: Text('Crash'),
-                  ),
-                  DropdownMenuItem<DrumSheetVoice?>(
-                    value: DrumSheetVoice.ride,
-                    child: Text('Ride'),
-                  ),
-                  DropdownMenuItem<DrumSheetVoice?>(
-                    value: DrumSheetVoice.kick,
-                    child: Text('Kick'),
-                  ),
-                ],
-              ),
-              OutlinedButton(
-                onPressed: onToggleAccent,
-                child: Text(allAccented ? 'Remove Accent' : 'Accent'),
-              ),
-              OutlinedButton(
-                onPressed: onToggleGhost,
-                child: Text(allGhosted ? 'Remove Ghost' : 'Ghost'),
-              ),
-              OutlinedButton(
-                onPressed: onDeleteSelection,
-                child: const Text('Delete'),
-              ),
-            ],
-          ),
-        ],
+        const SizedBox(height: 8),
+        _SelectedControlSetBody(
+          activeControlSet: activeControlSet,
+          selectedDuration: selectedDuration,
+          selectedVoice: selectedVoice,
+          allAccented: allAccented,
+          allGhosted: allGhosted,
+          canApplyBuildSelection: canApplyBuildSelection,
+          canApplyAccent: canApplyAccent,
+          canApplyGhost: canApplyGhost,
+          canApplyVoice: canApplyVoice,
+          onDurationChanged: onDurationChanged,
+          onVoiceChanged: onVoiceChanged,
+          onToggleAccent: onToggleAccent,
+          onToggleGhost: onToggleGhost,
+          onDeleteSelection: onDeleteSelection,
+        ),
       ],
     );
+  }
+
+  String _emptySelectionMessage(_ItemEditorControlSet controlSet) {
+    return switch (controlSet) {
+      _ItemEditorControlSet.build =>
+        'Select notes to edit duration or delete them.',
+      _ItemEditorControlSet.dynamics =>
+        'Select notes to edit accents or ghosts.',
+      _ItemEditorControlSet.voices => 'Select notes to assign drum voices.',
+    };
+  }
+
+  bool _canAccent(DrumSheetNotationNote note) {
+    return !note.rest && note.sticking.toUpperCase() != 'K';
+  }
+
+  bool _canGhost(DrumSheetNotationNote note) {
+    return !note.rest;
+  }
+
+  bool _canAssignVoice(DrumSheetNotationNote note) {
+    final String sticking = note.sticking.toUpperCase();
+    return !note.rest && (sticking == 'R' || sticking == 'L');
   }
 
   DrumSheetNoteValue? _singleSelectedDuration(
@@ -1294,5 +1304,179 @@ class _SelectedSheetNoteEditor extends StatelessWidget {
     }).toSet();
     if (values.length != 1) return null;
     return values.single;
+  }
+}
+
+class _ControlSetPill extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onPressed;
+
+  const _ControlSetPill({
+    required this.label,
+    required this.selected,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: DrumSelectablePill(
+        label: Text(label),
+        selected: selected,
+        onPressed: onPressed,
+      ),
+    );
+  }
+}
+
+class _SelectedControlSetBody extends StatelessWidget {
+  final _ItemEditorControlSet activeControlSet;
+  final DrumSheetNoteValue? selectedDuration;
+  final DrumSheetVoice? selectedVoice;
+  final bool allAccented;
+  final bool allGhosted;
+  final bool canApplyBuildSelection;
+  final bool canApplyAccent;
+  final bool canApplyGhost;
+  final bool canApplyVoice;
+  final ValueChanged<DrumSheetNoteValue?> onDurationChanged;
+  final ValueChanged<DrumSheetVoice?> onVoiceChanged;
+  final VoidCallback onToggleAccent;
+  final VoidCallback onToggleGhost;
+  final VoidCallback onDeleteSelection;
+
+  const _SelectedControlSetBody({
+    required this.activeControlSet,
+    required this.selectedDuration,
+    required this.selectedVoice,
+    required this.allAccented,
+    required this.allGhosted,
+    required this.canApplyBuildSelection,
+    required this.canApplyAccent,
+    required this.canApplyGhost,
+    required this.canApplyVoice,
+    required this.onDurationChanged,
+    required this.onVoiceChanged,
+    required this.onToggleAccent,
+    required this.onToggleGhost,
+    required this.onDeleteSelection,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return switch (activeControlSet) {
+      _ItemEditorControlSet.build => _buildControls(context),
+      _ItemEditorControlSet.dynamics => _dynamicsControls(context),
+      _ItemEditorControlSet.voices => _voiceControls(context),
+    };
+  }
+
+  Widget _buildControls(BuildContext context) {
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: <Widget>[
+        SizedBox(
+          width: 178,
+          child: DropdownButtonFormField<DrumSheetNoteValue?>(
+            key: ValueKey<DrumSheetNoteValue?>(selectedDuration),
+            initialValue: selectedDuration,
+            decoration: const InputDecoration(
+              labelText: 'Duration Override',
+              isDense: true,
+            ),
+            onChanged: canApplyBuildSelection ? onDurationChanged : null,
+            items: <DropdownMenuItem<DrumSheetNoteValue?>>[
+              const DropdownMenuItem<DrumSheetNoteValue?>(
+                value: null,
+                child: Text('Default'),
+              ),
+              for (final DrumSheetNoteValue value in DrumSheetNoteValue.values)
+                DropdownMenuItem<DrumSheetNoteValue?>(
+                  value: value,
+                  child: Text('1/${value.patternLabel}'),
+                ),
+            ],
+          ),
+        ),
+        OutlinedButton(
+          onPressed: canApplyBuildSelection ? onDeleteSelection : null,
+          child: const Text('Delete'),
+        ),
+      ],
+    );
+  }
+
+  Widget _dynamicsControls(BuildContext context) {
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: <Widget>[
+        OutlinedButton(
+          onPressed: canApplyAccent ? onToggleAccent : null,
+          child: Text(allAccented ? 'Remove Accent' : 'Accent'),
+        ),
+        OutlinedButton(
+          onPressed: canApplyGhost ? onToggleGhost : null,
+          child: Text(allGhosted ? 'Remove Ghost' : 'Ghost'),
+        ),
+      ],
+    );
+  }
+
+  Widget _voiceControls(BuildContext context) {
+    return SizedBox(
+      width: 210,
+      child: DropdownButtonFormField<DrumSheetVoice?>(
+        key: ValueKey<DrumSheetVoice?>(selectedVoice),
+        initialValue: selectedVoice,
+        decoration: const InputDecoration(
+          labelText: 'Voice Override',
+          isDense: true,
+        ),
+        onChanged: canApplyVoice ? onVoiceChanged : null,
+        items: const <DropdownMenuItem<DrumSheetVoice?>>[
+          DropdownMenuItem<DrumSheetVoice?>(
+            value: null,
+            child: Text('Default'),
+          ),
+          DropdownMenuItem<DrumSheetVoice?>(
+            value: DrumSheetVoice.snare,
+            child: Text('Snare'),
+          ),
+          DropdownMenuItem<DrumSheetVoice?>(
+            value: DrumSheetVoice.tom1,
+            child: Text('Tom 1'),
+          ),
+          DropdownMenuItem<DrumSheetVoice?>(
+            value: DrumSheetVoice.tom2,
+            child: Text('Tom 2'),
+          ),
+          DropdownMenuItem<DrumSheetVoice?>(
+            value: DrumSheetVoice.floorTom,
+            child: Text('Floor tom'),
+          ),
+          DropdownMenuItem<DrumSheetVoice?>(
+            value: DrumSheetVoice.hihat,
+            child: Text('Hi-hat'),
+          ),
+          DropdownMenuItem<DrumSheetVoice?>(
+            value: DrumSheetVoice.crash,
+            child: Text('Crash'),
+          ),
+          DropdownMenuItem<DrumSheetVoice?>(
+            value: DrumSheetVoice.ride,
+            child: Text('Ride'),
+          ),
+          DropdownMenuItem<DrumSheetVoice?>(
+            value: DrumSheetVoice.kick,
+            child: Text('Kick'),
+          ),
+        ],
+      ),
+    );
   }
 }

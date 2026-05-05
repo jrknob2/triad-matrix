@@ -189,7 +189,10 @@ class _CoachBlockCard extends StatelessWidget {
         ? FilledButton.styleFrom(
             backgroundColor: DrumcabularyTheme.creamText,
             foregroundColor: const Color(0xFF17130F),
-            side: const BorderSide(color: DrumcabularyTheme.pulseHover, width: 1.5),
+            side: const BorderSide(
+              color: DrumcabularyTheme.pulseHover,
+              width: 1.5,
+            ),
             textStyle: const TextStyle(fontWeight: FontWeight.w900),
           ).copyWith(
             overlayColor: WidgetStateProperty.resolveWith((states) {
@@ -308,11 +311,6 @@ class _CoachPatternStrip extends StatelessWidget {
                 child: PatternReadout(
                   controller: controller,
                   itemId: itemId,
-                  patternStyle: Theme.of(context).textTheme.titleMedium
-                      ?.copyWith(
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -0.5,
-                      ),
                   voiceStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w700,
                     color: DrumcabularyTheme.mutedInk,
