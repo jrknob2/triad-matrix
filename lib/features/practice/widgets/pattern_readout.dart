@@ -42,9 +42,9 @@ class PatternReadout extends StatelessWidget {
   Widget build(BuildContext context) {
     final PracticeItemV1 item = controller.itemById(itemId);
     return PatternTextReadout(
-      patternText: controller.markedPatternTextFor(
-        itemId,
-        grouping: PatternGroupingV1.none,
+      patternText: markedPatternTextForPracticeItem(
+        item,
+        groupingOverride: grouping,
       ),
       metadataText: notationInfoForPracticeItem(item),
       patternStyle: patternStyle,

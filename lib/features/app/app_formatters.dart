@@ -143,6 +143,51 @@ String markedPatternTextForNotes(
   }).join();
 }
 
+String markedPatternTextForPracticeItem(
+  PracticeItemV1 item, {
+  PatternGroupingV1? groupingOverride,
+}) {
+  final List<PatternNoteMarkingV1> markings =
+      List<PatternNoteMarkingV1>.generate(item.tokens.length, (int index) {
+        if (item.ghostNoteIndices.contains(index)) {
+          return PatternNoteMarkingV1.ghost;
+        }
+        if (item.accentedNoteIndices.contains(index)) {
+          return PatternNoteMarkingV1.accent;
+        }
+        return PatternNoteMarkingV1.normal;
+      }, growable: false);
+
+  final PatternGroupingV1? explicitGrouping = groupingOverride;
+  if (explicitGrouping != null) {
+    return markedPatternTextForNotes(
+      item.tokens,
+      markings,
+      grouping: explicitGrouping,
+    );
+  }
+
+  final List<int> beatGroups = groupingSizesForText(item.beatGrouping);
+  if (beatGroups.isNotEmpty) {
+    return _markedPatternTextForVariableGroups(
+      item.tokens,
+      markings,
+      beatGroups,
+    );
+  }
+
+  final int? groupSize = item.groupingHint.groupSize;
+  if (groupSize != null) {
+    return markedPatternTextForNotes(
+      item.tokens,
+      markings,
+      grouping: PatternGroupingV1(groupSize: groupSize, separator: ' '),
+    );
+  }
+
+  return markedPatternTextForNotes(item.tokens, markings);
+}
+
 String notationInfoForPracticeItem(PracticeItemV1 item) {
   final String grouping = item.beatGrouping.trim().isNotEmpty
       ? item.beatGrouping.trim()
@@ -150,10 +195,48 @@ String notationInfoForPracticeItem(PracticeItemV1 item) {
   return 'Grouping: $grouping • Subdivision: ${item.notationSubdivision.subdivisionLabel}';
 }
 
+List<int> groupingSizesForText(String text) {
+  final String trimmed = text.trim();
+  if (trimmed.isEmpty) return const <int>[];
+  final Iterable<String> rawValues = RegExp(r'^\d+$').hasMatch(trimmed)
+      ? trimmed.split('')
+      : RegExp(
+          r'\d+',
+        ).allMatches(trimmed).map((RegExpMatch match) => match.group(0)!);
+  return rawValues
+      .map(int.tryParse)
+      .whereType<int>()
+      .where((int value) => value > 0)
+      .toList(growable: false);
+}
+
 String _groupingInfoFor(PatternGroupingV1 grouping) {
   final int? groupSize = grouping.groupSize;
   if (groupSize == null) return 'None';
   return '$groupSize';
+}
+
+String _markedPatternTextForVariableGroups(
+  List<PatternTokenV1> tokens,
+  List<PatternNoteMarkingV1> markings,
+  List<int> groups,
+) {
+  int groupIndex = 0;
+  int remainingInGroup = groups[groupIndex];
+  return List<String>.generate(tokens.length, (int index) {
+    final String marked = markedPatternTextForNotes(
+      <PatternTokenV1>[tokens[index]],
+      <PatternNoteMarkingV1>[
+        index < markings.length ? markings[index] : PatternNoteMarkingV1.normal,
+      ],
+    );
+    remainingInGroup -= 1;
+    if (index >= tokens.length - 1) return marked;
+    if (remainingInGroup > 0) return marked;
+    groupIndex = (groupIndex + 1) % groups.length;
+    remainingInGroup = groups[groupIndex];
+    return '$marked ';
+  }).join();
 }
 
 extension MatrixProgressStateLabel on MatrixProgressStateV1 {

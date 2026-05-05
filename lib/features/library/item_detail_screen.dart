@@ -556,28 +556,13 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   }
 
   PatternGroupingV1 _legacyGroupingForText(String text) {
-    final List<int> groups = _groupSizesForText(text);
+    final List<int> groups = groupingSizesForText(text);
     if (groups.isEmpty) return PatternGroupingV1.none;
     final int first = groups.first;
     if (groups.any((int group) => group != first)) {
       return PatternGroupingV1.none;
     }
     return PatternGroupingV1(groupSize: first, separator: '-');
-  }
-
-  List<int> _groupSizesForText(String text) {
-    final String trimmed = text.trim();
-    if (trimmed.isEmpty) return const <int>[];
-    final Iterable<String> rawValues = RegExp(r'^\d+$').hasMatch(trimmed)
-        ? trimmed.split('')
-        : RegExp(
-            r'\d+',
-          ).allMatches(trimmed).map((RegExpMatch match) => match.group(0)!);
-    return rawValues
-        .map(int.tryParse)
-        .whereType<int>()
-        .where((int value) => value > 0)
-        .toList(growable: false);
   }
 
   void _applySheetNotesToDraft(

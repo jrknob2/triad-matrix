@@ -110,6 +110,9 @@ Notation and pattern text rules:
 - sheet-music accent and ghost decorations may be placed inside or outside bracket overrides when valid, but accented ghost notes such as `^(L)` are invalid
 - the sheet-music widget must not include the notation-input legend; app screens should own any modal/dialog that explains notation syntax
 - Practice Item sheet-notation editing should expose beat grouping as an editable text field, not as fixed grouping pills; spaces entered in the pattern field should update this grouping metadata and immediately affect the rendered SVG grouping
+- spaces entered in the editable pattern field are grouping input shorthand only; canonical token storage should remain a token sequence without literal spacing tokens
+- `beatGrouping` is the persisted source for authored visual grouping, and compact pattern readouts that show grouping metadata must also apply that grouping visually with spaces in the displayed pattern text
+- compact pattern readouts should interpret grouping text consistently with the sheet renderer: `3313` and `3 3 1 3` both mean variable groups of 3, 3, 1, and 3 note positions
 - Practice Item sheet-notation editing should expose default subdivision as a screen-level dropdown; selected-note duration controls are overrides and must not replace the default subdivision control
 - Practice Item sheet-notation editing should provide undo for pattern, grouping, subdivision, and selected-note edits
 - Practice Item should not show the legacy `Grouping` pill row or `Append` pill row when the sheet-notation pattern field is the editing surface
