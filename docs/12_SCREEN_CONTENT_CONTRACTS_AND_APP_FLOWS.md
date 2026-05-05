@@ -1489,6 +1489,9 @@ Practice Item lets the user inspect and edit one item cleanly.
 - voice displays outside the editor should only appear when the item has authored off-snare voices on non-kick notes
 - Practice Item should have one primary sheet-notation block near the top of the screen
 - pattern text is the direct text-editing input for that sheet notation, not a separate rendered notation surface
+- the editable pattern text field should wrap long authored patterns instead of clipping or horizontally hiding the pattern
+- Practice Item should not include a standalone history/statistics card for logged time, session count, or last worked; that information belongs in Progress/history surfaces and should appear only as secondary metadata when needed
+- Practice Item should show only one note-selection instruction at a time; the active `Build`, `Dynamics`, or `Voices` control set owns the contextual instruction
 - the `Flow Voices` section should contain voice editing controls only, not a second notation preview
 - rest positions should keep `_` as the canonical stored and user-facing text token
 - `Practice Item` may wrap the VexFlow staff renderer with selection affordances, but it should not introduce a separate staff-notation rendering style

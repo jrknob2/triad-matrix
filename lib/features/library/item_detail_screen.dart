@@ -85,10 +85,6 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         }
         final bool isDraftItem = !item.saved;
         final bool supportsMatrixEditing = _supportsMatrixEditingDraft();
-        final Duration totalTime = widget.controller.totalTime(itemId: item.id);
-        final int sessionCount = widget.controller.sessionCount(
-          itemId: item.id,
-        );
         final List<PatternNoteMarkingV1> draftMarkings = _draftMarkingsFor(
           _draftTokens.length,
         );
@@ -116,6 +112,8 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                       children: <Widget>[
                         TextField(
                           controller: _patternController,
+                          keyboardType: TextInputType.multiline,
+                          maxLines: null,
                           textAlignVertical: TextAlignVertical.center,
                           style: PatternTextStyles.editableInput(context),
                           strutStyle: const StrutStyle(
@@ -199,14 +197,6 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                           },
                           minNoteWidth: 40,
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Tap notes to select them, or edit the pattern text directly.',
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(
-                                color: DrumcabularyTheme.textSecondary,
-                              ),
-                        ),
                         const SizedBox(height: 12),
                         _SelectedSheetNoteEditor(
                           activeControlSet: _activeControlSet,
@@ -241,35 +231,6 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                DrumPanel(
-                  child: Column(
-                    children: <Widget>[
-                      if (!isDraftItem) ...<Widget>[
-                        ListTile(
-                          title: const Text('Logged Time'),
-                          trailing: Text(formatDuration(totalTime)),
-                        ),
-                        ListTile(
-                          title: const Text('Sessions'),
-                          trailing: Text('$sessionCount'),
-                        ),
-                        ListTile(
-                          title: const Text('Last Worked'),
-                          trailing: Text(
-                            widget.controller.recentSummaryForItem(item.id),
-                          ),
-                        ),
-                      ] else
-                        const ListTile(
-                          title: Text('New Phrase'),
-                          subtitle: Text(
-                            'Save this phrase to Working On when you are ready.',
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
                 FilledButton(
                   onPressed: hasUnsavedChanges || isDraftItem
                       ? () => _saveDraft(saveToWorkingOn: isDraftItem)
