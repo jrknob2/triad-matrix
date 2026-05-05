@@ -1831,7 +1831,7 @@ String _stickingForToken(PatternTokenV1 token) {
     PatternTokenKindV1.both => 'B',
     PatternTokenKindV1.flam => 'F',
     PatternTokenKindV1.accent => 'X',
-    PatternTokenKindV1.rest => '-',
+    PatternTokenKindV1.rest => '_',
   };
 }
 

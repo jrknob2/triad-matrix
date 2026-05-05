@@ -696,7 +696,7 @@ Practice Item is the detail/edit screen for one piece of material.
 - popup dialogs across the app should stay visually aligned with the app's own dialog motif rather than default tinted Material styling
 - when the item has flow voices, that primary notation block should render as a unified two-row pattern/voice display
 - the `Flow Voices` section should contain editing controls, not a second notation preview
-- rest positions should keep `_` as the canonical stored token but render as `•` in user-facing notation
+- rest positions should keep `_` as the canonical stored and user-facing text token
 - Practice Item may later expose timing controls, but grouping and timing must remain separate concepts in the data model and playback path
 - the `Practice Item` note-selection affordance may add only a small tap-target halo around the shared renderer; it should not create a wider second spacing model for note slots or separators
 - the `Practice Item` note-selection affordance should derive its slot and separator sizing from the shared renderer geometry instead of fixed local constants

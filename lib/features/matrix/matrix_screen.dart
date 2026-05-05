@@ -823,7 +823,7 @@ class _MatrixPhrasePanel extends StatelessWidget {
                     phraseReadout.markings,
                     grouping: PatternGroupingV1.none,
                   ),
-                  metadataText: 'Grouping: Triads • Subdivision: 1/8',
+                  metadataText: 'Grouping: Triads - Subdivision: 1/8',
                   scrollable: false,
                   wrap: true,
                   patternStyle: PatternTextStyles.card(context),

@@ -715,7 +715,7 @@ class _TrendView extends StatelessWidget {
                   (PracticeSessionLogV1 session) => Padding(
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Text(
-                      '${formatShortDate(session.endedAt)} • ${formatDuration(session.duration)} • ${session.practiceMode.label}',
+                      '${formatShortDate(session.endedAt)} - ${formatDuration(session.duration)} - ${session.practiceMode.label}',
                     ),
                   ),
                 ),
@@ -808,7 +808,7 @@ class _ItemAssessmentPanel extends StatelessWidget {
           Text(
             aggregate == null
                 ? 'No assessment yet.'
-                : '${aggregate.status.label} • ${assessments.length} assessed sessions',
+                : '${aggregate.status.label} - ${assessments.length} assessed sessions',
             style: Theme.of(
               context,
             ).textTheme.bodyMedium?.copyWith(color: DrumcabularyTheme.mutedInk),
@@ -1033,14 +1033,14 @@ class _ProgressItemRow extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${controller.matrixProgressStateFor(item.id).label} • ${controller.recentSummaryForItem(item.id)}',
+                    '${controller.matrixProgressStateFor(item.id).label} - ${controller.recentSummaryForItem(item.id)}',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: DrumcabularyTheme.mutedInk,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '${formatDuration(controller.totalTime(itemId: item.id))} logged • ${controller.sessionCount(itemId: item.id)} sessions',
+                    '${formatDuration(controller.totalTime(itemId: item.id))} logged - ${controller.sessionCount(itemId: item.id)} sessions',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: DrumcabularyTheme.mutedInk,
                     ),

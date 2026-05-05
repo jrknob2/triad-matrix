@@ -61,7 +61,7 @@ Canonical pattern-model rule:
 - when a session is explicitly launched in `Flow` or `Single Surface`, that chosen session-mode metadata should be preserved in setup, logging, replay, and history rather than being recomputed later from changed item state
 - pattern text and staff-notation documents should be derived from canonical token data directly
 - rest/pause must render explicitly as a timed position in normal notation readouts
-- `_` must remain the canonical stored rest token while rendering as `•`
+- `_` must remain the canonical stored and user-facing text token for rest/pause
 - voice rows should omit labels for rest positions even when the surrounding pattern shows voices
 
 List item rule:
@@ -1490,7 +1490,7 @@ Practice Item lets the user inspect and edit one item cleanly.
 - Practice Item should have one primary sheet-notation block near the top of the screen
 - pattern text is the direct text-editing input for that sheet notation, not a separate rendered notation surface
 - the `Flow Voices` section should contain voice editing controls only, not a second notation preview
-- rest positions should keep `_` as the canonical stored token but render as `•` in user-facing notation
+- rest positions should keep `_` as the canonical stored and user-facing text token
 - `Practice Item` may wrap the VexFlow staff renderer with selection affordances, but it should not introduce a separate staff-notation rendering style
 - the `Practice Item` selection wrapper may add only selection styling around each rendered note; it must not change note spacing, staff wrapping, or beam geometry
 - any `Practice Item` note-selection wrapper must derive selection targets from VexFlow-rendered SVG geometry rather than fixed local spacing constants

@@ -24,7 +24,7 @@ class PracticeItemSummaryBlock extends StatelessWidget {
   Widget build(BuildContext context) {
     final String metadataText = metadataLines
         .where((String line) => line.trim().isNotEmpty)
-        .join(' • ');
+        .join(' - ');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

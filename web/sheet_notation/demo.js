@@ -340,8 +340,7 @@ function noteFromToken(symbol, options = {}) {
     case 'FT':
       return { ...common, voices: withVoices(['floorTom']) };
     case '_':
-    case '-':
-      return { value: options.value, rest: true, sticking: '-' };
+      return { value: options.value, rest: true, sticking: '_' };
     default:
       throw new Error(`Unsupported pattern token: ${symbol}`);
   }
@@ -369,7 +368,7 @@ function patternTokenForNote(note, options = {}) {
 }
 
 function basePatternTokenForNote(note) {
-  if (note.rest) return '-';
+  if (note.rest) return '_';
   if (note.flam) return 'F';
   if (isLimbSticking(note.sticking)) return note.sticking;
   const voices = note.voices ?? [];

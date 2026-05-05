@@ -492,7 +492,7 @@ class _PreviousSessionRow extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                       Text(
-                        '${formatShortDate(session.endedAt)} • ${formatDuration(session.duration)}',
+                        '${formatShortDate(session.endedAt)} - ${formatDuration(session.duration)}',
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w900,
                         ),
@@ -745,5 +745,5 @@ String _workingOnMetadata(
   if (controller.hasKick(item.id)) parts.add('Kick');
   if (controller.hasNonSnareVoice(item.id)) parts.add('Flow');
   if (controller.hasDoubles(item.id)) parts.add('Doubles');
-  return parts.join(' • ');
+  return parts.join(' - ');
 }

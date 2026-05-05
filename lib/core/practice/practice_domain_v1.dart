@@ -271,7 +271,7 @@ class PatternTokenV1 {
     PatternTokenKindV1.both => 'B',
     PatternTokenKindV1.flam => 'F',
     PatternTokenKindV1.accent => 'X',
-    PatternTokenKindV1.rest => '•',
+    PatternTokenKindV1.rest => '_',
   };
 
   bool get isRest => kind == PatternTokenKindV1.rest;

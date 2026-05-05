@@ -12,14 +12,14 @@ void main() {
     });
 
     test(
-      'uses bullet for user-facing rest display while keeping underscore canonical',
+      'uses underscore for user-facing rest display and canonical storage',
       () {
         final PatternSequenceV1 sequence = PatternSequenceV1.parse('RL_K');
 
         expect(sequence.canonicalText, 'RL_K');
-        expect(sequence.toDisplayText(PatternGroupingV1.none), 'RL•K');
+        expect(sequence.toDisplayText(PatternGroupingV1.none), 'RL_K');
         expect(PatternTokenV1.rest.symbol, '_');
-        expect(PatternTokenV1.rest.notationSymbol, '•');
+        expect(PatternTokenV1.rest.notationSymbol, '_');
       },
     );
 
@@ -44,7 +44,7 @@ void main() {
       expect(PatternTokenV1.both.symbol, 'B');
       expect(PatternTokenV1.accent.symbol, 'X');
       expect(PatternTokenV1.rest.symbol, '_');
-      expect(PatternTokenV1.rest.notationSymbol, '•');
+      expect(PatternTokenV1.rest.notationSymbol, '_');
     });
 
     test(
@@ -97,7 +97,7 @@ void main() {
         final PracticeItemV1 item = PracticeItemV1(
           id: 'timing_meta_only',
           family: MaterialFamilyV1.custom,
-          name: 'RLL•RRL',
+          name: 'RLL_RRL',
           sequence: PatternSequenceV1.parse('RLL_RRL'),
           groupingHint: PatternGroupingV1.triads,
           accentedNoteIndices: const <int>[],

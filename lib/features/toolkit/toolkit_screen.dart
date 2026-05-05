@@ -386,7 +386,7 @@ class _FocusItemCard extends StatelessWidget {
             controller: controller,
             item: item,
             metadataLines: <String>[
-              '${item.family.label} • ${controller.matrixProgressStateFor(item.id).label}',
+              '${item.family.label} - ${controller.matrixProgressStateFor(item.id).label}',
               '${formatDuration(controller.totalTime(itemId: item.id))} logged',
             ],
           ),

@@ -192,7 +192,7 @@ String notationInfoForPracticeItem(PracticeItemV1 item) {
   final String grouping = item.beatGrouping.trim().isNotEmpty
       ? item.beatGrouping.trim()
       : _groupingInfoFor(item.groupingHint);
-  return 'Grouping: $grouping • Subdivision: ${item.notationSubdivision.subdivisionLabel}';
+  return 'Grouping: $grouping - Subdivision: ${item.notationSubdivision.subdivisionLabel}';
 }
 
 List<int> groupingSizesForText(String text) {

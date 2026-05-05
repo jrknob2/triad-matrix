@@ -3057,9 +3057,9 @@ class AppController extends ChangeNotifier {
         .map((PracticeItemV1 item) => item.name)
         .toList(growable: false);
     if (labels.isEmpty) return 'Unknown material';
-    if (labels.length <= maxItems) return labels.join(' • ');
+    if (labels.length <= maxItems) return labels.join(' - ');
     final List<String> visible = labels.take(maxItems).toList(growable: false);
-    return '${visible.join(' • ')} +${labels.length - maxItems} more';
+    return '${visible.join(' - ')} +${labels.length - maxItems} more';
   }
 
   String sessionSearchText(PracticeSessionLogV1 session) {
@@ -4208,7 +4208,7 @@ class AppController extends ChangeNotifier {
       PracticeItemV1(
         id: _customItemId('rll_rest_lr'),
         family: MaterialFamilyV1.custom,
-        name: 'RLL-•LR',
+        name: 'RLL-_LR',
         sequence: PatternSequenceV1.parse('RLL _ LR'),
         groupingHint: PatternGroupingV1.triads,
         accentedNoteIndices: const <int>[],
@@ -4221,7 +4221,7 @@ class AppController extends ChangeNotifier {
       PracticeItemV1(
         id: _customItemId('rl_rest_k'),
         family: MaterialFamilyV1.custom,
-        name: 'RL•K',
+        name: 'RL_K',
         sequence: PatternSequenceV1.parse('RL_K'),
         groupingHint: PatternGroupingV1.none,
         accentedNoteIndices: const <int>[],

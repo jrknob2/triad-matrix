@@ -26,7 +26,7 @@ const VALID_DOCUMENT = {
         { value: '16n', voices: ['snare'], sticking: 'R' },
         { value: '16n', voices: ['snare'], sticking: 'L', accent: true },
         { value: '16n', voices: ['kick'], sticking: 'K' },
-        { value: '16n', rest: true, sticking: '-' },
+        { value: '16n', rest: true, sticking: '_' },
       ],
     },
   ],
@@ -487,12 +487,12 @@ describe('svg rendering', () => {
   });
 
   test('notation notes can be serialized back to editable pattern text', () => {
-    const notes = documentFromPattern('^R^L^R(L)(L)KHHCF-B').measures[0].notes;
+    const notes = documentFromPattern('^R^L^R(L)(L)KHHCF_B').measures[0].notes;
 
-    assert.equal(patternFromNotes(notes), '^R^L^R(L)(L)KHHCF-B');
+    assert.equal(patternFromNotes(notes), '^R^L^R(L)(L)KHHCF_B');
     assert.equal(
       patternFromNotes(notes.filter((_, index) => !new Set([1, 3]).has(index))),
-      '^R^R(L)KHHCF-B',
+      '^R^R(L)KHHCF_B',
     );
   });
 

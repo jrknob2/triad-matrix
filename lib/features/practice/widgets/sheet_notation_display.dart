@@ -822,8 +822,8 @@ DrumSheetNotationNote _noteFromToken(
       sticking: 'FT',
       defaultVoices: <DrumSheetVoice>[DrumSheetVoice.floorTom],
     ),
-    '_' || '-' => note(
-      sticking: '-',
+    '_' => note(
+      sticking: '_',
       defaultVoices: const <DrumSheetVoice>[],
       rest: true,
     ),
@@ -848,7 +848,7 @@ List<DrumSheetVoice>? _voicesFromLabel(String label) {
 }
 
 String _baseTokenForNote(DrumSheetNotationNote note) {
-  if (note.rest) return '-';
+  if (note.rest) return '_';
   if (note.flam) return 'F';
   if (_isLimbSticking(note.sticking)) return note.sticking;
   if (note.voices.contains(DrumSheetVoice.kick)) return 'K';

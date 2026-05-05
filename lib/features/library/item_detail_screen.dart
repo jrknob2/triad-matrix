@@ -454,7 +454,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       PatternTokenKindV1.both => 'B',
       PatternTokenKindV1.flam => 'F',
       PatternTokenKindV1.accent => 'X',
-      PatternTokenKindV1.rest => '-',
+      PatternTokenKindV1.rest => '_',
     };
   }
 
@@ -1068,7 +1068,7 @@ class _SheetNotationLegend extends StatelessWidget {
           _LegendEntry(token: 'FT', text: 'floor tom'),
           _LegendEntry(token: 'F', text: 'flam'),
           _LegendEntry(token: 'B', text: 'hi-hat + snare'),
-          _LegendEntry(token: '- or _', text: 'rest'),
+          _LegendEntry(token: '_', text: 'rest'),
           _LegendEntry(token: '^R', text: 'accent'),
           _LegendEntry(token: '(L)', text: 'ghost'),
           _LegendEntry(token: '[32:R L]', text: 'duration override'),
