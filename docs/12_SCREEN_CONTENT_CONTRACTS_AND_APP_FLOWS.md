@@ -54,6 +54,9 @@ Canonical pattern-model rule:
 - triads, 4-note patterns, 5-note patterns, phrases, flow, and single-surface may still appear as product language, tags, filters, or pedagogy cues, but they must not define parsing, storage structure, renderer choice, playback shape, or session stepping
 - grouping is optional metadata for readability and teaching only
 - grouping may affect display spacing and labels, but it must not create a separate runtime model
+- pattern text fields must behave like normal text editors: cursor navigation, arrow keys, paste, and selection must not insert grouping spaces or trigger pattern rewrites
+- pattern text fields must normalize authored notation to uppercase
+- grouping is a helper derived from pattern spaces or applied by explicit grouping edits; it must not continuously control or overwrite free pattern text entry
 - timing metadata is optional playback structure and must remain separate from grouping metadata
 - if a pattern needs visible grouping, that grouping should be stored explicitly on the item; controller/runtime code should not infer grouping from family, mode, or tags outside localized legacy migration boundaries
 - item family and practice mode may remain persisted as metadata for labels, filtering, pedagogy, and legacy compatibility, but they must not define canonical structure, grouping defaults, or non-warmup session behavior

@@ -45,6 +45,9 @@ Active v1 data-model rule:
 - `F` and `X` are single-position expressive tokens and must not expand into multiple stored or timed events
 - `B` is not valid vocabulary; both-hands/unison or multi-voice hits must be authored as simultaneous hits such as `[RL]` or `[XK]`
 - grouping is optional metadata for readability and teaching, not runtime structure
+- pattern text fields must behave like normal text editors; cursor navigation, arrow keys, paste, and selection must not insert grouping spaces or rewrite the pattern
+- pattern text fields must normalize authored notation to uppercase
+- grouping may be derived from pattern spaces or applied by explicit grouping edits, but it must never continuously override free pattern text entry
 - timing metadata is optional playback structure; when present, it overrides grouping-derived defaults for playback without creating a new pattern type
 - default playback timing for simple drills should be:
   - if grouping has a compatible group size, one grouping = one beat and token duration = beat / group size

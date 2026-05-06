@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/practice/practice_domain_v1.dart';
 import '../../features/app/app_formatters.dart';
@@ -52,9 +53,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     super.initState();
     _loadDraftFromController();
     final PracticeItemV1 item = widget.controller.itemById(widget.itemId);
-    _lastPatternText = item.pattern.trim().isEmpty
-        ? _draftPatternText()
-        : item.pattern;
+    _lastPatternText =
+        (item.pattern.trim().isEmpty ? _draftPatternText() : item.pattern)
+            .toUpperCase();
     _lastGroupingText = _initialGroupingTextForItem(item);
     _patternController = TextEditingController(text: _lastPatternText);
     _groupingController = TextEditingController(text: _lastGroupingText);
@@ -114,6 +115,11 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                         TextField(
                           controller: _patternController,
                           keyboardType: TextInputType.multiline,
+                          textCapitalization: TextCapitalization.characters,
+                          autocorrect: false,
+                          enableSuggestions: false,
+                          smartDashesType: SmartDashesType.disabled,
+                          smartQuotesType: SmartQuotesType.disabled,
                           maxLines: null,
                           textAlignVertical: TextAlignVertical.center,
                           style: PatternTextStyles.editableInput(context),
@@ -121,6 +127,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                             fontSize: PatternTextStyles.editableInputFontSize,
                             height: PatternTextStyles.editableInputLineHeight,
                           ),
+                          inputFormatters: const <TextInputFormatter>[
+                            _PatternTextInputFormatter(),
+                          ],
                           decoration: const InputDecoration(
                             labelText: 'Pattern',
                             border: OutlineInputBorder(),
@@ -131,56 +140,14 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                           onChanged: _handlePatternTextChanged,
                         ),
                         const SizedBox(height: 12),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            Expanded(
-                              child:
-                                  DropdownButtonFormField<DrumSheetNoteValue>(
-                                    key: ValueKey<DrumSheetNoteValue>(
-                                      _draftSubdivision,
-                                    ),
-                                    initialValue: _draftSubdivision,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Subdivision',
-                                      border: OutlineInputBorder(),
-                                    ),
-                                    items:
-                                        <DropdownMenuItem<DrumSheetNoteValue>>[
-                                          for (final DrumSheetNoteValue value
-                                              in DrumSheetNoteValue.values)
-                                            DropdownMenuItem<
-                                              DrumSheetNoteValue
-                                            >(
-                                              value: value,
-                                              child: Text(
-                                                '1/${value.patternLabel}',
-                                              ),
-                                            ),
-                                        ],
-                                    onChanged: (DrumSheetNoteValue? next) {
-                                      if (next == null) return;
-                                      _recordUndo();
-                                      setState(() {
-                                        _draftSubdivision = next;
-                                        _syncPatternTextFromDraft();
-                                      });
-                                    },
-                                  ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: TextField(
-                                controller: _groupingController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Grouping',
-                                  hintText: '4, 3535, 3 5 3 5',
-                                  border: OutlineInputBorder(),
-                                ),
-                                onChanged: _handleGroupingTextChanged,
-                              ),
-                            ),
-                          ],
+                        TextField(
+                          controller: _groupingController,
+                          decoration: const InputDecoration(
+                            labelText: 'Grouping',
+                            hintText: '4, 3535, 3 5 3 5',
+                            border: OutlineInputBorder(),
+                          ),
+                          onChanged: _handleGroupingTextChanged,
                         ),
                         const SizedBox(height: 12),
                         _SheetNotationControls(
@@ -220,15 +187,50 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                 ),
                 const SizedBox(height: 12),
                 DrumPanel(
-                  child: SessionSetupControls(
-                    bpm: _sessionBpm,
-                    timerPreset: _timerPreset,
-                    onBpmChanged: (int next) {
-                      setState(() => _sessionBpm = next.clamp(30, 260));
-                    },
-                    onTimerPresetChanged: (TimerPresetV1 next) {
-                      setState(() => _timerPreset = next);
-                    },
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      DrumEyebrow(text: 'Practice Context'),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<DrumSheetNoteValue>(
+                        key: ValueKey<DrumSheetNoteValue>(_draftSubdivision),
+                        initialValue: _draftSubdivision,
+                        decoration: const InputDecoration(
+                          labelText: 'Subdivision',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: <DropdownMenuItem<DrumSheetNoteValue>>[
+                          for (final DrumSheetNoteValue value
+                              in DrumSheetNoteValue.values)
+                            DropdownMenuItem<DrumSheetNoteValue>(
+                              value: value,
+                              child: Text('1/${value.patternLabel}'),
+                            ),
+                        ],
+                        onChanged: (DrumSheetNoteValue? next) {
+                          if (next == null) return;
+                          _recordUndo();
+                          setState(() {
+                            _draftSubdivision = next;
+                            _syncPatternTextFromNotes(
+                              _currentSheetNotesForDisplay(),
+                            );
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      SessionSetupControls(
+                        eyebrow: 'Playback',
+                        bpm: _sessionBpm,
+                        timerPreset: _timerPreset,
+                        onBpmChanged: (int next) {
+                          setState(() => _sessionBpm = next.clamp(30, 260));
+                        },
+                        onTimerPresetChanged: (TimerPresetV1 next) {
+                          setState(() => _timerPreset = next);
+                        },
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -351,14 +353,20 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   }
 
   String _draftPatternText() {
-    return DrumSheetPatternParser.serialize(
+    return _patternTextForNotes(
       _draftSheetNotes(_draftMarkingsFor(_draftTokens.length)),
+    );
+  }
+
+  String _patternTextForNotes(List<DrumSheetNotationNote> notes) {
+    return DrumSheetPatternParser.serialize(
+      notes,
       subdivision: _draftSubdivision,
     );
   }
 
-  void _syncPatternTextFromDraft() {
-    final String next = _draftPatternText();
+  void _syncPatternTextFromNotes(List<DrumSheetNotationNote> notes) {
+    final String next = _patternTextForNotes(notes);
     if (_patternController.text == next) {
       _lastPatternText = next;
       return;
@@ -368,6 +376,12 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       selection: TextSelection.collapsed(offset: next.length),
     );
     _lastPatternText = next;
+  }
+
+  void _syncPatternTextFromDraft() {
+    _syncPatternTextFromNotes(
+      _draftSheetNotes(_draftMarkingsFor(_draftTokens.length)),
+    );
   }
 
   DrumSheetNotationNote _sheetNoteForDraftIndex(
@@ -445,16 +459,17 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   }
 
   void _handlePatternTextChanged(String value) {
+    final String normalizedValue = value.toUpperCase();
     try {
       _recordUndo(
         patternText: _lastPatternText,
         groupingText: _lastGroupingText,
       );
       final List<DrumSheetNotationNote> notes = DrumSheetPatternParser.parse(
-        value,
+        normalizedValue,
         lenient: true,
       );
-      final String groupingText = _groupingTextFromPattern(value);
+      final String groupingText = _groupingTextFromPattern(normalizedValue);
       setState(() {
         if (groupingText.isNotEmpty &&
             groupingText != _groupingController.text.trim()) {
@@ -468,7 +483,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
           _draftGrouping = _legacyGroupingForText(groupingText);
         }
         _applySheetNotesToDraft(notes, clearSelection: false);
-        _lastPatternText = value;
+        _lastPatternText = normalizedValue;
       });
     } on FormatException {
       // Keep the current rendered draft while the user has an invalid token.
@@ -652,7 +667,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         );
     setState(() {
       _applySheetNotesToDraft(notes);
-      _syncPatternTextFromDraft();
+      _syncPatternTextFromNotes(notes);
     });
   }
 
@@ -667,7 +682,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         );
     setState(() {
       _applySheetNotesToDraft(notes);
-      _syncPatternTextFromDraft();
+      _syncPatternTextFromNotes(notes);
     });
   }
 
@@ -681,7 +696,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         );
     setState(() {
       _applySheetNotesToDraft(notes);
-      _syncPatternTextFromDraft();
+      _syncPatternTextFromNotes(notes);
     });
   }
 
@@ -695,7 +710,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         );
     setState(() {
       _applySheetNotesToDraft(notes);
-      _syncPatternTextFromDraft();
+      _syncPatternTextFromNotes(notes);
     });
   }
 
@@ -731,7 +746,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
 
     setState(() {
       _applySheetNotesToDraft(remaining);
-      _syncPatternTextFromDraft();
+      _syncPatternTextFromNotes(remaining);
       _selectedNoteIndices = <int>{};
     });
   }
@@ -875,7 +890,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       voiceAssignments: _voiceAssignments,
       competency: widget.controller.competencyFor(widget.itemId),
       sequence: PatternSequenceV1.parse(_patternController.text.trim()),
-      pattern: _patternController.text.trim(),
+      pattern: _patternController.text.trim().toUpperCase(),
       groupingHint: _draftGrouping,
       beatGrouping: _groupingController.text.trim(),
       notationSubdivision: _storedNoteValueForSheetValue(_draftSubdivision),
@@ -992,6 +1007,20 @@ class _SheetNotationControls extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+class _PatternTextInputFormatter extends TextInputFormatter {
+  const _PatternTextInputFormatter();
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final String upper = newValue.text.toUpperCase();
+    if (upper == newValue.text) return newValue;
+    return newValue.copyWith(text: upper, composing: TextRange.empty);
   }
 }
 

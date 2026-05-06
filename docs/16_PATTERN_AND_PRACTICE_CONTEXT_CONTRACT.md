@@ -84,6 +84,22 @@ simultaneous hits.
 Spaces are visual/phrasing group breaks. They do not change playback timing by
 themselves and must be preserved by authoring surfaces.
 
+Pattern authoring fields must behave as normal text fields. Cursor navigation,
+selection, paste, and arrow keys must not insert grouping spaces or otherwise
+rewrite the pattern. Any formatting helper must run only from explicit text
+changes or explicit helper actions.
+
+Pattern authoring fields normalize playable notation to uppercase. Lowercase
+entry is accepted while typing, but the stored/displayed pattern text is
+uppercase.
+
+Grouping is a two-way helper, not an owner of pattern text:
+
+- Editing spaces in the pattern may update the grouping metadata.
+- Editing grouping metadata may update visual grouping only through an explicit
+  formatting action or a clearly scoped grouping-field edit handler.
+- Grouping metadata must never continuously override free text entry.
+
 ## Pattern Non-Goals
 
 These are not pattern grammar:

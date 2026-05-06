@@ -218,7 +218,6 @@
         documentFromPattern,
         groupingFromPattern,
         patternFromNotes,
-        patternWithGrouping,
       } from './demo.js?v=space-grouping-3';
       import { renderDrumNotationSvgWithMetadata } from './renderer.js?v=space-grouping-3';
 
@@ -288,10 +287,6 @@
       grouping.addEventListener('input', () => {
         pushUndoSnapshot(lastSnapshot);
         groupingSource = 'field';
-        pattern.value = patternWithGrouping(pattern.value, grouping.value, {
-          lenient: true,
-          subdivision: subdivision.value,
-        });
         markCurrentSnapshot();
         scheduleRender();
       });
@@ -305,6 +300,13 @@
       });
       pattern.addEventListener('input', () => {
         pushUndoSnapshot(lastSnapshot);
+        const upper = pattern.value.toUpperCase();
+        if (upper !== pattern.value) {
+          const start = pattern.selectionStart;
+          const end = pattern.selectionEnd;
+          pattern.value = upper;
+          pattern.setSelectionRange(start, end);
+        }
         groupingSource = 'pattern';
         const patternGrouping = groupingFromPattern(pattern.value, { lenient: true });
         if (patternGrouping != null) grouping.value = patternGrouping;
