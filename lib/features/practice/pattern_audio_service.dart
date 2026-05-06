@@ -108,6 +108,8 @@ class PatternAudioService {
     required PatternTimingV1 timing,
     required int bpm,
     AccentVoiceV1 accentVoice = AccentVoiceV1.snare,
+    Map<int, List<DrumVoiceV1>> additionalVoicesByIndex =
+        const <int, List<DrumVoiceV1>>{},
     Duration startElapsed = Duration.zero,
   }) async {
     await prepare();
@@ -121,6 +123,7 @@ class PatternAudioService {
       timing: timing,
       bpm: bpm,
       accentVoice: accentVoice,
+      additionalVoicesByIndex: additionalVoicesByIndex,
     );
     if (plan.cues.isEmpty || plan.cycleDuration <= Duration.zero) return;
 
@@ -165,6 +168,8 @@ class PatternAudioService {
     required PatternTimingV1 timing,
     required int bpm,
     AccentVoiceV1 accentVoice = AccentVoiceV1.snare,
+    Map<int, List<DrumVoiceV1>> additionalVoicesByIndex =
+        const <int, List<DrumVoiceV1>>{},
   }) {
     if (tokens.isEmpty || bpm <= 0) {
       return const PatternAudioPlanV1(
@@ -215,6 +220,29 @@ class PatternAudioService {
           volume: _volumeFor(token: token, voice: voice, marking: marking),
         ),
       );
+      for (final DrumVoiceV1 additionalVoice
+          in additionalVoicesByIndex[event.tokenIndex] ??
+              const <DrumVoiceV1>[]) {
+        cues.add(
+          PatternAudioCueV1(
+            tokenIndex: event.tokenIndex,
+            offset: Duration(
+              microseconds: (event.startBeat * microsPerBeat).round(),
+            ),
+            sample: _sampleFor(
+              token: _tokenForAdditionalVoice(additionalVoice),
+              voice: additionalVoice,
+              marking: PatternNoteMarkingV1.normal,
+              accentVoice: accentVoice,
+            ),
+            volume: _volumeFor(
+              token: _tokenForAdditionalVoice(additionalVoice),
+              voice: additionalVoice,
+              marking: PatternNoteMarkingV1.normal,
+            ),
+          ),
+        );
+      }
     }
 
     return PatternAudioPlanV1(
@@ -223,6 +251,19 @@ class PatternAudioService {
         microseconds: (playbackPlan.totalBeatCount * microsPerBeat).round(),
       ),
     );
+  }
+
+  static PatternTokenV1 _tokenForAdditionalVoice(DrumVoiceV1 voice) {
+    return switch (voice) {
+      DrumVoiceV1.kick => PatternTokenV1.kick,
+      DrumVoiceV1.crash ||
+      DrumVoiceV1.ride ||
+      DrumVoiceV1.hihat => PatternTokenV1.accent,
+      DrumVoiceV1.floorTom ||
+      DrumVoiceV1.tom2 ||
+      DrumVoiceV1.rackTom ||
+      DrumVoiceV1.snare => PatternTokenV1.right,
+    };
   }
 
   void _scheduleCycle({
@@ -313,9 +354,6 @@ class PatternAudioService {
   }) {
     if (token.kind == PatternTokenKindV1.flam) {
       return PatternAudioSampleV1.flam;
-    }
-    if (token.kind == PatternTokenKindV1.both) {
-      return PatternAudioSampleV1.unison;
     }
     if (token.kind == PatternTokenKindV1.accent) {
       return switch (accentVoice) {

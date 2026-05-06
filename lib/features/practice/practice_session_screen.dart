@@ -1331,10 +1331,53 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
       timing: widget.controller.patternTimingFor(itemId),
       bpm: _bpm,
       accentVoice: widget.controller.profile.accentVoice,
+      additionalVoicesByIndex: _additionalVoicesByIndexFor(itemId),
       startElapsed: startElapsed,
     );
     if (!_patternAudioEnabled || !mounted) return;
     _startPatternPreviewClock(startElapsed);
+  }
+
+  Map<int, List<DrumVoiceV1>> _additionalVoicesByIndexFor(String itemId) {
+    final PracticeItemV1 item = widget.controller.itemById(itemId);
+    final List<DrumSheetNotationNote> notes = DrumSheetPatternParser.parse(
+      item.pattern,
+      lenient: true,
+    );
+    final Map<int, List<DrumVoiceV1>> result = <int, List<DrumVoiceV1>>{};
+    for (int index = 0; index < notes.length; index += 1) {
+      final DrumSheetNotationNote note = notes[index];
+      if (note.rest || note.voices.length < 2) continue;
+      final DrumVoiceV1 primary = index < item.voiceAssignments.length
+          ? item.voiceAssignments[index]
+          : _primaryVoiceForNote(note);
+      final List<DrumVoiceV1> additional = <DrumVoiceV1>[];
+      for (final DrumSheetVoice voice in note.voices) {
+        final DrumVoiceV1 mapped = _drumVoiceForSheetVoice(voice);
+        if (mapped == primary || additional.contains(mapped)) continue;
+        additional.add(mapped);
+      }
+      if (additional.isNotEmpty) result[index] = additional;
+    }
+    return result;
+  }
+
+  DrumVoiceV1 _primaryVoiceForNote(DrumSheetNotationNote note) {
+    if (note.voices.isEmpty) return DrumVoiceV1.snare;
+    return _drumVoiceForSheetVoice(note.voices.first);
+  }
+
+  DrumVoiceV1 _drumVoiceForSheetVoice(DrumSheetVoice voice) {
+    return switch (voice) {
+      DrumSheetVoice.snare => DrumVoiceV1.snare,
+      DrumSheetVoice.tom1 => DrumVoiceV1.rackTom,
+      DrumSheetVoice.tom2 => DrumVoiceV1.tom2,
+      DrumSheetVoice.floorTom => DrumVoiceV1.floorTom,
+      DrumSheetVoice.hihat => DrumVoiceV1.hihat,
+      DrumSheetVoice.crash => DrumVoiceV1.crash,
+      DrumSheetVoice.ride => DrumVoiceV1.ride,
+      DrumSheetVoice.kick => DrumVoiceV1.kick,
+    };
   }
 
   void _startPatternPreviewClock(Duration startElapsed) {
@@ -1828,7 +1871,6 @@ String _stickingForToken(PatternTokenV1 token) {
     PatternTokenKindV1.right => 'R',
     PatternTokenKindV1.left => 'L',
     PatternTokenKindV1.kick => 'K',
-    PatternTokenKindV1.both => 'B',
     PatternTokenKindV1.flam => 'F',
     PatternTokenKindV1.accent => 'X',
     PatternTokenKindV1.rest => '_',
@@ -1841,10 +1883,6 @@ List<DrumSheetVoice> _sheetVoicesForToken(
 ) {
   return switch (token.kind) {
     PatternTokenKindV1.kick => const <DrumSheetVoice>[DrumSheetVoice.kick],
-    PatternTokenKindV1.both => const <DrumSheetVoice>[
-      DrumSheetVoice.hihat,
-      DrumSheetVoice.snare,
-    ],
     PatternTokenKindV1.accent => const <DrumSheetVoice>[DrumSheetVoice.crash],
     PatternTokenKindV1.flam => const <DrumSheetVoice>[DrumSheetVoice.snare],
     PatternTokenKindV1.rest => const <DrumSheetVoice>[],

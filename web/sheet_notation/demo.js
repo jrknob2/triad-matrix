@@ -1,7 +1,7 @@
 import { renderDrumNotationSvg } from './renderer.js';
 
 export const DEFAULT_DEMO_PATTERN =
-  '^R^L^R(L)(L)K^R^L^R(L)(L)FTHH^CF';
+  '^R^L^R(L)(L) K ^R^L^R(L)(L) ^R^L^R(L)(L) [XK]';
 
 export function demoDocument() {
   const wrappedMeasure = [
@@ -16,9 +16,12 @@ export function demoDocument() {
     { voices: ['tom2'], sticking: 'R', accent: true },
     { voices: ['snare'], sticking: 'L', ghost: true },
     { voices: ['snare'], sticking: 'L', ghost: true },
-    { voices: ['floorTom'], sticking: 'FT' },
-    { voices: ['hihat'], sticking: 'HH' },
-    { voices: ['crash'], sticking: 'C', accent: true },
+    { voices: ['snare'], sticking: 'R', accent: true },
+    { voices: ['snare'], sticking: 'L', accent: true },
+    { voices: ['snare'], sticking: 'R', accent: true },
+    { voices: ['snare'], sticking: 'L', ghost: true },
+    { voices: ['snare'], sticking: 'L', ghost: true },
+    { voices: ['crash', 'kick'], sticking: 'XK' },
     { voices: ['snare'], sticking: 'F', flam: true },
   ];
   return {
@@ -120,12 +123,17 @@ export function notesFromPattern(pattern, options = {}) {
       const body = pattern.slice(index + 1, close);
       const separator = body.indexOf(':');
       if (separator < 0) {
-        if (options.lenient) {
-          accent = false;
-          index = close;
-          continue;
+        try {
+          notes.push(simultaneousNoteFromBody(body, {
+            accent,
+            value: defaultValue,
+          }));
+        } catch (error) {
+          if (!options.lenient) throw error;
         }
-        throw new Error('Duration override must use [duration: pattern].');
+        accent = false;
+        index = close;
+        continue;
       }
       let override;
       try {
@@ -304,9 +312,43 @@ function voicesFromLabel(label) {
 }
 
 function multiCharacterTokenAt(pattern, index) {
-  const nextTwo = pattern.slice(index, index + 2).toUpperCase();
-  if (nextTwo === 'FT' || nextTwo === 'HH') return nextTwo;
   return null;
+}
+
+function simultaneousNoteFromBody(body, options = {}) {
+  const trimmed = body.trim();
+  if (trimmed.length === 0) {
+    throw new Error('Empty bracket. Use a simultaneous hit like [XK] or an override like [T1:L].');
+  }
+  const parts = notesFromPattern(trimmed, { lenient: false, value: options.value });
+  if (parts.length < 2) {
+    throw new Error('Simultaneous hits must contain at least two notes, such as [XK] or [RL].');
+  }
+  if (parts.some((note) => note.rest)) {
+    throw new Error('Rests are not allowed inside simultaneous hits.');
+  }
+  const voices = [];
+  let sticking = '';
+  let accent = options.accent === true;
+  let ghost = false;
+  let flam = false;
+  for (const note of parts) {
+    for (const voice of note.voices ?? []) {
+      if (!voices.includes(voice)) voices.push(voice);
+    }
+    sticking += basePatternTokenForNote(note);
+    accent = accent || note.accent === true;
+    ghost = ghost || note.ghost === true;
+    flam = flam || note.flam === true;
+  }
+  return {
+    value: options.value,
+    voices,
+    sticking,
+    accent,
+    ghost,
+    flam,
+  };
 }
 
 function noteFromToken(symbol, options = {}) {
@@ -327,18 +369,13 @@ function noteFromToken(symbol, options = {}) {
     case 'F':
       return { ...common, voices: withVoices(['snare']), flam: true };
     case 'B':
-      return { ...common, voices: withVoices(['hihat', 'snare']) };
+      throw new Error('Invalid token: B is no longer supported. Use [RL] for both hands/unison or assign explicit voices.');
     case 'X':
-    case 'C':
       return {
         ...common,
-        sticking: token === 'X' ? 'X' : 'C',
+        sticking: 'X',
         voices: withVoices(['crash']),
       };
-    case 'HH':
-      return { ...common, voices: withVoices(['hihat']) };
-    case 'FT':
-      return { ...common, voices: withVoices(['floorTom']) };
     case '_':
       return { value: options.value, rest: true, sticking: '_' };
     default:
@@ -347,6 +384,18 @@ function noteFromToken(symbol, options = {}) {
 }
 
 function patternTokenForNote(note, options = {}) {
+  if (isSimultaneousNote(note)) {
+    const token = `[${note.accent ? '^' : ''}${note.sticking}]`;
+    const overrides = [];
+    if (
+      options.subdivision != null &&
+      note.value != null &&
+      note.value !== options.subdivision
+    ) {
+      overrides.push(note.value.replace('n', ''));
+    }
+    return overrides.length > 0 ? `[${overrides.join(' ')}:${token}]` : token;
+  }
   if (note.ghost && note.accent) {
     throw new Error('Ghost notes cannot be accented.');
   }
@@ -373,11 +422,13 @@ function basePatternTokenForNote(note) {
   if (isLimbSticking(note.sticking)) return note.sticking;
   const voices = note.voices ?? [];
   if (voices.includes('kick')) return 'K';
-  if (voices.includes('floorTom')) return 'FT';
-  if (voices.includes('hihat') && voices.includes('snare')) return 'B';
-  if (voices.includes('hihat')) return 'HH';
-  if (voices.includes('crash')) return note.sticking === 'X' ? 'X' : 'C';
+  if (voices.includes('hihat') && voices.includes('snare')) return '[RL]';
+  if (voices.includes('crash')) return 'X';
   return note.sticking ?? 'R';
+}
+
+function isSimultaneousNote(note) {
+  return !note.rest && /^[RLKFX]{2,}$/.test(note.sticking ?? '');
 }
 
 function voiceOverrideLabelForNote(note) {
@@ -396,7 +447,7 @@ function voiceOverrideLabelForNote(note) {
     case 'hihat':
       return 'HH';
     case 'crash':
-      return 'C';
+      return 'X';
     case 'ride':
       return 'RD';
     default:

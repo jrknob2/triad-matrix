@@ -60,6 +60,34 @@ void main() {
     );
   });
 
+  test('parses phrase groups and simultaneous hits as one slot', () {
+    final List<DrumSheetNotationNote> notes =
+        DrumSheetNotationDocument.fromPattern(
+          '^R^L^R(L)(L) K ^R^L^R(L)(L) ^R^L^R(L)(L) [XK]',
+        ).flattenedNotes;
+
+    expect(notes, hasLength(17));
+    expect(notes.last.sticking, 'XK');
+    expect(notes.last.voices, <DrumSheetVoice>[
+      DrumSheetVoice.crash,
+      DrumSheetVoice.kick,
+    ]);
+  });
+
+  test('parses simultaneous hand and limb hits', () {
+    expect(
+      DrumSheetNotationDocument.fromPattern(
+        '[RL]',
+      ).flattenedNotes.single.sticking,
+      'RL',
+    );
+    final DrumSheetNotationNote note = DrumSheetNotationDocument.fromPattern(
+      '[RKL]',
+    ).flattenedNotes.single;
+    expect(note.sticking, 'RKL');
+    expect(note.voices, contains(DrumSheetVoice.kick));
+  });
+
   test('parses accent and ghost decorations inside or outside brackets', () {
     final List<DrumSheetNotationNote> notes =
         DrumSheetNotationDocument.fromPattern(
@@ -87,6 +115,25 @@ void main() {
     );
     expect(
       () => DrumSheetNotationDocument.fromPattern('^[T1:(L)]'),
+      throwsFormatException,
+    );
+  });
+
+  test('rejects invalid tokens and malformed simultaneous hits', () {
+    expect(
+      () => DrumSheetNotationDocument.fromPattern('B'),
+      throwsFormatException,
+    );
+    expect(
+      () => DrumSheetNotationDocument.fromPattern('[B]'),
+      throwsFormatException,
+    );
+    expect(
+      () => DrumSheetNotationDocument.fromPattern('[]'),
+      throwsFormatException,
+    );
+    expect(
+      () => DrumSheetNotationDocument.fromPattern('[X_]'),
       throwsFormatException,
     );
   });

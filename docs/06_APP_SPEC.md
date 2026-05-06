@@ -24,7 +24,8 @@ V1 remains triad-first pedagogically, but the canonical playable-material model 
 - one ordered token sequence
 - one timed position per token
 - support for note tokens and first-class rest/pause tokens
-- support for the core alphabet `R`, `L`, `K`, `B`, `F`, `X`, and `_`
+- support for the core alphabet `R`, `L`, `K`, `F`, `X`, and `_`
+- support for bracketed simultaneous hits such as `[RL]` and `[XK]`
 - optional grouping hints as display/pedagogy metadata, not structure
 - optional timing metadata as playback truth, separate from grouping
 
@@ -41,7 +42,8 @@ Active v1 data-model rule:
 - a practice item owns its own token sequence plus its authored state
 - normal editing should update that authored item directly rather than silently splitting it into a base item plus variant
 - rest/pause is a first-class timed token, not whitespace or a display hack
-- `B`, `F`, and `X` are single-position expressive tokens and must not expand into multiple stored or timed events
+- `F` and `X` are single-position expressive tokens and must not expand into multiple stored or timed events
+- `B` is not valid vocabulary; both-hands/unison or multi-voice hits must be authored as simultaneous hits such as `[RL]` or `[XK]`
 - grouping is optional metadata for readability and teaching, not runtime structure
 - timing metadata is optional playback structure; when present, it overrides grouping-derived defaults for playback without creating a new pattern type
 - default playback timing for simple drills should be:

@@ -20,7 +20,7 @@ enum PracticeModeV1 { singleSurface, flow }
 
 enum PracticeSessionEndBehaviorV1 { openSummary, returnToPrevious }
 
-enum PatternTokenKindV1 { right, left, kick, both, flam, accent, rest }
+enum PatternTokenKindV1 { right, left, kick, flam, accent, rest }
 
 enum PatternTimingModeV1 { autoByGrouping, explicitSpans }
 
@@ -36,6 +36,8 @@ enum PatternNoteValueV1 {
   sixteenth,
   thirtySecond,
 }
+
+enum DrumSubdivision { eight, triplet, sixteen }
 
 enum AccentVoiceV1 { snare, crash, ride }
 
@@ -230,7 +232,6 @@ class PatternTokenV1 {
   static const PatternTokenV1 right = PatternTokenV1(PatternTokenKindV1.right);
   static const PatternTokenV1 left = PatternTokenV1(PatternTokenKindV1.left);
   static const PatternTokenV1 kick = PatternTokenV1(PatternTokenKindV1.kick);
-  static const PatternTokenV1 both = PatternTokenV1(PatternTokenKindV1.both);
   static const PatternTokenV1 flam = PatternTokenV1(PatternTokenKindV1.flam);
   static const PatternTokenV1 accent = PatternTokenV1(
     PatternTokenKindV1.accent,
@@ -242,7 +243,6 @@ class PatternTokenV1 {
       'R' => right,
       'L' => left,
       'K' => kick,
-      'B' => both,
       'F' => flam,
       'X' => accent,
       '_' => rest,
@@ -258,7 +258,6 @@ class PatternTokenV1 {
     PatternTokenKindV1.right => 'R',
     PatternTokenKindV1.left => 'L',
     PatternTokenKindV1.kick => 'K',
-    PatternTokenKindV1.both => 'B',
     PatternTokenKindV1.flam => 'F',
     PatternTokenKindV1.accent => 'X',
     PatternTokenKindV1.rest => '_',
@@ -268,7 +267,6 @@ class PatternTokenV1 {
     PatternTokenKindV1.right => 'R',
     PatternTokenKindV1.left => 'L',
     PatternTokenKindV1.kick => 'K',
-    PatternTokenKindV1.both => 'B',
     PatternTokenKindV1.flam => 'F',
     PatternTokenKindV1.accent => 'X',
     PatternTokenKindV1.rest => '_',
@@ -307,12 +305,39 @@ class PatternSequenceV1 {
 
   factory PatternSequenceV1.parse(String text) {
     final List<PatternTokenV1> parsed = <PatternTokenV1>[];
-    for (final String char in text.toUpperCase().split('')) {
+    final String upper = text.toUpperCase();
+    for (int index = 0; index < upper.length; index += 1) {
+      final String char = upper[index];
+      if (char == '^') continue;
+      if (char == '(') continue;
+      if (char == ')') continue;
+      if (char == '[') {
+        final int close = upper.indexOf(']', index + 1);
+        if (close < 0) {
+          throw const FormatException('Unclosed bracket group.');
+        }
+        final String body = upper.substring(index + 1, close).trim();
+        if (body.isEmpty) {
+          throw const FormatException('Empty bracket group.');
+        }
+        final int separator = body.indexOf(':');
+        final String playable = separator < 0
+            ? body
+            : body.substring(separator + 1).trim();
+        if (playable.contains('B')) {
+          throw const FormatException(
+            'Invalid token: B is no longer supported. Use [RL] for both hands/unison or assign explicit voices.',
+          );
+        }
+        final PatternTokenV1? token = _firstPlayableToken(playable);
+        if (token != null) parsed.add(token);
+        index = close;
+        continue;
+      }
       switch (char) {
         case 'R':
         case 'L':
         case 'K':
-        case 'B':
         case 'F':
         case 'X':
         case '_':
@@ -321,11 +346,31 @@ class PatternSequenceV1 {
         case ' ':
         case '-':
           break;
+        case 'B':
+          throw const FormatException(
+            'Invalid token: B is no longer supported. Use [RL] for both hands/unison or assign explicit voices.',
+          );
         default:
-          break;
+          throw FormatException('Unsupported pattern token: $char');
       }
     }
     return PatternSequenceV1(tokens: parsed);
+  }
+
+  static PatternTokenV1? _firstPlayableToken(String text) {
+    for (int index = 0; index < text.length; index += 1) {
+      final String char = text[index];
+      switch (char) {
+        case 'R':
+        case 'L':
+        case 'K':
+        case 'F':
+        case 'X':
+        case '_':
+          return PatternTokenV1.fromSymbol(char);
+      }
+    }
+    return null;
   }
 
   String get canonicalText =>
@@ -469,6 +514,211 @@ class PatternTimingV1 {
 }
 
 @immutable
+class PatternItem {
+  final String id;
+  final String title;
+  final String pattern;
+  final List<String> tags;
+  final String? notes;
+
+  PatternItem({
+    required this.id,
+    required this.title,
+    required this.pattern,
+    List<String> tags = const <String>[],
+    this.notes,
+  }) : tags = List<String>.unmodifiable(tags);
+}
+
+@immutable
+class TempoPlan {
+  final int start;
+  final int? step;
+  final int? max;
+
+  const TempoPlan({required this.start, this.step, this.max});
+
+  List<String> validate() {
+    final List<String> errors = <String>[];
+    if (start <= 0) errors.add('Tempo start must be greater than zero.');
+    final int? resolvedStep = step;
+    if (resolvedStep != null && resolvedStep <= 0) {
+      errors.add('Tempo step must be greater than zero.');
+    }
+    final int? resolvedMax = max;
+    if (resolvedMax != null && resolvedMax < start) {
+      errors.add('Tempo max must be greater than or equal to start.');
+    }
+    return errors;
+  }
+}
+
+@immutable
+class BeatAlignment {
+  final bool enabled;
+  final String? anchoredPattern;
+
+  const BeatAlignment({required this.enabled, this.anchoredPattern});
+
+  List<String> validate() {
+    final String? text = anchoredPattern;
+    if (!enabled || text == null || text.trim().isEmpty) {
+      return const <String>[];
+    }
+    final Iterable<RegExpMatch> matches = RegExp(
+      r'\|([^|]+)\|',
+    ).allMatches(text);
+    for (final RegExpMatch match in matches) {
+      final String value = match.group(1) ?? '';
+      final int? beat = int.tryParse(value);
+      if (beat == null || beat <= 0) {
+        return <String>['Beat anchors must look like |1|, |2|, |3|, or |4|.'];
+      }
+    }
+    if (text.contains('|') && matches.isEmpty) {
+      return <String>['Beat anchors must look like |1|, |2|, |3|, or |4|.'];
+    }
+    return const <String>[];
+  }
+}
+
+@immutable
+class PracticeCycleStep {
+  final String? label;
+  final DrumSubdivision subdivision;
+  final String pattern;
+
+  const PracticeCycleStep({
+    this.label,
+    required this.subdivision,
+    required this.pattern,
+  });
+}
+
+@immutable
+class PracticeCycle {
+  final List<PracticeCycleStep> steps;
+
+  PracticeCycle({required List<PracticeCycleStep> steps})
+    : steps = List<PracticeCycleStep>.unmodifiable(steps);
+}
+
+@immutable
+class LoopSettings {
+  final bool enabled;
+  final int? count;
+
+  const LoopSettings({required this.enabled, this.count});
+
+  List<String> validate() {
+    final int? resolvedCount = count;
+    if (resolvedCount != null && resolvedCount <= 0) {
+      return <String>['Loop count must be greater than zero.'];
+    }
+    return const <String>[];
+  }
+}
+
+@immutable
+class PracticeContext {
+  final String id;
+  final String patternId;
+  final DrumSubdivision? subdivision;
+  final TempoPlan? tempo;
+  final BeatAlignment? beatAlignment;
+  final PracticeCycle? cycle;
+  final LoopSettings? loop;
+
+  const PracticeContext({
+    required this.id,
+    required this.patternId,
+    this.subdivision,
+    this.tempo,
+    this.beatAlignment,
+    this.cycle,
+    this.loop,
+  });
+
+  List<String> validate({
+    required List<String> Function(String pattern) validatePattern,
+  }) {
+    final List<String> errors = <String>[];
+    errors.addAll(tempo?.validate() ?? const <String>[]);
+    errors.addAll(beatAlignment?.validate() ?? const <String>[]);
+    errors.addAll(loop?.validate() ?? const <String>[]);
+    final PracticeCycle? resolvedCycle = cycle;
+    if (resolvedCycle != null) {
+      if (resolvedCycle.steps.isEmpty) {
+        errors.add('Cycle must contain at least one step.');
+      }
+      for (final PracticeCycleStep step in resolvedCycle.steps) {
+        for (final String error in validatePattern(step.pattern)) {
+          errors.add(
+            'Cycle step ${step.label ?? step.subdivision.name}: $error',
+          );
+        }
+      }
+    }
+    return errors;
+  }
+}
+
+@immutable
+class PracticeSelfAssessment {
+  final bool clean;
+  final int difficulty;
+  final String? notes;
+
+  const PracticeSelfAssessment({
+    required this.clean,
+    required this.difficulty,
+    this.notes,
+  }) : assert(difficulty >= 1 && difficulty <= 5);
+}
+
+@immutable
+class PracticeSession {
+  final String id;
+  final String patternId;
+  final String? practiceContextId;
+  final DateTime dateStarted;
+  final int durationSeconds;
+  final int? tempoUsed;
+  final DrumSubdivision? subdivisionUsed;
+  final PracticeSelfAssessment? selfAssessment;
+
+  const PracticeSession({
+    required this.id,
+    required this.patternId,
+    this.practiceContextId,
+    required this.dateStarted,
+    required this.durationSeconds,
+    this.tempoUsed,
+    this.subdivisionUsed,
+    this.selfAssessment,
+  });
+}
+
+@immutable
+class ProgressSummary {
+  final String patternId;
+  final int? highestCleanTempo;
+  final int totalSessions;
+  final int totalPracticeSeconds;
+  final List<String> weakAreas;
+  final bool owned;
+
+  ProgressSummary({
+    required this.patternId,
+    this.highestCleanTempo,
+    required this.totalSessions,
+    required this.totalPracticeSeconds,
+    List<String> weakAreas = const <String>[],
+    required this.owned,
+  }) : weakAreas = List<String>.unmodifiable(weakAreas);
+}
+
+@immutable
 class PracticeLaunchPreferenceV1 {
   final String practiceItemId;
   final int bpm;
@@ -503,6 +753,7 @@ class PracticeItemV1 {
   /// It must not define canonical pattern structure.
   final MaterialFamilyV1 family;
   final String name;
+  final String pattern;
   final PatternSequenceV1 sequence;
 
   /// Metadata only.
@@ -556,6 +807,7 @@ class PracticeItemV1 {
     required this.id,
     required this.family,
     required this.name,
+    String? pattern,
     PatternSequenceV1? sequence,
     String? sticking,
     int? noteCount,
@@ -570,8 +822,13 @@ class PracticeItemV1 {
     required this.source,
     required this.tags,
     required this.saved,
-  }) : assert(sequence != null || sticking != null),
-       sequence = sequence ?? PatternSequenceV1.parse(sticking ?? ''),
+  }) : assert(sequence != null || sticking != null || pattern != null),
+       pattern =
+           pattern ??
+           sticking ??
+           (sequence ?? PatternSequenceV1.parse(sticking ?? '')).canonicalText,
+       sequence =
+           sequence ?? PatternSequenceV1.parse(pattern ?? sticking ?? ''),
        groupingHint = groupingHint ?? PatternGroupingV1.none,
        timing = timing ?? const PatternTimingV1.auto(),
        noteValueOverrides = List<PatternNoteValueV1?>.unmodifiable(
@@ -579,7 +836,7 @@ class PracticeItemV1 {
        ),
        assert(
          noteCount == null ||
-             (sequence ?? PatternSequenceV1.parse(sticking ?? ''))
+             (sequence ?? PatternSequenceV1.parse(pattern ?? sticking ?? ''))
                      .positionCount ==
                  noteCount,
          'noteCount must match the canonical token sequence length.',
@@ -587,7 +844,7 @@ class PracticeItemV1 {
 
   /// Temporary compatibility getter while the app migrates away from
   /// `sticking` as a structural field.
-  String get sticking => sequence.toDisplayText(groupingHint);
+  String get sticking => pattern;
 
   /// Temporary compatibility getter while the app migrates away from
   /// `noteCount` as a stored field.
@@ -608,6 +865,7 @@ class PracticeItemV1 {
     String? id,
     MaterialFamilyV1? family,
     String? name,
+    String? pattern,
     PatternSequenceV1? sequence,
     String? sticking,
     int? noteCount,
@@ -624,9 +882,12 @@ class PracticeItemV1 {
     bool? saved,
   }) {
     final MaterialFamilyV1 nextFamily = family ?? this.family;
+    final String? nextPattern = pattern ?? sticking;
     final PatternSequenceV1 nextSequence =
         sequence ??
-        (sticking != null ? PatternSequenceV1.parse(sticking) : this.sequence);
+        (nextPattern != null
+            ? PatternSequenceV1.parse(nextPattern)
+            : this.sequence);
     assert(
       noteCount == null || nextSequence.positionCount == noteCount,
       'noteCount must match the canonical token sequence length.',
@@ -635,6 +896,7 @@ class PracticeItemV1 {
       id: id ?? this.id,
       family: nextFamily,
       name: name ?? this.name,
+      pattern: nextPattern ?? this.pattern,
       sequence: nextSequence,
       groupingHint: groupingHint ?? this.groupingHint,
       timing: timing ?? this.timing,

@@ -47,8 +47,9 @@ Canonical pattern-model rule:
 
 - the app has one canonical playable-pattern model: an ordered token sequence
 - each token represents one timed position in the pattern
-- the core alphabet is `R`, `L`, `K`, `B`, `F`, `X`, and `_`
-- `B`, `F`, and `X` are expressive intent tokens, not expanded rudiment variants
+- the core alphabet is `R`, `L`, `K`, `F`, `X`, and `_`
+- `F` and `X` are expressive intent tokens, not expanded rudiment variants
+- `B` is not valid pattern vocabulary; both-hands/unison or multi-voice hits must be represented as simultaneous hits such as `[RL]` or `[XK]`
 - canonical tokens must support note tokens and a first-class rest/pause token
 - triads, 4-note patterns, 5-note patterns, phrases, flow, and single-surface may still appear as product language, tags, filters, or pedagogy cues, but they must not define parsing, storage structure, renderer choice, playback shape, or session stepping
 - grouping is optional metadata for readability and teaching only
@@ -129,7 +130,7 @@ Notation and pattern text rules:
 - notation may wrap only between note cells or documented group boundaries, never inside a marked token
 - marked tokens like `^R` and `(R)` must remain visually intact as one unit
 - `R`, `L`, and `K` are the anchor glyphs and must always render at the exact same size within a notation readout
-- `F`, `B`, and `X` should use light visual differentiation only: `F` may be subtly italicized, `B` slightly bolder, and `X` highlighted with the pulse/accent color
+- `F` and `X` should use light visual differentiation only
 - pattern text should use shared role-based styles instead of per-screen ad hoc font sizes
 - compact pattern text readouts should use the shared compact pattern style unless a screen contract explicitly calls for card or summary emphasis
 - editable pattern text fields are the only default place where the pattern value should scale larger than adjacent ordinary controls

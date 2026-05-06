@@ -1916,6 +1916,7 @@ class AppController extends ChangeNotifier {
     required List<DrumVoiceV1> voiceAssignments,
     required CompetencyLevelV1 competency,
     PatternSequenceV1? sequence,
+    String? pattern,
     PatternGroupingV1? groupingHint,
     PatternTimingV1? timing,
     String? beatGrouping,
@@ -1935,11 +1936,14 @@ class AppController extends ChangeNotifier {
           noteValueOverrides ?? existingItem.noteValueOverrides,
         );
     final PatternSequenceV1 nextSequence = sequence ?? existingItem.sequence;
+    final String nextPattern = pattern ?? nextSequence.canonicalText;
     final bool sequenceChanged = !listEquals(
       nextSequence.tokens,
       existingItem.tokens,
     );
+    final bool patternChanged = nextPattern != existingItem.pattern;
     final bool structureChanged =
+        patternChanged ||
         sequenceChanged ||
         (groupingHint != null && groupingHint != existingItem.groupingHint);
     final MaterialFamilyV1 nextFamily = structureChanged
@@ -1950,9 +1954,7 @@ class AppController extends ChangeNotifier {
     final PatternTimingV1 nextTiming =
         timing ??
         (structureChanged ? const PatternTimingV1.auto() : existingItem.timing);
-    final String nextName = structureChanged
-        ? nextSequence.toDisplayText(nextGroupingHint)
-        : existingItem.name;
+    final String nextName = structureChanged ? nextPattern : existingItem.name;
     final List<String> nextTags = structureChanged
         ? _tagsForEditedSequence(nextSequence.tokens, nextFamily)
         : existingItem.tags;
@@ -1970,6 +1972,7 @@ class AppController extends ChangeNotifier {
             entry.copyWith(
               family: nextFamily,
               name: nextName,
+              pattern: nextPattern,
               sequence: nextSequence,
               groupingHint: nextGroupingHint,
               timing: nextTiming,

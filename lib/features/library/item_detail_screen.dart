@@ -52,7 +52,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     super.initState();
     _loadDraftFromController();
     final PracticeItemV1 item = widget.controller.itemById(widget.itemId);
-    _lastPatternText = _draftPatternText();
+    _lastPatternText = item.pattern.trim().isEmpty
+        ? _draftPatternText()
+        : item.pattern;
     _lastGroupingText = _initialGroupingTextForItem(item);
     _patternController = TextEditingController(text: _lastPatternText);
     _groupingController = TextEditingController(text: _lastGroupingText);
@@ -85,9 +87,8 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         }
         final bool isDraftItem = !item.saved;
         final bool supportsMatrixEditing = _supportsMatrixEditingDraft();
-        final List<PatternNoteMarkingV1> draftMarkings = _draftMarkingsFor(
-          _draftTokens.length,
-        );
+        final List<DrumSheetNotationNote> draftNotes =
+            _currentSheetNotesForDisplay();
         final bool hasUnsavedChanges = _hasUnsavedChanges(item);
 
         return PopScope(
@@ -189,7 +190,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                         ),
                         const SizedBox(height: 12),
                         DrumSheetNotationDisplay(
-                          document: _draftSheetNotationDocument(draftMarkings),
+                          document: _draftSheetNotationDocument(draftNotes),
                           grouping: _effectiveGroupingText(),
                           selectedIndexes: _selectedNoteIndices,
                           onSelectionChanged: (Set<int> next) {
@@ -200,7 +201,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                         const SizedBox(height: 12),
                         _SelectedSheetNoteEditor(
                           activeControlSet: _activeControlSet,
-                          notes: _draftSheetNotes(draftMarkings),
+                          notes: draftNotes,
                           selectedIndices: _selectedNoteIndices,
                           subdivision: _draftSubdivision,
                           onControlSetChanged: (_ItemEditorControlSet next) =>
@@ -312,14 +313,31 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   }
 
   DrumSheetNotationDocument _draftSheetNotationDocument(
-    List<PatternNoteMarkingV1> markings,
+    List<DrumSheetNotationNote> notes,
   ) {
     return DrumSheetNotationDocument(
       subdivision: _draftSubdivision,
       measures: <DrumSheetNotationMeasure>[
-        DrumSheetNotationMeasure(notes: _draftSheetNotes(markings)),
+        DrumSheetNotationMeasure(notes: notes),
       ],
     );
+  }
+
+  List<DrumSheetNotationNote> _currentSheetNotesForDisplay() {
+    try {
+      final List<DrumSheetNotationNote> parsed = DrumSheetPatternParser.parse(
+        _patternController.text,
+        lenient: true,
+      );
+      if (parsed.isNotEmpty || _patternController.text.trim().isNotEmpty) {
+        return parsed;
+      }
+    } on FormatException {
+      // Fall back to the legacy draft while the user is mid-edit.
+    } on ArgumentError {
+      // Fall back to the legacy draft while the user is mid-edit.
+    }
+    return _draftSheetNotes(_draftMarkingsFor(_draftTokens.length));
   }
 
   List<DrumSheetNotationNote> _draftSheetNotes(
@@ -381,10 +399,6 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   ) {
     return switch (token.kind) {
       PatternTokenKindV1.kick => const <DrumSheetVoice>[DrumSheetVoice.kick],
-      PatternTokenKindV1.both => const <DrumSheetVoice>[
-        DrumSheetVoice.hihat,
-        DrumSheetVoice.snare,
-      ],
       PatternTokenKindV1.accent => const <DrumSheetVoice>[DrumSheetVoice.crash],
       PatternTokenKindV1.flam => const <DrumSheetVoice>[DrumSheetVoice.snare],
       PatternTokenKindV1.rest => const <DrumSheetVoice>[],
@@ -412,7 +426,6 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       PatternTokenKindV1.right => 'R',
       PatternTokenKindV1.left => 'L',
       PatternTokenKindV1.kick => 'K',
-      PatternTokenKindV1.both => 'B',
       PatternTokenKindV1.flam => 'F',
       PatternTokenKindV1.accent => 'X',
       PatternTokenKindV1.rest => '_',
@@ -556,11 +569,8 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       'R' => PatternTokenV1.right,
       'L' => PatternTokenV1.left,
       'K' => PatternTokenV1.kick,
-      'B' => PatternTokenV1.both,
       'F' => PatternTokenV1.flam,
-      'C' || 'X' => PatternTokenV1.accent,
-      'HH' => PatternTokenV1.accent,
-      'FT' => PatternTokenV1.left,
+      'X' => PatternTokenV1.accent,
       _ =>
         note.voices.contains(DrumSheetVoice.kick)
             ? PatternTokenV1.kick
@@ -636,7 +646,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     _recordUndo();
     final List<DrumSheetNotationNote> notes =
         DrumSheetPatternParser.applyValueOverride(
-          _draftSheetNotes(_draftMarkingsFor(_draftTokens.length)),
+          _currentSheetNotesForDisplay(),
           _selectedNoteIndices,
           value,
         );
@@ -651,7 +661,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     _recordUndo();
     final List<DrumSheetNotationNote> notes =
         DrumSheetPatternParser.applyVoiceOverride(
-          _draftSheetNotes(_draftMarkingsFor(_draftTokens.length)),
+          _currentSheetNotesForDisplay(),
           _selectedNoteIndices,
           voice,
         );
@@ -666,7 +676,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     _recordUndo();
     final List<DrumSheetNotationNote> notes =
         DrumSheetPatternParser.toggleAccent(
-          _draftSheetNotes(_draftMarkingsFor(_draftTokens.length)),
+          _currentSheetNotesForDisplay(),
           _selectedNoteIndices,
         );
     setState(() {
@@ -680,7 +690,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     _recordUndo();
     final List<DrumSheetNotationNote> notes =
         DrumSheetPatternParser.toggleGhost(
-          _draftSheetNotes(_draftMarkingsFor(_draftTokens.length)),
+          _currentSheetNotesForDisplay(),
           _selectedNoteIndices,
         );
     setState(() {
@@ -712,42 +722,15 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     final Set<int> selected = Set<int>.from(_selectedNoteIndices);
     if (selected.isEmpty) return;
     _recordUndo();
-    final List<PatternTokenV1> nextTokens = <PatternTokenV1>[];
-    final List<DrumVoiceV1> nextVoices = <DrumVoiceV1>[];
-    final List<DrumSheetNoteValue?> nextDurations = <DrumSheetNoteValue?>[];
-    final Map<int, int> nextIndexByOld = <int, int>{};
-
-    for (int index = 0; index < _draftTokens.length; index++) {
-      if (selected.contains(index)) continue;
-      nextIndexByOld[index] = nextTokens.length;
-      nextTokens.add(_draftTokens[index]);
-      nextVoices.add(
-        index < _voiceAssignments.length
-            ? _voiceAssignments[index]
-            : _defaultVoiceForDraftToken(_draftTokens[index]),
-      );
-      nextDurations.add(
-        index < _durationOverrides.length ? _durationOverrides[index] : null,
-      );
-    }
+    final List<DrumSheetNotationNote> currentNotes =
+        _currentSheetNotesForDisplay();
+    final List<DrumSheetNotationNote> remaining = <DrumSheetNotationNote>[
+      for (int index = 0; index < currentNotes.length; index++)
+        if (!selected.contains(index)) currentNotes[index],
+    ];
 
     setState(() {
-      _draftTokens = nextTokens;
-      _voiceAssignments = nextVoices;
-      _durationOverrides = nextDurations;
-      _accentedNoteIndices =
-          _accentedNoteIndices
-              .where(nextIndexByOld.containsKey)
-              .map((int index) => nextIndexByOld[index]!)
-              .toList(growable: false)
-            ..sort();
-      _ghostNoteIndices =
-          _ghostNoteIndices
-              .where(nextIndexByOld.containsKey)
-              .map((int index) => nextIndexByOld[index]!)
-              .toList(growable: false)
-            ..sort();
-      _normalizeDraftStructure();
+      _applySheetNotesToDraft(remaining);
       _syncPatternTextFromDraft();
       _selectedNoteIndices = <int>{};
     });
@@ -813,6 +796,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       _draftTokens.length,
     );
     return !item.saved ||
+        item.pattern.trim() != _patternController.text.trim() ||
         !listEquals(item.tokens, _draftTokens) ||
         item.groupingHint != _draftGrouping ||
         !listEquals(currentMarkings, draftMarkings) ||
@@ -842,7 +826,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       durationOverrides: List<DrumSheetNoteValue?>.from(_durationOverrides),
       subdivision: _draftSubdivision,
       selectedNoteIndices: Set<int>.from(_selectedNoteIndices),
-      patternText: patternText ?? _draftPatternText(),
+      patternText: patternText ?? _patternController.text,
     );
     if (_undoStack.isNotEmpty && _undoStack.last == snapshot) return;
     _undoStack.add(snapshot);
@@ -890,7 +874,8 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       ghostNoteIndices: _ghostNoteIndices,
       voiceAssignments: _voiceAssignments,
       competency: widget.controller.competencyFor(widget.itemId),
-      sequence: PatternSequenceV1(tokens: _draftTokens),
+      sequence: PatternSequenceV1.parse(_patternController.text.trim()),
+      pattern: _patternController.text.trim(),
       groupingHint: _draftGrouping,
       beatGrouping: _groupingController.text.trim(),
       notationSubdivision: _storedNoteValueForSheetValue(_draftSubdivision),
@@ -1024,20 +1009,23 @@ class _SheetNotationLegend extends StatelessWidget {
         children: const <Widget>[
           _LegendEntry(token: 'R/L', text: 'snare'),
           _LegendEntry(token: 'K', text: 'kick'),
-          _LegendEntry(token: 'HH', text: 'hi-hat'),
-          _LegendEntry(token: 'C or X', text: 'crash'),
-          _LegendEntry(token: 'FT', text: 'floor tom'),
           _LegendEntry(token: 'F', text: 'flam'),
-          _LegendEntry(token: 'B', text: 'hi-hat + snare'),
+          _LegendEntry(token: 'X', text: 'accent / crash / big hit'),
           _LegendEntry(token: '_', text: 'rest'),
           _LegendEntry(token: '^R', text: 'accent'),
           _LegendEntry(token: '(L)', text: 'ghost'),
-          _LegendEntry(token: '[32:R L]', text: 'duration override'),
+          _LegendEntry(token: '[XK]', text: 'simultaneous hit'),
+          _LegendEntry(token: '[RL]', text: 'both hands together'),
+          _LegendEntry(token: '[32:R]', text: 'duration override'),
           _LegendEntry(token: '[T1:L]', text: 'voice override'),
           _LegendEntry(token: '[T1 16:L]', text: 'combined override'),
           _LegendEntry(token: 'RLR LK', text: 'space-defined grouping'),
           _LegendEntry(token: '^[T1:R] or [T1:^R]', text: 'accented override'),
           _LegendEntry(token: '[T1:(L)] or ([T1:L])', text: 'ghosted override'),
+          _LegendEntry(
+            token: 'Practice Context',
+            text: 'subdivision, tempo, loop, cycle, and beat alignment',
+          ),
           _LegendEntry(token: '^(L)', text: 'invalid'),
         ],
       ),

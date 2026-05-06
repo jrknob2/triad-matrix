@@ -265,6 +265,7 @@ class IsarAppStateStore implements AppStateStore {
       'id': item.id,
       'family': item.family.name,
       'name': item.name,
+      'pattern': item.pattern,
       'tokens': item.sequence.tokens
           .map((PatternTokenV1 token) => token.symbol)
           .toList(growable: false),
@@ -295,11 +296,14 @@ class IsarAppStateStore implements AppStateStore {
         : _legacyGroupingHintForFamily(
             MaterialFamilyV1.values.byName(map['family'] as String),
           );
+    final String pattern = (map['pattern'] as String?) ?? '';
     final PatternSequenceV1 sequence = map['tokens'] is List<dynamic>
         ? PatternSequenceV1.fromSymbols(
             (map['tokens'] as List<dynamic>).cast<String>(),
           )
-        : PatternSequenceV1.parse((map['sticking'] as String?) ?? '');
+        : PatternSequenceV1.parse(
+            pattern.isNotEmpty ? pattern : (map['sticking'] as String?) ?? '',
+          );
     final Object? rawTiming = map['timing'];
     final PatternTimingV1 timing = rawTiming is Map<String, dynamic>
         ? _patternTimingFromMap(rawTiming)
@@ -308,6 +312,9 @@ class IsarAppStateStore implements AppStateStore {
       id: map['id'] as String,
       family: MaterialFamilyV1.values.byName(map['family'] as String),
       name: map['name'] as String,
+      pattern: pattern.isNotEmpty
+          ? pattern
+          : (map['sticking'] as String?) ?? sequence.canonicalText,
       sequence: sequence,
       groupingHint: groupingHint,
       timing: timing,

@@ -9,9 +9,9 @@ void main() {
         id: 'grouped',
         family: MaterialFamilyV1.custom,
         name: 'Grouped',
-        sequence: PatternSequenceV1.parse('RLL_RLLKBXF'),
-        accentedNoteIndices: const <int>[0, 4, 10],
-        ghostNoteIndices: const <int>[1, 2, 5, 6, 8],
+        sequence: PatternSequenceV1.parse('RLL_RLLKXF'),
+        accentedNoteIndices: const <int>[0, 4, 9],
+        ghostNoteIndices: const <int>[1, 2, 5, 6],
         voiceAssignments: const <DrumVoiceV1>[],
         beatGrouping: beatGrouping,
         source: PracticeItemSourceV1.userDefined,
@@ -30,11 +30,11 @@ void main() {
       () {
         expect(
           markedPatternTextForPracticeItem(itemWithGrouping('3 3 1 3')),
-          '^R(L)(L) _^R(L) (L) K(B)X ^F',
+          '^R(L)(L) _^R(L) (L) KX^F',
         );
         expect(
           markedPatternTextForPracticeItem(itemWithGrouping('3313')),
-          '^R(L)(L) _^R(L) (L) K(B)X ^F',
+          '^R(L)(L) _^R(L) (L) KX^F',
         );
       },
     );
@@ -42,7 +42,7 @@ void main() {
     test('does not add literal spacing when no grouping is stored', () {
       expect(
         markedPatternTextForPracticeItem(itemWithGrouping('')),
-        '^R(L)(L)_^R(L)(L)K(B)X^F',
+        '^R(L)(L)_^R(L)(L)KX^F',
       );
     });
   });

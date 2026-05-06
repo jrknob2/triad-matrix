@@ -158,27 +158,26 @@
     </div>
     <label class="pattern-control">
       Pattern
-      <input id="pattern" value="^R^L^R(L)(L)K" />
+      <input id="pattern" value="^R^L^R(L)(L) K ^R^L^R(L)(L) ^R^L^R(L)(L) [XK]" />
     </label>
     <div id="legend" class="legend" aria-label="Notation input legend">
       <div class="legend-title">Input legend</div>
       <div class="legend-items">
         <span><code>R</code>/<code>L</code>: snare</span>
         <span><code>K</code>: kick</span>
-        <span><code>HH</code>: hi-hat</span>
-        <span><code>C</code> or <code>X</code>: crash</span>
-        <span><code>FT</code>: floor tom</span>
         <span><code>F</code>: flam</span>
-        <span><code>B</code>: hi-hat + snare</span>
         <span><code>_</code>: rest</span>
         <span><code>^R</code>: accent</span>
         <span><code>(L)</code>: ghost</span>
+        <span><code>[XK]</code>: crash and kick together</span>
+        <span><code>[RL]</code>: both hands together</span>
         <span><code>[32:R L]</code>: duration override</span>
         <span><code>[T1:L]</code>: voice override</span>
         <span><code>[T1 16:L]</code>: combined override</span>
         <span><code>RLR LK</code>: space-defined grouping</span>
         <span><code>^[T1:R]</code> or <code>[T1:^R]</code>: accented override</span>
         <span><code>[T1:(L)]</code> or <code>([T1:L])</code>: ghosted override</span>
+        <span>Practice Context is separate: subdivision, tempo, cycle, and beat alignment.</span>
         <span><code>^(L)</code>: invalid</span>
       </div>
     </div>
@@ -549,15 +548,8 @@
         switch (note.sticking) {
           case 'K':
             return ['kick'];
-          case 'B':
-            return ['hihat', 'snare'];
-          case 'C':
           case 'X':
             return ['crash'];
-          case 'HH':
-            return ['hihat'];
-          case 'FT':
-            return ['floorTom'];
           default:
             return ['snare'];
         }

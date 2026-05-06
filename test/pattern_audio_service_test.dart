@@ -78,12 +78,10 @@ void main() {
           PatternTokenV1.left,
           PatternTokenV1.right,
           PatternTokenV1.kick,
-          PatternTokenV1.both,
           PatternTokenV1.accent,
           PatternTokenV1.rest,
         ],
         markings: const <PatternNoteMarkingV1>[
-          PatternNoteMarkingV1.normal,
           PatternNoteMarkingV1.normal,
           PatternNoteMarkingV1.normal,
           PatternNoteMarkingV1.normal,
@@ -100,7 +98,6 @@ void main() {
           DrumVoiceV1.kick,
           DrumVoiceV1.snare,
           DrumVoiceV1.snare,
-          DrumVoiceV1.snare,
         ],
         grouping: PatternGroupingV1.none,
         timing: const PatternTimingV1.auto(),
@@ -109,15 +106,14 @@ void main() {
       );
 
       expect(plan.cycleDuration, const Duration(seconds: 1));
-      expect(plan.cues.length, 7);
+      expect(plan.cues.length, 6);
       expect(
         plan.cues.map((PatternAudioCueV1 cue) => cue.tokenIndex).toList(),
-        <int>[0, 1, 2, 3, 4, 5, 6],
+        <int>[0, 1, 2, 3, 4, 5],
       );
       expect(plan.cues[0].sample, PatternAudioSampleV1.flam);
-      expect(plan.cues[5].sample, PatternAudioSampleV1.unison);
-      expect(plan.cues[6].sample, PatternAudioSampleV1.accentRide);
-      expect(plan.cues[6].offset, const Duration(milliseconds: 750));
+      expect(plan.cues[5].sample, PatternAudioSampleV1.accentRide);
+      expect(plan.cues[5].offset, const Duration(microseconds: 714286));
     });
 
     test('maps X to the selected accent voice', () {
@@ -144,6 +140,34 @@ void main() {
       expect(
         planFor(AccentVoiceV1.ride).cues.single.sample,
         PatternAudioSampleV1.accentRide,
+      );
+    });
+
+    test('schedules simultaneous hit voices at the same offset', () {
+      final PatternAudioPlanV1 plan = PatternAudioService.buildPlan(
+        tokens: const <PatternTokenV1>[PatternTokenV1.accent],
+        markings: const <PatternNoteMarkingV1>[PatternNoteMarkingV1.normal],
+        voices: const <DrumVoiceV1>[DrumVoiceV1.crash],
+        grouping: PatternGroupingV1.none,
+        timing: const PatternTimingV1.auto(),
+        bpm: 60,
+        accentVoice: AccentVoiceV1.crash,
+        additionalVoicesByIndex: const <int, List<DrumVoiceV1>>{
+          0: <DrumVoiceV1>[DrumVoiceV1.kick],
+        },
+      );
+
+      expect(plan.cues.length, 2);
+      expect(
+        plan.cues.map((PatternAudioCueV1 cue) => cue.offset).toSet(),
+        <Duration>{Duration.zero},
+      );
+      expect(
+        plan.cues.map((PatternAudioCueV1 cue) => cue.sample).toSet(),
+        <PatternAudioSampleV1>{
+          PatternAudioSampleV1.accentCrash,
+          PatternAudioSampleV1.kick,
+        },
       );
     });
 

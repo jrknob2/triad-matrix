@@ -134,6 +134,18 @@ class DrumSheetPatternParser {
     DrumSheetNoteValue subdivision = DrumSheetNoteValue.eighth,
   }) {
     return notes.map((DrumSheetNotationNote note) {
+      if (_isSimultaneousNote(note)) {
+        final String simultaneous = note.accent
+            ? '[^${note.sticking}]'
+            : '[${note.sticking}]';
+        final List<String> overrides = <String>[];
+        if (note.value != null && note.value != subdivision) {
+          overrides.add(note.value!.patternLabel);
+        }
+        return overrides.isEmpty
+            ? simultaneous
+            : '[${overrides.join(' ')}:$simultaneous]';
+      }
       if (note.accent && note.ghost) {
         throw ArgumentError('Ghost notes cannot be accented.');
       }
@@ -653,17 +665,25 @@ List<DrumSheetNotationNote> _parsePattern(
       final int close = pattern.indexOf(']', index + 1);
       if (close < 0) {
         if (options.lenient) break;
-        throw const FormatException('Unclosed override group.');
+        throw const FormatException('Unclosed bracket group.');
       }
       final String body = pattern.substring(index + 1, close);
       final int separator = body.indexOf(':');
       if (separator < 0) {
-        if (options.lenient) {
-          accent = false;
-          index = close;
-          continue;
+        try {
+          notes.add(
+            _simultaneousNoteFromBody(
+              body,
+              accent: accent,
+              value: options.value,
+            ),
+          );
+        } on FormatException {
+          if (!options.lenient) rethrow;
         }
-        throw const FormatException('Override must use [override: pattern].');
+        accent = false;
+        index = close;
+        continue;
       }
       late final _ParsedOverride override;
       try {
@@ -722,6 +742,57 @@ List<DrumSheetNotationNote> _parsePattern(
   return notes;
 }
 
+DrumSheetNotationNote _simultaneousNoteFromBody(
+  String body, {
+  required bool accent,
+  DrumSheetNoteValue? value,
+}) {
+  final String trimmed = body.trim();
+  if (trimmed.isEmpty) {
+    throw const FormatException(
+      'Empty bracket. Use a simultaneous hit like [XK] or an override like [T1:L].',
+    );
+  }
+
+  final List<DrumSheetNotationNote> parts = _parsePattern(
+    trimmed,
+    const _ParseOptions(lenient: false),
+  );
+  if (parts.length < 2) {
+    throw const FormatException(
+      'Simultaneous hits must contain at least two notes, such as [XK] or [RL].',
+    );
+  }
+  if (parts.any((DrumSheetNotationNote note) => note.rest)) {
+    throw const FormatException(
+      'Rests are not allowed inside simultaneous hits.',
+    );
+  }
+
+  final List<DrumSheetVoice> voices = <DrumSheetVoice>[];
+  final StringBuffer sticking = StringBuffer();
+  bool hasGhost = false;
+  bool hasAccent = accent;
+  bool hasFlam = false;
+  for (final DrumSheetNotationNote note in parts) {
+    for (final DrumSheetVoice voice in note.voices) {
+      if (!voices.contains(voice)) voices.add(voice);
+    }
+    sticking.write(_baseTokenForNote(note));
+    hasGhost = hasGhost || note.ghost;
+    hasAccent = hasAccent || note.accent;
+    hasFlam = hasFlam || note.flam;
+  }
+  return DrumSheetNotationNote(
+    value: value,
+    voices: voices,
+    sticking: sticking.toString(),
+    accent: hasAccent,
+    ghost: hasGhost,
+    flam: hasFlam,
+  );
+}
+
 @immutable
 class _ParsedOverride {
   final DrumSheetNoteValue? value;
@@ -759,10 +830,6 @@ _ParsedOverride _overrideFromLabel(String label) {
 }
 
 String? _multiCharacterTokenAt(String pattern, int index) {
-  final String nextTwo = pattern
-      .substring(index, math.min(index + 2, pattern.length))
-      .toUpperCase();
-  if (nextTwo == 'FT' || nextTwo == 'HH') return nextTwo;
   return null;
 }
 
@@ -803,24 +870,12 @@ DrumSheetNotationNote _noteFromToken(
       defaultVoices: <DrumSheetVoice>[DrumSheetVoice.snare],
       flam: true,
     ),
-    'B' => note(
-      sticking: 'B',
-      defaultVoices: <DrumSheetVoice>[
-        DrumSheetVoice.hihat,
-        DrumSheetVoice.snare,
-      ],
+    'B' => throw const FormatException(
+      'Invalid token: B is no longer supported. Use [RL] for both hands/unison or assign explicit voices.',
     ),
-    'X' || 'C' => note(
-      sticking: token,
+    'X' => note(
+      sticking: 'X',
       defaultVoices: <DrumSheetVoice>[DrumSheetVoice.crash],
-    ),
-    'HH' => note(
-      sticking: 'HH',
-      defaultVoices: <DrumSheetVoice>[DrumSheetVoice.hihat],
-    ),
-    'FT' => note(
-      sticking: 'FT',
-      defaultVoices: <DrumSheetVoice>[DrumSheetVoice.floorTom],
     ),
     '_' => note(
       sticking: '_',
@@ -852,14 +907,12 @@ String _baseTokenForNote(DrumSheetNotationNote note) {
   if (note.flam) return 'F';
   if (_isLimbSticking(note.sticking)) return note.sticking;
   if (note.voices.contains(DrumSheetVoice.kick)) return 'K';
-  if (note.voices.contains(DrumSheetVoice.floorTom)) return 'FT';
   if (note.voices.contains(DrumSheetVoice.hihat) &&
       note.voices.contains(DrumSheetVoice.snare)) {
-    return 'B';
+    return '[RL]';
   }
-  if (note.voices.contains(DrumSheetVoice.hihat)) return 'HH';
   if (note.voices.contains(DrumSheetVoice.crash)) {
-    return note.sticking == 'X' ? 'X' : 'C';
+    return 'X';
   }
   return note.sticking.isEmpty ? 'R' : note.sticking;
 }
@@ -875,7 +928,7 @@ String? _voiceOverrideLabelForNote(DrumSheetNotationNote note) {
     DrumSheetVoice.floorTom => 'FT',
     DrumSheetVoice.kick => 'K',
     DrumSheetVoice.hihat => 'HH',
-    DrumSheetVoice.crash => 'C',
+    DrumSheetVoice.crash => 'X',
     DrumSheetVoice.ride => 'RD',
     DrumSheetVoice.snare => null,
   };
@@ -886,15 +939,18 @@ List<DrumSheetVoice> _defaultVoicesForNote(DrumSheetNotationNote note) {
   if (note.flam) return const <DrumSheetVoice>[DrumSheetVoice.snare];
   return switch (note.sticking) {
     'K' => const <DrumSheetVoice>[DrumSheetVoice.kick],
-    'B' => const <DrumSheetVoice>[DrumSheetVoice.hihat, DrumSheetVoice.snare],
-    'C' || 'X' => const <DrumSheetVoice>[DrumSheetVoice.crash],
-    'HH' => const <DrumSheetVoice>[DrumSheetVoice.hihat],
-    'FT' => const <DrumSheetVoice>[DrumSheetVoice.floorTom],
+    'X' => const <DrumSheetVoice>[DrumSheetVoice.crash],
     _ => const <DrumSheetVoice>[DrumSheetVoice.snare],
   };
 }
 
 bool _isLimbSticking(String sticking) => sticking == 'R' || sticking == 'L';
+
+bool _isSimultaneousNote(DrumSheetNotationNote note) {
+  if (note.rest) return false;
+  if (note.sticking.length < 2) return false;
+  return RegExp(r'^[RLKFX]+$').hasMatch(note.sticking);
+}
 
 extension DrumSheetNoteValueSyntax on DrumSheetNoteValue {
   static DrumSheetNoteValue? fromPatternLabel(String label) {
