@@ -223,7 +223,7 @@ export function stemDirectionForMappings(mappings) {
 
 function stickingLabelFor(note) {
   if (note.sticking == null || note.sticking === '') return note.sticking;
-  return note.sticking;
+  return String(note.sticking).toUpperCase();
 }
 
 function attachNoteMetadata(staveNote, metadata) {

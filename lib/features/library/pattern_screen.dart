@@ -32,7 +32,6 @@ class _PatternScreenState extends State<PatternScreen> {
 
   final List<_PatternDraftSnapshot> _undoStack = <_PatternDraftSnapshot>[];
   String? _validationMessage;
-  _PatternControlContext _controlContext = _PatternControlContext.write;
   Set<int> _selectedNoteIndexes = const <int>{};
   TextSelection _lastPatternSelection = const TextSelection.collapsed(
     offset: 0,
@@ -50,11 +49,13 @@ class _PatternScreenState extends State<PatternScreen> {
     );
     _patternFocusNode = FocusNode();
     _patternController.addListener(_handlePatternControllerChanged);
+    _patternFocusNode.addListener(_handlePatternFocusChanged);
   }
 
   @override
   void dispose() {
     _patternController.removeListener(_handlePatternControllerChanged);
+    _patternFocusNode.removeListener(_handlePatternFocusChanged);
     _titleController.dispose();
     _tagsController.dispose();
     _notesController.dispose();
@@ -120,14 +121,18 @@ class _PatternScreenState extends State<PatternScreen> {
                         maxLines: 6,
                         style: PatternTextStyles.editableInput(
                           context,
-                        ).copyWith(fontSize: 28, height: 1.25),
+                        ).copyWith(fontSize: 22, height: 1.25),
                         inputFormatters: const <TextInputFormatter>[
                           _PatternTextInputFormatter(),
                         ],
-                        decoration: const InputDecoration(
-                          hintText: 'Enter Pattern',
+                        decoration: InputDecoration(
+                          hintText:
+                              _patternFocusNode.hasFocus ||
+                                  _patternController.text.isNotEmpty
+                              ? null
+                              : 'Enter Pattern',
                           border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.all(16),
+                          contentPadding: const EdgeInsets.all(16),
                         ),
                         onChanged: _handlePatternTextChanged,
                       ),
@@ -154,15 +159,7 @@ class _PatternScreenState extends State<PatternScreen> {
                         minNoteWidth: 34,
                       ),
                       const SizedBox(height: 10),
-                      _PatternContextPills(
-                        selected: _controlContext,
-                        onChanged: (value) {
-                          setState(() => _controlContext = value);
-                        },
-                      ),
-                      const SizedBox(height: 10),
-                      _PatternContextControls(
-                        contextMode: _controlContext,
+                      _PatternHelperControls(
                         hasSelection: _hasEditableSelection,
                         canUndo: _undoStack.isNotEmpty,
                         onAccent: () => _transformSelectedNotes(
@@ -200,6 +197,10 @@ class _PatternScreenState extends State<PatternScreen> {
     final TextSelection selection = _patternController.selection;
     if (selection == _lastPatternSelection) return;
     _lastPatternSelection = selection;
+    if (mounted) setState(() {});
+  }
+
+  void _handlePatternFocusChanged() {
     if (mounted) setState(() {});
   }
 
@@ -644,44 +645,7 @@ class _PatternScreenState extends State<PatternScreen> {
   }
 }
 
-enum _PatternControlContext { write, dynamics, combine }
-
-extension _PatternControlContextLabel on _PatternControlContext {
-  String get label {
-    return switch (this) {
-      _PatternControlContext.write => 'Write',
-      _PatternControlContext.dynamics => 'Dynamics',
-      _PatternControlContext.combine => 'Combine',
-    };
-  }
-}
-
-class _PatternContextPills extends StatelessWidget {
-  final _PatternControlContext selected;
-  final ValueChanged<_PatternControlContext> onChanged;
-
-  const _PatternContextPills({required this.selected, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: <Widget>[
-        for (final _PatternControlContext value
-            in _PatternControlContext.values)
-          DrumSelectablePill(
-            label: Text(value.label),
-            selected: selected == value,
-            onPressed: () => onChanged(value),
-          ),
-      ],
-    );
-  }
-}
-
-class _PatternContextControls extends StatelessWidget {
-  final _PatternControlContext contextMode;
+class _PatternHelperControls extends StatelessWidget {
   final bool hasSelection;
   final bool canUndo;
   final VoidCallback onAccent;
@@ -689,8 +653,7 @@ class _PatternContextControls extends StatelessWidget {
   final VoidCallback onCombine;
   final VoidCallback? onUndo;
 
-  const _PatternContextControls({
-    required this.contextMode,
+  const _PatternHelperControls({
     required this.hasSelection,
     required this.canUndo,
     required this.onAccent,
@@ -701,41 +664,31 @@ class _PatternContextControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List<Widget> controls = switch (contextMode) {
-      _PatternControlContext.write => <Widget>[
-        Text(
-          'Type directly in the pattern field. Spaces are phrasing breaks.',
-          style: Theme.of(
-            context,
-          ).textTheme.bodyMedium?.copyWith(color: DrumcabularyTheme.mutedInk),
-        ),
-      ],
-      _PatternControlContext.dynamics => <Widget>[
-        OutlinedButton(
-          onPressed: hasSelection ? onAccent : null,
-          child: const Text('Accent'),
-        ),
-        OutlinedButton(
-          onPressed: hasSelection ? onGhost : null,
-          child: const Text('Ghost'),
-        ),
-      ],
-      _PatternControlContext.combine => <Widget>[
-        OutlinedButton(
-          onPressed: hasSelection ? onCombine : null,
-          child: const Text('Combine'),
-        ),
-      ],
-    };
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        ...controls,
-        OutlinedButton.icon(
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: <Widget>[
+            OutlinedButton(
+              onPressed: hasSelection ? onAccent : null,
+              child: const Text('Accent'),
+            ),
+            OutlinedButton(
+              onPressed: hasSelection ? onGhost : null,
+              child: const Text('Ghost'),
+            ),
+            OutlinedButton(
+              onPressed: hasSelection ? onCombine : null,
+              child: const Text('Simultaneous Hit'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        OutlinedButton(
           onPressed: canUndo ? onUndo : null,
-          icon: const Icon(Icons.undo),
-          label: const Text('Undo'),
+          child: const Text('Undo'),
         ),
       ],
     );

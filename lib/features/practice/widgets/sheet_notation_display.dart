@@ -581,7 +581,7 @@ Map<String, Object?> _noteJson(DrumSheetNotationNote note) {
         for (final DrumSheetVoice voice in note.voices) voice.id,
       ],
     if (note.rest) 'rest': true,
-    if (note.sticking.isNotEmpty) 'sticking': note.sticking,
+    if (note.sticking.isNotEmpty) 'sticking': note.sticking.toUpperCase(),
     if (note.accent) 'accent': true,
     if (note.flam) 'flam': true,
     if (note.ghost) 'ghost': true,

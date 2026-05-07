@@ -139,9 +139,8 @@ Allowed here:
 - sheet-music preview of the current pattern
 - pattern validation
 - header `?` icon that opens a `Notation Grammar` modal
-- lightweight selected-text helpers: accent, ghost, combine into simultaneous
-  hit
-- lightweight context pills for `Write`, `Dynamics`, and `Combine`
+- lightweight selected-text helpers visible together: accent, ghost, and
+  simultaneous hit
 - compact undo control
 - save modal for title, tags, and notes
 - optional preview/playback of the pattern only
@@ -169,6 +168,9 @@ should be preserved in saved pattern text.
 
 Pattern details live in the save modal. They should not crowd the always-visible
 authoring surface.
+
+The Pattern screen should not use context filters. Its few helper controls stay
+visible together and disable when the current selection cannot use them.
 
 Saving a pattern must parse and validate the corrected pattern grammar used by
 the editor and preview. It must not route through stale sequence-only parsers

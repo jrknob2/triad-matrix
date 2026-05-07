@@ -1468,11 +1468,7 @@ drum idea, not configuring a practice system.
 - pattern text input
 - sheet-music preview of the current pattern
 - pattern validation messages
-- lightweight context pills for selected-note helpers:
-  - Write
-  - Dynamics
-  - Combine
-- lightweight selected-note helpers only inside the matching context:
+- lightweight selected-note helpers:
   - accent selected notes
   - ghost selected notes
   - combine selected notes into a simultaneous hit
@@ -1511,8 +1507,9 @@ drum idea, not configuring a practice system.
 - spaces are authored phrasing breaks and should be preserved in the saved pattern text
 - lightweight helpers operate on selected pattern text, not on a hidden per-note grid
 - helper controls may disable when no compatible selection exists, but they must not introduce a large control-panel model
+- Pattern screen helper controls should be visible together; do not use context filters on this screen
 - selection and helper action are separate: selecting text never mutates the pattern until the user invokes a helper
-- `Accent`, `Ghost`, and `Combine` are the only required selected-note helper actions on this screen
+- `Accent`, `Ghost`, and `Simultaneous Hit` are the only required selected-note helper actions on this screen
 - `Undo` may live with the lightweight context controls; `Notation Grammar` opens from a header `?` icon, not an in-body button
 - the notation grammar modal must cover the full current notation grammar and must not mention `B`
 - saving validates the corrected pattern grammar used by the editor
