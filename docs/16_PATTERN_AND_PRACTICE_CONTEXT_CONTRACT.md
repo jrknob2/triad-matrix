@@ -135,15 +135,17 @@ mixes pattern authoring with practice behavior.
 
 Allowed here:
 
-- compact pattern details: title, tags, notes
-- pattern title/details
 - large, dominant pattern text editor
+- sheet-music preview of the current pattern
 - pattern validation
+- header `?` icon that opens a `Notation Grammar` modal
 - lightweight selected-text helpers: accent, ghost, combine into simultaneous
-  hit, insert rest
-- compact utility row: undo and notation/vocabulary modal
+  hit
+- lightweight context pills for `Write`, `Dynamics`, and `Combine`
+- compact undo control
+- save modal for title, tags, and notes
 - optional preview/playback of the pattern only
-- `Save Pattern`
+- `Save`
 
 Not allowed here:
 
@@ -151,6 +153,7 @@ Not allowed here:
 - `Build`, `Dynamics`, or `Voices` segmented control panels
 - duration override controls or any per-note duration UI
 - grouping controls
+- insert-rest action buttons
 - tempo plans
 - subdivision drill controls
 - cycle/routine controls
@@ -163,6 +166,9 @@ Pattern text must remain visible and editable at all times. It must behave like
 a normal text field: paste, arrow keys, selection, and cursor movement cannot
 rewrite spaces or invoke grouping logic. Spaces are authored phrasing breaks and
 should be preserved in saved pattern text.
+
+Pattern details live in the save modal. They should not crowd the always-visible
+authoring surface.
 
 Saving a pattern must parse and validate the corrected pattern grammar used by
 the editor and preview. It must not route through stale sequence-only parsers

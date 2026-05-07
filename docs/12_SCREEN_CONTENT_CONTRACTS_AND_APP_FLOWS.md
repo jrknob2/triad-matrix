@@ -1459,31 +1459,33 @@ Only if those counts are actually correct for the visible scope.
 ### Screen Job
 
 Pattern is the idea-capture screen for a playable musical phrase. It replaces
-the old Pattern authoring surface. The screen must feel like writing a
+the old Practice Item authoring surface. The screen must feel like writing a
 drum idea, not configuring a practice system.
 
 ### Allowed Content
 
 - header with Back and `Pattern`
-- compact pattern details: title, optional tags, optional notes
 - pattern text input
+- sheet-music preview of the current pattern
 - pattern validation messages
-- lightweight selected-text helpers:
+- lightweight context pills for selected-note helpers:
+  - Write
+  - Dynamics
+  - Combine
+- lightweight selected-note helpers only inside the matching context:
   - accent selected notes
   - ghost selected notes
   - combine selected notes into a simultaneous hit
-  - insert rest
 - optional minimal preview controls:
   - play
   - loop
-- compact utility row:
-  - undo
-  - notation/input legend
-- `Save Pattern`
+- header notation grammar icon
+- save pattern modal containing title, optional tags, and optional notes
+- `Save`
 
 ### Forbidden Content
 
-- `Pattern` wording
+- `Practice Item` wording
 - the old `Build`, `Dynamics`, and `Voices` segmented control model
 - large control panels
 - grouping controls
@@ -1494,6 +1496,7 @@ drum idea, not configuring a practice system.
 - flow builder
 - session setup controls
 - duration override controls or any per-note duration UI
+- insert-rest action buttons
 - Working On membership controls
 - player transport
 - statistics/history cards for logged time, sessions, or last worked
@@ -1502,16 +1505,18 @@ drum idea, not configuring a practice system.
 ### Required Control Rules
 
 - the pattern text input is the primary surface and must remain visible at all times
+- pattern details belong in the save modal, not as always-visible fields
 - pattern text input behaves like a normal text editor: paste, arrow keys, selection, and cursor movement must not rewrite spaces or trigger grouping logic
 - typed pattern text normalizes to uppercase at the editor boundary
 - spaces are authored phrasing breaks and should be preserved in the saved pattern text
 - lightweight helpers operate on selected pattern text, not on a hidden per-note grid
 - helper controls may disable when no compatible selection exists, but they must not introduce a large control-panel model
 - selection and helper action are separate: selecting text never mutates the pattern until the user invokes a helper
-- `Accent`, `Ghost`, `Combine`, and `Insert Rest` are the only required helper actions on this screen
-- `Undo` and `Notation` live in a compact utility row and do not become an editing mode
-- the notation/input legend must reflect the corrected grammar and must not mention `B`
+- `Accent`, `Ghost`, and `Combine` are the only required selected-note helper actions on this screen
+- `Undo` may live with the lightweight context controls; `Notation Grammar` opens from a header `?` icon, not an in-body button
+- the notation grammar modal must cover the full current notation grammar and must not mention `B`
 - saving validates the corrected pattern grammar used by the editor
+- pressing `Save` opens the save modal when the pattern is valid; committing that modal saves title, tags, notes, and pattern text
 - leaving a dirty Pattern screen should prompt the user to save, discard, or keep editing
 - Pattern owns notes/tags/details as authored idea metadata
 - accents, ghosts, simultaneous hits, and bracket overrides are user-authored pattern text

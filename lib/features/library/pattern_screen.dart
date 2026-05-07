@@ -32,6 +32,8 @@ class _PatternScreenState extends State<PatternScreen> {
 
   final List<_PatternDraftSnapshot> _undoStack = <_PatternDraftSnapshot>[];
   String? _validationMessage;
+  _PatternControlContext _controlContext = _PatternControlContext.write;
+  Set<int> _selectedNoteIndexes = const <int>{};
   TextSelection _lastPatternSelection = const TextSelection.collapsed(
     offset: 0,
   );
@@ -78,63 +80,27 @@ class _PatternScreenState extends State<PatternScreen> {
           return const Scaffold(body: SizedBox.shrink());
         }
 
-        final bool hasUnsavedChanges = _hasUnsavedChanges(item);
         return PopScope(
-          canPop: !hasUnsavedChanges,
+          canPop: !_hasUnsavedChanges(item),
           onPopInvokedWithResult: (bool didPop, Object? result) async {
-            if (didPop || !hasUnsavedChanges || !mounted) return;
+            if (didPop || !_hasUnsavedChanges(item) || !mounted) return;
             final bool shouldPop = await _handleUnsavedExit(item);
             if (shouldPop && mounted) Navigator.of(this.context).pop();
           },
           child: Scaffold(
-            appBar: AppBar(title: const Text('Pattern')),
+            appBar: AppBar(
+              title: const Text('Pattern'),
+              actions: <Widget>[
+                IconButton(
+                  onPressed: _showInputLegend,
+                  icon: const Icon(Icons.help_outline),
+                  tooltip: 'Notation Grammar',
+                ),
+              ],
+            ),
             body: ListView(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
               children: <Widget>[
-                DrumPanel(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: <Widget>[
-                      const DrumSectionTitle(text: 'Pattern Details'),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: _titleController,
-                        textCapitalization: TextCapitalization.words,
-                        decoration: const InputDecoration(
-                          labelText: 'Title',
-                          border: OutlineInputBorder(),
-                          isDense: true,
-                        ),
-                        onChanged: (_) => setState(() {}),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: _tagsController,
-                        decoration: const InputDecoration(
-                          labelText: 'Tags',
-                          hintText: 'fill, warmup, groove',
-                          border: OutlineInputBorder(),
-                          isDense: true,
-                        ),
-                        onChanged: (_) => setState(() {}),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: _notesController,
-                        keyboardType: TextInputType.multiline,
-                        minLines: 2,
-                        maxLines: 4,
-                        decoration: const InputDecoration(
-                          labelText: 'Notes',
-                          border: OutlineInputBorder(),
-                          isDense: true,
-                        ),
-                        onChanged: (_) => setState(() {}),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
                 DrumPanel(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -159,7 +125,7 @@ class _PatternScreenState extends State<PatternScreen> {
                           _PatternTextInputFormatter(),
                         ],
                         decoration: const InputDecoration(
-                          hintText: 'RLRLL K RLRLL RLRLL X',
+                          hintText: 'Enter Pattern',
                           border: OutlineInputBorder(),
                           contentPadding: EdgeInsets.all(16),
                         ),
@@ -174,8 +140,31 @@ class _PatternScreenState extends State<PatternScreen> {
                         ),
                       ],
                       const SizedBox(height: 12),
-                      _PatternHelperRow(
-                        hasSelection: _hasPatternSelection,
+                      DrumSheetNotationDisplay(
+                        document: _currentNotationDocument,
+                        grouping: _groupingTextFromPattern(
+                          _patternController.text,
+                        ),
+                        selectedIndexes: _selectedNoteIndexes,
+                        onSelectionChanged: (Set<int> indexes) {
+                          setState(() => _selectedNoteIndexes = indexes);
+                        },
+                        selectable: true,
+                        compactLayout: true,
+                        minNoteWidth: 34,
+                      ),
+                      const SizedBox(height: 10),
+                      _PatternContextPills(
+                        selected: _controlContext,
+                        onChanged: (value) {
+                          setState(() => _controlContext = value);
+                        },
+                      ),
+                      const SizedBox(height: 10),
+                      _PatternContextControls(
+                        contextMode: _controlContext,
+                        hasSelection: _hasEditableSelection,
+                        canUndo: _undoStack.isNotEmpty,
                         onAccent: () => _transformSelectedNotes(
                           DrumSheetPatternParser.toggleAccent,
                         ),
@@ -183,21 +172,15 @@ class _PatternScreenState extends State<PatternScreen> {
                           DrumSheetPatternParser.toggleGhost,
                         ),
                         onCombine: _combineSelectedNotes,
-                        onInsertRest: _insertRest,
-                      ),
-                      const SizedBox(height: 10),
-                      _PatternUtilityRow(
-                        canUndo: _undoStack.isNotEmpty,
                         onUndo: _undoStack.isEmpty ? null : _undo,
-                        onShowLegend: _showInputLegend,
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 12),
                 FilledButton(
-                  onPressed: hasUnsavedChanges ? () => _savePattern() : null,
-                  child: const Text('Save Pattern'),
+                  onPressed: _openSavePatternModal,
+                  child: const Text('Save'),
                 ),
               ],
             ),
@@ -222,12 +205,31 @@ class _PatternScreenState extends State<PatternScreen> {
 
   void _handlePatternTextChanged(String value) {
     _validatePattern(value, lenient: true);
-    setState(() {});
+    setState(() => _selectedNoteIndexes = const <int>{});
   }
 
   bool get _hasPatternSelection {
     final TextSelection selection = _patternController.selection;
     return selection.isValid && !selection.isCollapsed;
+  }
+
+  bool get _hasEditableSelection {
+    return _hasPatternSelection || _selectedNoteIndexes.isNotEmpty;
+  }
+
+  DrumSheetNotationDocument get _currentNotationDocument {
+    try {
+      return DrumSheetNotationDocument.fromPattern(
+        _patternController.text.toUpperCase(),
+        lenient: true,
+      );
+    } catch (_) {
+      return const DrumSheetNotationDocument(
+        measures: <DrumSheetNotationMeasure>[
+          DrumSheetNotationMeasure(notes: <DrumSheetNotationNote>[]),
+        ],
+      );
+    }
   }
 
   bool _hasUnsavedChanges(PracticeItemV1 item) {
@@ -283,6 +285,10 @@ class _PatternScreenState extends State<PatternScreen> {
     List<DrumSheetNotationNote> Function(List<DrumSheetNotationNote>, Set<int>)
     transform,
   ) {
+    if (_selectedNoteIndexes.isNotEmpty && !_hasPatternSelection) {
+      _transformSelectedSheetNotes(transform);
+      return;
+    }
     final _PatternSelection? selection = _selectedPatternText();
     if (selection == null) return;
     try {
@@ -303,7 +309,39 @@ class _PatternScreenState extends State<PatternScreen> {
     }
   }
 
+  void _transformSelectedSheetNotes(
+    List<DrumSheetNotationNote> Function(List<DrumSheetNotationNote>, Set<int>)
+    transform,
+  ) {
+    try {
+      final List<DrumSheetNotationNote> notes = DrumSheetPatternParser.parse(
+        _patternController.text,
+      );
+      if (notes.isEmpty) return;
+      _recordUndo();
+      final List<DrumSheetNotationNote> edited = transform(
+        notes,
+        _selectedNoteIndexes,
+      );
+      final String next = DrumSheetPatternParser.serialize(edited);
+      _patternController.value = TextEditingValue(
+        text: next,
+        selection: TextSelection.collapsed(offset: next.length),
+      );
+      _validatePattern(next, lenient: true);
+      setState(() => _selectedNoteIndexes = const <int>{});
+    } on FormatException catch (error) {
+      setState(() => _validationMessage = error.message);
+    } on ArgumentError catch (error) {
+      setState(() => _validationMessage = error.message ?? 'Invalid pattern.');
+    }
+  }
+
   void _combineSelectedNotes() {
+    if (_selectedNoteIndexes.isNotEmpty && !_hasPatternSelection) {
+      _combineSelectedSheetNotes();
+      return;
+    }
     final _PatternSelection? selection = _selectedPatternText();
     if (selection == null) return;
     try {
@@ -329,21 +367,55 @@ class _PatternScreenState extends State<PatternScreen> {
     }
   }
 
-  void _insertRest() {
-    _recordUndo();
-    final TextSelection selection = _patternController.selection;
-    final int start = selection.isValid
-        ? selection.start
-        : _patternController.text.length;
-    final int end = selection.isValid ? selection.end : start;
-    final String text = _patternController.text;
-    final String next = text.replaceRange(start, end, '_');
-    _patternController.value = TextEditingValue(
-      text: next,
-      selection: TextSelection.collapsed(offset: start + 1),
-    );
-    _validatePattern(next, lenient: true);
-    setState(() {});
+  void _combineSelectedSheetNotes() {
+    try {
+      final List<int> indexes = _selectedNoteIndexes.toList()..sort();
+      if (indexes.length < 2 ||
+          indexes.last - indexes.first + 1 != indexes.length) {
+        setState(() {
+          _validationMessage = 'Select adjacent notes to combine.';
+        });
+        return;
+      }
+      final List<DrumSheetNotationNote> notes = DrumSheetPatternParser.parse(
+        _patternController.text,
+      );
+      if (indexes.any((int index) => index < 0 || index >= notes.length)) {
+        return;
+      }
+      final List<DrumSheetNotationNote> combined = <DrumSheetNotationNote>[
+        for (final int index in indexes) notes[index],
+      ];
+      if (combined.any((DrumSheetNotationNote note) => note.rest)) {
+        setState(() {
+          _validationMessage =
+              'Rests cannot be combined into a simultaneous hit.';
+        });
+        return;
+      }
+      final String replacement =
+          '[${DrumSheetPatternParser.serialize(combined)}]';
+      DrumSheetPatternParser.parse(replacement);
+      _recordUndo();
+      final List<DrumSheetNotationNote> nextNotes = <DrumSheetNotationNote>[
+        for (int index = 0; index < notes.length; index += 1)
+          if (index == indexes.first)
+            DrumSheetPatternParser.parse(replacement).first
+          else if (!indexes.contains(index))
+            notes[index],
+      ];
+      final String next = DrumSheetPatternParser.serialize(nextNotes);
+      _patternController.value = TextEditingValue(
+        text: next,
+        selection: TextSelection.collapsed(offset: next.length),
+      );
+      _validatePattern(next, lenient: true);
+      setState(() => _selectedNoteIndexes = const <int>{});
+    } on FormatException catch (error) {
+      setState(() => _validationMessage = error.message);
+    } on ArgumentError catch (error) {
+      setState(() => _validationMessage = error.message ?? 'Invalid pattern.');
+    }
   }
 
   _PatternSelection? _selectedPatternText() {
@@ -379,6 +451,95 @@ class _PatternScreenState extends State<PatternScreen> {
     );
     _validatePattern(next, lenient: true);
     setState(() {});
+  }
+
+  Future<void> _openSavePatternModal() async {
+    final String? validationError = _strictValidationError();
+    if (validationError != null) {
+      setState(() => _validationMessage = validationError);
+      return;
+    }
+    final bool? shouldSave = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: DrumcabularyTheme.surface,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+            side: const BorderSide(color: DrumcabularyTheme.line),
+          ),
+          title: const Text('Save Pattern'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                TextField(
+                  controller: _titleController,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: const InputDecoration(
+                    labelText: 'Title',
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _tagsController,
+                  decoration: const InputDecoration(
+                    labelText: 'Tags',
+                    hintText: 'fill, warmup, groove',
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _notesController,
+                  keyboardType: TextInputType.multiline,
+                  minLines: 2,
+                  maxLines: 4,
+                  decoration: const InputDecoration(
+                    labelText: 'Notes',
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            OutlinedButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+    if (!mounted) return;
+    if (shouldSave == true) {
+      _savePattern();
+    } else {
+      setState(() {});
+    }
+  }
+
+  String? _strictValidationError() {
+    try {
+      final List<DrumSheetNotationNote> notes = DrumSheetPatternParser.parse(
+        _patternController.text.trim().toUpperCase(),
+      );
+      return notes.isEmpty ? 'Enter a pattern before saving.' : null;
+    } on FormatException catch (error) {
+      return error.message;
+    } on ArgumentError catch (error) {
+      return error.message ?? 'Invalid pattern.';
+    }
   }
 
   String _savePattern() {
@@ -442,7 +603,7 @@ class _PatternScreenState extends State<PatternScreen> {
       message: item.saved
           ? 'Save your changes to this pattern before leaving?'
           : 'Save this pattern before leaving?',
-      saveLabel: 'Save Pattern',
+      saveLabel: 'Save',
     );
     if (!mounted) return false;
     return switch (decision) {
@@ -469,7 +630,7 @@ class _PatternScreenState extends State<PatternScreen> {
             borderRadius: BorderRadius.circular(28),
             side: const BorderSide(color: DrumcabularyTheme.line),
           ),
-          title: const Text('Notation'),
+          title: const Text('Notation Grammer'),
           content: const _PatternInputLegend(),
           actions: <Widget>[
             OutlinedButton(
@@ -483,20 +644,23 @@ class _PatternScreenState extends State<PatternScreen> {
   }
 }
 
-class _PatternHelperRow extends StatelessWidget {
-  final bool hasSelection;
-  final VoidCallback onAccent;
-  final VoidCallback onGhost;
-  final VoidCallback onCombine;
-  final VoidCallback onInsertRest;
+enum _PatternControlContext { write, dynamics, combine }
 
-  const _PatternHelperRow({
-    required this.hasSelection,
-    required this.onAccent,
-    required this.onGhost,
-    required this.onCombine,
-    required this.onInsertRest,
-  });
+extension _PatternControlContextLabel on _PatternControlContext {
+  String get label {
+    return switch (this) {
+      _PatternControlContext.write => 'Write',
+      _PatternControlContext.dynamics => 'Dynamics',
+      _PatternControlContext.combine => 'Combine',
+    };
+  }
+}
+
+class _PatternContextPills extends StatelessWidget {
+  final _PatternControlContext selected;
+  final ValueChanged<_PatternControlContext> onChanged;
+
+  const _PatternContextPills({required this.selected, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -504,6 +668,49 @@ class _PatternHelperRow extends StatelessWidget {
       spacing: 8,
       runSpacing: 8,
       children: <Widget>[
+        for (final _PatternControlContext value
+            in _PatternControlContext.values)
+          DrumSelectablePill(
+            label: Text(value.label),
+            selected: selected == value,
+            onPressed: () => onChanged(value),
+          ),
+      ],
+    );
+  }
+}
+
+class _PatternContextControls extends StatelessWidget {
+  final _PatternControlContext contextMode;
+  final bool hasSelection;
+  final bool canUndo;
+  final VoidCallback onAccent;
+  final VoidCallback onGhost;
+  final VoidCallback onCombine;
+  final VoidCallback? onUndo;
+
+  const _PatternContextControls({
+    required this.contextMode,
+    required this.hasSelection,
+    required this.canUndo,
+    required this.onAccent,
+    required this.onGhost,
+    required this.onCombine,
+    required this.onUndo,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final List<Widget> controls = switch (contextMode) {
+      _PatternControlContext.write => <Widget>[
+        Text(
+          'Type directly in the pattern field. Spaces are phrasing breaks.',
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: DrumcabularyTheme.mutedInk),
+        ),
+      ],
+      _PatternControlContext.dynamics => <Widget>[
         OutlinedButton(
           onPressed: hasSelection ? onAccent : null,
           child: const Text('Accent'),
@@ -512,45 +719,23 @@ class _PatternHelperRow extends StatelessWidget {
           onPressed: hasSelection ? onGhost : null,
           child: const Text('Ghost'),
         ),
+      ],
+      _PatternControlContext.combine => <Widget>[
         OutlinedButton(
           onPressed: hasSelection ? onCombine : null,
           child: const Text('Combine'),
         ),
-        OutlinedButton(
-          onPressed: onInsertRest,
-          child: const Text('Insert Rest'),
-        ),
       ],
-    );
-  }
-}
-
-class _PatternUtilityRow extends StatelessWidget {
-  final bool canUndo;
-  final VoidCallback? onUndo;
-  final VoidCallback onShowLegend;
-
-  const _PatternUtilityRow({
-    required this.canUndo,
-    required this.onUndo,
-    required this.onShowLegend,
-  });
-
-  @override
-  Widget build(BuildContext context) {
+    };
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       children: <Widget>[
+        ...controls,
         OutlinedButton.icon(
           onPressed: canUndo ? onUndo : null,
           icon: const Icon(Icons.undo),
           label: const Text('Undo'),
-        ),
-        OutlinedButton.icon(
-          onPressed: onShowLegend,
-          icon: const Icon(Icons.help_outline),
-          label: const Text('Notation'),
         ),
       ],
     );
@@ -576,28 +761,84 @@ class _PatternInputLegend extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final TextStyle? style = Theme.of(context).textTheme.bodyMedium;
-    return DefaultTextStyle.merge(
-      style: style,
-      child: Wrap(
-        spacing: 14,
-        runSpacing: 10,
-        children: const <Widget>[
-          _LegendEntry(token: 'R', text: 'right hand'),
-          _LegendEntry(token: 'L', text: 'left hand'),
-          _LegendEntry(token: 'K', text: 'kick'),
-          _LegendEntry(token: 'F', text: 'flam'),
-          _LegendEntry(token: 'X', text: 'accent / crash / big hit'),
-          _LegendEntry(token: '_', text: 'rest'),
-          _LegendEntry(token: '^R', text: 'accent'),
-          _LegendEntry(token: '(L)', text: 'ghost'),
-          _LegendEntry(token: '[XK]', text: 'simultaneous hit'),
-          _LegendEntry(token: '[RL]', text: 'right + left together'),
-          _LegendEntry(token: '[T1:L]', text: 'voice override'),
-          _LegendEntry(token: '[32:R]', text: 'duration override text'),
-          _LegendEntry(token: '[T1 16:L]', text: 'voice + duration text'),
-          _LegendEntry(token: 'RLR LK', text: 'space-defined phrasing'),
-        ],
+    final TextStyle? titleStyle = Theme.of(
+      context,
+    ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900);
+    final TextStyle? bodyStyle = Theme.of(context).textTheme.bodyMedium;
+    return SizedBox(
+      width: 360,
+      child: DefaultTextStyle.merge(
+        style: bodyStyle,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text('Tokens', style: titleStyle),
+            const SizedBox(height: 8),
+            const Wrap(
+              spacing: 14,
+              runSpacing: 10,
+              children: <Widget>[
+                _LegendEntry(token: 'R', text: 'right hand'),
+                _LegendEntry(token: 'L', text: 'left hand'),
+                _LegendEntry(token: 'K', text: 'kick'),
+                _LegendEntry(token: 'F', text: 'flam'),
+                _LegendEntry(token: 'X', text: 'crash / accent / big hit'),
+                _LegendEntry(token: '_', text: 'rest'),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text('Dynamics', style: titleStyle),
+            const SizedBox(height: 8),
+            const Wrap(
+              spacing: 14,
+              runSpacing: 10,
+              children: <Widget>[
+                _LegendEntry(token: '^R', text: 'accent'),
+                _LegendEntry(token: '(L)', text: 'ghost'),
+                _LegendEntry(token: '^(L)', text: 'invalid'),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text('Simultaneous Hits', style: titleStyle),
+            const SizedBox(height: 8),
+            const Wrap(
+              spacing: 14,
+              runSpacing: 10,
+              children: <Widget>[
+                _LegendEntry(token: '[XK]', text: 'X + kick in one slot'),
+                _LegendEntry(token: '[RL]', text: 'right + left together'),
+                _LegendEntry(token: '[RKL]', text: 'right + left + kick'),
+                _LegendEntry(token: '[^XK]', text: 'accented X + kick'),
+                _LegendEntry(token: '[X_]', text: 'invalid'),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text('Overrides', style: titleStyle),
+            const SizedBox(height: 8),
+            const Wrap(
+              spacing: 14,
+              runSpacing: 10,
+              children: <Widget>[
+                _LegendEntry(token: '[T1:L]', text: 'voice override'),
+                _LegendEntry(token: '[FT:R]', text: 'floor tom voice'),
+                _LegendEntry(token: '[32:R]', text: 'duration override'),
+                _LegendEntry(token: '[T1 16:L]', text: 'voice + duration'),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text('Phrasing', style: titleStyle),
+            const SizedBox(height: 8),
+            const Wrap(
+              spacing: 14,
+              runSpacing: 10,
+              children: <Widget>[
+                _LegendEntry(token: 'RLR LK', text: 'spaces are group breaks'),
+                _LegendEntry(token: 'RLRLL K', text: '5 / 1 phrasing'),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
