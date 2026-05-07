@@ -83,6 +83,44 @@ void main() {
       );
     });
 
+    test('built-in seed catalog does not appear in authored library', () async {
+      final FakeAppStateStore store = FakeAppStateStore();
+      final AppController controller = await AppController.createForTesting(
+        store,
+      );
+
+      expect(controller.items, isNotEmpty);
+      expect(controller.libraryPatterns, isEmpty);
+
+      final String itemId = controller.createBlankDraftPracticeItem();
+      controller.savePracticeItemEdits(
+        itemId: itemId,
+        accentedNoteIndices: const <int>[],
+        ghostNoteIndices: const <int>[],
+        voiceAssignments: const <DrumVoiceV1>[
+          DrumVoiceV1.snare,
+          DrumVoiceV1.snare,
+          DrumVoiceV1.kick,
+        ],
+        competency: CompetencyLevelV1.learning,
+        sequence: PatternSequenceV1.parse('RLK'),
+        pattern: 'RLK',
+        saveAsPattern: true,
+      );
+      await controller.flushPersistence();
+
+      expect(
+        controller.libraryPatterns.map((PracticeItemV1 item) => item.id),
+        <String>[itemId],
+      );
+      expect(
+        store.savedSnapshots.last.items.every(
+          (PracticeItemV1 item) => item.source != PracticeItemSourceV1.builtIn,
+        ),
+        isTrue,
+      );
+    });
+
     test(
       'matrix preview emits a generic ephemeral phrase item instead of a combo runtime item',
       () async {

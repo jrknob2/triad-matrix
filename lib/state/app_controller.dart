@@ -71,6 +71,16 @@ class AppController extends ChangeNotifier {
   List<PracticeItemV1> get items => List<PracticeItemV1>.unmodifiable(
     _items.where((PracticeItemV1 item) => item.saved).toList(growable: false),
   );
+  List<PracticeItemV1> get libraryPatterns => List<PracticeItemV1>.unmodifiable(
+    _items
+        .where(
+          (PracticeItemV1 item) =>
+              item.saved &&
+              !item.isWarmup &&
+              item.source != PracticeItemSourceV1.builtIn,
+        )
+        .toList(growable: false),
+  );
   List<PracticeCombinationV1> get combinations =>
       List<PracticeCombinationV1>.unmodifiable(
         _combinations
@@ -165,7 +175,12 @@ class AppController extends ChangeNotifier {
 
   AppStateSnapshotData _snapshotForPersistence() {
     final List<PracticeItemV1> persistedItems = _items
-        .where((PracticeItemV1 item) => !item.isWarmup && item.saved)
+        .where(
+          (PracticeItemV1 item) =>
+              !item.isWarmup &&
+              item.saved &&
+              item.source != PracticeItemSourceV1.builtIn,
+        )
         .toList(growable: false);
     return AppStateSnapshotData(
       profile: _profile,

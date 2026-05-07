@@ -169,10 +169,13 @@ Practice must not silently edit saved pattern text. It may offer an explicit
 
 ### Library Screen
 
-The Library screen shows saved patterns. Its default view is all saved,
-non-warmup patterns. It must not expose `All`, `Single Surface`, or `Flow`
-filters; those are practice/context concepts, not library ownership filters.
-Search narrows the same all-pattern library.
+The Library screen shows authored saved patterns. Its default view is all saved,
+non-warmup, non-built-in patterns. Built-in Matrix/catalog material may exist in
+runtime state so Matrix, Coach, and practice recommendations can work from a
+cleared app, but that seed catalog must not appear as user library content.
+The Library must not expose `All`, `Single Surface`, or `Flow` filters; those
+are practice/context concepts, not library ownership filters. Search narrows
+the same authored-pattern library.
 
 ## Practice Context
 

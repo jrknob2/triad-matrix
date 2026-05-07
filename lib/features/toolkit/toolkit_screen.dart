@@ -50,9 +50,7 @@ class _FocusScreenState extends State<FocusScreen> {
     return AnimatedBuilder(
       animation: widget.controller,
       builder: (BuildContext context, _) {
-        final List<PracticeItemV1> allItems = widget.controller.items
-            .where((PracticeItemV1 item) => item.saved && !item.isWarmup)
-            .toList(growable: false);
+        final List<PracticeItemV1> allItems = widget.controller.libraryPatterns;
         final bool hasSearch = _searchQuery.trim().isNotEmpty;
         final List<PracticeItemV1> visibleItems =
             allItems
