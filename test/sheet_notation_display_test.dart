@@ -60,7 +60,7 @@ void main() {
     );
   });
 
-  test('parses phrase groups and simultaneous hits as one slot', () {
+  test('parses phrase groups and multi-voice beats as one slot', () {
     final List<DrumSheetNotationNote> notes =
         DrumSheetNotationDocument.fromPattern(
           '^R^L^R(L)(L) K ^R^L^R(L)(L) ^R^L^R(L)(L) [XK]',
@@ -74,7 +74,7 @@ void main() {
     ]);
   });
 
-  test('parses simultaneous hand and limb hits', () {
+  test('parses multi-voice hand and limb beats', () {
     expect(
       DrumSheetNotationDocument.fromPattern(
         '[RL]',
@@ -119,7 +119,7 @@ void main() {
     );
   });
 
-  test('rejects invalid tokens and malformed simultaneous hits', () {
+  test('rejects invalid tokens and malformed multi-voice beats', () {
     expect(
       () => DrumSheetNotationDocument.fromPattern('B'),
       throwsFormatException,
@@ -164,6 +164,21 @@ void main() {
       '^R[T2 16:(L)]',
     );
   });
+
+  test(
+    'serializes multiple override voices and uppercases sticking labels',
+    () {
+      final List<DrumSheetNotationNote> notes =
+          DrumSheetNotationDocument.fromPattern('[S T1:l]').flattenedNotes;
+
+      expect(notes.single.sticking, 'L');
+      expect(notes.single.voices, <DrumSheetVoice>[
+        DrumSheetVoice.snare,
+        DrumSheetVoice.tom1,
+      ]);
+      expect(DrumSheetPatternParser.serialize(notes), '[S T1:L]');
+    },
+  );
 
   test('lenient parsing tolerates incomplete editing states', () {
     expect(

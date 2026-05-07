@@ -23,6 +23,45 @@ class PatternScreen extends StatefulWidget {
   State<PatternScreen> createState() => _PatternScreenState();
 }
 
+enum _PatternEditContext { dynamics, voices }
+
+@immutable
+class _VoiceOption {
+  final DrumSheetVoice voice;
+  final String label;
+
+  const _VoiceOption(this.voice, this.label);
+}
+
+const List<_VoiceOption> _voiceOptions = <_VoiceOption>[
+  _VoiceOption(DrumSheetVoice.snare, 'Snare'),
+  _VoiceOption(DrumSheetVoice.tom1, 'T1'),
+  _VoiceOption(DrumSheetVoice.tom2, 'T2'),
+  _VoiceOption(DrumSheetVoice.floorTom, 'FT'),
+  _VoiceOption(DrumSheetVoice.hihat, 'HH'),
+  _VoiceOption(DrumSheetVoice.crash, 'Crash'),
+  _VoiceOption(DrumSheetVoice.ride, 'Ride'),
+  _VoiceOption(DrumSheetVoice.kick, 'Kick'),
+];
+
+int _voiceSortOrder(DrumSheetVoice voice) {
+  return switch (voice) {
+    DrumSheetVoice.snare => 0,
+    DrumSheetVoice.tom1 => 1,
+    DrumSheetVoice.tom2 => 2,
+    DrumSheetVoice.floorTom => 3,
+    DrumSheetVoice.hihat => 4,
+    DrumSheetVoice.crash => 5,
+    DrumSheetVoice.ride => 6,
+    DrumSheetVoice.kick => 7,
+  };
+}
+
+bool _isPatternLimb(String value) {
+  final String normalized = value.toUpperCase();
+  return normalized == 'R' || normalized == 'L';
+}
+
 class _PatternScreenState extends State<PatternScreen> {
   late final TextEditingController _titleController;
   late final TextEditingController _tagsController;
@@ -33,6 +72,7 @@ class _PatternScreenState extends State<PatternScreen> {
   final List<_PatternDraftSnapshot> _undoStack = <_PatternDraftSnapshot>[];
   String? _validationMessage;
   Set<int> _selectedNoteIndexes = const <int>{};
+  _PatternEditContext _editContext = _PatternEditContext.dynamics;
   TextSelection _lastPatternSelection = const TextSelection.collapsed(
     offset: 0,
   );
@@ -159,17 +199,29 @@ class _PatternScreenState extends State<PatternScreen> {
                         minNoteWidth: 34,
                       ),
                       const SizedBox(height: 10),
-                      _PatternHelperControls(
+                      _PatternContextPills(
+                        selected: _editContext,
+                        onSelected: (_PatternEditContext context) {
+                          setState(() => _editContext = context);
+                        },
+                      ),
+                      const SizedBox(height: 10),
+                      _PatternContextControls(
+                        selectedContext: _editContext,
                         hasSelection: _hasEditableSelection,
-                        canUndo: _undoStack.isNotEmpty,
+                        selectedVoices: _selectedVoiceSet,
                         onAccent: () => _transformSelectedNotes(
                           DrumSheetPatternParser.toggleAccent,
                         ),
                         onGhost: () => _transformSelectedNotes(
                           DrumSheetPatternParser.toggleGhost,
                         ),
-                        onCombine: _combineSelectedNotes,
-                        onUndo: _undoStack.isEmpty ? null : _undo,
+                        onToggleVoice: _toggleVoiceForSelection,
+                      ),
+                      const SizedBox(height: 10),
+                      OutlinedButton(
+                        onPressed: _undoStack.isEmpty ? null : _undo,
+                        child: const Text('Undo'),
                       ),
                     ],
                   ),
@@ -216,6 +268,20 @@ class _PatternScreenState extends State<PatternScreen> {
 
   bool get _hasEditableSelection {
     return _hasPatternSelection || _selectedNoteIndexes.isNotEmpty;
+  }
+
+  Set<DrumSheetVoice> get _selectedVoiceSet {
+    final List<DrumSheetNotationNote> notes = _notesForCurrentSelection()
+        .where((DrumSheetNotationNote note) => !note.rest)
+        .toList(growable: false);
+    if (notes.isEmpty) return const <DrumSheetVoice>{};
+    final Set<DrumSheetVoice> common = notes.first.voices.toSet();
+    for (final DrumSheetNotationNote note in notes.skip(1)) {
+      common.removeWhere(
+        (DrumSheetVoice voice) => !note.voices.contains(voice),
+      );
+    }
+    return common;
   }
 
   DrumSheetNotationDocument get _currentNotationDocument {
@@ -338,29 +404,28 @@ class _PatternScreenState extends State<PatternScreen> {
     }
   }
 
-  void _combineSelectedNotes() {
+  void _toggleVoiceForSelection(DrumSheetVoice voice) {
+    final _PatternSelection? selection = _selectedPatternText();
     if (_selectedNoteIndexes.isNotEmpty && !_hasPatternSelection) {
-      _combineSelectedSheetNotes();
+      _transformSelectedSheetNotes(
+        (List<DrumSheetNotationNote> notes, Set<int> selectedIndexes) =>
+            _toggleVoiceOnNotes(notes, selectedIndexes, voice),
+      );
       return;
     }
-    final _PatternSelection? selection = _selectedPatternText();
     if (selection == null) return;
     try {
-      final String body = selection.text.replaceAll(RegExp(r'\s+'), '');
       final List<DrumSheetNotationNote> notes = DrumSheetPatternParser.parse(
-        body,
+        selection.text,
       );
-      if (notes.length < 2) {
-        setState(() {
-          _validationMessage =
-              'Select at least two notes to combine into a simultaneous hit.';
-        });
-        return;
-      }
-      final String replacement = '[$body]';
-      DrumSheetPatternParser.parse(replacement);
+      if (notes.isEmpty) return;
       _recordUndo();
-      _replaceSelectedPatternText(replacement);
+      final List<DrumSheetNotationNote> edited = _toggleVoiceOnNotes(
+        notes,
+        Set<int>.from(Iterable<int>.generate(notes.length)),
+        voice,
+      );
+      _replaceSelectedPatternText(DrumSheetPatternParser.serialize(edited));
     } on FormatException catch (error) {
       setState(() => _validationMessage = error.message);
     } on ArgumentError catch (error) {
@@ -368,54 +433,114 @@ class _PatternScreenState extends State<PatternScreen> {
     }
   }
 
-  void _combineSelectedSheetNotes() {
-    try {
-      final List<int> indexes = _selectedNoteIndexes.toList()..sort();
-      if (indexes.length < 2 ||
-          indexes.last - indexes.first + 1 != indexes.length) {
-        setState(() {
-          _validationMessage = 'Select adjacent notes to combine.';
-        });
-        return;
-      }
-      final List<DrumSheetNotationNote> notes = DrumSheetPatternParser.parse(
-        _patternController.text,
-      );
-      if (indexes.any((int index) => index < 0 || index >= notes.length)) {
-        return;
-      }
-      final List<DrumSheetNotationNote> combined = <DrumSheetNotationNote>[
-        for (final int index in indexes) notes[index],
-      ];
-      if (combined.any((DrumSheetNotationNote note) => note.rest)) {
-        setState(() {
-          _validationMessage =
-              'Rests cannot be combined into a simultaneous hit.';
-        });
-        return;
-      }
-      final String replacement =
-          '[${DrumSheetPatternParser.serialize(combined)}]';
-      DrumSheetPatternParser.parse(replacement);
-      _recordUndo();
-      final List<DrumSheetNotationNote> nextNotes = <DrumSheetNotationNote>[
-        for (int index = 0; index < notes.length; index += 1)
-          if (index == indexes.first)
-            DrumSheetPatternParser.parse(replacement).first
-          else if (!indexes.contains(index))
+  List<DrumSheetNotationNote> _toggleVoiceOnNotes(
+    List<DrumSheetNotationNote> notes,
+    Set<int> selectedIndexes,
+    DrumSheetVoice voice,
+  ) {
+    final List<int> playableIndexes = selectedIndexes
+        .where(
+          (int index) =>
+              index >= 0 && index < notes.length && !notes[index].rest,
+        )
+        .toList(growable: false);
+    if (playableIndexes.isEmpty) return notes;
+
+    final bool shouldAdd = !playableIndexes.every(
+      (int index) => notes[index].voices.contains(voice),
+    );
+    if (!shouldAdd &&
+        playableIndexes.any((int index) => notes[index].voices.length <= 1)) {
+      throw ArgumentError('A note needs at least one voice.');
+    }
+
+    return <DrumSheetNotationNote>[
+      for (int index = 0; index < notes.length; index += 1)
+        if (playableIndexes.contains(index))
+          _noteWithVoices(
             notes[index],
-      ];
-      final String next = DrumSheetPatternParser.serialize(nextNotes);
-      _patternController.value = TextEditingValue(
-        text: next,
-        selection: TextSelection.collapsed(offset: next.length),
-      );
-      _validatePattern(next, lenient: true);
-      setState(() => _selectedNoteIndexes = const <int>{});
-    } on FormatException catch (error) {
-      setState(() => _validationMessage = error.message);
-    } on ArgumentError catch (error) {
-      setState(() => _validationMessage = error.message ?? 'Invalid pattern.');
+            _voicesAfterToggle(notes[index].voices, voice, shouldAdd),
+          )
+        else
+          notes[index],
+    ];
+  }
+
+  DrumSheetNotationNote _noteWithVoices(
+    DrumSheetNotationNote note,
+    List<DrumSheetVoice> voices,
+  ) {
+    return note.copyWith(
+      voices: voices,
+      sticking: _stickingForVoices(note, voices),
+    );
+  }
+
+  String _stickingForVoices(
+    DrumSheetNotationNote note,
+    List<DrumSheetVoice> voices,
+  ) {
+    final String existing = note.sticking.toUpperCase();
+    if (voices.length == 1) {
+      return switch (voices.first) {
+        DrumSheetVoice.snare => _snareStickingFrom(existing),
+        DrumSheetVoice.kick => 'K',
+        DrumSheetVoice.crash => 'X',
+        _ => _isPatternLimb(existing) ? existing : 'R',
+      };
+    }
+
+    final List<String> representable = <String>[];
+    if (voices.contains(DrumSheetVoice.snare)) {
+      representable.add(_snareStickingFrom(existing));
+    }
+    if (voices.contains(DrumSheetVoice.crash)) representable.add('X');
+    if (voices.contains(DrumSheetVoice.kick)) representable.add('K');
+    if (representable.length == voices.length) return representable.join();
+    return _isPatternLimb(existing) ? existing : 'R';
+  }
+
+  String _snareStickingFrom(String existing) {
+    if (existing == 'L' || existing.contains('L') && !existing.contains('R')) {
+      return 'L';
+    }
+    return 'R';
+  }
+
+  List<DrumSheetVoice> _voicesAfterToggle(
+    List<DrumSheetVoice> voices,
+    DrumSheetVoice voice,
+    bool shouldAdd,
+  ) {
+    final List<DrumSheetVoice> next = <DrumSheetVoice>[...voices];
+    if (shouldAdd) {
+      if (!next.contains(voice)) next.add(voice);
+    } else {
+      next.remove(voice);
+    }
+    next.sort(
+      (DrumSheetVoice a, DrumSheetVoice b) =>
+          _voiceSortOrder(a).compareTo(_voiceSortOrder(b)),
+    );
+    return next;
+  }
+
+  List<DrumSheetNotationNote> _notesForCurrentSelection() {
+    try {
+      if (_selectedNoteIndexes.isNotEmpty && !_hasPatternSelection) {
+        final List<DrumSheetNotationNote> notes = DrumSheetPatternParser.parse(
+          _patternController.text,
+        );
+        return <DrumSheetNotationNote>[
+          for (final int index in _selectedNoteIndexes)
+            if (index >= 0 && index < notes.length) notes[index],
+        ];
+      }
+      final _PatternSelection? selection = _selectedPatternText();
+      if (selection == null) return const <DrumSheetNotationNote>[];
+      return DrumSheetPatternParser.parse(selection.text);
+    } catch (_) {
+      return const <DrumSheetNotationNote>[];
     }
   }
 
@@ -645,21 +770,51 @@ class _PatternScreenState extends State<PatternScreen> {
   }
 }
 
-class _PatternHelperControls extends StatelessWidget {
+class _PatternContextPills extends StatelessWidget {
+  final _PatternEditContext selected;
+  final ValueChanged<_PatternEditContext> onSelected;
+
+  const _PatternContextPills({
+    required this.selected,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: <Widget>[
+        DrumSelectablePill(
+          label: const Text('Dynamics'),
+          selected: selected == _PatternEditContext.dynamics,
+          onPressed: () => onSelected(_PatternEditContext.dynamics),
+        ),
+        DrumSelectablePill(
+          label: const Text('Voices'),
+          selected: selected == _PatternEditContext.voices,
+          onPressed: () => onSelected(_PatternEditContext.voices),
+        ),
+      ],
+    );
+  }
+}
+
+class _PatternContextControls extends StatelessWidget {
+  final _PatternEditContext selectedContext;
   final bool hasSelection;
-  final bool canUndo;
+  final Set<DrumSheetVoice> selectedVoices;
   final VoidCallback onAccent;
   final VoidCallback onGhost;
-  final VoidCallback onCombine;
-  final VoidCallback? onUndo;
+  final ValueChanged<DrumSheetVoice> onToggleVoice;
 
-  const _PatternHelperControls({
+  const _PatternContextControls({
+    required this.selectedContext,
     required this.hasSelection,
-    required this.canUndo,
+    required this.selectedVoices,
     required this.onAccent,
     required this.onGhost,
-    required this.onCombine,
-    required this.onUndo,
+    required this.onToggleVoice,
   });
 
   @override
@@ -667,29 +822,55 @@ class _PatternHelperControls extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: <Widget>[
-            OutlinedButton(
-              onPressed: hasSelection ? onAccent : null,
-              child: const Text('Accent'),
-            ),
-            OutlinedButton(
-              onPressed: hasSelection ? onGhost : null,
-              child: const Text('Ghost'),
-            ),
-            OutlinedButton(
-              onPressed: hasSelection ? onCombine : null,
-              child: const Text('Simultaneous Hit'),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        OutlinedButton(
-          onPressed: canUndo ? onUndo : null,
-          child: const Text('Undo'),
-        ),
+        if (selectedContext == _PatternEditContext.dynamics)
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: <Widget>[
+              OutlinedButton(
+                onPressed: hasSelection ? onAccent : null,
+                child: const Text('Accent'),
+              ),
+              OutlinedButton(
+                onPressed: hasSelection ? onGhost : null,
+                child: const Text('Ghost'),
+              ),
+            ],
+          )
+        else
+          _VoiceButtonGrid(
+            enabled: hasSelection,
+            selectedVoices: selectedVoices,
+            onToggleVoice: onToggleVoice,
+          ),
+      ],
+    );
+  }
+}
+
+class _VoiceButtonGrid extends StatelessWidget {
+  final bool enabled;
+  final Set<DrumSheetVoice> selectedVoices;
+  final ValueChanged<DrumSheetVoice> onToggleVoice;
+
+  const _VoiceButtonGrid({
+    required this.enabled,
+    required this.selectedVoices,
+    required this.onToggleVoice,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: <Widget>[
+        for (final _VoiceOption option in _voiceOptions)
+          DrumSelectablePill(
+            label: Text(option.label),
+            selected: enabled && selectedVoices.contains(option.voice),
+            onPressed: enabled ? () => onToggleVoice(option.voice) : null,
+          ),
       ],
     );
   }
@@ -753,13 +934,13 @@ class _PatternInputLegend extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-            Text('Simultaneous Hits', style: titleStyle),
+            Text('Multiple Voices', style: titleStyle),
             const SizedBox(height: 8),
             const Wrap(
               spacing: 14,
               runSpacing: 10,
               children: <Widget>[
-                _LegendEntry(token: '[XK]', text: 'X + kick in one slot'),
+                _LegendEntry(token: '[XK]', text: 'X + kick on one beat'),
                 _LegendEntry(token: '[RL]', text: 'right + left together'),
                 _LegendEntry(token: '[RKL]', text: 'right + left + kick'),
                 _LegendEntry(token: '[^XK]', text: 'accented X + kick'),

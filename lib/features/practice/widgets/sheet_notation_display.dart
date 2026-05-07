@@ -135,9 +135,10 @@ class DrumSheetPatternParser {
   }) {
     return notes.map((DrumSheetNotationNote note) {
       if (_isSimultaneousNote(note)) {
+        final String sticking = note.sticking.toUpperCase();
         final String simultaneous = note.accent
-            ? '[^${note.sticking}]'
-            : '[${note.sticking}]';
+            ? '[^$sticking]'
+            : '[$sticking]';
         final List<String> overrides = <String>[];
         if (note.value != null && note.value != subdivision) {
           overrides.add(note.value!.patternLabel);
@@ -750,7 +751,7 @@ DrumSheetNotationNote _simultaneousNoteFromBody(
   final String trimmed = body.trim();
   if (trimmed.isEmpty) {
     throw const FormatException(
-      'Empty bracket. Use a simultaneous hit like [XK] or an override like [T1:L].',
+      'Empty bracket. Use a multi-voice beat like [XK] or an override like [T1:L].',
     );
   }
 
@@ -760,12 +761,12 @@ DrumSheetNotationNote _simultaneousNoteFromBody(
   );
   if (parts.length < 2) {
     throw const FormatException(
-      'Simultaneous hits must contain at least two notes, such as [XK] or [RL].',
+      'Multi-voice beats must contain at least two notes, such as [XK] or [RL].',
     );
   }
   if (parts.any((DrumSheetNotationNote note) => note.rest)) {
     throw const FormatException(
-      'Rests are not allowed inside simultaneous hits.',
+      'Rests are not allowed inside multi-voice beats.',
     );
   }
 
@@ -821,7 +822,11 @@ _ParsedOverride _overrideFromLabel(String label) {
     }
     final List<DrumSheetVoice>? parsedVoices = _voicesFromLabel(part);
     if (parsedVoices != null) {
-      voices = parsedVoices;
+      voices = <DrumSheetVoice>[
+        ...?voices,
+        for (final DrumSheetVoice voice in parsedVoices)
+          if (!(voices ?? const <DrumSheetVoice>[]).contains(voice)) voice,
+      ];
       continue;
     }
     throw FormatException('Unsupported override: $part');
@@ -905,7 +910,8 @@ List<DrumSheetVoice>? _voicesFromLabel(String label) {
 String _baseTokenForNote(DrumSheetNotationNote note) {
   if (note.rest) return '_';
   if (note.flam) return 'F';
-  if (_isLimbSticking(note.sticking)) return note.sticking;
+  final String sticking = note.sticking.toUpperCase();
+  if (_isLimbSticking(sticking)) return sticking;
   if (note.voices.contains(DrumSheetVoice.kick)) return 'K';
   if (note.voices.contains(DrumSheetVoice.hihat) &&
       note.voices.contains(DrumSheetVoice.snare)) {
@@ -914,15 +920,20 @@ String _baseTokenForNote(DrumSheetNotationNote note) {
   if (note.voices.contains(DrumSheetVoice.crash)) {
     return 'X';
   }
-  return note.sticking.isEmpty ? 'R' : note.sticking;
+  return sticking.isEmpty ? 'R' : sticking;
 }
 
 String? _voiceOverrideLabelForNote(DrumSheetNotationNote note) {
   if (!_isLimbSticking(note.sticking)) return null;
-  if (note.voices.length != 1 || note.voices.first == DrumSheetVoice.snare) {
+  if (note.voices.length == 1 && note.voices.first == DrumSheetVoice.snare) {
     return null;
   }
-  return switch (note.voices.first) {
+  return note.voices.map(_voiceOverrideLabel).join(' ');
+}
+
+String _voiceOverrideLabel(DrumSheetVoice voice) {
+  return switch (voice) {
+    DrumSheetVoice.snare => 'S',
     DrumSheetVoice.tom1 => 'T1',
     DrumSheetVoice.tom2 => 'T2',
     DrumSheetVoice.floorTom => 'FT',
@@ -930,26 +941,28 @@ String? _voiceOverrideLabelForNote(DrumSheetNotationNote note) {
     DrumSheetVoice.hihat => 'HH',
     DrumSheetVoice.crash => 'X',
     DrumSheetVoice.ride => 'RD',
-    DrumSheetVoice.snare => null,
   };
 }
 
 List<DrumSheetVoice> _defaultVoicesForNote(DrumSheetNotationNote note) {
   if (note.rest) return const <DrumSheetVoice>[];
   if (note.flam) return const <DrumSheetVoice>[DrumSheetVoice.snare];
-  return switch (note.sticking) {
+  return switch (note.sticking.toUpperCase()) {
     'K' => const <DrumSheetVoice>[DrumSheetVoice.kick],
     'X' => const <DrumSheetVoice>[DrumSheetVoice.crash],
     _ => const <DrumSheetVoice>[DrumSheetVoice.snare],
   };
 }
 
-bool _isLimbSticking(String sticking) => sticking == 'R' || sticking == 'L';
+bool _isLimbSticking(String sticking) {
+  final String normalized = sticking.toUpperCase();
+  return normalized == 'R' || normalized == 'L';
+}
 
 bool _isSimultaneousNote(DrumSheetNotationNote note) {
   if (note.rest) return false;
   if (note.sticking.length < 2) return false;
-  return RegExp(r'^[RLKFX]+$').hasMatch(note.sticking);
+  return RegExp(r'^[RLKFX]+$').hasMatch(note.sticking.toUpperCase());
 }
 
 extension DrumSheetNoteValueSyntax on DrumSheetNoteValue {
@@ -1524,7 +1537,7 @@ class _DrumSheetNotationPainter extends CustomPainter {
   ) {
     _drawText(
       canvas,
-      note.sticking,
+      note.sticking.toUpperCase(),
       Offset(_noteX(system, localIndex) - 8, system.y + 52),
       stickingStyle,
     );

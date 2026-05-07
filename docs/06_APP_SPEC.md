@@ -25,7 +25,7 @@ V1 remains triad-first pedagogically, but the canonical playable-material model 
 - one timed position per token
 - support for note tokens and first-class rest/pause tokens
 - support for the core alphabet `R`, `L`, `K`, `F`, `X`, and `_`
-- support for bracketed simultaneous hits such as `[RL]` and `[XK]`
+- support for bracketed multi-voice beats such as `[RL]` and `[XK]`
 - optional grouping hints as display/pedagogy metadata, not structure
 - optional timing metadata as playback truth, separate from grouping
 
@@ -43,7 +43,7 @@ Active v1 data-model rule:
 - normal editing should update that authored item directly rather than silently splitting it into a base item plus variant
 - rest/pause is a first-class timed token, not whitespace or a display hack
 - `F` and `X` are single-position expressive tokens and must not expand into multiple stored or timed events
-- `B` is not valid vocabulary; both-hands/unison or multi-voice hits must be authored as simultaneous hits such as `[RL]` or `[XK]`
+- `B` is not valid vocabulary; both-hands/unison or multi-voice beats must be authored as bracketed voice groups such as `[RL]` or `[XK]`
 - grouping is optional metadata for readability and teaching, not runtime structure
 - pattern text fields must behave like normal text editors; cursor navigation, arrow keys, paste, and selection must not insert grouping spaces or rewrite the pattern
 - pattern text fields must normalize authored notation to uppercase

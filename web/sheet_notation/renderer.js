@@ -471,6 +471,9 @@ function parseGrouping(grouping) {
 }
 
 function noteMetadataForEntry(entry) {
+  const sticking = entry.note.sticking == null
+    ? entry.note.sticking
+    : String(entry.note.sticking).toUpperCase();
   return {
     index: entry.index,
     measureIndex: entry.measureIndex,
@@ -478,7 +481,7 @@ function noteMetadataForEntry(entry) {
     value: entry.value,
     voices: entry.note.voices,
     rest: entry.note.rest,
-    sticking: entry.note.sticking,
+    sticking,
     accent: entry.note.accent,
     flam: entry.note.flam,
     ghost: entry.note.ghost,

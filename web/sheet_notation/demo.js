@@ -261,7 +261,10 @@ function overrideFromLabel(label) {
     }
     const voices = voicesFromLabel(part);
     if (voices != null) {
-      override.voices = voices;
+      override.voices ??= [];
+      for (const voice of voices) {
+        if (!override.voices.includes(voice)) override.voices.push(voice);
+      }
       continue;
     }
     throw new Error(`Unsupported override: ${part}`);
@@ -385,7 +388,8 @@ function noteFromToken(symbol, options = {}) {
 
 function patternTokenForNote(note, options = {}) {
   if (isSimultaneousNote(note)) {
-    const token = `[${note.accent ? '^' : ''}${note.sticking}]`;
+    const sticking = String(note.sticking).toUpperCase();
+    const token = `[${note.accent ? '^' : ''}${sticking}]`;
     const overrides = [];
     if (
       options.subdivision != null &&
@@ -419,23 +423,30 @@ function patternTokenForNote(note, options = {}) {
 function basePatternTokenForNote(note) {
   if (note.rest) return '_';
   if (note.flam) return 'F';
-  if (isLimbSticking(note.sticking)) return note.sticking;
+  const sticking = String(note.sticking ?? '').toUpperCase();
+  if (isLimbSticking(sticking)) return sticking;
   const voices = note.voices ?? [];
   if (voices.includes('kick')) return 'K';
   if (voices.includes('hihat') && voices.includes('snare')) return '[RL]';
   if (voices.includes('crash')) return 'X';
-  return note.sticking ?? 'R';
+  return sticking || 'R';
 }
 
 function isSimultaneousNote(note) {
-  return !note.rest && /^[RLKFX]{2,}$/.test(note.sticking ?? '');
+  return !note.rest && /^[RLKFX]{2,}$/.test(String(note.sticking ?? '').toUpperCase());
 }
 
 function voiceOverrideLabelForNote(note) {
   if (!isLimbSticking(note.sticking)) return null;
   const voices = note.voices ?? [];
-  if (voices.length !== 1 || voices[0] === 'snare') return null;
-  switch (voices[0]) {
+  if (voices.length === 1 && voices[0] === 'snare') return null;
+  return voices.map(voiceOverrideLabel).join(' ');
+}
+
+function voiceOverrideLabel(voice) {
+  switch (voice) {
+    case 'snare':
+      return 'S';
     case 'tom1':
       return 'T1';
     case 'tom2':
@@ -456,5 +467,6 @@ function voiceOverrideLabelForNote(note) {
 }
 
 function isLimbSticking(sticking) {
-  return sticking === 'R' || sticking === 'L';
+  const normalized = String(sticking ?? '').toUpperCase();
+  return normalized === 'R' || normalized === 'L';
 }

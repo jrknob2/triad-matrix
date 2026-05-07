@@ -27,7 +27,7 @@ Valid base tokens:
 - `_` = rest
 
 `B` is not valid pattern vocabulary. Use `[RL]` for both hands together or a
-bracketed simultaneous hit such as `[XK]` for multiple voices on the same slot.
+bracketed voice group such as `[XK]` for multiple voices on the same slot.
 
 ## Pattern Grammar
 
@@ -57,7 +57,7 @@ Ghost:
 (X)
 ```
 
-Simultaneous hits:
+Multiple voices on one beat:
 
 ```text
 [XK]
@@ -66,9 +66,10 @@ Simultaneous hits:
 [RKL]
 ```
 
-A simultaneous hit occupies one beat/slot. Its contents are multiple valid
-note tokens and optional note-local modifiers. `_` is not allowed inside a
-simultaneous hit.
+A bracketed multi-voice beat occupies one beat/slot. Its contents are multiple
+valid note tokens and optional note-local modifiers. `_` is not allowed inside a
+multi-voice beat. UI should describe this as voice assignment or multiple voices
+on one beat.
 
 Override brackets keep their existing meaning when they contain `:`:
 
@@ -80,7 +81,7 @@ Override brackets keep their existing meaning when they contain `:`:
 ```
 
 Parser rule: brackets with `:` are overrides; brackets without `:` are
-simultaneous hits.
+multi-voice beats.
 
 Spaces are visual/phrasing group breaks. They do not change playback timing by
 themselves and must be preserved by authoring surfaces.
@@ -139,8 +140,9 @@ Allowed here:
 - sheet-music preview of the current pattern
 - pattern validation
 - header `?` icon that opens a `Notation Grammar` modal
-- lightweight selected-text helpers visible together: accent, ghost, and
-  simultaneous hit
+- compact selected-note helper contexts:
+  - `Dynamics`: accent and ghost
+  - `Voices`: voice button grid
 - compact undo control
 - save modal for title, tags, and notes
 - optional preview/playback of the pattern only
@@ -149,7 +151,7 @@ Allowed here:
 Not allowed here:
 
 - `Practice Item` terminology
-- `Build`, `Dynamics`, or `Voices` segmented control panels
+- the old `Build` segmented control and large control-panel model
 - duration override controls or any per-note duration UI
 - grouping controls
 - insert-rest action buttons
@@ -169,13 +171,18 @@ should be preserved in saved pattern text.
 Pattern details live in the save modal. They should not crowd the always-visible
 authoring surface.
 
-The Pattern screen should not use context filters. Its few helper controls stay
-visible together and disable when the current selection cannot use them.
+The Pattern screen uses compact context filters only for selected-note helper
+ownership: `Dynamics` and `Voices`. These filters must not hide the pattern text
+editor or staff preview. `Dynamics` shows accent and ghost actions. `Voices`
+shows a grid of voice buttons, not a dropdown. Existing voices on the selected
+beat(s) are shown as on/enabled, and toggling a voice adds or removes that voice
+from the selected beat(s). The UI must not expose `Combine` or `Simultaneous
+Hit` as action labels; multi-voice beats are created by voice assignment.
 
 Saving a pattern must parse and validate the corrected pattern grammar used by
 the editor and preview. It must not route through stale sequence-only parsers
 that reject valid pattern text such as accents, ghosts, overrides, or
-simultaneous hits.
+multi-voice beats.
 
 ### Practice Screen
 
@@ -227,8 +234,7 @@ selection-based edits:
 
 - accent selected notes
 - ghost selected notes
-- combine selected notes into simultaneous hit
-- assign voice override
+- toggle selected beat voices with a voice button grid
 - insert rest
 
 Practice context controls belong in a separate context/tab/collapsible section:

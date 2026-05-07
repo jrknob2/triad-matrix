@@ -42,6 +42,18 @@ describe('sheet notation document parsing', () => {
     assert.deepEqual(parsed.measures[0].notes[0].voices, ['snare']);
   });
 
+  test('document parsing normalizes sticking labels to uppercase', () => {
+    const parsed = parseDrumNotationDocument({
+      measures: [
+        {
+          notes: [{ value: '8n', voices: ['snare'], sticking: 'l' }],
+        },
+      ],
+    });
+
+    assert.equal(parsed.measures[0].notes[0].sticking, 'L');
+  });
+
   test('error handling for unknown voice', () => {
     assert.throws(
       () =>
@@ -179,6 +191,18 @@ describe('voice mapping and VexFlow conversion', () => {
     assert.equal(note.modifiers.length, 1);
     assert.equal(VF.calls.annotations[0].text, 'R');
     assert.equal(VF.calls.annotations[0].verticalJustification, 'bottom');
+  });
+
+  test('sticking label attachment uppercases lowercase input', () => {
+    const VF = createFakeVexFlow();
+    const note = createVexFlowNote(VF, {
+      value: '16n',
+      voices: ['snare'],
+      sticking: 'l',
+    });
+
+    assert.equal(note.modifiers.length, 1);
+    assert.equal(VF.calls.annotations[0].text, 'L');
   });
 
   test('accent uses aligned top annotation row', () => {
@@ -366,6 +390,15 @@ describe('svg rendering', () => {
         { sticking: 'L', voices: ['snare'], value: undefined, accent: true },
       ],
     );
+  });
+
+  test('pattern input and serialization normalize lowercase sticking labels', () => {
+    const notes = documentFromPattern('[T1:l]', {
+      subdivision: '8n',
+    }).measures[0].notes;
+
+    assert.equal(notes[0].sticking, 'L');
+    assert.equal(patternFromNotes(notes, { subdivision: '8n' }), '[T1:L]');
   });
 
   test('accent decoration works inside or outside brackets', () => {
@@ -646,6 +679,26 @@ describe('svg rendering', () => {
       VF.calls.notes[0].attributes['data-drum-measure-note-index'],
       '0',
     );
+  });
+
+  test('metadata render result normalizes lowercase sticking labels', () => {
+    const VF = createFakeVexFlow();
+    const result = renderDrumNotationSvgWithMetadata(
+      {
+        measures: [
+          {
+            notes: [{ value: '8n', voices: ['snare'], sticking: 'l' }],
+          },
+        ],
+      },
+      {
+        vexFlow: VF,
+        notesPerSystem: 10,
+      },
+    );
+
+    assert.equal(result.notes[0].sticking, 'L');
+    assert.equal(VF.calls.annotations[0].text, 'L');
   });
 
   test('mapped stem mode beams do not cross mixed stem directions', () => {

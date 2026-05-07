@@ -139,7 +139,7 @@ function parseNote(rawNote, measureIndex, noteIndex) {
     value,
     voices,
     rest,
-    sticking: optionalString(rawNote.sticking, `${path}.sticking`),
+    sticking: optionalSticking(rawNote.sticking, `${path}.sticking`),
     accent: rawNote.accent === true,
     flam: rawNote.flam === true,
     ghost: rawNote.ghost === true,
@@ -171,6 +171,10 @@ function optionalString(value, path) {
   if (value == null) return undefined;
   assertString(value, path);
   return value;
+}
+
+function optionalSticking(value, path) {
+  return optionalString(value, path)?.toUpperCase();
 }
 
 function assertObject(value, path) {
@@ -657,6 +661,9 @@ function parseGrouping(grouping) {
 }
 
 function noteMetadataForEntry(entry) {
+  const sticking = entry.note.sticking == null
+    ? entry.note.sticking
+    : String(entry.note.sticking).toUpperCase();
   return {
     index: entry.index,
     measureIndex: entry.measureIndex,
@@ -664,7 +671,7 @@ function noteMetadataForEntry(entry) {
     value: entry.value,
     voices: entry.note.voices,
     rest: entry.note.rest,
-    sticking: entry.note.sticking,
+    sticking,
     accent: entry.note.accent,
     flam: entry.note.flam,
     ghost: entry.note.ghost,

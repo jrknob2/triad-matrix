@@ -41,7 +41,7 @@ function parseNote(rawNote, measureIndex, noteIndex) {
     value,
     voices,
     rest,
-    sticking: optionalString(rawNote.sticking, `${path}.sticking`),
+    sticking: optionalSticking(rawNote.sticking, `${path}.sticking`),
     accent: rawNote.accent === true,
     flam: rawNote.flam === true,
     ghost: rawNote.ghost === true,
@@ -73,6 +73,10 @@ function optionalString(value, path) {
   if (value == null) return undefined;
   assertString(value, path);
   return value;
+}
+
+function optionalSticking(value, path) {
+  return optionalString(value, path)?.toUpperCase();
 }
 
 function assertObject(value, path) {

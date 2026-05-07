@@ -49,7 +49,7 @@ Canonical pattern-model rule:
 - each token represents one timed position in the pattern
 - the core alphabet is `R`, `L`, `K`, `F`, `X`, and `_`
 - `F` and `X` are expressive intent tokens, not expanded rudiment variants
-- `B` is not valid pattern vocabulary; both-hands/unison or multi-voice hits must be represented as simultaneous hits such as `[RL]` or `[XK]`
+- `B` is not valid pattern vocabulary; both-hands/unison or multi-voice beats must be represented as bracketed voice groups such as `[RL]` or `[XK]`
 - canonical tokens must support note tokens and a first-class rest/pause token
 - triads, 4-note patterns, 5-note patterns, phrases, flow, and single-surface may still appear as product language, tags, filters, or pedagogy cues, but they must not define parsing, storage structure, renderer choice, playback shape, or session stepping
 - grouping is optional metadata for readability and teaching only
@@ -113,6 +113,7 @@ Notation and pattern text rules:
 - sheet-music rendering must remain display/edit notation only; it must not include tempo, BPM, metronome, playback, audio sample, practice-session, or app-state behavior
 - sheet-music limb/sticking and drum voice are separate concepts: `R` and `L` are sticking labels, while `snare`, `tom1`, `tom2`, `floorTom`, `hihat`, `crash`, `ride`, and `kick` are rendered voices
 - sheet-music pattern text may use bracket overrides for duration and voice, such as `[16:R]`, `[T1:L]`, and `[T2 16:R]`
+- multi-voice beats are authored through bracketed note groups such as `[XK]`, `[RL]`, and `[RKL]`; app UI should describe this as voice assignment or multiple voices on one beat
 - sheet-music accent and ghost decorations may be placed inside or outside bracket overrides when valid, but accented ghost notes such as `^(L)` are invalid
 - the sheet-music widget must not include the notation-input legend; app screens should own any modal/dialog that explains notation syntax
 - spaces entered in the editable pattern field are grouping input shorthand only; canonical token storage should remain a token sequence without literal spacing tokens
@@ -177,7 +178,7 @@ Pattern editing source-of-truth rule:
 - once triads are saved as part of a phrase item, the phrase item's authored state is the source of truth for that phrase
 - Matrix structural triads may be used as templates for newly added material, but they must not overwrite or reinterpret an authored practice item's existing notes, accents, ghosts, or voices
 - editing may be split across screens, but the draft must be shared:
-  - `Pattern` owns authored pattern text, tags, notes, accents, ghosts, simultaneous hits, and simple helper actions
+  - `Pattern` owns authored pattern text, tags, notes, accents, ghosts, multi-voice beats, and simple helper actions
   - `Matrix` owns triad discovery and triad-structure helper flows
   - both screens must operate on the same authored item draft, not on separately recomposed data
 - when Matrix edits the structure of an existing authored item:
@@ -1468,10 +1469,9 @@ drum idea, not configuring a practice system.
 - pattern text input
 - sheet-music preview of the current pattern
 - pattern validation messages
-- lightweight selected-note helpers:
-  - accent selected notes
-  - ghost selected notes
-  - combine selected notes into a simultaneous hit
+- lightweight selected-note helpers organized by context:
+  - Dynamics: accent selected notes, ghost selected notes
+  - Voices: toggle drum voices on the selected note beat(s)
 - optional minimal preview controls:
   - play
   - loop
@@ -1482,7 +1482,7 @@ drum idea, not configuring a practice system.
 ### Forbidden Content
 
 - `Practice Item` wording
-- the old `Build`, `Dynamics`, and `Voices` segmented control model
+- the old `Build` segmented control and large control-panel model
 - large control panels
 - grouping controls
 - subdivision controls
@@ -1505,18 +1505,23 @@ drum idea, not configuring a practice system.
 - pattern text input behaves like a normal text editor: paste, arrow keys, selection, and cursor movement must not rewrite spaces or trigger grouping logic
 - typed pattern text normalizes to uppercase at the editor boundary
 - spaces are authored phrasing breaks and should be preserved in the saved pattern text
-- lightweight helpers operate on selected pattern text, not on a hidden per-note grid
+- lightweight helpers operate on selected pattern text or selected staff notes, not on a hidden per-note grid
 - helper controls may disable when no compatible selection exists, but they must not introduce a large control-panel model
-- Pattern screen helper controls should be visible together; do not use context filters on this screen
+- Pattern screen helper controls use compact context filters for `Dynamics` and `Voices`
+- the active context filter shows only the controls for that context; the pattern text input and staff preview remain visible at all times
+- `Dynamics` contains `Accent` and `Ghost`
+- `Voices` contains a button grid, not a dropdown; one button exists for each supported drum voice
+- selected note beat(s) show their existing voice buttons as enabled/on; toggling a voice button adds or removes that voice from the selected beat(s)
+- removing the last remaining voice from a non-rest note is not allowed
 - selection and helper action are separate: selecting text never mutates the pattern until the user invokes a helper
-- `Accent`, `Ghost`, and `Simultaneous Hit` are the only required selected-note helper actions on this screen
-- `Undo` may live with the lightweight context controls; `Notation Grammar` opens from a header `?` icon, not an in-body button
+- the UI must not expose "Combine" or "Simultaneous Hit" as helper labels; multi-voice authored results come from the `Voices` grid
+- `Undo` stays outside context-specific meaning near the helper area; `Notation Grammar` opens from a header `?` icon, not an in-body button
 - the notation grammar modal must cover the full current notation grammar and must not mention `B`
 - saving validates the corrected pattern grammar used by the editor
 - pressing `Save` opens the save modal when the pattern is valid; committing that modal saves title, tags, notes, and pattern text
 - leaving a dirty Pattern screen should prompt the user to save, discard, or keep editing
 - Pattern owns notes/tags/details as authored idea metadata
-- accents, ghosts, simultaneous hits, and bracket overrides are user-authored pattern text
+- accents, ghosts, multi-voice beats, and bracket overrides are user-authored pattern text
 - base material enters the app plain unless the user has explicitly edited it
 - voice displays outside the editor should only appear when an item has authored off-snare voices on non-kick notes
 - the editable pattern text field should wrap long authored patterns instead of clipping or horizontally hiding the pattern
