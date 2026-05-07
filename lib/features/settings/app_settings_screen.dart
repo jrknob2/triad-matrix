@@ -43,26 +43,6 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
         body: ListView(
           padding: const EdgeInsets.all(16),
           children: <Widget>[
-            DropdownButtonFormField<HandednessV1>(
-              initialValue: _draft.handedness,
-              decoration: const InputDecoration(
-                labelText: 'Handedness',
-                border: OutlineInputBorder(),
-              ),
-              items: HandednessV1.values
-                  .map(
-                    (handedness) => DropdownMenuItem<HandednessV1>(
-                      value: handedness,
-                      child: Text(handedness.label),
-                    ),
-                  )
-                  .toList(growable: false),
-              onChanged: (HandednessV1? value) {
-                if (value == null) return;
-                setState(() => _draft = _draft.copyWith(handedness: value));
-              },
-            ),
-            const SizedBox(height: 12),
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -169,26 +149,6 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                 setState(() {
                   _draft = _draft.copyWith(darkPracticeSheetNotation: value);
                 });
-              },
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<AccentVoiceV1>(
-              initialValue: _draft.accentVoice,
-              decoration: const InputDecoration(
-                labelText: 'Accent Voice',
-                border: OutlineInputBorder(),
-              ),
-              items: AccentVoiceV1.values
-                  .map(
-                    (voice) => DropdownMenuItem<AccentVoiceV1>(
-                      value: voice,
-                      child: Text(voice.label),
-                    ),
-                  )
-                  .toList(growable: false),
-              onChanged: (AccentVoiceV1? value) {
-                if (value == null) return;
-                setState(() => _draft = _draft.copyWith(accentVoice: value));
               },
             ),
             const SizedBox(height: 20),
@@ -301,11 +261,9 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
 
   bool get _hasUnsavedChanges {
     final UserProfileV1 current = widget.controller.profile;
-    return _draft.handedness != current.handedness ||
-        _draft.defaultBpm != current.defaultBpm ||
+    return _draft.defaultBpm != current.defaultBpm ||
         _draft.defaultTimerPreset != current.defaultTimerPreset ||
         _draft.clickEnabledByDefault != current.clickEnabledByDefault ||
-        _draft.accentVoice != current.accentVoice ||
         _draft.darkPracticeSheetNotation != current.darkPracticeSheetNotation;
   }
 

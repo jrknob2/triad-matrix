@@ -100,6 +100,9 @@ Settings modal rule:
 - global preferences belong in the app settings modal; player-only runtime controls belong in the Practice Session settings modal
 - a screen should add its own settings modal only when the settings are contextual, persistent enough to revisit, and would otherwise crowd the primary flow
 - settings modals must use the app's own paper/surface motif, border, and button styling
+- the app Settings screen must only expose global preferences whose ownership is clear today: default BPM, default timer, click default, sheet-notation display preference, app data reset, and mock scenario selection when mock scenarios are enabled
+- `Handedness` must not appear in Settings until the app has a dedicated onboarding/profile ownership model for how weak-hand coaching and progress interpretation should be set or changed
+- `Accent Voice` must not appear in Settings; accent/crash/ride meaning belongs to pattern/playback context, not a global app preference
 
 Notation and pattern text rules:
 
