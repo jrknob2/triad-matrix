@@ -9,7 +9,6 @@ import '../../features/app/drumcabulary_ui.dart';
 import '../../features/app/unsaved_changes_dialog.dart';
 import '../../state/app_controller.dart';
 import '../practice/widgets/sheet_notation_display.dart';
-import '../practice/widgets/session_setup_controls.dart';
 import '../practice/widgets/pattern_text_styles.dart';
 
 enum _ItemEditorControlSet { build, dynamics, voices }
@@ -38,9 +37,8 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   late List<DrumVoiceV1> _voiceAssignments;
   late List<DrumSheetNoteValue?> _durationOverrides;
   late DrumSheetNoteValue _draftSubdivision;
-  late int _sessionBpm;
-  late TimerPresetV1 _timerPreset;
   late Set<int> _selectedNoteIndices;
+  late final TextEditingController _titleController;
   late final TextEditingController _patternController;
   late final TextEditingController _groupingController;
   final List<_DraftSnapshot> _undoStack = <_DraftSnapshot>[];
@@ -57,12 +55,14 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         (item.pattern.trim().isEmpty ? _draftPatternText() : item.pattern)
             .toUpperCase();
     _lastGroupingText = _initialGroupingTextForItem(item);
+    _titleController = TextEditingController(text: item.name);
     _patternController = TextEditingController(text: _lastPatternText);
     _groupingController = TextEditingController(text: _lastGroupingText);
   }
 
   @override
   void dispose() {
+    _titleController.dispose();
     _patternController.dispose();
     _groupingController.dispose();
     super.dispose();
@@ -87,7 +87,6 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
           return const Scaffold(body: SizedBox.shrink());
         }
         final bool isDraftItem = !item.saved;
-        final bool supportsMatrixEditing = _supportsMatrixEditingDraft();
         final List<DrumSheetNotationNote> draftNotes =
             _currentSheetNotesForDisplay();
         final bool hasUnsavedChanges = _hasUnsavedChanges(item);
@@ -102,7 +101,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
             }
           },
           child: Scaffold(
-            appBar: AppBar(title: const Text('Practice Item')),
+            appBar: AppBar(title: const Text('Pattern')),
             body: ListView(
               padding: const EdgeInsets.all(16),
               children: <Widget>[
@@ -113,6 +112,17 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
                         TextField(
+                          controller: _titleController,
+                          textCapitalization: TextCapitalization.words,
+                          decoration: const InputDecoration(
+                            labelText: 'Title',
+                            border: OutlineInputBorder(),
+                            isDense: true,
+                          ),
+                          onChanged: (_) => setState(() {}),
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
                           controller: _patternController,
                           keyboardType: TextInputType.multiline,
                           textCapitalization: TextCapitalization.characters,
@@ -120,7 +130,8 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                           enableSuggestions: false,
                           smartDashesType: SmartDashesType.disabled,
                           smartQuotesType: SmartQuotesType.disabled,
-                          maxLines: null,
+                          minLines: 1,
+                          maxLines: 2,
                           textAlignVertical: TextAlignVertical.center,
                           style: PatternTextStyles.editableInput(context),
                           strutStyle: const StrutStyle(
@@ -138,16 +149,6 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                 PatternTextStyles.editableInputPadding,
                           ),
                           onChanged: _handlePatternTextChanged,
-                        ),
-                        const SizedBox(height: 12),
-                        TextField(
-                          controller: _groupingController,
-                          decoration: const InputDecoration(
-                            labelText: 'Grouping',
-                            hintText: '4, 3535, 3 5 3 5',
-                            border: OutlineInputBorder(),
-                          ),
-                          onChanged: _handleGroupingTextChanged,
                         ),
                         const SizedBox(height: 12),
                         _SheetNotationControls(
@@ -186,106 +187,12 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                DrumPanel(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      DrumEyebrow(text: 'Practice Context'),
-                      const SizedBox(height: 8),
-                      DropdownButtonFormField<DrumSheetNoteValue>(
-                        key: ValueKey<DrumSheetNoteValue>(_draftSubdivision),
-                        initialValue: _draftSubdivision,
-                        decoration: const InputDecoration(
-                          labelText: 'Subdivision',
-                          border: OutlineInputBorder(),
-                        ),
-                        items: <DropdownMenuItem<DrumSheetNoteValue>>[
-                          for (final DrumSheetNoteValue value
-                              in DrumSheetNoteValue.values)
-                            DropdownMenuItem<DrumSheetNoteValue>(
-                              value: value,
-                              child: Text('1/${value.patternLabel}'),
-                            ),
-                        ],
-                        onChanged: (DrumSheetNoteValue? next) {
-                          if (next == null) return;
-                          _recordUndo();
-                          setState(() {
-                            _draftSubdivision = next;
-                            _syncPatternTextFromNotes(
-                              _currentSheetNotesForDisplay(),
-                            );
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      SessionSetupControls(
-                        eyebrow: 'Playback',
-                        bpm: _sessionBpm,
-                        timerPreset: _timerPreset,
-                        onBpmChanged: (int next) {
-                          setState(() => _sessionBpm = next.clamp(30, 260));
-                        },
-                        onTimerPresetChanged: (TimerPresetV1 next) {
-                          setState(() => _timerPreset = next);
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
                 FilledButton(
                   onPressed: hasUnsavedChanges || isDraftItem
-                      ? () => _saveDraft(saveToWorkingOn: isDraftItem)
+                      ? () => _saveDraft()
                       : null,
-                  child: Text(
-                    isDraftItem ? 'Save to Working On' : 'Save Changes',
-                  ),
+                  child: const Text('Save Pattern'),
                 ),
-                const SizedBox(height: 8),
-                OutlinedButton(
-                  onPressed: !supportsMatrixEditing
-                      ? null
-                      : () async {
-                          final String currentItemId = hasUnsavedChanges
-                              ? _saveDraft()
-                              : item.id;
-                          final List<String>? selection = await widget
-                              .onOpenInMatrix(currentItemId);
-                          if (!mounted ||
-                              selection == null ||
-                              listEquals(
-                                selection,
-                                widget.controller.matrixSelectionItemIdsForItem(
-                                  currentItemId,
-                                ),
-                              )) {
-                            return;
-                          }
-                          _applyMatrixSelectionResult(
-                            originalItemId: currentItemId,
-                            selection: selection,
-                          );
-                        },
-                  child: const Text('Open in Matrix'),
-                ),
-                if (!isDraftItem) ...<Widget>[
-                  const SizedBox(height: 8),
-                  OutlinedButton(
-                    onPressed: () {
-                      if (hasUnsavedChanges) {
-                        _saveDraft(saveToWorkingOn: true);
-                        return;
-                      }
-                      widget.controller.toggleRoutineItem(item.id);
-                    },
-                    child: Text(
-                      widget.controller.isDirectRoutineEntry(item.id)
-                          ? 'Remove from Working On'
-                          : 'Add to Working On',
-                    ),
-                  ),
-                ],
               ],
             ),
           ),
@@ -308,8 +215,6 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       _draftTokens.length,
     );
     _draftSubdivision = _sheetNoteValueForStoredValue(item.notationSubdivision);
-    _sessionBpm = widget.controller.launchBpmForItem(item.id);
-    _timerPreset = widget.controller.launchTimerPresetForItem(item.id);
     _selectedNoteIndices = <int>{};
     _undoStack.clear();
   }
@@ -376,12 +281,6 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       selection: TextSelection.collapsed(offset: next.length),
     );
     _lastPatternText = next;
-  }
-
-  void _syncPatternTextFromDraft() {
-    _syncPatternTextFromNotes(
-      _draftSheetNotes(_draftMarkingsFor(_draftTokens.length)),
-    );
   }
 
   DrumSheetNotationNote _sheetNoteForDraftIndex(
@@ -492,16 +391,8 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     }
   }
 
-  void _handleGroupingTextChanged(String value) {
-    _recordUndo(groupingText: _lastGroupingText);
-    setState(() {
-      _draftGrouping = _legacyGroupingForText(value);
-      _lastGroupingText = value;
-    });
-  }
-
   String? _effectiveGroupingText() {
-    final String text = _groupingController.text.trim();
+    final String text = _groupingTextFromPattern(_patternController.text);
     return text.isEmpty ? null : text;
   }
 
@@ -724,11 +615,6 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     });
   }
 
-  bool _supportsMatrixEditingDraft() {
-    if (_draftTokens.isEmpty || _draftTokens.length % 3 != 0) return false;
-    return !_draftTokens.any((PatternTokenV1 token) => token.isRest);
-  }
-
   DrumVoiceV1 _defaultVoiceForDraftToken(PatternTokenV1 token) {
     return token.isKick ? DrumVoiceV1.kick : DrumVoiceV1.snare;
   }
@@ -811,6 +697,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       _draftTokens.length,
     );
     return !item.saved ||
+        item.name.trim() != _titleController.text.trim() ||
         item.pattern.trim() != _patternController.text.trim() ||
         !listEquals(item.tokens, _draftTokens) ||
         item.groupingHint != _draftGrouping ||
@@ -825,9 +712,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         !listEquals(
           widget.controller.noteVoicesFor(item.id),
           _voiceAssignments,
-        ) ||
-        widget.controller.launchBpmForItem(item.id) != _sessionBpm ||
-        widget.controller.launchTimerPresetForItem(item.id) != _timerPreset;
+        );
   }
 
   void _recordUndo({String? patternText, String? groupingText}) {
@@ -878,17 +763,13 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   }
 
   String _saveDraft({bool saveToWorkingOn = false}) {
-    widget.controller.rememberLaunchPreferencesForItem(
-      itemId: widget.itemId,
-      bpm: _sessionBpm,
-      timerPreset: _timerPreset,
-    );
     final String savedItemId = widget.controller.savePracticeItemEdits(
       itemId: widget.itemId,
       accentedNoteIndices: _accentedNoteIndices,
       ghostNoteIndices: _ghostNoteIndices,
       voiceAssignments: _voiceAssignments,
       competency: widget.controller.competencyFor(widget.itemId),
+      name: _titleController.text.trim(),
       sequence: PatternSequenceV1.parse(_patternController.text.trim()),
       pattern: _patternController.text.trim().toUpperCase(),
       groupingHint: _draftGrouping,
@@ -896,40 +777,12 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       notationSubdivision: _storedNoteValueForSheetValue(_draftSubdivision),
       noteValueOverrides: _storedNoteValuesForSheetValues(_durationOverrides),
       saveToWorkingOn: saveToWorkingOn,
+      saveAsPattern: true,
     );
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          saveToWorkingOn ? 'Saved to Working On.' : 'Changes saved.',
-        ),
-      ),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Pattern saved.')));
     return savedItemId;
-  }
-
-  void _applyMatrixSelectionResult({
-    required String originalItemId,
-    required List<String> selection,
-  }) {
-    widget.controller.applyMatrixSelectionToItem(
-      itemId: originalItemId,
-      itemIds: selection,
-    );
-    widget.controller.rememberLaunchPreferencesForItem(
-      itemId: originalItemId,
-      bpm: _sessionBpm,
-      timerPreset: _timerPreset,
-    );
-    _loadDraftFromController();
-    _syncPatternTextFromDraft();
-    final PracticeItemV1 item = widget.controller.itemById(originalItemId);
-    final String groupingText = _initialGroupingTextForItem(item);
-    _groupingController.value = TextEditingValue(
-      text: groupingText,
-      selection: TextSelection.collapsed(offset: groupingText.length),
-    );
-    _lastGroupingText = groupingText;
-    setState(() {});
   }
 
   Future<bool> _handleUnsavedExit() async {
@@ -938,9 +791,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       context,
       title: 'Unsaved Changes',
       message: isDraftItem
-          ? 'Save this phrase to Working On before leaving?'
-          : 'Save your changes to this practice item before leaving?',
-      saveLabel: isDraftItem ? 'Save to Working On' : 'Save Changes',
+          ? 'Save this pattern before leaving?'
+          : 'Save your changes to this pattern before leaving?',
+      saveLabel: 'Save Pattern',
     );
     if (!mounted) return false;
     return switch (decision) {

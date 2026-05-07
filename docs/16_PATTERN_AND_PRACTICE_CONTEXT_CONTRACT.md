@@ -5,7 +5,8 @@ This is the active contract for Drumcabulary pattern text and practice behavior.
 ## Architecture
 
 - `Pattern` = what to play.
-- `PracticeContext` = how to practice it.
+- `PracticeContext` = how to practice selected pattern(s).
+- `Flow` = how selected patterns live musically in sequence.
 - `PracticeSession` = what happened.
 - `Progress` = calculated history.
 
@@ -100,6 +101,11 @@ Grouping is a two-way helper, not an owner of pattern text:
   formatting action or a clearly scoped grouping-field edit handler.
 - Grouping metadata must never continuously override free text entry.
 
+Pattern text fields must not be controlled by grouping metadata. Arrow keys,
+cursor movement, paste, and text selection are plain text-editing operations and
+must never insert grouping spaces or rewrite text. Pattern text is normalized to
+uppercase at the editor boundary and before saving.
+
 ## Pattern Non-Goals
 
 These are not pattern grammar:
@@ -116,9 +122,50 @@ These are not pattern grammar:
 
 Full-bar validation is not required for ordinary patterns.
 
+## Screen Responsibilities
+
+### Pattern Screen
+
+The old `Practice Item` screen is now the `Pattern` screen. It is reached from
+Library `New Pattern` and `Edit Pattern`.
+
+Allowed here:
+
+- pattern title/details
+- pattern text
+- tags/notes
+- pattern validation
+- notation/vocabulary modal
+- optional preview/playback of the pattern only
+
+Not allowed here:
+
+- tempo plans
+- subdivision drill controls
+- cycle/routine controls
+- groove context
+- flow builder
+- practice session controls
+- Working On membership controls
+
+### Practice Screen
+
+The Practice screen owns active training work:
+
+- selected saved patterns
+- playback/session controls
+- subdivision, tempo, loop, beat alignment, and cycle practice context
+- optional groove context
+- optional flow builder
+- session completion and self-assessment
+
+Practice must not silently edit saved pattern text. It may offer an explicit
+`Edit Pattern` action that navigates to the Pattern screen.
+
 ## Practice Context
 
-`PracticeContext` is optional and belongs to a pattern as practice behavior.
+`PracticeContext` is optional and belongs to selected pattern(s) as practice
+behavior. It is not stored inside normal pattern text.
 
 It may contain:
 
@@ -155,3 +202,8 @@ Practice context controls belong in a separate context/tab/collapsible section:
 
 Do not show every control at once. Do not require users to fill out practice
 context before creating a pattern.
+
+Controls are organized by context pills when a screen has too many controls for
+one view. Context pills show the controls for that context. Controls that do not
+apply to the current selection may be disabled with clear state, but they should
+not disappear in a way that breaks the user’s mental model.

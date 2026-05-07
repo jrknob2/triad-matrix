@@ -18,6 +18,14 @@ enum PracticeItemSourceV1 { builtIn, userDefined, generated }
 
 enum PracticeModeV1 { singleSurface, flow }
 
+enum PatternRoleV1 { groove, fill, chop, rudiment, warmup, transition, unknown }
+
+enum PatternFeelV1 { straight, triplet, shuffle, swing, unknown }
+
+enum PatternLengthHintV1 { fragment, beat, bar, twoBars, unknown }
+
+enum PatternIntensityV1 { low, medium, high, unknown }
+
 enum PracticeSessionEndBehaviorV1 { openSummary, returnToPrevious }
 
 enum PatternTokenKindV1 { right, left, kick, flam, accent, rest }
@@ -520,6 +528,7 @@ class PatternItem {
   final String pattern;
   final List<String> tags;
   final String? notes;
+  final PatternMetadata? metadata;
 
   PatternItem({
     required this.id,
@@ -527,7 +536,27 @@ class PatternItem {
     required this.pattern,
     List<String> tags = const <String>[],
     this.notes,
+    this.metadata,
   }) : tags = List<String>.unmodifiable(tags);
+}
+
+@immutable
+class PatternMetadata {
+  final PatternRoleV1 role;
+  final PatternFeelV1 feel;
+  final DrumSubdivision? subdivisionHint;
+  final String? timeSignatureHint;
+  final PatternLengthHintV1 lengthHint;
+  final PatternIntensityV1 intensity;
+
+  const PatternMetadata({
+    this.role = PatternRoleV1.unknown,
+    this.feel = PatternFeelV1.unknown,
+    this.subdivisionHint,
+    this.timeSignatureHint,
+    this.lengthHint = PatternLengthHintV1.unknown,
+    this.intensity = PatternIntensityV1.unknown,
+  });
 }
 
 @immutable
@@ -622,21 +651,27 @@ class LoopSettings {
 @immutable
 class PracticeContext {
   final String id;
-  final String patternId;
+  final String? patternId;
+  final List<String> selectedPatternIds;
   final DrumSubdivision? subdivision;
   final TempoPlan? tempo;
   final BeatAlignment? beatAlignment;
   final PracticeCycle? cycle;
   final LoopSettings? loop;
+  final GrooveContext? grooveContext;
+  final PracticeFlow? flow;
 
   const PracticeContext({
     required this.id,
-    required this.patternId,
+    this.patternId,
+    this.selectedPatternIds = const <String>[],
     this.subdivision,
     this.tempo,
     this.beatAlignment,
     this.cycle,
     this.loop,
+    this.grooveContext,
+    this.flow,
   });
 
   List<String> validate({
@@ -659,8 +694,71 @@ class PracticeContext {
         }
       }
     }
+    final PracticeFlow? resolvedFlow = flow;
+    if (resolvedFlow != null) {
+      errors.addAll(resolvedFlow.validate());
+    }
     return errors;
   }
+}
+
+@immutable
+class GrooveContext {
+  final String? groovePatternId;
+  final List<String> applyAgainstPatternIds;
+  final String? notes;
+
+  GrooveContext({
+    this.groovePatternId,
+    List<String> applyAgainstPatternIds = const <String>[],
+    this.notes,
+  }) : applyAgainstPatternIds = List<String>.unmodifiable(
+         applyAgainstPatternIds,
+       );
+}
+
+@immutable
+class PracticeFlow {
+  final List<PracticeFlowStep> steps;
+  final bool loopEnabled;
+
+  PracticeFlow({
+    required List<PracticeFlowStep> steps,
+    this.loopEnabled = false,
+  }) : steps = List<PracticeFlowStep>.unmodifiable(steps);
+
+  List<String> validate() {
+    final List<String> errors = <String>[];
+    for (int index = 0; index < steps.length; index += 1) {
+      final PracticeFlowStep step = steps[index];
+      if (step.patternId.trim().isEmpty) {
+        errors.add('Flow step ${index + 1} must reference a pattern.');
+      }
+      if (step.repeatCount <= 0) {
+        errors.add(
+          'Flow step ${index + 1} repeat count must be greater than zero.',
+        );
+      }
+    }
+    return errors;
+  }
+}
+
+@immutable
+class PracticeFlowStep {
+  final String patternId;
+  final PatternRoleV1 role;
+  final int repeatCount;
+  final DrumSubdivision? subdivisionOverride;
+  final String? notes;
+
+  const PracticeFlowStep({
+    required this.patternId,
+    this.role = PatternRoleV1.unknown,
+    this.repeatCount = 1,
+    this.subdivisionOverride,
+    this.notes,
+  });
 }
 
 @immutable

@@ -1915,6 +1915,7 @@ class AppController extends ChangeNotifier {
     required List<int> ghostNoteIndices,
     required List<DrumVoiceV1> voiceAssignments,
     required CompetencyLevelV1 competency,
+    String? name,
     PatternSequenceV1? sequence,
     String? pattern,
     PatternGroupingV1? groupingHint,
@@ -1923,6 +1924,7 @@ class AppController extends ChangeNotifier {
     PatternNoteValueV1? notationSubdivision,
     List<PatternNoteValueV1?>? noteValueOverrides,
     bool saveToWorkingOn = false,
+    bool saveAsPattern = false,
   }) {
     final PracticeItemV1 existingItem = _sanitizedItem(itemById(itemId));
     final List<int> sanitizedAccents = List<int>.from(accentedNoteIndices)
@@ -1954,7 +1956,11 @@ class AppController extends ChangeNotifier {
     final PatternTimingV1 nextTiming =
         timing ??
         (structureChanged ? const PatternTimingV1.auto() : existingItem.timing);
-    final String nextName = structureChanged ? nextPattern : existingItem.name;
+    final String nextName = name?.trim().isNotEmpty == true
+        ? name!.trim()
+        : structureChanged
+        ? nextPattern
+        : existingItem.name;
     final List<String> nextTags = structureChanged
         ? _tagsForEditedSequence(nextSequence.tokens, nextFamily)
         : existingItem.tags;
@@ -1984,7 +1990,7 @@ class AppController extends ChangeNotifier {
                   notationSubdivision ?? existingItem.notationSubdivision,
               noteValueOverrides: sanitizedValueOverrides,
               tags: nextTags,
-              saved: saveToWorkingOn ? true : entry.saved,
+              saved: saveToWorkingOn || saveAsPattern ? true : entry.saved,
             ),
           );
         })

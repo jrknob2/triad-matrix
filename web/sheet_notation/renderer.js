@@ -104,7 +104,7 @@ export function createVexFlowNote(VF, note, options = {}) {
   const noteOptions = {
     keys,
     duration,
-    stem_direction: stemDirectionForMappings(mappings, options.stemMode),
+    stem_direction: stemDirectionForNote(note, mappings, options.stemMode),
   };
   const noteheadType = noteheadTypeForMappings(mappings);
   if (noteheadType != null) {
@@ -207,11 +207,18 @@ function noteheadTypeForMappings(mappings) {
   return mappings.every((mapping) => mapping.notehead === 'x') ? 'x' : null;
 }
 
-function stemDirectionForMappings(mappings, stemMode = 'single') {
+function stemDirectionForNote(note, mappings, stemMode = 'single') {
   if (stemMode === 'single') return 1;
+  if (stemMode === 'role') {
+    return stemDirectionForMappings(mappings);
+  }
   if (mappings.length === 0) return 1;
-  const hasDownStem = mappings.some((mapping) => mapping.stemDirection < 0);
-  return hasDownStem ? -1 : 1;
+  return stemDirectionForMappings(mappings);
+}
+
+export function stemDirectionForMappings(mappings) {
+  if (mappings.length === 0) return 1;
+  return mappings[0].stemDirection < 0 ? -1 : 1;
 }
 
 function stickingLabelFor(note) {

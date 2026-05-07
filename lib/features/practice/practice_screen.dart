@@ -32,6 +32,11 @@ enum _PracticeSource { workingOn, previousSessions }
 
 class _PracticeScreenState extends State<PracticeScreen> {
   _PracticeSource _selectedSource = _PracticeSource.workingOn;
+  DrumSubdivision _practiceSubdivision = DrumSubdivision.eight;
+  bool _loopEnabled = false;
+  int _tempoStart = 70;
+  int _tempoStep = 10;
+  int _tempoMax = 110;
   int _visiblePreviousSessionCount = 5;
   int _visibleWorkingOnItemCount = 5;
   String _previousSessionQuery = '';
@@ -199,6 +204,29 @@ class _PracticeScreenState extends State<PracticeScreen> {
             _selectedSource == _PracticeSource.previousSessions
             ? previousSessionsPane()
             : workingOnPane();
+        final Widget practiceContextPane = _PracticeContextPane(
+          subdivision: _practiceSubdivision,
+          loopEnabled: _loopEnabled,
+          tempoStart: _tempoStart,
+          tempoStep: _tempoStep,
+          tempoMax: _tempoMax,
+          onSubdivisionChanged: (DrumSubdivision value) {
+            setState(() => _practiceSubdivision = value);
+          },
+          onLoopChanged: (bool value) {
+            setState(() => _loopEnabled = value);
+          },
+          onTempoStartChanged: (int value) {
+            setState(() => _tempoStart = value.clamp(1, 320));
+          },
+          onTempoStepChanged: (int value) {
+            setState(() => _tempoStep = value.clamp(1, 80));
+          },
+          onTempoMaxChanged: (int value) {
+            setState(() => _tempoMax = value.clamp(_tempoStart, 360));
+          },
+        );
+        const Widget grooveAndFlowPane = _GrooveAndFlowPane();
 
         if (isTablet) {
           return DrumScreen(
@@ -212,7 +240,17 @@ class _PracticeScreenState extends State<PracticeScreen> {
                     child: ListView(children: <Widget>[sourcePane]),
                   ),
                   const SizedBox(width: AppViewport.splitPaneGap),
-                  Expanded(child: ListView(children: <Widget>[activePane])),
+                  Expanded(
+                    child: ListView(
+                      children: <Widget>[
+                        activePane,
+                        const SizedBox(height: 14),
+                        practiceContextPane,
+                        const SizedBox(height: 14),
+                        grooveAndFlowPane,
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -226,6 +264,10 @@ class _PracticeScreenState extends State<PracticeScreen> {
               sourcePane,
               const SizedBox(height: 14),
               activePane,
+              const SizedBox(height: 14),
+              practiceContextPane,
+              const SizedBox(height: 14),
+              grooveAndFlowPane,
             ],
           ),
         );
@@ -261,6 +303,158 @@ class _PracticeScreenState extends State<PracticeScreen> {
 
     next.add(filter);
     return next;
+  }
+}
+
+class _PracticeContextPane extends StatelessWidget {
+  final DrumSubdivision subdivision;
+  final bool loopEnabled;
+  final int tempoStart;
+  final int tempoStep;
+  final int tempoMax;
+  final ValueChanged<DrumSubdivision> onSubdivisionChanged;
+  final ValueChanged<bool> onLoopChanged;
+  final ValueChanged<int> onTempoStartChanged;
+  final ValueChanged<int> onTempoStepChanged;
+  final ValueChanged<int> onTempoMaxChanged;
+
+  const _PracticeContextPane({
+    required this.subdivision,
+    required this.loopEnabled,
+    required this.tempoStart,
+    required this.tempoStep,
+    required this.tempoMax,
+    required this.onSubdivisionChanged,
+    required this.onLoopChanged,
+    required this.onTempoStartChanged,
+    required this.onTempoStepChanged,
+    required this.onTempoMaxChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return DrumPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const DrumSectionTitle(text: 'Practice Context'),
+          const SizedBox(height: 8),
+          Text(
+            'These settings describe how to work the selected patterns. They do not edit the saved pattern text.',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: DrumcabularyTheme.mutedInk,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 14),
+          DropdownButtonFormField<DrumSubdivision>(
+            initialValue: subdivision,
+            decoration: const InputDecoration(
+              labelText: 'Subdivision',
+              border: OutlineInputBorder(),
+            ),
+            items: const <DropdownMenuItem<DrumSubdivision>>[
+              DropdownMenuItem<DrumSubdivision>(
+                value: DrumSubdivision.eight,
+                child: Text('8'),
+              ),
+              DropdownMenuItem<DrumSubdivision>(
+                value: DrumSubdivision.triplet,
+                child: Text('Triplet'),
+              ),
+              DropdownMenuItem<DrumSubdivision>(
+                value: DrumSubdivision.sixteen,
+                child: Text('16'),
+              ),
+            ],
+            onChanged: (DrumSubdivision? value) {
+              if (value != null) onSubdivisionChanged(value);
+            },
+          ),
+          const SizedBox(height: 12),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Loop selected practice setup'),
+            value: loopEnabled,
+            onChanged: onLoopChanged,
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: <Widget>[
+              _TempoNumberField(
+                label: 'Start',
+                value: tempoStart,
+                onChanged: onTempoStartChanged,
+              ),
+              _TempoNumberField(
+                label: 'Step',
+                value: tempoStep,
+                onChanged: onTempoStepChanged,
+              ),
+              _TempoNumberField(
+                label: 'Max',
+                value: tempoMax,
+                onChanged: onTempoMaxChanged,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TempoNumberField extends StatelessWidget {
+  final String label;
+  final int value;
+  final ValueChanged<int> onChanged;
+
+  const _TempoNumberField({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 104,
+      child: TextFormField(
+        initialValue: '$value',
+        keyboardType: TextInputType.number,
+        decoration: InputDecoration(labelText: label),
+        onChanged: (String text) {
+          final int? parsed = int.tryParse(text);
+          if (parsed != null) onChanged(parsed);
+        },
+      ),
+    );
+  }
+}
+
+class _GrooveAndFlowPane extends StatelessWidget {
+  const _GrooveAndFlowPane();
+
+  @override
+  Widget build(BuildContext context) {
+    return DrumPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const DrumSectionTitle(text: 'Groove and Flow'),
+          const SizedBox(height: 8),
+          Text(
+            'Groove context and flow steps belong here on the Practice screen. The next pass can wire this panel to saved pattern roles and ordered flow steps without mutating library patterns.',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: DrumcabularyTheme.mutedInk,
+              height: 1.35,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

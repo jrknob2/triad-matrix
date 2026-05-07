@@ -33,7 +33,7 @@ export const DRUM_VOICE_MAP = Object.freeze({
   snare: Object.freeze({
     key: 'c/5',
     notehead: 'normal',
-    stemDirection: 1,
+    stemDirection: -1,
   }),
   tom2: Object.freeze({
     key: 'a/4',

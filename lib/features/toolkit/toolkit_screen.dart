@@ -83,7 +83,7 @@ class _FocusScreenState extends State<FocusScreen> {
                         _visibleItemCount = 5;
                       }),
                       decoration: const InputDecoration(
-                        hintText: 'Search all practice items',
+                        hintText: 'Search all patterns',
                         prefixIcon: Icon(Icons.search_rounded),
                         isDense: true,
                       ),
@@ -92,7 +92,7 @@ class _FocusScreenState extends State<FocusScreen> {
                   const SizedBox(width: 10),
                   OutlinedButton(
                     onPressed: widget.onCreateNewItem,
-                    child: const Text('New'),
+                    child: const Text('New Pattern'),
                   ),
                 ],
               ),

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class PatternTextStyles {
   static const String notationFontFamily = 'Courier';
-  static const double editableInputFontSize = 24;
+  static const double editableInputFontSize = 20;
   static const double editableInputLineHeight = 1.0;
   static const EdgeInsets editableInputPadding = EdgeInsets.fromLTRB(
     16,

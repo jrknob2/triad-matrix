@@ -67,7 +67,7 @@ class _AppShellState extends State<AppShell> {
             controller: widget.controller,
             onOpenItem: _openItemDetail,
             onPracticeItemInMode: _openPracticeItemInMode,
-            onCreateNewItem: _openNewPracticeItemDraft,
+            onCreateNewItem: _openNewPatternDraft,
             onOpenMatrix: _openMatrix,
           ),
           ProgressScreen(
@@ -321,7 +321,7 @@ class _AppShellState extends State<AppShell> {
     );
   }
 
-  void _openNewPracticeItemDraft() {
+  void _openNewPatternDraft() {
     final String itemId = widget.controller.createBlankDraftPracticeItem();
     _openItemDetail(itemId);
   }
