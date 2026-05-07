@@ -284,6 +284,7 @@ class IsarAppStateStore implements AppStateStore {
           .toList(growable: false),
       'source': item.source.name,
       'tags': item.tags,
+      'notes': item.notes,
       'saved': item.saved,
     };
   }
@@ -338,6 +339,7 @@ class IsarAppStateStore implements AppStateStore {
               .toList(growable: false),
       source: PracticeItemSourceV1.values.byName(map['source'] as String),
       tags: (map['tags'] as List<dynamic>).cast<String>(),
+      notes: map['notes'] as String? ?? '',
       saved: map['saved'] as bool,
     );
   }

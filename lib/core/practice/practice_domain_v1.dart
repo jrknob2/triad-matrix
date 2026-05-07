@@ -899,6 +899,7 @@ class PracticeItemV1 {
 
   final PracticeItemSourceV1 source;
   final List<String> tags;
+  final String notes;
   final bool saved;
 
   PracticeItemV1({
@@ -919,6 +920,7 @@ class PracticeItemV1 {
     List<PatternNoteValueV1?>? noteValueOverrides,
     required this.source,
     required this.tags,
+    this.notes = '',
     required this.saved,
   }) : assert(sequence != null || sticking != null || pattern != null),
        pattern =
@@ -977,6 +979,7 @@ class PracticeItemV1 {
     List<PatternNoteValueV1?>? noteValueOverrides,
     PracticeItemSourceV1? source,
     List<String>? tags,
+    String? notes,
     bool? saved,
   }) {
     final MaterialFamilyV1 nextFamily = family ?? this.family;
@@ -1006,6 +1009,7 @@ class PracticeItemV1 {
       noteValueOverrides: noteValueOverrides ?? this.noteValueOverrides,
       source: source ?? this.source,
       tags: tags ?? this.tags,
+      notes: notes ?? this.notes,
       saved: saved ?? this.saved,
     );
   }

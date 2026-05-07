@@ -129,17 +129,28 @@ Full-bar validation is not required for ordinary patterns.
 The old `Practice Item` screen is now the `Pattern` screen. It is reached from
 Library `New Pattern` and `Edit Pattern`.
 
+This is a full replacement surface, not a relabeled Practice Item editor. The
+screen must not reuse the old control-panel model or any UI structure that
+mixes pattern authoring with practice behavior.
+
 Allowed here:
 
+- compact pattern details: title, tags, notes
 - pattern title/details
-- pattern text
-- tags/notes
+- large, dominant pattern text editor
 - pattern validation
-- notation/vocabulary modal
+- lightweight selected-text helpers: accent, ghost, combine into simultaneous
+  hit, insert rest
+- compact utility row: undo and notation/vocabulary modal
 - optional preview/playback of the pattern only
+- `Save Pattern`
 
 Not allowed here:
 
+- `Practice Item` terminology
+- `Build`, `Dynamics`, or `Voices` segmented control panels
+- duration override controls or any per-note duration UI
+- grouping controls
 - tempo plans
 - subdivision drill controls
 - cycle/routine controls
@@ -147,6 +158,11 @@ Not allowed here:
 - flow builder
 - practice session controls
 - Working On membership controls
+
+Pattern text must remain visible and editable at all times. It must behave like
+a normal text field: paste, arrow keys, selection, and cursor movement cannot
+rewrite spaces or invoke grouping logic. Spaces are authored phrasing breaks and
+should be preserved in saved pattern text.
 
 Saving a pattern must parse and validate the corrected pattern grammar used by
 the editor and preview. It must not route through stale sequence-only parsers

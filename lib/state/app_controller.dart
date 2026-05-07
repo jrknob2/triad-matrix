@@ -1931,6 +1931,8 @@ class AppController extends ChangeNotifier {
     required List<DrumVoiceV1> voiceAssignments,
     required CompetencyLevelV1 competency,
     String? name,
+    List<String>? tags,
+    String? notes,
     PatternSequenceV1? sequence,
     String? pattern,
     PatternGroupingV1? groupingHint,
@@ -1976,9 +1978,11 @@ class AppController extends ChangeNotifier {
         : structureChanged
         ? nextPattern
         : existingItem.name;
-    final List<String> nextTags = structureChanged
-        ? _tagsForEditedSequence(nextSequence.tokens, nextFamily)
-        : existingItem.tags;
+    final List<String> nextTags =
+        tags ??
+        (structureChanged
+            ? _tagsForEditedSequence(nextSequence.tokens, nextFamily)
+            : existingItem.tags);
 
     if (sequenceChanged && existingItem.isCombo) {
       _combinations = _combinations
@@ -2005,6 +2009,7 @@ class AppController extends ChangeNotifier {
                   notationSubdivision ?? existingItem.notationSubdivision,
               noteValueOverrides: sanitizedValueOverrides,
               tags: nextTags,
+              notes: notes ?? existingItem.notes,
               saved: saveToWorkingOn || saveAsPattern ? true : entry.saved,
             ),
           );

@@ -83,8 +83,6 @@ Dynamic control organization rule:
 
 - screens or panels with more controls than can be understood at a glance should organize controls with the same filter-style segmented row pattern used elsewhere in the app
 - source-selection screens should use context pills when the primary choice is which source of material is being acted on
-- the standard organization model is `Build`, `Dynamics`, and `Voices` when a screen edits pattern structure, note markings, and drum voices
-- `Build`, `Dynamics`, and `Voices` are actual filter pills/segments, not just conceptual headings
 - context pills show one active control set and hide inactive control sets
 - controls inside the active control set should remain visible even when they cannot currently run
 - unavailable controls inside the active set should be disabled with stable labels, not hidden or replaced by a different layout
@@ -93,6 +91,7 @@ Dynamic control organization rule:
 - controls that apply to selected notes should remain in their relevant control set and disable when the current selection is missing or incompatible
 - global helpers such as undo and input legend should not interrupt the main editing hierarchy; they should live in a compact utility row or header area for the editor section
 - new cleanup work must restore this organization before adjusting local spacing or button placement
+- the Pattern screen is an explicit exception: it must not use the old `Build`, `Dynamics`, and `Voices` segmented control model, because Pattern creation is text-first idea capture rather than a full practice-control surface
 
 Settings modal rule:
 
@@ -116,14 +115,12 @@ Notation and pattern text rules:
 - sheet-music pattern text may use bracket overrides for duration and voice, such as `[16:R]`, `[T1:L]`, and `[T2 16:R]`
 - sheet-music accent and ghost decorations may be placed inside or outside bracket overrides when valid, but accented ghost notes such as `^(L)` are invalid
 - the sheet-music widget must not include the notation-input legend; app screens should own any modal/dialog that explains notation syntax
-- Practice Item sheet-notation editing should expose beat grouping as an editable text field, not as fixed grouping pills; spaces entered in the pattern field should update this grouping metadata and immediately affect the rendered SVG grouping
 - spaces entered in the editable pattern field are grouping input shorthand only; canonical token storage should remain a token sequence without literal spacing tokens
 - `beatGrouping` is the persisted source for authored visual grouping, and compact pattern readouts that show grouping metadata must also apply that grouping visually with spaces in the displayed pattern text
 - compact pattern readouts should interpret grouping text consistently with the sheet renderer: `3313` and `3 3 1 3` both mean variable groups of 3, 3, 1, and 3 note positions
-- Practice Item sheet-notation editing should expose default subdivision as a screen-level dropdown; selected-note duration controls are overrides and must not replace the default subdivision control
-- Practice Item sheet-notation editing should provide undo for pattern, grouping, subdivision, and selected-note edits
-- Practice Item should not show the legacy `Grouping` pill row or `Append` pill row when the sheet-notation pattern field is the editing surface
-- persisted practice item data must include the sheet-notation fields needed to reopen the same notation view: exact beat grouping text, default notation subdivision, and per-note duration overrides; transient controls such as undo history and legend visibility are screen state and should not be persisted
+- the Pattern screen may derive beat-grouping metadata from authored spaces at save time, but it must not expose grouping or subdivision controls; those controls belong to Practice context
+- Pattern screen undo should cover local pattern/details editing actions only; practice-context undo belongs on Practice surfaces if needed
+- persisted pattern data must include the authored pattern text, tags, notes, and lightweight display metadata needed by readouts; practice behavior such as subdivision drills, tempo plans, loops, cycles, groove context, and flow builder state must not be stored by the Pattern screen
 - Practice Session should use the same sheet-music SVG notation surface for the active item instead of the legacy shared text renderer; the pattern-audio action belongs with the bottom transport controls alongside Play/Pause and End, not under the notation
 - Practice Session sheet notation should use a compact layout so the notation and transport controls remain visible together; active-note highlighting must update without forcing a full VexFlow SVG re-render on every playback tick
 - built-in warmup items should store the shortest repeating rudiment cycle needed to identify the exercise; the repeat bar communicates repetition
@@ -159,8 +156,8 @@ Notation and pattern text rules:
 - suppressing dynamics or voices is a display choice only; it must not mutate or discard authored item data
 - when grouped phrase notation wraps, the group separator should stay at the end of the row it belongs to
 - long player phrases may wrap on phone, but that wrapping must occur on practical group boundaries rather than by raw character position
-- editable pattern text fields should render the typed pattern in the shared editable pattern style: larger, bold, monospaced, and at least as visually prominent as adjacent subdivision/grouping values; increase the value text size and tune dense internal padding rather than making the whole field visibly taller or heavier
-- selected-note duration and voice controls should use labeled form fields or equivalent visible labels, not unlabeled dropdowns with only the current value showing
+- editable pattern text fields should render the typed pattern in the shared editable pattern style: large, bold, monospaced, and visually dominant on the Pattern screen; compact readouts elsewhere must keep using compact pattern styles
+- selected-note controls should use clear labels and disabled states; Pattern screen must not expose per-note duration controls
 - phone layouts must not allow `RenderFlex` overflow; if vertical space is tight, reduce section spacing and nonessential vertical padding before making primary controls unreachable
 
 Pattern editing source-of-truth rule:
@@ -180,15 +177,15 @@ Pattern editing source-of-truth rule:
 - once triads are saved as part of a phrase item, the phrase item's authored state is the source of truth for that phrase
 - Matrix structural triads may be used as templates for newly added material, but they must not overwrite or reinterpret an authored practice item's existing notes, accents, ghosts, or voices
 - editing may be split across screens, but the draft must be shared:
-  - `Practice Item` owns item authoring and orchestration edits
-  - `Matrix` owns structure edits when entered from `Practice Item`
+  - `Pattern` owns authored pattern text, tags, notes, accents, ghosts, simultaneous hits, and simple helper actions
+  - `Matrix` owns triad discovery and triad-structure helper flows
   - both screens must operate on the same authored item draft, not on separately recomposed data
 - when Matrix edits the structure of an existing authored item:
   - unchanged triad occurrences keep their authored dynamics and voices
   - removed triad occurrences lose their segment data
   - newly added triads start from their own authored/default template data
   - the visible Matrix phrase readout must render the current item draft, not the current global state of the child triad records
-- after a structure edit, returning to `Practice Item` should continue editing the same authored item when possible, or the resulting replacement phrase item when a single triad has become a phrase
+- after a structure edit, returning to `Pattern` should continue editing the same authored item when possible, or the resulting replacement phrase item when a single triad has become a phrase
 
 ## Layout Rule
 
@@ -414,12 +411,12 @@ Path:
 
 1. `Focus`
 2. play / edit / remove
-3. `Practice Item` or `Practice Session`
+3. `Pattern` or `Practice Session`
 
 Screens involved:
 
 - Focus
-- Practice Item
+- Pattern
 - Practice Session
 
 Required controls:
@@ -447,12 +444,12 @@ Path:
 
 1. `Progress`
 2. drill into item or category
-3. optionally continue into `Practice Item` or `Matrix`
+3. optionally continue into `Pattern` or `Matrix`
 
 Screens involved:
 
 - Progress
-- Practice Item optionally
+- Pattern optionally
 - Matrix optionally
 
 Required controls:
@@ -471,19 +468,19 @@ Goal:
 Path:
 
 1. `Matrix` for phrase structure if needed
-2. `Practice Item` for authored voices if needed
+2. `Pattern` for authored voices if needed
 3. `Practice` session setup from `Working On`
 4. `Practice Session`
 
 Screens involved:
 
-- Practice Item
+- Pattern
 - Matrix
 - Practice Session
 
 Required controls:
 
-- voice assignment editor in Practice Item
+- voice assignment editor in Pattern
 - `Flow`-derived filters or metadata where they help session selection
 
 Rules:
@@ -491,7 +488,7 @@ Rules:
 - `Flow` is a derived practice capability, not a user-declared item type
 - an item is considered `Flow` only when it has user-authored off-snare voices on non-kick notes
 - no voice assignments and all-default voices are the same single-surface state
-- flow preparation does not add direct `Practice in Flow` buttons to `Practice Item`; session launch belongs to `Practice`
+- flow preparation does not add direct `Practice in Flow` buttons to `Pattern`; session launch belongs to `Practice`
 - default kick placement on `K` does not make an item `Flow`
 - `Single Surface` is the universal baseline practice mode, not an item classification
 - free-built phrases remain allowed in v1
@@ -840,7 +837,7 @@ Rules:
 - phrase chips in the editor should size to their phrase content and wrap as compact rows
 - phrase chips must not stretch to the full panel width unless the phrase content actually requires it
 - in generic phrase-building mode, Matrix may compose the phrase readout from selected triad items
-- in item-edit mode from `Practice Item`, Matrix must render and edit the current authored item draft as the source of truth
+- in item-edit mode from `Pattern`, Matrix must render and edit the current authored item draft as the source of truth
 - item-edit Matrix must not rebuild the phrase display from child triad records when doing so would change existing authored accents, ghosts, or voices
 
 #### Action Row
@@ -870,10 +867,10 @@ Rules:
 - a practice item's identity is the item record itself, including its owned notes and authored state
 - exact authored duplicates should resolve to the existing saved item only when the user is explicitly saving or duplicating a new item on purpose
 - for an existing item or saved phrase, `Add to Working On` should prompt the user to open that item instead of creating a duplicate of the same authored item
-- for a new phrase, `Add to Working On` should open `Practice Item` as a draft authoring handoff
+- for a new phrase, `Add to Working On` should open `Pattern` as a draft authoring handoff
 - top-level new-item authoring should not begin in Matrix
-- Matrix may still create a draft authoring handoff from triad selection, but it must not expose 4-note construction directly; 4-note authoring belongs in `Practice Item`
-- when Matrix is entered from `Practice Item`, the primary return action should return the updated structure to the same editing flow instead of adding, saving, or opening a separate item
+- Matrix may still create a draft authoring handoff from triad selection, but it must not expose 4-note construction directly; 4-note authoring belongs in `Pattern`
+- when Matrix is entered from `Pattern`, the primary return action should return the updated structure to the same editing flow instead of adding, saving, or opening a separate item
 
 ### Matrix States
 
@@ -903,8 +900,8 @@ Rules:
 
 - this state exists for triad selection and triad-based structure editing
 - it is not the primary generic new-item builder for the app
-- when it creates new material, it should hand off to `Practice Item` as the universal authoring surface
-- Matrix must not expose 4-note construction directly; 4-note helper authoring is owned by the `Practice Item` Build controls
+- when it creates new material, it should hand off to `Pattern` as the universal authoring surface
+- Matrix must not expose 4-note construction directly; if 4-note helper authoring returns, it must be redesigned as a lightweight Pattern text helper rather than reviving the old Build control panel
 
 #### Deep-Link State
 
@@ -1348,7 +1345,7 @@ Must not show:
 - this screen should default to less verbose presentation
 - if explanatory/help content is needed, it should live in optional help, not as a permanent top card
 - the add entry point may sit inline with search as a compact `New` / `+` control
-- `New` from Library should open a new `Practice Item` draft rather than opening Matrix directly
+- `New` from Library should open a new `Pattern` draft rather than opening Matrix directly
 - that draft should start as a blank generic token-sequence item and expose triad insertion as a helper from inside the editor
 - flow voice assignments remain user-authored item data and must not add extra list-level per-item launch buttons
 - compact item rows should display the authored pattern text, with grouping and subdivision as secondary metadata, rather than using the sheet-music renderer or the retired shared notation renderer
@@ -1457,105 +1454,79 @@ Only if those counts are actually correct for the visible scope.
 
 ---
 
-## 8. Practice Item
+## 8. Pattern
 
 ### Screen Job
 
-Practice Item lets the user inspect and edit one item cleanly.
+Pattern is the idea-capture screen for a playable musical phrase. It replaces
+the old Pattern authoring surface. The screen must feel like writing a
+drum idea, not configuring a practice system.
 
 ### Allowed Content
 
+- header with Back and `Pattern`
+- compact pattern details: title, optional tags, optional notes
 - pattern text input
-- staff notation preview/editor
-- concise work summary
-- accent/ghost controls
-- flow voice controls
-- session setup controls for BPM and duration
-- open in matrix CTA
+- pattern validation messages
+- lightweight selected-text helpers:
+  - accent selected notes
+  - ghost selected notes
+  - combine selected notes into a simultaneous hit
+  - insert rest
+- optional minimal preview controls:
+  - play
+  - loop
+- compact utility row:
+  - undo
+  - notation/input legend
+- `Save Pattern`
 
 ### Forbidden Content
 
+- `Pattern` wording
+- the old `Build`, `Dynamics`, and `Voices` segmented control model
+- large control panels
+- grouping controls
+- subdivision controls
+- tempo controls
+- cycle/routine controls
+- groove context
+- flow builder
+- session setup controls
+- duration override controls or any per-note duration UI
+- Working On membership controls
 - player transport
-- redundant pattern chips repeating the same value
+- statistics/history cards for logged time, sessions, or last worked
 - extra badges that restate obvious information
 
 ### Required Control Rules
 
-- editing controls appear under the pattern
-- mode control changes editing context
-- tapping the notation selects one or more assignable notes
-- selection and assignment are separate actions
-- `Accents & Ghosts` assigns the marking for the selected note set
-- `Flow Voices` assigns the voice for the selected note set
-- practice default controls may live here even though session launch happens elsewhere
-- last BPM and duration for a single item should be remembered outside the authored item data
-- Practice Item owns its notes as part of the authored item record
-- accents, ghosts, and flow voice assignments are user-authored edit layers
+- the pattern text input is the primary surface and must remain visible at all times
+- pattern text input behaves like a normal text editor: paste, arrow keys, selection, and cursor movement must not rewrite spaces or trigger grouping logic
+- typed pattern text normalizes to uppercase at the editor boundary
+- spaces are authored phrasing breaks and should be preserved in the saved pattern text
+- lightweight helpers operate on selected pattern text, not on a hidden per-note grid
+- helper controls may disable when no compatible selection exists, but they must not introduce a large control-panel model
+- selection and helper action are separate: selecting text never mutates the pattern until the user invokes a helper
+- `Accent`, `Ghost`, `Combine`, and `Insert Rest` are the only required helper actions on this screen
+- `Undo` and `Notation` live in a compact utility row and do not become an editing mode
+- the notation/input legend must reflect the corrected grammar and must not mention `B`
+- saving validates the corrected pattern grammar used by the editor
+- leaving a dirty Pattern screen should prompt the user to save, discard, or keep editing
+- Pattern owns notes/tags/details as authored idea metadata
+- accents, ghosts, simultaneous hits, and bracket overrides are user-authored pattern text
 - base material enters the app plain unless the user has explicitly edited it
-- no voice assignments and all-default voices must collapse to the same single-surface state
-- voice displays outside the editor should only appear when the item has authored off-snare voices on non-kick notes
-- Practice Item should have one primary sheet-notation block near the top of the screen
-- pattern text is the direct text-editing input for that sheet notation, not a separate rendered notation surface
+- voice displays outside the editor should only appear when an item has authored off-snare voices on non-kick notes
 - the editable pattern text field should wrap long authored patterns instead of clipping or horizontally hiding the pattern
-- Practice Item should not include a standalone history/statistics card for logged time, session count, or last worked; that information belongs in Progress/history surfaces and should appear only as secondary metadata when needed
-- Practice Item should show only one note-selection instruction at a time; the active `Build`, `Dynamics`, or `Voices` control set owns the contextual instruction
-- the `Flow Voices` section should contain voice editing controls only, not a second notation preview
 - rest positions should keep `_` as the canonical stored and user-facing text token
-- `Practice Item` may wrap the VexFlow staff renderer with selection affordances, but it should not introduce a separate staff-notation rendering style
-- the `Practice Item` selection wrapper may add only selection styling around each rendered note; it must not change note spacing, staff wrapping, or beam geometry
-- any `Practice Item` note-selection wrapper must derive selection targets from VexFlow-rendered SVG geometry rather than fixed local spacing constants
-- the notation block should be the note-selection surface, so the screen does not need a per-note chip grid for editing
-- `Practice Item` should use a filter-style control row with `Build`, `Dynamics`, and `Voices`, with `Build` as the default active set
-- the `Build`, `Dynamics`, and `Voices` controls should behave as show/hide filter pills: only the active control group is visible at a time
-- `Build` owns structure-editing controls for append, insert, replace, delete, rest insertion, and triad-helper insertion
-- `Dynamics` owns selected-note accent and ghost controls
-- `Voices` owns selected-note drum voice assignment controls
-- every visible control inside the active `Build`, `Dynamics`, or `Voices` set should keep a stable position and label across compatible and incompatible selection states
-- selected-note controls must disable rather than disappear when no notes are selected
-- `Build` selected-note actions such as duration override and delete require at least one selected note
-- `Dynamics` accent requires at least one selected non-rest, non-kick note; ghost requires at least one selected non-rest note
-- `Voices` voice override requires a selected set made only of authored hand notes that can accept voice assignment
-- `Practice Item` should use the pattern text field as the direct token-sequence editing surface
-- `Practice Item` should contain an explicit `Grouping` control for visible separator metadata
-- a new blank `Practice Item` draft should open with a stable empty notation row already visible so the layout does not jump on first insertion
-- when entering voice editing, effective default voices remain `snare` for hand notes and `kick` for `K` notes unless the user assigns something else
-- selection should toggle on tap so the user can build or reduce a note set before applying an edit
-- applying a marking or voice assignment should clear the current note selection
-- kick notes should not be assignable through this editing surface
-- non-hand positions may still be selected for structure editing even though they are not assignable through the dynamics/voice controls
-- the `Build` control set should use one `Strokes` row for choosing the next source stroke
-- when no pattern position is selected, choosing a stroke in that row should append it to the end of the draft automatically
-- the `Build` control set should use one action row for `Insert Before`, `Insert After`, `Replace`, and `Delete`
-- the `Build` control set should also provide an explicit `Append` action that appends the current stroke source to the end of the draft without requiring a selected pattern position
-- the `Build` control set should also provide a `Repeat` action that repeats the last non-delete structure action when the current selection satisfies that action's prerequisites
-- the `Build` control set should also provide a full-pattern clear/reset action that returns the draft to the empty-row state
-- `Insert Before` and `Insert After` should remain disabled unless both a source stroke and at least one selected pattern position are present
-- `Delete` should be the destructive action available when no new source token or triad is selected
-- structure editing should support replace, insert, delete, rest insertion, and triad-helper insertion inside the same `Practice Item` surface
-- triad-helper insertion should allow selecting one or more triads and should insert them in the order selected
-- 4-note helper insertion should live in `Practice Item` as a `Build` source, select exactly one triad from the shared triad-grid language, then append exactly one `R`, `L`, or `K`
-- the 4-note helper must expose only `triad + x`; it must not add an `x + triad` construction path, a 4-note Matrix action, a 4-note grid, or a separate 4-note runtime mode
-- a 4-note helper result must enter the draft as ordinary generic pattern tokens with explicit `4` grouping metadata when compatible
-- the `Grouping` control should affect only visible separator metadata, not runtime behavior or family labels
-- the `Grouping` control should show `None`, `3`, `4`, and `5`, and incompatible group sizes should disable rather than disappear
-- deleting the entire current token sequence should be allowed and should return the draft to that stable empty-row state
-- when direct structure edits break an inherited grouping shape, the stale grouping hint should clear instead of continuing to render separators that no longer fit the edited pattern
-- triad-helper insertion inside `Practice Item` should use the same shared triad-grid rendering language as Matrix, even if the insert modal or sheet carries a reduced control set
-- triad-helper insertion should establish explicit triad grouping metadata when the resulting draft is fully triad-grouped and contains no rests
+- a new blank Pattern draft should open with an empty pattern field and stable layout
+- deleting the current text should be allowed; an empty pattern cannot be saved until it contains valid playable text
 - Matrix selection and phrase building must not inject authored markings automatically
 - item edits should live in a local draft until the user explicitly saves them
 - navigating away with unsaved item changes should prompt the user to save, discard, or keep editing
 - normal editing must not silently split one item into a hidden base item plus authored variant
-- `Open in Matrix` must reuse the Matrix screen in an item-edit context when the material can be expressed as a triad or triad phrase
-- any generic item whose current canonical token sequence can be losslessly split into triads may still use `Open in Matrix`; this should be based on the token sequence, not only on combo metadata
-- in that context, Matrix should preload the current sequence from the authored item draft, preserve the authored item state through the round trip, and replace `Add to Working On` with a return action back to `Working On`
-- `Open in Matrix` must treat the current `Practice Item` draft as authoritative; it must not render the phrase from global child-triad state if that would scramble or replace authored markings or voices
-- unsaved phrase drafts may still reopen Matrix for structure edits; `Open in Matrix` should not be disabled solely because the item has not been saved to `Working On` yet
-- adding a triad in Matrix should append a new segment with that triad's structural/default template data, while existing segments retain their current authored notes, markings, and voices
-- removing a triad in Matrix should remove that occurrence and its attached authored segment data
-- when Matrix editing expands a single triad into a phrase, returning should continue in `Practice Item` on the resulting phrase item instead of silently keeping the old single-triad item
-- `Practice Item` should not offer direct practice-launch buttons when that pulls the screen away from its editing job
-- `Practice Item` is the primary screen for creating a new pattern from scratch
+- Pattern should not offer direct practice-launch buttons when that pulls the screen away from its authoring job
+- Pattern is the primary screen for creating a new pattern from scratch
 - Matrix is not the default place to start generic pattern creation; it remains a triad-specific teaching, discovery, insertion, and triad-structure-editing helper
 
 ---
@@ -1566,7 +1537,7 @@ Editable screens should not auto-save field-level changes while the user is stil
 
 This applies to screens like:
 
-- `Practice Item`
+- `Pattern`
 - `Settings`
 - `Custom Pattern`
 

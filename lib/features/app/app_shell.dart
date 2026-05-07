@@ -4,7 +4,7 @@ import '../../core/practice/practice_domain_v1.dart';
 import '../../state/app_controller.dart';
 import 'app_viewport.dart';
 import '../matrix/matrix_screen.dart';
-import '../library/item_detail_screen.dart';
+import '../library/pattern_screen.dart';
 import '../practice/practice_screen.dart';
 import '../practice/practice_session_screen.dart';
 import '../progress/progress_screen.dart';
@@ -312,11 +312,8 @@ class _AppShellState extends State<AppShell> {
   void _openItemDetail(String itemId) {
     _shellNavigatorKey.currentState?.push(
       MaterialPageRoute<void>(
-        builder: (_) => ItemDetailScreen(
-          controller: widget.controller,
-          itemId: itemId,
-          onOpenInMatrix: _openMatrixForItemEdit,
-        ),
+        builder: (_) =>
+            PatternScreen(controller: widget.controller, itemId: itemId),
       ),
     );
   }
@@ -324,33 +321,6 @@ class _AppShellState extends State<AppShell> {
   void _openNewPatternDraft() {
     final String itemId = widget.controller.createBlankDraftPracticeItem();
     _openItemDetail(itemId);
-  }
-
-  Future<List<String>?> _openMatrixForItemEdit(String itemId) {
-    final List<String> selectedItemIds = widget.controller
-        .matrixSelectionItemIdsForItem(itemId);
-    return _shellNavigatorKey.currentState!.push<List<String>>(
-      MaterialPageRoute<List<String>>(
-        builder: (BuildContext routeContext) => Scaffold(
-          appBar: AppBar(title: const Text('Triad Matrix')),
-          body: MatrixScreen(
-            controller: widget.controller,
-            request: MatrixScreenRequest(
-              version: 1,
-              lane: null,
-              filters: const <TriadMatrixFilterV1>{},
-              selectedItemIds: selectedItemIds,
-              editingItemId: itemId,
-            ),
-            onOpenItem: _openItemDetail,
-            onPreviewSelection: _openMatrixPreviewFromSelection,
-            onFinishEditing: (List<String> itemIds) {
-              Navigator.of(routeContext).pop(itemIds);
-            },
-          ),
-        ),
-      ),
-    );
   }
 
   void _openSettings() {
