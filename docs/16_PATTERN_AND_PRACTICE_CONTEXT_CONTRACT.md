@@ -148,6 +148,11 @@ Not allowed here:
 - practice session controls
 - Working On membership controls
 
+Saving a pattern must parse and validate the corrected pattern grammar used by
+the editor and preview. It must not route through stale sequence-only parsers
+that reject valid pattern text such as accents, ghosts, overrides, or
+simultaneous hits.
+
 ### Practice Screen
 
 The Practice screen owns active training work:
@@ -161,6 +166,13 @@ The Practice screen owns active training work:
 
 Practice must not silently edit saved pattern text. It may offer an explicit
 `Edit Pattern` action that navigates to the Pattern screen.
+
+### Library Screen
+
+The Library screen shows saved patterns. Its default view is all saved,
+non-warmup patterns. It must not expose `All`, `Single Surface`, or `Flow`
+filters; those are practice/context concepts, not library ownership filters.
+Search narrows the same all-pattern library.
 
 ## Practice Context
 

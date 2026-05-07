@@ -8,8 +8,6 @@ import '../../state/app_controller.dart';
 import '../practice/widgets/pattern_readout.dart';
 import '../practice/widgets/practice_item_summary_block.dart';
 
-enum _FocusViewFilter { all, singleSurface, flow }
-
 class FocusScreen extends StatefulWidget {
   final AppController controller;
   final ValueChanged<String> onOpenItem;
@@ -31,7 +29,6 @@ class FocusScreen extends StatefulWidget {
 }
 
 class _FocusScreenState extends State<FocusScreen> {
-  _FocusViewFilter _viewFilter = _FocusViewFilter.all;
   late final TextEditingController _searchController;
   String _searchQuery = '';
   int _visibleItemCount = 5;
@@ -53,19 +50,16 @@ class _FocusScreenState extends State<FocusScreen> {
     return AnimatedBuilder(
       animation: widget.controller,
       builder: (BuildContext context, _) {
-        final List<PracticeItemV1> allItems = widget.controller.activeWorkItems;
-        final bool hasSearch = _searchQuery.trim().isNotEmpty;
-        final List<PracticeItemV1> searchSource = widget.controller.items
-            .where((PracticeItemV1 item) => !item.isWarmup)
+        final List<PracticeItemV1> allItems = widget.controller.items
+            .where((PracticeItemV1 item) => item.saved && !item.isWarmup)
             .toList(growable: false);
+        final bool hasSearch = _searchQuery.trim().isNotEmpty;
         final List<PracticeItemV1> visibleItems =
-            (hasSearch
-                    ? searchSource.where(
-                        (PracticeItemV1 item) =>
-                            _matchesSearch(item, _searchQuery),
-                      )
-                    : allItems)
-                .where(_matchesViewFilter)
+            allItems
+                .where(
+                  (PracticeItemV1 item) =>
+                      !hasSearch || _matchesSearch(item, _searchQuery),
+                )
                 .toList(growable: false)
               ..sort(_compareVisibleItems);
 
@@ -97,41 +91,10 @@ class _FocusScreenState extends State<FocusScreen> {
                 ],
               ),
               const SizedBox(height: 14),
-              DrumHorizontalControlStrip(
-                child: Row(
-                  children: _FocusViewFilter.values
-                      .map(
-                        (_FocusViewFilter filter) => Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: DrumSelectablePill(
-                            label: Text(
-                              _labelForViewFilter(filter),
-                              style: TextStyle(
-                                color: _viewFilter == filter
-                                    ? Colors.white
-                                    : null,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                            selected: _viewFilter == filter,
-                            onPressed: () => setState(() {
-                              _viewFilter = filter;
-                              _visibleItemCount = 5;
-                            }),
-                          ),
-                        ),
-                      )
-                      .toList(growable: false),
-                ),
-              ),
-              const SizedBox(height: 14),
               if (!hasSearch && allItems.isEmpty)
                 _FocusEmptyState(onOpenMatrix: widget.onOpenMatrix)
               else if (visibleItems.isEmpty)
-                _FocusSearchEmptyState(
-                  hasSearch: hasSearch,
-                  filterLabel: _labelForViewFilter(_viewFilter),
-                )
+                _FocusSearchEmptyState(hasSearch: hasSearch)
               else
                 ...visibleItems
                     .take(_visibleItemCount)
@@ -185,16 +148,6 @@ class _FocusScreenState extends State<FocusScreen> {
     return haystack.contains(normalized);
   }
 
-  bool _matchesViewFilter(PracticeItemV1 item) {
-    return switch (_viewFilter) {
-      _FocusViewFilter.all => true,
-      _FocusViewFilter.singleSurface => !widget.controller.hasNonSnareVoice(
-        item.id,
-      ),
-      _FocusViewFilter.flow => widget.controller.hasNonSnareVoice(item.id),
-    };
-  }
-
   int _compareVisibleItems(PracticeItemV1 a, PracticeItemV1 b) {
     final bool aInRoutine = widget.controller.isDirectRoutineEntry(a.id);
     final bool bInRoutine = widget.controller.isDirectRoutineEntry(b.id);
@@ -203,14 +156,6 @@ class _FocusScreenState extends State<FocusScreen> {
       return widget.controller.compareItemsByNeed(a, b);
     }
     return a.name.compareTo(b.name);
-  }
-
-  String _labelForViewFilter(_FocusViewFilter filter) {
-    return switch (filter) {
-      _FocusViewFilter.all => 'All',
-      _FocusViewFilter.singleSurface => 'Single Surface',
-      _FocusViewFilter.flow => 'Flow',
-    };
   }
 
   Future<void> _confirmRemoveItem(PracticeItemV1 item) async {
@@ -275,10 +220,10 @@ class _FocusEmptyState extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const DrumSectionTitle(text: 'Nothing In Working On'),
+          const DrumSectionTitle(text: 'No Saved Patterns'),
           const SizedBox(height: 8),
           Text(
-            'Add a few items from Coach or Matrix. This screen is only for the material you are actively trying to develop now.',
+            'Create a pattern or add one from Matrix. Saved patterns will appear here.',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: DrumcabularyTheme.mutedInk,
               height: 1.35,
@@ -297,20 +242,14 @@ class _FocusEmptyState extends StatelessWidget {
 
 class _FocusSearchEmptyState extends StatelessWidget {
   final bool hasSearch;
-  final String filterLabel;
 
-  const _FocusSearchEmptyState({
-    required this.hasSearch,
-    required this.filterLabel,
-  });
+  const _FocusSearchEmptyState({required this.hasSearch});
 
   @override
   Widget build(BuildContext context) {
     return DrumPanel(
       child: Text(
-        hasSearch
-            ? 'No practice items match that search in $filterLabel.'
-            : 'Nothing in Working On matches $filterLabel right now.',
+        hasSearch ? 'No patterns match that search.' : 'No saved patterns yet.',
         style: Theme.of(
           context,
         ).textTheme.bodyMedium?.copyWith(color: DrumcabularyTheme.mutedInk),

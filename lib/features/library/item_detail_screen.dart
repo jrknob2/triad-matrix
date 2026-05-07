@@ -763,22 +763,81 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   }
 
   String _saveDraft({bool saveToWorkingOn = false}) {
+    final String patternText = _patternController.text.trim().toUpperCase();
+    final List<DrumSheetNotationNote> parsedNotes;
+    try {
+      parsedNotes = DrumSheetPatternParser.parse(patternText);
+    } on FormatException catch (error) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
+      return widget.itemId;
+    } on ArgumentError catch (error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message ?? 'Invalid pattern.')),
+      );
+      return widget.itemId;
+    }
+
+    final List<PatternTokenV1> savedTokens = parsedNotes
+        .map(_legacyTokenForSheetNote)
+        .toList(growable: false);
+    final List<int> savedAccents = <int>[
+      for (int index = 0; index < parsedNotes.length; index += 1)
+        if (parsedNotes[index].accent) index,
+    ];
+    final List<int> savedGhosts = <int>[
+      for (int index = 0; index < parsedNotes.length; index += 1)
+        if (parsedNotes[index].ghost) index,
+    ];
+    final List<DrumVoiceV1> savedVoices = parsedNotes
+        .map(_legacyVoiceForSheetNote)
+        .toList(growable: false);
+    final List<PatternNoteValueV1?> savedDurations =
+        _storedNoteValuesForSheetValues(
+          parsedNotes
+              .map((DrumSheetNotationNote note) => note.value)
+              .toList(growable: false),
+        );
+
     final String savedItemId = widget.controller.savePracticeItemEdits(
       itemId: widget.itemId,
-      accentedNoteIndices: _accentedNoteIndices,
-      ghostNoteIndices: _ghostNoteIndices,
-      voiceAssignments: _voiceAssignments,
+      accentedNoteIndices: savedAccents,
+      ghostNoteIndices: savedGhosts,
+      voiceAssignments: savedVoices,
       competency: widget.controller.competencyFor(widget.itemId),
       name: _titleController.text.trim(),
-      sequence: PatternSequenceV1.parse(_patternController.text.trim()),
-      pattern: _patternController.text.trim().toUpperCase(),
+      sequence: PatternSequenceV1(tokens: savedTokens),
+      pattern: patternText,
       groupingHint: _draftGrouping,
-      beatGrouping: _groupingController.text.trim(),
+      beatGrouping: _groupingTextFromPattern(patternText),
       notationSubdivision: _storedNoteValueForSheetValue(_draftSubdivision),
-      noteValueOverrides: _storedNoteValuesForSheetValues(_durationOverrides),
+      noteValueOverrides: savedDurations,
       saveToWorkingOn: saveToWorkingOn,
       saveAsPattern: true,
     );
+    _undoStack.clear();
+    setState(() {
+      _draftTokens = savedTokens;
+      _accentedNoteIndices = savedAccents;
+      _ghostNoteIndices = savedGhosts;
+      _voiceAssignments = savedVoices;
+      _durationOverrides = parsedNotes
+          .map((DrumSheetNotationNote note) => note.value)
+          .toList(growable: false);
+      _lastPatternText = patternText;
+      _lastGroupingText = _groupingTextFromPattern(patternText);
+      if (_patternController.text != patternText) {
+        _patternController.value = TextEditingValue(
+          text: patternText,
+          selection: TextSelection.collapsed(offset: patternText.length),
+        );
+      }
+      _groupingController.value = TextEditingValue(
+        text: _lastGroupingText,
+        selection: TextSelection.collapsed(offset: _lastGroupingText.length),
+      );
+    });
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('Pattern saved.')));
