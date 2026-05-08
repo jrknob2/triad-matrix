@@ -222,6 +222,11 @@ The Library must not expose `All`, `Single Surface`, or `Flow` filters; those
 are practice/context concepts, not library ownership filters. Search narrows
 the same authored-pattern library.
 
+Every saved pattern card in the default Library view must be directly playable
+and editable. `Working On` membership must not change a normal saved pattern
+card into an add/search-result state. If membership controls are shown on a
+card, they are secondary to the always-present play and edit actions.
+
 ## Practice Context
 
 `PracticeContext` is optional and belongs to selected pattern(s) as practice

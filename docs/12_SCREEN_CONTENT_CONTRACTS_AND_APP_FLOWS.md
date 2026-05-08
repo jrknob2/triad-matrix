@@ -78,6 +78,7 @@ List item rule:
 - Library practice-item cards should use a stacked rhythm: actions in their own top row, full-width notation in the next row, and concise metadata below the notation
 - action controls in Library cards must not share horizontal space with the notation readout
 - Library practice-item cards should stay compact: action rows should be short, vertical gaps should be minimal, and bottom metadata should render as one line
+- every saved pattern card in the Library default view must expose play and edit actions; Working On membership must not replace those actions with an add-only state
 
 Dynamic control organization rule:
 

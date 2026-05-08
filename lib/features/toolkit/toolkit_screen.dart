@@ -99,22 +99,16 @@ class _FocusScreenState extends State<FocusScreen> {
                     .map(
                       (PracticeItemV1 item) => Padding(
                         padding: const EdgeInsets.only(bottom: 10),
-                        child: widget.controller.isDirectRoutineEntry(item.id)
-                            ? _FocusItemCard(
-                                controller: widget.controller,
-                                item: item,
-                                onOpenItem: widget.onOpenItem,
-                                onPracticeItemInMode:
-                                    widget.onPracticeItemInMode,
-                                onRemoveItem: () => _confirmRemoveItem(item),
-                              )
-                            : _SearchResultCard(
-                                controller: widget.controller,
-                                item: item,
-                                onOpenItem: widget.onOpenItem,
-                                onAddItem: () => widget.controller
-                                    .toggleRoutineItem(item.id),
-                              ),
+                        child: _FocusItemCard(
+                          controller: widget.controller,
+                          item: item,
+                          onOpenItem: widget.onOpenItem,
+                          onPracticeItemInMode: widget.onPracticeItemInMode,
+                          onRemoveItem:
+                              widget.controller.isDirectRoutineEntry(item.id)
+                              ? () => _confirmRemoveItem(item)
+                              : null,
+                        ),
                       ),
                     ),
               if (visibleItems.length > _visibleItemCount)
@@ -270,7 +264,7 @@ class _FocusItemCard extends StatelessWidget {
   final PracticeItemV1 item;
   final ValueChanged<String> onOpenItem;
   final void Function(String, PracticeModeV1) onPracticeItemInMode;
-  final VoidCallback onRemoveItem;
+  final VoidCallback? onRemoveItem;
 
   const _FocusItemCard({
     required this.controller,
@@ -309,14 +303,15 @@ class _FocusItemCard extends StatelessWidget {
                 icon: const Icon(Icons.edit_outlined),
                 onPressed: () => onOpenItem(item.id),
               ),
-              IconButton(
-                tooltip: 'Remove from Working On',
-                visualDensity: VisualDensity.compact,
-                constraints: _actionButtonConstraints,
-                padding: EdgeInsets.zero,
-                icon: const Icon(Icons.remove_circle_outline),
-                onPressed: onRemoveItem,
-              ),
+              if (onRemoveItem != null)
+                IconButton(
+                  tooltip: 'Remove from Working On',
+                  visualDensity: VisualDensity.compact,
+                  constraints: _actionButtonConstraints,
+                  padding: EdgeInsets.zero,
+                  icon: const Icon(Icons.remove_circle_outline),
+                  onPressed: onRemoveItem,
+                ),
             ],
           ),
           PracticeItemSummaryBlock(
@@ -326,67 +321,6 @@ class _FocusItemCard extends StatelessWidget {
               '${item.family.label} - ${controller.matrixProgressStateFor(item.id).label}',
               '${formatDuration(controller.totalTime(itemId: item.id))} logged',
             ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SearchResultCard extends StatelessWidget {
-  static const EdgeInsetsGeometry _cardPadding = EdgeInsets.fromLTRB(
-    12,
-    6,
-    12,
-    10,
-  );
-  static const BoxConstraints _actionButtonConstraints =
-      BoxConstraints.tightFor(width: 36, height: 34);
-
-  final AppController controller;
-  final PracticeItemV1 item;
-  final ValueChanged<String> onOpenItem;
-  final VoidCallback onAddItem;
-
-  const _SearchResultCard({
-    required this.controller,
-    required this.item,
-    required this.onOpenItem,
-    required this.onAddItem,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return DrumPanel(
-      padding: _cardPadding,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: <Widget>[
-              IconButton(
-                tooltip: 'Open Item',
-                visualDensity: VisualDensity.compact,
-                constraints: _actionButtonConstraints,
-                padding: EdgeInsets.zero,
-                icon: const Icon(Icons.edit_outlined),
-                onPressed: () => onOpenItem(item.id),
-              ),
-              IconButton(
-                tooltip: 'Add to Working On',
-                visualDensity: VisualDensity.compact,
-                constraints: _actionButtonConstraints,
-                padding: EdgeInsets.zero,
-                icon: const Icon(Icons.add_circle_outline_rounded),
-                onPressed: onAddItem,
-              ),
-            ],
-          ),
-          PracticeItemSummaryBlock(
-            controller: controller,
-            item: item,
-            metadataLines: <String>[item.family.label],
           ),
         ],
       ),
