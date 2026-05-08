@@ -517,7 +517,7 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay> {
           'backgroundColor': _cssColor(widget.backgroundColor!),
         if (widget.compactLayout) ...<String, Object?>{
           'staffY': 0,
-          'staffHeight': 104,
+          'staffHeight': 124,
           'systemGapY': 108,
           'paddingRight': 4,
           'systemEndReserve': 16,
@@ -540,7 +540,7 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay> {
     );
     final int systems = (noteCount / notesPerSystem).ceil();
     if (widget.compactLayout) {
-      return 104 + math.max(0, systems - 1) * 108;
+      return 124 + math.max(0, systems - 1) * 108;
     }
     return 10 + 126 + math.max(0, systems - 1) * 140;
   }
@@ -575,6 +575,7 @@ Map<String, Object?> _documentJson(DrumSheetNotationDocument document) {
 }
 
 Map<String, Object?> _noteJson(DrumSheetNotationNote note) {
+  final String sticking = _displayStickingForNote(note);
   return <String, Object?>{
     if (note.value != null) 'value': note.value!.noteValueLabel,
     if (!note.rest)
@@ -582,12 +583,17 @@ Map<String, Object?> _noteJson(DrumSheetNotationNote note) {
         for (final DrumSheetVoice voice in note.voices) voice.id,
       ],
     if (note.rest) 'rest': true,
-    if (note.sticking.isNotEmpty) 'sticking': note.sticking.toUpperCase(),
+    if (sticking.isNotEmpty) 'sticking': sticking,
     if (note.accent) 'accent': true,
     if (note.flam) 'flam': true,
     if (note.ghost) 'ghost': true,
     if (note.tie) 'tie': true,
   };
+}
+
+String _displayStickingForNote(DrumSheetNotationNote note) {
+  if (!note.rest && note.voices.length > 1) return '';
+  return note.sticking.toUpperCase();
 }
 
 @immutable
@@ -1535,9 +1541,11 @@ class _DrumSheetNotationPainter extends CustomPainter {
     int localIndex,
     DrumSheetNotationNote note,
   ) {
+    final String sticking = _displayStickingForNote(note);
+    if (sticking.isEmpty) return;
     _drawText(
       canvas,
-      note.sticking.toUpperCase(),
+      sticking,
       Offset(_noteX(system, localIndex) - 8, system.y + 52),
       stickingStyle,
     );

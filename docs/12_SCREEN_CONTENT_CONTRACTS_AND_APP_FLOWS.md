@@ -143,7 +143,10 @@ Notation and pattern text rules:
 - staff-notation spacing, wrapping, stems, beams, noteheads, accents, ghosts, and sticking labels belong to the VexFlow staff renderer
 - wrappers such as editable/selectable staff notation surfaces may expand tap targets or add selection styling, but they must not change VexFlow note spacing, staff wrapping, or beam geometry
 - selected staff-note styling must apply to every rendered SVG part that belongs to that timed position: notehead or rest glyph, sticking label, stem, beam-owned stem geometry when VexFlow separates it, and all noteheads in a multi-voice note
+- staff-note selection state belongs to staff interaction only: note taps toggle note selection, empty staff taps clear selection, and helper action buttons must not clear the current staff-note selection
 - staff-note selection metadata should be assigned from renderer/VexFlow geometry or renderer metadata, not by fragile DOM order assumptions
+- `HH`, crash/`X`, and ride voices must render with X noteheads whenever those voices are present, including in mixed multi-voice beats
+- multi-voice beats should not print a single `R` or `L` sticking assignment under the staff; the authored bracketed pattern text carries the multi-voice meaning
 - once selection metadata is reliable, temporary selector fallbacks must be removed unless a named browser/WebView state still requires them
 - ghost notation should keep the note letter at normal size and weight; only the parentheses should step back visually
 - ghost parentheses must render in their own slots around the note, leave a small consistent breathing gap, and stay vertically centered with the note, with the same visual amount above and below
@@ -1514,6 +1517,7 @@ drum idea, not configuring a practice system.
 - selected note beat(s) show their existing voice buttons as enabled/on; toggling a voice button adds or removes that voice from the selected beat(s)
 - removing the last remaining voice from a non-rest note is not allowed
 - selection and helper action are separate: selecting text never mutates the pattern until the user invokes a helper
+- staff-note selection and helper actions are also separate: action buttons apply to the current selected notes and then keep those notes selected
 - the UI must not expose "Combine" or "Simultaneous Hit" as helper labels; multi-voice authored results come from the `Voices` grid
 - `Undo` stays outside context-specific meaning near the helper area; `Notation Grammar` opens from a header `?` icon, not an in-body button
 - the notation grammar modal must cover the full current notation grammar and must not mention `B`

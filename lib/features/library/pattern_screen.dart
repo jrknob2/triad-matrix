@@ -396,7 +396,11 @@ class _PatternScreenState extends State<PatternScreen> {
         selection: TextSelection.collapsed(offset: next.length),
       );
       _validatePattern(next, lenient: true);
-      setState(() => _selectedNoteIndexes = const <int>{});
+      setState(() {
+        _selectedNoteIndexes = _selectedNoteIndexes
+            .where((int index) => index >= 0 && index < edited.length)
+            .toSet();
+      });
     } on FormatException catch (error) {
       setState(() => _validationMessage = error.message);
     } on ArgumentError catch (error) {

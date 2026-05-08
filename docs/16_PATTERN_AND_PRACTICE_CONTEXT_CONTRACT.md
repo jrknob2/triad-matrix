@@ -179,6 +179,17 @@ beat(s) are shown as on/enabled, and toggling a voice adds or removes that voice
 from the selected beat(s). The UI must not expose `Combine` or `Simultaneous
 Hit` as action labels; multi-voice beats are created by voice assignment.
 
+Staff-note selection is owned only by the staff surface. Tapping a note toggles
+that note's selection. Tapping empty staff space clears selection. Helper
+actions such as accent, ghost, and voice toggles must not clear note selection
+after they run.
+
+Sheet-music sticking labels are for single-voice beats only. If a beat contains
+multiple rendered voices, the staff must not print an `R` or `L` assignment
+under that beat; the bracketed pattern text remains the source of the authored
+multi-voice beat. Cymbal voices (`HH`, crash/`X`, and ride) must render with an
+X notehead whenever they are present, including inside a multi-voice beat.
+
 Saving a pattern must parse and validate the corrected pattern grammar used by
 the editor and preview. It must not route through stale sequence-only parsers
 that reject valid pattern text such as accents, ghosts, overrides, or

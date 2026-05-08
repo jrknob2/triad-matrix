@@ -215,6 +215,10 @@ const DEFAULT_RENDER_OPTIONS = Object.freeze({
   flatBeams: true,
 });
 
+const STICKING_FONT_FAMILY = 'Arial';
+const STICKING_FONT_SIZE = 12;
+const STICKING_FONT_WEIGHT = '';
+
 function renderDrumNotationSvg(documentJson, options = {}) {
   return renderDrumNotationSvgWithMetadata(documentJson, options).svg;
 }
@@ -290,16 +294,12 @@ function renderDrumNotationSvgWithMetadata(documentJson, options = {}) {
 function createVexFlowNote(VF, note, options = {}) {
   const duration = toVexFlowDuration(note.value, { rest: note.rest });
   const mappings = note.rest ? [] : note.voices.map(voiceMappingFor);
-  const keys = note.rest ? ['b/4'] : mappings.map((mapping) => mapping.key);
+  const keys = note.rest ? ['b/4'] : mappings.map(keyForMapping);
   const noteOptions = {
     keys,
     duration,
     stem_direction: stemDirectionForNote(note, mappings, options.stemMode),
   };
-  const noteheadType = noteheadTypeForMappings(mappings);
-  if (noteheadType != null) {
-    noteOptions.type = noteheadType;
-  }
   const staveNote = new VF.StaveNote(noteOptions);
 
   applyNoteheads(VF, staveNote, mappings);
@@ -318,7 +318,7 @@ function createVexFlowNote(VF, note, options = {}) {
 function attachSticking(VF, staveNote, sticking) {
   if (sticking == null || sticking === '') return;
   const annotation = new VF.Annotation(sticking)
-    .setFont('Arial', 12, '')
+    .setFont(STICKING_FONT_FAMILY, STICKING_FONT_SIZE, STICKING_FONT_WEIGHT)
     .setVerticalJustification(VF.Annotation.VerticalJustify.BOTTOM);
   staveNote.addModifier(annotation, 0);
 }
@@ -392,9 +392,8 @@ function applyNoteheads(VF, staveNote, mappings) {
   });
 }
 
-function noteheadTypeForMappings(mappings) {
-  if (mappings.length === 0) return null;
-  return mappings.every((mapping) => mapping.notehead === 'x') ? 'x' : null;
+function keyForMapping(mapping) {
+  return mapping.notehead === 'x' ? `${mapping.key}/x` : mapping.key;
 }
 
 function stemDirectionForNote(note, mappings, stemMode = 'single') {
@@ -413,6 +412,7 @@ function stemDirectionForMappings(mappings) {
 
 function stickingLabelFor(note) {
   if (note.sticking == null || note.sticking === '') return note.sticking;
+  if (Array.isArray(note.voices) && note.voices.length > 1) return '';
   return String(note.sticking).toUpperCase();
 }
 

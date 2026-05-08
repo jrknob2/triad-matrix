@@ -123,6 +123,7 @@ describe('voice mapping and VexFlow conversion', () => {
     assert.deepEqual(note.options.keys, ['c/5', 'f/4']);
     assert.equal(note.options.duration, '16');
     assert.equal(note.options.stem_direction, 1);
+    assert.equal(VF.calls.annotations.length, 0);
   });
 
   test('default stem direction is all up for now', () => {
@@ -175,9 +176,20 @@ describe('voice mapping and VexFlow conversion', () => {
       sticking: 'R',
     });
 
-    assert.equal(hihat.options.type, 'x');
-    assert.equal(crash.options.type, 'x');
-    assert.equal(ride.options.type, 'x');
+    assert.deepEqual(hihat.options.keys, ['e/5/x']);
+    assert.deepEqual(crash.options.keys, ['g/5/x']);
+    assert.deepEqual(ride.options.keys, ['f/5/x']);
+  });
+
+  test('cymbal voices keep x noteheads inside multi-voice beats', () => {
+    const VF = createFakeVexFlow();
+    const note = createVexFlowNote(VF, {
+      value: '16n',
+      voices: ['snare', 'crash', 'ride', 'kick'],
+      sticking: 'RXK',
+    });
+
+    assert.deepEqual(note.options.keys, ['c/5', 'g/5/x', 'f/5/x', 'f/4']);
   });
 
   test('sticking label attachment', () => {
@@ -190,6 +202,11 @@ describe('voice mapping and VexFlow conversion', () => {
 
     assert.equal(note.modifiers.length, 1);
     assert.equal(VF.calls.annotations[0].text, 'R');
+    assert.deepEqual(VF.calls.annotations[0].font, {
+      family: 'Arial',
+      size: 12,
+      weight: '',
+    });
     assert.equal(VF.calls.annotations[0].verticalJustification, 'bottom');
   });
 
@@ -561,7 +578,7 @@ describe('svg rendering', () => {
     assert.match(svg, /width="660"/);
     assert.match(svg, /height="276"/);
     assert.equal(VF.calls.notes.length, 36);
-    assert.equal(VF.calls.annotations.length, 54);
+    assert.equal(VF.calls.annotations.length, 52);
     assert.equal(VF.calls.notes[17].graceNoteGroup.notes.length, 1);
     assert.equal(VF.calls.notes[35].graceNoteGroup.notes.length, 1);
     assert.equal(VF.calls.staves.length, 2);

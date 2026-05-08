@@ -47,6 +47,9 @@ Active v1 data-model rule:
 - grouping is optional metadata for readability and teaching, not runtime structure
 - pattern text fields must behave like normal text editors; cursor navigation, arrow keys, paste, and selection must not insert grouping spaces or rewrite the pattern
 - pattern text fields must normalize authored notation to uppercase
+- selected staff notes remain selected after helper actions; only note taps toggle note selection and empty staff taps clear it
+- `HH`, crash/`X`, and ride voices render with X noteheads everywhere they appear, including mixed multi-voice beats
+- multi-voice beats do not receive a single printed `R` or `L` sticking assignment in staff notation
 - grouping may be derived from pattern spaces or applied by explicit grouping edits, but it must never continuously override free pattern text entry
 - timing metadata is optional playback structure; when present, it overrides grouping-derived defaults for playback without creating a new pattern type
 - default playback timing for simple drills should be:
