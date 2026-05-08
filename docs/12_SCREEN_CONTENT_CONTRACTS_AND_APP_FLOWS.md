@@ -147,6 +147,7 @@ Notation and pattern text rules:
 - staff-note selection metadata should be assigned from renderer/VexFlow geometry or renderer metadata, not by fragile DOM order assumptions
 - `HH`, crash/`X`, and ride voices must render with X noteheads whenever those voices are present, including in mixed multi-voice beats
 - multi-voice beats should not print a single `R` or `L` sticking assignment under the staff; the authored bracketed pattern text carries the multi-voice meaning
+- drum voice staff positions must leave enough vertical separation for common same-beat normal noteheads to remain readable; snare and T1 must not be adjacent staff positions that force VexFlow chord heads onto opposite sides of the stem
 - once selection metadata is reliable, temporary selector fallbacks must be removed unless a named browser/WebView state still requires them
 - ghost notation should keep the note letter at normal size and weight; only the parentheses should step back visually
 - ghost parentheses must render in their own slots around the note, leave a small consistent breathing gap, and stay vertically centered with the note, with the same visual amount above and below

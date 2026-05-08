@@ -102,7 +102,7 @@ describe('voice mapping and VexFlow conversion', () => {
     assert.equal(voiceMappingFor('ride').notehead, 'x');
     assert.equal(voiceMappingFor('snare').key, 'c/5');
     assert.equal(voiceMappingFor('snare').stemDirection, -1);
-    assert.equal(voiceMappingFor('tom1').key, 'd/5');
+    assert.equal(voiceMappingFor('tom1').key, 'e/5');
     assert.equal(voiceMappingFor('tom1').stemDirection, 1);
     assert.equal(voiceMappingFor('tom2').key, 'a/4');
     assert.equal(voiceMappingFor('tom2').stemDirection, 1);
@@ -176,9 +176,9 @@ describe('voice mapping and VexFlow conversion', () => {
       sticking: 'R',
     });
 
-    assert.deepEqual(hihat.options.keys, ['e/5/x']);
-    assert.deepEqual(crash.options.keys, ['g/5/x']);
-    assert.deepEqual(ride.options.keys, ['f/5/x']);
+    assert.deepEqual(hihat.options.keys, ['f/5/x']);
+    assert.deepEqual(crash.options.keys, ['a/5/x']);
+    assert.deepEqual(ride.options.keys, ['g/5/x']);
   });
 
   test('cymbal voices keep x noteheads inside multi-voice beats', () => {
@@ -189,7 +189,18 @@ describe('voice mapping and VexFlow conversion', () => {
       sticking: 'RXK',
     });
 
-    assert.deepEqual(note.options.keys, ['c/5', 'g/5/x', 'f/5/x', 'f/4']);
+    assert.deepEqual(note.options.keys, ['c/5', 'a/5/x', 'g/5/x', 'f/4']);
+  });
+
+  test('snare and T1 use separated staff positions for same-beat readability', () => {
+    const VF = createFakeVexFlow();
+    const note = createVexFlowNote(VF, {
+      value: '16n',
+      voices: ['snare', 'tom1'],
+      sticking: '',
+    });
+
+    assert.deepEqual(note.options.keys, ['c/5', 'e/5']);
   });
 
   test('sticking label attachment', () => {

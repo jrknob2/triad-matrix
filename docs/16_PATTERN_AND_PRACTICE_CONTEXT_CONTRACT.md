@@ -189,6 +189,9 @@ multiple rendered voices, the staff must not print an `R` or `L` assignment
 under that beat; the bracketed pattern text remains the source of the authored
 multi-voice beat. Cymbal voices (`HH`, crash/`X`, and ride) must render with an
 X notehead whenever they are present, including inside a multi-voice beat.
+The drum voice mapping must also account for notehead size: common same-beat
+normal voices such as snare + T1 must not sit on adjacent staff positions where
+VexFlow displaces the noteheads to opposite sides of the stem.
 
 Saving a pattern must parse and validate the corrected pattern grammar used by
 the editor and preview. It must not route through stale sequence-only parsers

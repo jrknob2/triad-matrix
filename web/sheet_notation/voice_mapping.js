@@ -11,22 +11,22 @@ export const DRUM_VOICE_IDS = Object.freeze([
 
 export const DRUM_VOICE_MAP = Object.freeze({
   crash: Object.freeze({
-    key: 'g/5',
+    key: 'a/5',
     notehead: 'x',
     stemDirection: 1,
   }),
   ride: Object.freeze({
-    key: 'f/5',
+    key: 'g/5',
     notehead: 'x',
     stemDirection: 1,
   }),
   hihat: Object.freeze({
-    key: 'e/5',
+    key: 'f/5',
     notehead: 'x',
     stemDirection: 1,
   }),
   tom1: Object.freeze({
-    key: 'd/5',
+    key: 'e/5',
     notehead: 'normal',
     stemDirection: 1,
   }),
