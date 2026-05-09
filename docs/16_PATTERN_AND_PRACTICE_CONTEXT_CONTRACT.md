@@ -223,9 +223,11 @@ are practice/context concepts, not library ownership filters. Search narrows
 the same authored-pattern library.
 
 Every saved pattern card in the default Library view must be directly playable
-and editable. `Working On` membership must not change a normal saved pattern
-card into an add/search-result state. If membership controls are shown on a
-card, they are secondary to the always-present play and edit actions.
+and editable. Every card must expose the same stable action set: play, edit,
+and remove from Library. `Working On` membership must not change which buttons
+appear on the card. Removing a saved pattern from the Library also removes any
+active Working On membership for that pattern, but that membership state must
+not be represented as a different Library card action.
 
 ## Practice Context
 

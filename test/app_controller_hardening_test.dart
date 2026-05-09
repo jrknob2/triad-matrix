@@ -122,6 +122,48 @@ void main() {
     });
 
     test(
+      'removing a saved pattern hides it from library and working on',
+      () async {
+        final FakeAppStateStore store = FakeAppStateStore();
+        final AppController controller = await AppController.createForTesting(
+          store,
+        );
+
+        final String itemId = controller.createBlankDraftPracticeItem();
+        controller.savePracticeItemEdits(
+          itemId: itemId,
+          accentedNoteIndices: const <int>[],
+          ghostNoteIndices: const <int>[],
+          voiceAssignments: const <DrumVoiceV1>[
+            DrumVoiceV1.snare,
+            DrumVoiceV1.snare,
+            DrumVoiceV1.kick,
+          ],
+          competency: CompetencyLevelV1.learning,
+          sequence: PatternSequenceV1.parse('RLK'),
+          pattern: 'RLK',
+          saveAsPattern: true,
+        );
+        controller.toggleRoutineItem(itemId);
+
+        expect(
+          controller.libraryPatterns.map((item) => item.id),
+          contains(itemId),
+        );
+        expect(controller.isDirectRoutineEntry(itemId), isTrue);
+
+        controller.removeSavedPatternFromLibrary(itemId);
+
+        expect(
+          controller.libraryPatterns.map((PracticeItemV1 item) => item.id),
+          isNot(contains(itemId)),
+        );
+        expect(controller.isDirectRoutineEntry(itemId), isFalse);
+        expect(controller.itemById(itemId).saved, isFalse);
+      },
+    );
+
+    test(
       'matrix preview emits a generic ephemeral phrase item instead of a combo runtime item',
       () async {
         final FakeAppStateStore store = FakeAppStateStore();

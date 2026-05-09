@@ -2378,6 +2378,24 @@ class AppController extends ChangeNotifier {
     _notifyChanged();
   }
 
+  void removeSavedPatternFromLibrary(String itemId) {
+    final PracticeItemV1? item = itemByIdOrNull(itemId);
+    if (item == null || item.source == PracticeItemSourceV1.builtIn) return;
+
+    _items = _items
+        .map((PracticeItemV1 entry) {
+          if (entry.id != itemId) return entry;
+          return entry.copyWith(saved: false);
+        })
+        .toList(growable: false);
+    _routine = _routine.copyWith(
+      entries: _routine.entries
+          .where((RoutineEntryV1 entry) => entry.practiceItemId != itemId)
+          .toList(growable: false),
+    );
+    _notifyChanged();
+  }
+
   void toggleRoutineItem(String itemId) {
     final bool alreadyInRoutine = isDirectRoutineEntry(itemId);
     if (alreadyInRoutine) {

@@ -5,7 +5,6 @@ import '../../features/app/app_formatters.dart';
 import '../../features/app/drumcabulary_theme.dart';
 import '../../features/app/drumcabulary_ui.dart';
 import '../../state/app_controller.dart';
-import '../practice/widgets/pattern_readout.dart';
 import '../practice/widgets/practice_item_summary_block.dart';
 
 class FocusScreen extends StatefulWidget {
@@ -104,10 +103,7 @@ class _FocusScreenState extends State<FocusScreen> {
                           item: item,
                           onOpenItem: widget.onOpenItem,
                           onPracticeItemInMode: widget.onPracticeItemInMode,
-                          onRemoveItem:
-                              widget.controller.isDirectRoutineEntry(item.id)
-                              ? () => _confirmRemoveItem(item)
-                              : null,
+                          onRemoveItem: () => _confirmRemovePattern(item),
                         ),
                       ),
                     ),
@@ -150,7 +146,7 @@ class _FocusScreenState extends State<FocusScreen> {
     return a.name.compareTo(b.name);
   }
 
-  Future<void> _confirmRemoveItem(PracticeItemV1 item) async {
+  Future<void> _confirmRemovePattern(PracticeItemV1 item) async {
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
@@ -161,25 +157,10 @@ class _FocusScreenState extends State<FocusScreen> {
             borderRadius: BorderRadius.circular(28),
             side: const BorderSide(color: DrumcabularyTheme.line),
           ),
-          title: const Text('Remove From Working On?'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(
-                'This only removes the item from Working On. It does not delete the practice item.',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 14),
-              PatternReadout(
-                controller: widget.controller,
-                itemId: item.id,
-                voiceStyle: Theme.of(context).textTheme.bodySmall,
-                scrollable: false,
-                wrap: true,
-                cellWidth: 24,
-              ),
-            ],
+          title: const Text('Remove Pattern?'),
+          content: Text(
+            'Remove this pattern from the Library? Practice history is kept.',
+            style: Theme.of(context).textTheme.bodyMedium,
           ),
           actions: <Widget>[
             OutlinedButton(
@@ -196,7 +177,7 @@ class _FocusScreenState extends State<FocusScreen> {
     );
 
     if (confirmed == true) {
-      widget.controller.toggleRoutineItem(item.id);
+      widget.controller.removeSavedPatternFromLibrary(item.id);
     }
   }
 }
@@ -264,7 +245,7 @@ class _FocusItemCard extends StatelessWidget {
   final PracticeItemV1 item;
   final ValueChanged<String> onOpenItem;
   final void Function(String, PracticeModeV1) onPracticeItemInMode;
-  final VoidCallback? onRemoveItem;
+  final VoidCallback onRemoveItem;
 
   const _FocusItemCard({
     required this.controller,
@@ -303,15 +284,14 @@ class _FocusItemCard extends StatelessWidget {
                 icon: const Icon(Icons.edit_outlined),
                 onPressed: () => onOpenItem(item.id),
               ),
-              if (onRemoveItem != null)
-                IconButton(
-                  tooltip: 'Remove from Working On',
-                  visualDensity: VisualDensity.compact,
-                  constraints: _actionButtonConstraints,
-                  padding: EdgeInsets.zero,
-                  icon: const Icon(Icons.remove_circle_outline),
-                  onPressed: onRemoveItem,
-                ),
+              IconButton(
+                tooltip: 'Remove from Library',
+                visualDensity: VisualDensity.compact,
+                constraints: _actionButtonConstraints,
+                padding: EdgeInsets.zero,
+                icon: const Icon(Icons.remove_circle_outline),
+                onPressed: onRemoveItem,
+              ),
             ],
           ),
           PracticeItemSummaryBlock(
