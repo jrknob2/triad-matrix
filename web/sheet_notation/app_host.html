@@ -66,6 +66,18 @@
         stroke: #b26a00;
       }
 
+      .drum-selection-overlay {
+        pointer-events: none;
+      }
+
+      .drum-selection-overlay line {
+        filter: drop-shadow(0 0 3px #b26a00);
+        fill: none;
+        stroke: #b26a00;
+        stroke-linecap: round;
+        stroke-width: 2.5;
+      }
+
       .empty-notation {
         min-height: 96px;
       }
@@ -87,6 +99,7 @@
     <script>
       const notation = document.getElementById('notation');
       let renderedNotes = [];
+      let selectionTargetsByIndex = new Map();
       const selectedIndexes = new Set();
 
       globalThis.DrumcabularySheetNotation = {
@@ -104,6 +117,7 @@
             document.body.style.background = backgroundColor;
             if (!hasRenderableNotes(documentJson)) {
               renderedNotes = [];
+              selectionTargetsByIndex = new Map();
               selectedIndexes.clear();
               notation.innerHTML = '<div class="empty-notation"></div>';
               renderSelection();
@@ -172,31 +186,25 @@
         const noteTargets = noteElements
           .map((element) => {
             const note = renderedNotes[Number(element.dataset.drumNoteIndex)];
-            if (note == null || note.rest) return null;
+            if (note == null) return null;
             const bounds = svgBoundsFor(element);
             if (bounds == null) return null;
             return {
               element,
               note,
+              bounds,
               x: bounds.x + bounds.width / 2,
               y: bounds.y + bounds.height / 2,
             };
           })
           .filter(Boolean);
 
-        [...svg.querySelectorAll('.vf-stem, [class*="stem"]')].forEach((element) => {
-          const target = nearestNoteTarget(element, noteTargets);
-          const note = target?.note;
-          if (note == null) return;
-          element.dataset.drumNoteIndex = String(note.index);
-          element.dataset.drumMeasureIndex = String(note.measureIndex);
-          element.dataset.drumMeasureNoteIndex = String(note.measureNoteIndex);
-        });
+        selectionTargetsByIndex = new Map(
+          noteTargets.map((target) => [Number(target.note.index), target]),
+        );
 
         svg.addEventListener('click', (event) => {
-          const element = event.target.closest(
-            '[data-drum-note-index], .vf-stavenote, .vf-stem',
-          );
+          const element = event.target.closest('[data-drum-note-index], .vf-stavenote');
           if (element == null || !svg.contains(element)) {
             selectedIndexes.clear();
             renderSelection();
@@ -225,34 +233,41 @@
         }
       }
 
-      function nearestNoteTarget(element, noteTargets) {
-        const bounds = svgBoundsFor(element);
-        if (bounds == null || noteTargets.length === 0) return null;
-        const x = bounds.x + bounds.width / 2;
-        const y = bounds.y + bounds.height / 2;
-        let nearest = null;
-        let nearestScore = Number.POSITIVE_INFINITY;
-        for (const target of noteTargets) {
-          const dx = x - target.x;
-          const dy = y - target.y;
-          const score = dx * dx + dy * dy * 4;
-          if (score < nearestScore) {
-            nearest = target;
-            nearestScore = score;
-          }
-        }
-        return nearest;
-      }
-
       function renderSelection() {
         notation
           .querySelectorAll('.drum-note-selected')
           .forEach((element) => element.classList.remove('drum-note-selected'));
+        notation.querySelector('.drum-selection-overlay')?.remove();
+        const svg = notation.querySelector('svg');
+        const overlay = svg == null
+          ? null
+          : document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        overlay?.setAttribute('class', 'drum-selection-overlay');
         for (const index of selectedIndexes) {
           notation
             .querySelectorAll(`[data-drum-note-index="${index}"]`)
             .forEach((element) => element.classList.add('drum-note-selected'));
+          addSelectionOverlayLine(overlay, index);
         }
+        if (overlay != null && overlay.childNodes.length > 0) {
+          svg.appendChild(overlay);
+        }
+      }
+
+      function addSelectionOverlayLine(overlay, index) {
+        if (overlay == null) return;
+        const target = selectionTargetsByIndex.get(Number(index));
+        if (target == null || target.note?.rest) return;
+        const bounds = target.bounds;
+        const x = bounds.x + bounds.width + 1;
+        const y1 = Math.max(0, bounds.y - 3);
+        const y2 = bounds.y + bounds.height + 3;
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', String(x));
+        line.setAttribute('x2', String(x));
+        line.setAttribute('y1', String(y1));
+        line.setAttribute('y2', String(y2));
+        overlay.appendChild(line);
       }
 
       function postSelection() {

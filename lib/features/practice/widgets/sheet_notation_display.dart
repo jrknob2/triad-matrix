@@ -592,8 +592,16 @@ Map<String, Object?> _noteJson(DrumSheetNotationNote note) {
 }
 
 String _displayStickingForNote(DrumSheetNotationNote note) {
-  if (!note.rest && note.voices.length > 1) return '';
-  return note.sticking.toUpperCase();
+  final String sticking = note.sticking.trim().toUpperCase();
+  if (sticking.isEmpty) return '';
+  if (note.rest || note.voices.length <= 1) return sticking;
+
+  if (sticking.length == 1) return sticking;
+  if (sticking.contains('R')) return 'R';
+  if (sticking.contains('L')) return 'L';
+  if (sticking.contains('K')) return 'K';
+  if (sticking.contains('F')) return 'F';
+  return '';
 }
 
 @immutable

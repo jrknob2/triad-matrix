@@ -147,6 +147,11 @@ String markedPatternTextForPracticeItem(
   PracticeItemV1 item, {
   PatternGroupingV1? groupingOverride,
 }) {
+  final String authoredPattern = item.pattern.trim();
+  if (authoredPattern.isNotEmpty) {
+    return authoredPattern;
+  }
+
   final List<PatternNoteMarkingV1> markings =
       List<PatternNoteMarkingV1>.generate(item.tokens.length, (int index) {
         if (item.ghostNoteIndices.contains(index)) {

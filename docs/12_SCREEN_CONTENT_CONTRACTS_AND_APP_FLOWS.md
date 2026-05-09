@@ -142,13 +142,16 @@ Notation and pattern text rules:
 - editable pattern text fields are the only default place where the pattern value should scale larger than adjacent ordinary controls
 - pattern text spacing is controlled by the text style and string content; screens must not reintroduce per-character renderer geometry, local character-slot constants, or ornament-positioning code for compact pattern text
 - pattern text must preserve marked tokens like `^R` and `(R)` as literal authored text
+- compact pattern text readouts must use the saved authored pattern text exactly when it exists, including bracketed voice groups and overrides such as `[S HH:R]` and `[KX]`
+- compact readouts must not reconstruct pattern text from parsed token sequences when doing so would strip authored bracket syntax, spaces, voice overrides, accents, or ghosts
 - staff-notation spacing, wrapping, stems, beams, noteheads, accents, ghosts, and sticking labels belong to the VexFlow staff renderer
 - wrappers such as editable/selectable staff notation surfaces may expand tap targets or add selection styling, but they must not change VexFlow note spacing, staff wrapping, or beam geometry
-- selected staff-note styling must apply to every rendered SVG part that belongs to that timed position: notehead or rest glyph, sticking label, stem, beam-owned stem geometry when VexFlow separates it, and all noteheads in a multi-voice note
+- selected staff-note styling must be index-based and renderer-owned; do not infer selected stems by nearest DOM geometry from VexFlow stem or beam fragments
+- selected staff-note styling must apply to the selected timed position through notehead/rest/sticking highlighting plus a renderer-owned selection stem overlay when needed
 - staff-note selection state belongs to staff interaction only: note taps toggle note selection, empty staff taps clear selection, and helper action buttons must not clear the current staff-note selection
 - staff-note selection metadata should be assigned from renderer/VexFlow geometry or renderer metadata, not by fragile DOM order assumptions
 - `HH`, crash/`X`, and ride voices must render with X noteheads whenever those voices are present, including in mixed multi-voice beats
-- multi-voice beats should not print a single `R` or `L` sticking assignment under the staff; the authored bracketed pattern text carries the multi-voice meaning
+- multi-voice beats may print a concise assignment label when one exists: `[XK]` prints `K`, `[HH S:R]` prints `R`, and unlabeled multi-voice beats should not invent a label
 - drum voice staff positions must leave enough vertical separation for common same-beat normal noteheads to remain readable; snare and T1 must not be adjacent staff positions that force VexFlow chord heads onto opposite sides of the stem
 - once selection metadata is reliable, temporary selector fallbacks must be removed unless a named browser/WebView state still requires them
 - ghost notation should keep the note letter at normal size and weight; only the parentheses should step back visually

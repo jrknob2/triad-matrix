@@ -86,6 +86,12 @@ multi-voice beats.
 Spaces are visual/phrasing group breaks. They do not change playback timing by
 themselves and must be preserved by authoring surfaces.
 
+Compact pattern readouts must use the saved authored pattern text exactly when
+it exists. They must not rebuild display text from a parsed token sequence when
+that would strip bracketed voice groups, voice overrides, accents, ghosts, or
+authored spaces. Secondary grouping metadata is supporting information; it is
+not allowed to rewrite compact display text.
+
 Pattern authoring fields must behave as normal text fields. Cursor navigation,
 selection, paste, and arrow keys must not insert grouping spaces or otherwise
 rewrite the pattern. Any formatting helper must run only from explicit text
@@ -184,11 +190,16 @@ that note's selection. Tapping empty staff space clears selection. Helper
 actions such as accent, ghost, and voice toggles must not clear note selection
 after they run.
 
-Sheet-music sticking labels are for single-voice beats only. If a beat contains
-multiple rendered voices, the staff must not print an `R` or `L` assignment
-under that beat; the bracketed pattern text remains the source of the authored
-multi-voice beat. Cymbal voices (`HH`, crash/`X`, and ride) must render with an
-X notehead whenever they are present, including inside a multi-voice beat.
+Sheet-music sticking labels are concise assignment labels. Single-voice beats
+print their normal assignment. Multi-voice beats may print a label only when one
+is meaningful: `[XK]` prints `K`, `[HH S:R]` prints `R`, and unlabeled
+multi-voice beats must not invent a label. Cymbal voices (`HH`, crash/`X`, and
+ride) must render with an X notehead whenever they are present, including inside
+a multi-voice beat.
+Selected staff-note styling must be driven by renderer note indexes and a
+renderer-owned overlay when needed. Do not assign selected stems by nearest
+VexFlow DOM geometry; that path has proven ambiguous for beamed and multi-voice
+notes.
 The drum voice mapping must also account for notehead size: common same-beat
 normal voices such as snare + T1 must not sit on adjacent staff positions where
 VexFlow displaces the noteheads to opposite sides of the stem.

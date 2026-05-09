@@ -117,13 +117,37 @@ describe('voice mapping and VexFlow conversion', () => {
     const note = createVexFlowNote(VF, {
       value: '16n',
       voices: ['snare', 'kick'],
-      sticking: 'RK',
+      sticking: '',
     });
 
     assert.deepEqual(note.options.keys, ['c/5', 'f/4']);
     assert.equal(note.options.duration, '16');
     assert.equal(note.options.stem_direction, 1);
     assert.equal(VF.calls.annotations.length, 0);
+  });
+
+  test('multi-voice sticking keeps useful limb assignment', () => {
+    const VF = createFakeVexFlow();
+    createVexFlowNote(VF, {
+      value: '16n',
+      voices: ['crash', 'kick'],
+      sticking: 'XK',
+    });
+
+    assert.equal(VF.calls.annotations.length, 1);
+    assert.equal(VF.calls.annotations[0].text, 'K');
+  });
+
+  test('multi-voice override sticking keeps authored hand assignment', () => {
+    const VF = createFakeVexFlow();
+    createVexFlowNote(VF, {
+      value: '16n',
+      voices: ['snare', 'hihat'],
+      sticking: 'R',
+    });
+
+    assert.equal(VF.calls.annotations.length, 1);
+    assert.equal(VF.calls.annotations[0].text, 'R');
   });
 
   test('default stem direction is all up for now', () => {
@@ -589,7 +613,7 @@ describe('svg rendering', () => {
     assert.match(svg, /width="660"/);
     assert.match(svg, /height="276"/);
     assert.equal(VF.calls.notes.length, 36);
-    assert.equal(VF.calls.annotations.length, 52);
+    assert.equal(VF.calls.annotations.length, 54);
     assert.equal(VF.calls.notes[17].graceNoteGroup.notes.length, 1);
     assert.equal(VF.calls.notes[35].graceNoteGroup.notes.length, 1);
     assert.equal(VF.calls.staves.length, 2);

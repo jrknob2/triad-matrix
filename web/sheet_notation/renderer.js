@@ -222,8 +222,15 @@ export function stemDirectionForMappings(mappings) {
 
 function stickingLabelFor(note) {
   if (note.sticking == null || note.sticking === '') return note.sticking;
-  if (Array.isArray(note.voices) && note.voices.length > 1) return '';
-  return String(note.sticking).toUpperCase();
+  const sticking = String(note.sticking).trim().toUpperCase();
+  if (sticking === '') return '';
+  if (!Array.isArray(note.voices) || note.voices.length <= 1) return sticking;
+  if (sticking.length === 1) return sticking;
+  if (sticking.includes('R')) return 'R';
+  if (sticking.includes('L')) return 'L';
+  if (sticking.includes('K')) return 'K';
+  if (sticking.includes('F')) return 'F';
+  return '';
 }
 
 function attachNoteMetadata(staveNote, metadata) {

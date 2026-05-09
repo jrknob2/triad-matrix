@@ -9,6 +9,7 @@ void main() {
         id: 'grouped',
         family: MaterialFamilyV1.custom,
         name: 'Grouped',
+        pattern: '',
         sequence: PatternSequenceV1.parse('RLL_RLLKXF'),
         accentedNoteIndices: const <int>[0, 4, 9],
         ghostNoteIndices: const <int>[1, 2, 5, 6],
@@ -44,6 +45,25 @@ void main() {
         markedPatternTextForPracticeItem(itemWithGrouping('')),
         '^R(L)(L)_^R(L)(L)KX^F',
       );
+    });
+
+    test('uses authored pattern text as compact readout source of truth', () {
+      final PracticeItemV1 item = PracticeItemV1(
+        id: 'authored',
+        family: MaterialFamilyV1.custom,
+        name: 'Authored',
+        pattern: '[S HH:R]LRLLKRLRLL[KX]',
+        sequence: PatternSequenceV1.parse('RLRLLKRLRLLK'),
+        accentedNoteIndices: const <int>[],
+        ghostNoteIndices: const <int>[],
+        voiceAssignments: const <DrumVoiceV1>[],
+        beatGrouping: '3 5 4',
+        source: PracticeItemSourceV1.userDefined,
+        tags: const <String>[],
+        saved: true,
+      );
+
+      expect(markedPatternTextForPracticeItem(item), '[S HH:R]LRLLKRLRLL[KX]');
     });
   });
 }
