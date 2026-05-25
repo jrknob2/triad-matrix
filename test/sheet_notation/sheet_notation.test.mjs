@@ -698,7 +698,7 @@ describe('svg rendering', () => {
 
     assert.deepEqual(
       VF.calls.beams.map((beam) => beam.notes.length),
-      [3, 5, 3, 5, 3, 5, 3, 5, 3],
+      [3, 5, 3, 5, 3, 5, 3, 5, 4],
     );
     assert.equal(VF.calls.staves.length, 5);
   });
@@ -724,6 +724,10 @@ describe('svg rendering', () => {
       flam: false,
       ghost: false,
       tie: false,
+      selection: {
+        stemY1: -26,
+        stemY2: 46,
+      },
     });
     assert.equal(VF.calls.notes[0].attributes['data-drum-note-index'], '0');
     assert.equal(VF.calls.notes[0].attributes['data-drum-measure-index'], '0');

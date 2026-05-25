@@ -259,9 +259,14 @@
         const target = selectionTargetsByIndex.get(Number(index));
         if (target == null || target.note?.rest) return;
         const bounds = target.bounds;
-        const x = bounds.x + bounds.width + 1;
-        const y1 = Math.max(0, bounds.y - 3);
-        const y2 = bounds.y + bounds.height + 3;
+        const selection = target.note.selection ?? {};
+        const x = target.x + 6;
+        const y1 = Number.isFinite(selection.stemY1)
+          ? selection.stemY1
+          : Math.max(0, bounds.y - 3);
+        const y2 = Number.isFinite(selection.stemY2)
+          ? selection.stemY2
+          : bounds.y + bounds.height + 3;
         const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
         line.setAttribute('x1', String(x));
         line.setAttribute('x2', String(x));

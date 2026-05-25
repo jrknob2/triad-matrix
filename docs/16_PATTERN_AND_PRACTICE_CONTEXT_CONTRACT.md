@@ -200,6 +200,9 @@ Selected staff-note styling must be driven by renderer note indexes and a
 renderer-owned overlay when needed. Do not assign selected stems by nearest
 VexFlow DOM geometry; that path has proven ambiguous for beamed and multi-voice
 notes.
+Staff notation should avoid isolated flagged notes when adjacent beamable notes
+can carry the beam cleanly. Grouping breaks remain phrasing aids; they must not
+force awkward one-note flagged beam fragments.
 The drum voice mapping must also account for notehead size: common same-beat
 normal voices such as snare + T1 must not sit on adjacent staff positions where
 VexFlow displaces the noteheads to opposite sides of the stem.

@@ -23,6 +23,7 @@ const DEFAULT_RENDER_OPTIONS = Object.freeze({
   standardAccents: true,
   stemMode: 'single',
   flatBeams: true,
+  avoidSingleNoteFlags: true,
 });
 
 const STICKING_FONT_FAMILY = 'Arial';
@@ -97,7 +98,10 @@ export function renderDrumNotationSvgWithMetadata(documentJson, options = {}) {
 
   return {
     svg: extractSvg(host),
-    notes: systems.flatMap((system) => system.entries.map(noteMetadataForEntry)),
+    notes: systems.flatMap((system, systemIndex) => {
+      const layout = systemLayoutForIndex(systemIndex, renderOptions);
+      return system.entries.map((entry) => noteMetadataForEntry(entry, layout));
+    }),
   };
 }
 
@@ -257,8 +261,11 @@ function createBeams(VF, vexNotes, system, options = {}) {
   if (typeof VF.Beam !== 'function') return [];
   const beams = [];
   let beamGroup = [];
+  const beamBreaks = options.avoidSingleNoteFlags === true
+    ? beamBreaksWithoutSingleNoteGroups(system)
+    : system.beamBreaks;
   for (let index = 0; index < vexNotes.length; index += 1) {
-    if (index > 0 && system.beamBreaks.has(index)) {
+    if (index > 0 && beamBreaks.has(index)) {
       addBeamGroup(VF, beams, beamGroup, options);
       beamGroup = [];
     }
@@ -284,6 +291,27 @@ function createBeams(VF, vexNotes, system, options = {}) {
   }
   addBeamGroup(VF, beams, beamGroup, options);
   return beams;
+}
+
+function beamBreaksWithoutSingleNoteGroups(system) {
+  if (system.beamBreaks.size === 0) return system.beamBreaks;
+  const breaks = [...system.beamBreaks].sort((left, right) => left - right);
+  const boundaries = [0, ...breaks, system.entries.length];
+  const result = new Set(system.beamBreaks);
+  for (let index = 1; index < boundaries.length - 1; index += 1) {
+    const start = boundaries[index];
+    const end = boundaries[index + 1];
+    const length = end - start;
+    if (length === 1 && isBeamableEntry(system.entries[start])) {
+      result.delete(start);
+      if (end < system.entries.length) result.delete(end);
+    }
+  }
+  return result;
+}
+
+function isBeamableEntry(entry) {
+  return !entry.note.rest && isBeamableValue(entry.value);
 }
 
 function addBeamGroup(VF, beams, beamGroup, options) {
@@ -477,7 +505,7 @@ function parseGrouping(grouping) {
     .filter((value) => Number.isInteger(value) && value > 0);
 }
 
-function noteMetadataForEntry(entry) {
+function noteMetadataForEntry(entry, layout) {
   const sticking = entry.note.sticking == null
     ? entry.note.sticking
     : String(entry.note.sticking).toUpperCase();
@@ -493,6 +521,10 @@ function noteMetadataForEntry(entry) {
     flam: entry.note.flam,
     ghost: entry.note.ghost,
     tie: entry.note.tie,
+    selection: {
+      stemY1: layout.y - 36,
+      stemY2: layout.y + 36,
+    },
   };
 }
 

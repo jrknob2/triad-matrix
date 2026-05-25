@@ -153,6 +153,7 @@ Notation and pattern text rules:
 - `HH`, crash/`X`, and ride voices must render with X noteheads whenever those voices are present, including in mixed multi-voice beats
 - multi-voice beats may print a concise assignment label when one exists: `[XK]` prints `K`, `[HH S:R]` prints `R`, and unlabeled multi-voice beats should not invent a label
 - drum voice staff positions must leave enough vertical separation for common same-beat normal noteheads to remain readable; snare and T1 must not be adjacent staff positions that force VexFlow chord heads onto opposite sides of the stem
+- staff notation should avoid isolated flagged notes when adjacent beamable notes can carry the beam cleanly; grouping breaks are visual phrasing aids, not a reason to create awkward single-note flags
 - once selection metadata is reliable, temporary selector fallbacks must be removed unless a named browser/WebView state still requires them
 - ghost notation should keep the note letter at normal size and weight; only the parentheses should step back visually
 - ghost parentheses must render in their own slots around the note, leave a small consistent breathing gap, and stay vertically centered with the note, with the same visual amount above and below
