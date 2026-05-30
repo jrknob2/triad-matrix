@@ -7,7 +7,6 @@ import '../app/drumcabulary_ui.dart';
 import '../coach/lesson_detail_screen.dart';
 import '../coach/lesson_plan.dart';
 import '../coach/lesson_plan_loader.dart';
-import '../practice/widgets/pattern_text_styles.dart';
 
 typedef OpenMatrixCallback =
     void Function({
@@ -148,12 +147,13 @@ class _LessonListRow extends StatelessWidget {
                     if (primaryPattern != null) ...<Widget>[
                       const SizedBox(height: 8),
                       Text(
-                        primaryPattern.notation,
+                        '${primaryPattern.title} - ${primaryPattern.role}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: PatternTextStyles.compact(
-                          context,
-                        ).copyWith(fontSize: 16),
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: DrumcabularyTheme.mutedInk,
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
                     ],
                   ],

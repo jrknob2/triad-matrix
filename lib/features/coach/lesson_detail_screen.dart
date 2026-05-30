@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../app/drumcabulary_theme.dart';
 import '../app/drumcabulary_ui.dart';
-import '../practice/widgets/pattern_text_styles.dart';
 import '../practice/widgets/sheet_notation_display.dart';
 import 'lesson_plan.dart';
 
@@ -222,8 +221,6 @@ class _PatternRow extends StatelessWidget {
             _MetadataPill(label: pattern.role),
           ],
         ),
-        const SizedBox(height: 8),
-        Text(pattern.notation, style: PatternTextStyles.compact(context)),
         const SizedBox(height: 10),
         DrumSheetNotationDisplay(
           document: DrumSheetNotationDocument.fromPattern(

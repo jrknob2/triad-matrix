@@ -5,42 +5,8 @@ lesson_plan:
   version: 1
 
   lessons:
-    - id: notation-basics
-      number: 1
-      title: Notation Basics
-      objective: Learn the core Drumcabulary notation symbols used throughout the plan.
-      skill_focus: notation
-      estimated_minutes: 15
-      required_concepts:
-        - R and L hands
-        - K kick
-        - X crash or big hit
-        - _ rest
-        - spaces as grouping
-      patterns:
-        - id: basic-hands
-          title: Basic Hands
-          role: warmup
-          notation: R L R L
-        - id: kick-added
-          title: Kick Added
-          role: warmup
-          notation: R L K R L K
-      exercises:
-        - title: Read and Play
-          instructions: Play each pattern slowly while saying the symbols out loud.
-          subdivision: 8
-          tempo:
-            start: 60
-            target: 90
-      coaching_notes:
-        - Keep the notation literal. Do not interpret extra notes.
-        - Spaces show phrasing groups, not timing changes.
-      mastery:
-        - Play both patterns cleanly at 90 BPM.
-
     - id: groove-foundation
-      number: 2
+      number: 1
       title: Groove Foundation
       objective: Build a simple rock groove using simultaneous hand and kick/snare hits.
       skill_focus: groove
@@ -68,7 +34,7 @@ lesson_plan:
         - Play the groove for two minutes without rushing.
 
     - id: accents-and-ghosts
-      number: 3
+      number: 2
       title: Accents and Ghosts
       objective: Shape patterns with accented notes and ghost notes.
       skill_focus: dynamics
@@ -99,7 +65,7 @@ lesson_plan:
         - Clear dynamic contrast at 100 BPM.
 
     - id: simultaneous-hits
-      number: 4
+      number: 3
       title: Simultaneous Hits
       objective: Use bracketed hits to place multiple voices on the same beat.
       skill_focus: coordination
@@ -131,7 +97,7 @@ lesson_plan:
         - Land [XK] cleanly without flam between limbs.
 
     - id: five-note-groupings
-      number: 5
+      number: 4
       title: Five-Note Groupings
       objective: Learn to feel 5-note phrases inside a 16th-note grid.
       skill_focus: grouping
@@ -163,7 +129,7 @@ lesson_plan:
         - Play the shaped fill at 100 BPM without losing the grid.
 
     - id: groove-to-fill-flow
-      number: 6
+      number: 5
       title: Groove to Fill Flow
       objective: Move from groove to fill and back to groove without losing time.
       skill_focus: flow
@@ -200,7 +166,7 @@ lesson_plan:
         - Complete the exercise three times in a row without rushing the fill.
 
     - id: triplet-feel
-      number: 7
+      number: 6
       title: Triplet Feel
       objective: Build comfort with triplet timing without treating groupings as tuplets.
       skill_focus: triplets
@@ -230,7 +196,7 @@ lesson_plan:
         - Play triplet patterns evenly at 100 BPM.
 
     - id: subdivision-transitions
-      number: 8
+      number: 7
       title: Subdivision Transitions
       objective: Switch between 8ths, triplets, and 16ths without freezing.
       skill_focus: subdivision

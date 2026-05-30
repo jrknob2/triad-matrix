@@ -11,7 +11,7 @@ void main() {
 
     expect(plan.id, 'flow-foundations');
     expect(plan.title, 'Flow Foundations');
-    expect(plan.lessons, hasLength(8));
+    expect(plan.lessons, hasLength(7));
     expect(plan.lessons.map((Lesson lesson) => lesson.number), <int>[
       1,
       2,
@@ -20,11 +20,14 @@ void main() {
       5,
       6,
       7,
-      8,
     ]);
-    expect(plan.lessons.first.title, 'Notation Basics');
-    expect(plan.lessons.first.patterns.first.notation, 'R L R L');
-    expect(plan.lessons[5].exercises.single.flow, hasLength(2));
+    expect(plan.lessons.first.title, 'Groove Foundation');
+    expect(
+      plan.lessons.map((Lesson lesson) => lesson.id),
+      isNot(contains('notation-basics')),
+    );
+    expect(plan.lessons.first.patterns.first.title, 'Basic Rock Groove');
+    expect(plan.lessons[4].exercises.single.flow, hasLength(2));
 
     for (final Lesson lesson in plan.lessons) {
       for (final LessonPattern pattern in lesson.patterns) {

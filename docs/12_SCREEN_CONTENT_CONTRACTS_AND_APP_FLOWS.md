@@ -305,7 +305,7 @@ Required controls:
 Rules:
 
 - Coach loads the ordered lesson plan from a YAML asset
-- each row shows lesson number, title, objective, estimated minutes, and primary pattern preview when available
+- each row shows lesson number, title, objective, estimated minutes, and primary pattern title when available
 - selecting a row opens the printable lesson detail
 - this flow must not start a practice session or write progress
 
@@ -374,8 +374,8 @@ Rules:
 
 - for the POC, Print may be a stub that logs `Print lesson requested.`
 - lesson detail must show objective, skill focus, estimated time, required concepts, patterns, exercises, coaching notes, and mastery target
-- pattern rows must show playable Drumcabulary notation text
-- sheet notation previews may appear when the existing renderer can display the pattern
+- pattern rows must not show raw playable Drumcabulary notation strings
+- sheet notation previews may appear when the existing renderer can display the internally-authored pattern
 - this flow must not create PDF infrastructure unless an export path already exists
 
 ### Flow D: Matrix Discovery And Phrase Building
@@ -549,17 +549,16 @@ Coach answers:
 
 - what is the lesson path
 - what does each lesson teach
-- what notation and patterns belong to the lesson
+- what patterns belong to the lesson
 - how can the lesson be reviewed or printed
 
 ### Allowed Content
 
 - YAML-loaded lesson plan title and subtitle
 - compact ordered lesson list
-- lesson number, title, short objective, estimated minutes, and primary pattern preview
+- lesson number, title, short objective, estimated minutes, and primary pattern title
 - lesson detail with objective, skill focus, estimated time, required concepts, pattern list, exercise list, coaching notes, and mastery target
-- playable Drumcabulary pattern notation text
-- optional sheet notation preview using the existing notation renderer
+- pattern names, roles, and optional sheet notation previews using the existing renderer
 - Print action
 
 ### Forbidden Content
@@ -572,6 +571,7 @@ Coach answers:
 - user-specific recommendations
 - audio playback or BPM engine controls
 - Matrix handoff CTAs from lesson rows
+- raw playable Drumcabulary pattern notation strings in lesson rows or lesson detail
 
 ### Primary Controls
 
@@ -626,6 +626,10 @@ Required pattern fields:
 - `role`
 - `notation`
 
+Rule:
+
+- `notation` is an internal asset field for validation and sheet preview rendering; it is not displayed as raw text in the Coach POC
+
 Required exercise fields:
 
 - `title`
@@ -644,6 +648,7 @@ Optional exercise fields:
 - the lesson detail should favor printable structure over interactive controls
 - use section headings and readable pattern rows
 - do not expose app-internal implementation language in the lesson content
+- do not expose raw pattern notation strings
 - the lesson plan order comes from the lesson `number` field
 
 ---
