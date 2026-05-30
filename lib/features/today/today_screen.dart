@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../../core/practice/practice_domain_v1.dart';
 import '../../state/app_controller.dart';
-import '../app/drumcabulary_ui.dart';
 import '../app/drumcabulary_theme.dart';
-import '../practice/widgets/pattern_readout.dart';
+import '../app/drumcabulary_ui.dart';
+import '../coach/lesson_detail_screen.dart';
+import '../coach/lesson_plan.dart';
+import '../coach/lesson_plan_loader.dart';
+import '../practice/widgets/pattern_text_styles.dart';
 
 typedef OpenMatrixCallback =
     void Function({
@@ -13,407 +16,238 @@ typedef OpenMatrixCallback =
       List<String>? selectedItemIds,
     });
 
-class TodayScreen extends StatelessWidget {
-  final AppController controller;
-  final OpenMatrixCallback onOpenMatrix;
-  final VoidCallback onOpenFocus;
-  final ValueChanged<String> onOpenItem;
-  final void Function(String, PracticeModeV1) onPracticeItemInMode;
-
+class TodayScreen extends StatefulWidget {
   const TodayScreen({
     super.key,
-    required this.controller,
-    required this.onOpenMatrix,
-    required this.onOpenFocus,
-    required this.onOpenItem,
-    required this.onPracticeItemInMode,
+    required AppController controller,
+    required OpenMatrixCallback onOpenMatrix,
+    required VoidCallback onOpenFocus,
+    required ValueChanged<String> onOpenItem,
+    required void Function(String, PracticeModeV1) onPracticeItemInMode,
   });
 
   @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: controller,
-      builder: (BuildContext context, _) {
-        final CoachBriefingV1 briefing = controller.buildCoachBriefing();
-        final bool showGettingStarted = !controller.hasLoggedPractice;
+  State<TodayScreen> createState() => _TodayScreenState();
+}
 
-        return DrumScreen(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
-            children: showGettingStarted
-                ? <Widget>[
-                    _GettingStartedCoachCard(
-                      controller: controller,
-                      onAddToWorkingOn: () {
-                        controller.addRecommendedStartingTriadsToRoutine();
-                        onOpenFocus();
-                      },
-                      onOpenMatrix: onOpenMatrix,
-                    ),
-                  ]
-                : <Widget>[
-                    ...briefing.blocks.map(
-                      (CoachBlockV1 block) => Padding(
-                        padding: const EdgeInsets.only(bottom: 14),
-                        child: _CoachBlockCard(
-                          block: block,
-                          controller: controller,
-                          onOpenItem: onOpenItem,
-                          onAction: () => _handleCoachBlockAction(block),
-                          onOpenMatrix: _blockHasMatrixContext(block)
-                              ? () => _openMatrixForBlock(block)
-                              : null,
-                        ),
+class _TodayScreenState extends State<TodayScreen> {
+  late final Future<LessonPlan> _lessonPlanFuture =
+      LessonPlanLoader.loadFlowFoundations();
+
+  @override
+  Widget build(BuildContext context) {
+    return DrumScreen(
+      child: FutureBuilder<LessonPlan>(
+        future: _lessonPlanFuture,
+        builder: (BuildContext context, AsyncSnapshot<LessonPlan> snapshot) {
+          if (snapshot.hasError) {
+            return _CoachLoadError(error: snapshot.error);
+          }
+          final LessonPlan? lessonPlan = snapshot.data;
+          if (lessonPlan == null) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          return _CoachLessonPlanView(lessonPlan: lessonPlan);
+        },
+      ),
+    );
+  }
+}
+
+class _CoachLessonPlanView extends StatelessWidget {
+  final LessonPlan lessonPlan;
+
+  const _CoachLessonPlanView({required this.lessonPlan});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
+      children: <Widget>[
+        Text(
+          lessonPlan.title,
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+            fontWeight: FontWeight.w900,
+            height: 1.05,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          lessonPlan.subtitle,
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            color: DrumcabularyTheme.mutedInk,
+            height: 1.35,
+          ),
+        ),
+        const SizedBox(height: 18),
+        DrumPanel(
+          padding: EdgeInsets.zero,
+          child: Column(
+            children: <Widget>[
+              for (
+                int index = 0;
+                index < lessonPlan.lessons.length;
+                index += 1
+              ) ...<Widget>[
+                if (index > 0) const Divider(height: 1),
+                _LessonListRow(
+                  lessonPlan: lessonPlan,
+                  lesson: lessonPlan.lessons[index],
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LessonListRow extends StatelessWidget {
+  final LessonPlan lessonPlan;
+  final Lesson lesson;
+
+  const _LessonListRow({required this.lessonPlan, required this.lesson});
+
+  @override
+  Widget build(BuildContext context) {
+    final LessonPattern? primaryPattern = lesson.primaryPattern;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(22),
+        onTap: () => _openLesson(context),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              _LessonNumberBadge(number: lesson.number),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      lesson.title,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        height: 1.15,
                       ),
                     ),
-                    if (briefing.blocks.isEmpty)
-                      _EmptyCoachCard(onOpenMatrix: onOpenMatrix),
+                    const SizedBox(height: 5),
+                    Text(
+                      lesson.objective,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: DrumcabularyTheme.mutedInk,
+                        height: 1.28,
+                      ),
+                    ),
+                    if (primaryPattern != null) ...<Widget>[
+                      const SizedBox(height: 8),
+                      Text(
+                        primaryPattern.notation,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: PatternTextStyles.compact(
+                          context,
+                        ).copyWith(fontSize: 16),
+                      ),
+                    ],
                   ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: <Widget>[
+                  Text(
+                    '${lesson.estimatedMinutes} min',
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: DrumcabularyTheme.mutedInk,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  const Icon(Icons.chevron_right_rounded),
+                ],
+              ),
+            ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
-  void _handleCoachBlockAction(CoachBlockV1 block) {
-    switch (block.ctaAction) {
-      case CoachActionV1.openMatrix:
-        _openMatrixForBlock(block);
-      case CoachActionV1.buildCombo:
-        _openMatrixForBlock(block, selectedItemIds: block.itemIds);
-      case CoachActionV1.moveToFlow:
-        final String? itemId = _blockPracticeItemId(
-          block,
-          createIfMissing: true,
-        );
-        if (itemId == null) {
-          _openMatrixForBlock(block);
-        } else {
-          onPracticeItemInMode(itemId, PracticeModeV1.flow);
-        }
-      case CoachActionV1.startPractice:
-      case CoachActionV1.resumePractice:
-        final String? itemId = _blockPracticeItemId(
-          block,
-          createIfMissing: true,
-        );
-        if (itemId == null) {
-          _openMatrixForBlock(block);
-        } else {
-          onPracticeItemInMode(itemId, block.practiceMode);
-        }
-    }
-  }
-
-  void _openMatrixForBlock(
-    CoachBlockV1 block, {
-    List<String>? selectedItemIds,
-  }) {
-    onOpenMatrix(
-      filters: block.matrixFilters,
-      selectedItemIds: selectedItemIds,
+  void _openLesson(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (BuildContext context) {
+          return LessonDetailScreen(lessonPlan: lessonPlan, lesson: lesson);
+        },
+      ),
     );
-  }
-
-  bool _blockHasMatrixContext(CoachBlockV1 block) {
-    return block.matrixFilters.isNotEmpty;
-  }
-
-  String? _blockPracticeItemId(
-    CoachBlockV1 block, {
-    required bool createIfMissing,
-  }) {
-    if (block.itemIds.isEmpty) return null;
-    if (block.itemIds.length == 1) return block.itemIds.first;
-    final PracticeCombinationV1? existing = controller
-        .combinationForItemIdsOrNull(block.itemIds);
-    if (existing != null) return existing.id;
-    if (!createIfMissing) return null;
-    return controller.createCombination(itemIds: block.itemIds).id;
   }
 }
 
-class _EmptyCoachCard extends StatelessWidget {
-  final OpenMatrixCallback onOpenMatrix;
+class _LessonNumberBadge extends StatelessWidget {
+  final int number;
 
-  const _EmptyCoachCard({required this.onOpenMatrix});
+  const _LessonNumberBadge({required this.number});
 
   @override
   Widget build(BuildContext context) {
-    return DrumPanel(
-      child: Padding(
-        padding: EdgeInsets.zero,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            const DrumSectionTitle(text: 'Coach'),
-            const SizedBox(height: 8),
-            const Text(
-              'Start from Matrix or Practice. After a few tracked sessions, Coach will have something more specific to point to.',
+    return SizedBox.square(
+      dimension: 34,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: DrumcabularyTheme.ink,
+          shape: BoxShape.circle,
+          border: Border.all(color: DrumcabularyTheme.line),
+        ),
+        child: Center(
+          child: Text(
+            '$number',
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: DrumcabularyTheme.surface,
+              fontWeight: FontWeight.w900,
             ),
-            const SizedBox(height: 14),
-            DrumActionRow(
-              children: <Widget>[
-                FilledButton(
-                  onPressed: () => onOpenMatrix(),
-                  child: const Text('Open Matrix'),
-                ),
-              ],
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _CoachBlockCard extends StatelessWidget {
-  final CoachBlockV1 block;
-  final AppController controller;
-  final ValueChanged<String> onOpenItem;
-  final VoidCallback onAction;
-  final VoidCallback? onOpenMatrix;
+class _CoachLoadError extends StatelessWidget {
+  final Object? error;
 
-  const _CoachBlockCard({
-    required this.block,
-    required this.controller,
-    required this.onOpenItem,
-    required this.onAction,
-    required this.onOpenMatrix,
-  });
+  const _CoachLoadError({required this.error});
 
   @override
   Widget build(BuildContext context) {
-    final bool prominent = block.type == CoachBlockTypeV1.summary;
-    final ButtonStyle? primaryButtonStyle = prominent
-        ? FilledButton.styleFrom(
-            backgroundColor: DrumcabularyTheme.creamText,
-            foregroundColor: const Color(0xFF17130F),
-            side: const BorderSide(
-              color: DrumcabularyTheme.pulseHover,
-              width: 1.5,
-            ),
-            textStyle: const TextStyle(fontWeight: FontWeight.w900),
-          ).copyWith(
-            overlayColor: WidgetStateProperty.resolveWith((states) {
-              if (states.contains(WidgetState.pressed)) {
-                return const Color(0x2217130F);
-              }
-              if (states.contains(WidgetState.hovered) ||
-                  states.contains(WidgetState.focused)) {
-                return const Color(0x14F05A28);
-              }
-              return null;
-            }),
-          )
-        : null;
-
-    return DrumPanel(
-      tone: prominent ? DrumPanelTone.dark : DrumPanelTone.surface,
-      padding: const EdgeInsets.all(18),
-      child: Padding(
-        padding: EdgeInsets.zero,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            if (block.subtitle != null) ...<Widget>[
-              DrumEyebrow(
-                text: block.subtitle!,
-                color: prominent ? const Color(0xFFF0C35B) : null,
-              ),
-              const SizedBox(height: 10),
-            ],
-            Text(
-              block.title,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: prominent ? DrumcabularyTheme.creamText : null,
-                fontWeight: FontWeight.w900,
-                height: 1.05,
-              ),
-            ),
-            if (block.body != null) ...<Widget>[
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
+      children: <Widget>[
+        DrumPanel(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              const DrumSectionTitle(text: 'Lesson Plan Unavailable'),
               const SizedBox(height: 10),
               Text(
-                block.body!,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: prominent ? const Color(0xFFD3C6AD) : null,
-                  height: 1.35,
+                '$error',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: const Color(0xFF9D2B24),
                 ),
               ),
             ],
-            if (block.itemIds.isNotEmpty &&
-                block.type != CoachBlockTypeV1.summary) ...<Widget>[
-              const SizedBox(height: 14),
-              _CoachPatternStrip(
-                itemIds: block.itemIds,
-                controller: controller,
-                prominent: prominent,
-                onOpenItem: onOpenItem,
-              ),
-            ],
-            const SizedBox(height: 16),
-            DrumActionRow(
-              children: <Widget>[
-                FilledButton(
-                  style: primaryButtonStyle,
-                  onPressed: onAction,
-                  child: Text(block.ctaLabel),
-                ),
-                if (onOpenMatrix != null)
-                  OutlinedButton(
-                    onPressed: onOpenMatrix,
-                    child: const Text('See in Matrix'),
-                  ),
-              ],
-            ),
-          ],
+          ),
         ),
-      ),
-    );
-  }
-}
-
-class _CoachPatternStrip extends StatelessWidget {
-  final List<String> itemIds;
-  final AppController controller;
-  final bool prominent;
-  final ValueChanged<String> onOpenItem;
-
-  const _CoachPatternStrip({
-    required this.itemIds,
-    required this.controller,
-    required this.prominent,
-    required this.onOpenItem,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      children: itemIds
-          .map(
-            (String itemId) => InkWell(
-              borderRadius: BorderRadius.circular(16),
-              onTap: () => onOpenItem(itemId),
-              child: Ink(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: prominent
-                      ? const Color(0xFFFBF4E7)
-                      : const Color(0xFFF5F0E6),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFD8C8B0)),
-                ),
-                child: PatternReadout(
-                  controller: controller,
-                  itemId: itemId,
-                  voiceStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: DrumcabularyTheme.mutedInk,
-                  ),
-                  scrollable: false,
-                  wrap: false,
-                  cellWidth: 22,
-                ),
-              ),
-            ),
-          )
-          .toList(growable: false),
-    );
-  }
-}
-
-class _GettingStartedCoachCard extends StatelessWidget {
-  final AppController controller;
-  final VoidCallback onAddToWorkingOn;
-  final OpenMatrixCallback onOpenMatrix;
-
-  const _GettingStartedCoachCard({
-    required this.controller,
-    required this.onAddToWorkingOn,
-    required this.onOpenMatrix,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final List<String> itemIds = controller.recommendedStartingTriadItemIds;
-    final bool allAdded = itemIds.every(controller.isDirectRoutineEntry);
-    return DrumPanel(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          const DrumSectionTitle(text: 'Coach'),
-          const SizedBox(height: 10),
-          Text(
-            'Getting Started',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.w900,
-              height: 1.05,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Drumcabulary helps you build the control, flow, and confidence to move around the kit with ease. Start with these four triads. Repeat each one slowly and evenly with a relaxed posture and grip. Take your time. Clean reps build real progress.',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyLarge?.copyWith(height: 1.35),
-          ),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: itemIds
-                .map(
-                  (itemId) => _StartingTriadChip(
-                    controller: controller,
-                    itemId: itemId,
-                  ),
-                )
-                .toList(growable: false),
-          ),
-          const SizedBox(height: 18),
-          DrumActionRow(
-            children: <Widget>[
-              FilledButton(
-                onPressed: onAddToWorkingOn,
-                child: Text(allAdded ? 'Open Working On' : 'Add to Working On'),
-              ),
-              OutlinedButton(
-                onPressed: () => onOpenMatrix(),
-                child: const Text('Open the Matrix'),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StartingTriadChip extends StatelessWidget {
-  final AppController controller;
-  final String itemId;
-
-  const _StartingTriadChip({required this.controller, required this.itemId});
-
-  @override
-  Widget build(BuildContext context) {
-    return DrumTag(
-      backgroundColor: const Color(0xFFF5F0E6),
-      borderColor: const Color(0xFFD8C8B0),
-      child: Text(
-        controller.itemById(itemId).name,
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-          color: const Color(0xFF1F2528),
-          fontWeight: FontWeight.w900,
-          letterSpacing: -0.5,
-        ),
-      ),
+      ],
     );
   }
 }

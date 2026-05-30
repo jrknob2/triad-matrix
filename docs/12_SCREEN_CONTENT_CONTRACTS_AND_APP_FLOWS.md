@@ -280,32 +280,34 @@ Rules:
 - startup splash should not show shell navigation or other app controls
 - startup splash should transition directly into the normal app shell when ready
 
-### Flow A: First Light Start
+### Flow A: Coach Lesson Plan Browsing
 
 Goal:
 
-- help a new user start correctly without wandering
+- show the ordered lesson path and let the user inspect a full lesson
 
 Path:
 
 1. `Coach`
-2. `Add to Working On` or `Open Matrix`
-3. `Library` or `Matrix`
-4. `Practice`
+2. select lesson row
+3. `Lesson Detail`
 
 Screens involved:
 
 - Coach
-- Library
-- Matrix
-- Practice
+- Lesson Detail
 
 Required controls:
 
-- Coach starter CTA
-- Matrix open CTA
-- Library item play CTA
-- Practice direct-entry CTA
+- lesson rows
+- `Back`
+
+Rules:
+
+- Coach loads the ordered lesson plan from a YAML asset
+- each row shows lesson number, title, objective, estimated minutes, and primary pattern preview when available
+- selecting a row opens the printable lesson detail
+- this flow must not start a practice session or write progress
 
 ### Flow B: Direct Practice Start
 
@@ -346,35 +348,35 @@ Rules:
 - previous-session browsing may start short and offer `Load More`
 - `From Working On` should not show duplicate count chips when the same information is already expressed by the start action
 
-### Flow C: Coach-Driven Practice
+### Flow C: Coach Lesson Printing
 
 Goal:
 
-- move from guidance to action quickly
+- prepare a lesson for offline use or handoff
 
 Path:
 
 1. `Coach`
-2. `Practice` or `Matrix`
-3. `Practice Session`
-4. `Session Summary`
+2. `Lesson Detail`
+3. `Print`
 
 Screens involved:
 
 - Coach
-- Matrix optionally
-- Practice Session
-- Session Summary
+- Lesson Detail
 
 Required controls:
 
-- primary CTA on each Coach block
-- optional `See in Matrix`
+- `Print`
+- `Back`
 
 Rules:
 
-- if Coach is pointing toward phrase building, it should hand off into `Matrix`, not a separate builder screen
-- that handoff should preload the suggested triad selection when the advice depends on specific triads
+- for the POC, Print may be a stub that logs `Print lesson requested.`
+- lesson detail must show objective, skill focus, estimated time, required concepts, patterns, exercises, coaching notes, and mastery target
+- pattern rows must show playable Drumcabulary notation text
+- sheet notation previews may appear when the existing renderer can display the pattern
+- this flow must not create PDF infrastructure unless an export path already exists
 
 ### Flow D: Matrix Discovery And Phrase Building
 
@@ -545,186 +547,104 @@ Rules:
 
 Coach answers:
 
-- how is my practice going overall
-- what should I do next
-- why now
-- what is the shortest useful path into practice
+- what is the lesson path
+- what does each lesson teach
+- what notation and patterns belong to the lesson
+- how can the lesson be reviewed or printed
 
 ### Allowed Content
 
-- 1 to 2 cards
-- one summary-first lead card
-- short evidence lines
-- at most one follow-up action card
-- one primary CTA per card
-- optional secondary `See in Matrix`
+- YAML-loaded lesson plan title and subtitle
+- compact ordered lesson list
+- lesson number, title, short objective, estimated minutes, and primary pattern preview
+- lesson detail with objective, skill focus, estimated time, required concepts, pattern list, exercise list, coaching notes, and mastery target
+- playable Drumcabulary pattern notation text
+- optional sheet notation preview using the existing notation renderer
+- Print action
 
 ### Forbidden Content
 
-- dashboards
-- charts
-- long lists
-- static motivational text
-- status explanation cards
-- controls for editing items
-
-### Allowed Card Types
-
-Internal only:
-
-- `Summary`
-- `Getting Started`
-- `Focus`
-- `Needs Work`
-- `Momentum`
-- `Next Unlock`
-- `Resume` later
-
-Visible card identity should be a coaching move, not the internal type.
-
-### Required Information On A Card
-
-- title
-- short body
-- one concrete reason
-- one primary CTA
-
-Coach structure rule:
-
-- the first card should read as a progress-aware summary
-- Coach may include one concrete next action beneath that summary
-- Coach should not feel like a stack of drill commands
-- Coach should not open with a pattern-specific command unless the user is in first-light or no-history states
-- when real practice history exists, the lead card should summarize momentum, consistency, or scope before naming a specific pattern
-- when a second card exists, it should be the single clearest next action, not another summary
-- summary cards should avoid raw notation and specific triad names in prose
-- action cards should not lead with raw notation as the main sentence shape
-- if a specific pattern must be identified, prefer a lightweight pattern strip or supporting line over building the whole sentence around the notation
-- Coach should read like a progress report first and advice second
-- Coach must not sound like it is listening live unless the app actually has listening capability
-- beginner-facing instruction should prefer `pad` or `snare` instead of `one surface`
-- Coach summary time should read in plain language like `logged 16 hours` or `logged 37 minutes`, rounded down
-- recommendation titles, bodies, and CTA labels should switch cleanly between `this` and `these` based on whether one item or a small set is being recommended
-
-Preferred visible title shapes:
-
-- `Try this`
-- `Think about`
-- `Put more attention on...`
-- `Slow it down`
-- `Speed it up now`
-- `You are ready for...`
-- `Spend more time here`
-- `Keep this going`
-- `Clean this up`
-- `Move this around the kit`
-- `Spend more time on this`
-- `Spend more time on these`
-
-### Forbidden Wording
-
-- `baseline`
-- `signal`
-- `active work`
-- `status language`
-- `this view shows`
-- `reference point`
-- robotic diagnostic phrases like `the weak spot is`
-- visible category labels that read like framework buckets
-- template-like statements that sound machine-assembled from item names and status flags
-- pseudo-observational phrases that imply the app directly heard the rep when it did not
-- developer-like action phrasing such as `assign one change`
+- live practice session controls
+- start, stop, or player controls
+- progress tracking
+- assessment evaluator state
+- lesson completion state
+- user-specific recommendations
+- audio playback or BPM engine controls
+- Matrix handoff CTAs from lesson rows
 
 ### Primary Controls
 
-- `Practice`
-- `See in Matrix`
-- `Add to Working On`
-- `Open Matrix`
+- lesson row selection
+- `Print`
+- `Back`
 
 ### Control Rules
 
-- every CTA must map to a real flow
-- every card must be actionable
-- no display-only chips with no action value
-- each card should feel like observation plus advice, not category plus label
+- lesson rows open lesson detail
+- Print may call existing export infrastructure if available
+- if no print/export path exists, Print is a visible stub that logs `Print lesson requested.`
+- Back returns from lesson detail to the lesson list
+- no control may start a practice session or mutate user progress
 
-### Coach State Matrix
+### YAML Contract
 
-#### First Light
+Required asset:
 
-Show:
+- `assets/lessons/flow_foundations.yaml`
 
-- one starter card
-- recommended starter triads
-- `Add to Working On` or `Open Working On`
-- `Open the Matrix`
+Required root:
 
-Hide:
+- `lesson_plan`
 
-- needs work
-- momentum
-- next unlock
+Required lesson plan fields:
 
-Rules:
+- `id`
+- `title`
+- `subtitle`
+- `version`
+- `lessons`
 
-- any no-history state should collapse to this same single starter card
-- no separate `Start Here` or `You are ready to start` card should appear before the first logged practice session
-- if the recommended starter set has already been added, keep the same starter card and change only the available action state
-- the card may reference the full starter set, not collapse immediately to one pattern unless the user explicitly narrowed the set
-- beginner-facing starter copy should use `pad` or `snare`
-- the starter actions should help the user either add the starter set or begin from Matrix
-- the starter card should use the shared Coach/app panel motif, not a one-off blue hero treatment
-- the starter card body should lead with a brief welcome and simple first-step coaching, not workflow explanation
-- starter copy should not explain `Working On`, loop mechanics, or other app/process details inside the coaching body
-- beginner starter advice should stay simple: repeat each item slowly and evenly with a relaxed posture and grip
-- starter copy may feel encouraging, but it should not drift into generic marketing language
-- starter copy may briefly explain what Drumcabulary helps the player build before naming the first step
+Required lesson fields:
 
-#### Early Struggle
+- `id`
+- `number`
+- `title`
+- `objective`
+- `skill_focus`
+- `estimated_minutes`
+- `required_concepts`
+- `patterns`
+- `exercises`
+- `coaching_notes`
+- `mastery`
 
-Show:
+Required pattern fields:
 
-- one summary lead card
-- one follow-up action card if needed
+- `id`
+- `title`
+- `role`
+- `notation`
 
-Rule:
+Required exercise fields:
 
-- first visible card should summarize the slowdown or inconsistency before naming the next action
+- `title`
+- `instructions`
 
-#### Steady Progress
+Optional exercise fields:
 
-Show:
+- `subdivision`
+- `subdivision_sequence`
+- `tempo`
+- `flow`
 
-- one summary lead card
-- one follow-up action card if needed
+### Layout Rules
 
-Rule:
-
-- lead with progress summary
-- follow with one next action only when it adds value
-
-#### Phrase Ready
-
-Show:
-
-- one summary lead card
-- one follow-up action card if needed
-
-Rule:
-
-- summary should state readiness before pointing to phrase work
-
-#### Flow Ready
-
-Show:
-
-- one summary lead card
-- one follow-up action card if needed
-
-Rule:
-
-- summary should state readiness before pointing to flow work
+- Coach list should be compact and scannable, not a stack of large cards
+- the lesson detail should favor printable structure over interactive controls
+- use section headings and readable pattern rows
+- do not expose app-internal implementation language in the lesson content
+- the lesson plan order comes from the lesson `number` field
 
 ---
 

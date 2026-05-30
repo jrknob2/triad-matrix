@@ -1,0 +1,268 @@
+lesson_plan:
+  id: flow-foundations
+  title: Flow Foundations
+  subtitle: Starter path for groove, subdivision, fill placement, and kit flow.
+  version: 1
+
+  lessons:
+    - id: notation-basics
+      number: 1
+      title: Notation Basics
+      objective: Learn the core Drumcabulary notation symbols used throughout the plan.
+      skill_focus: notation
+      estimated_minutes: 15
+      required_concepts:
+        - R and L hands
+        - K kick
+        - X crash or big hit
+        - _ rest
+        - spaces as grouping
+      patterns:
+        - id: basic-hands
+          title: Basic Hands
+          role: warmup
+          notation: R L R L
+        - id: kick-added
+          title: Kick Added
+          role: warmup
+          notation: R L K R L K
+      exercises:
+        - title: Read and Play
+          instructions: Play each pattern slowly while saying the symbols out loud.
+          subdivision: 8
+          tempo:
+            start: 60
+            target: 90
+      coaching_notes:
+        - Keep the notation literal. Do not interpret extra notes.
+        - Spaces show phrasing groups, not timing changes.
+      mastery:
+        - Play both patterns cleanly at 90 BPM.
+
+    - id: groove-foundation
+      number: 2
+      title: Groove Foundation
+      objective: Build a simple rock groove using simultaneous hand and kick/snare hits.
+      skill_focus: groove
+      estimated_minutes: 20
+      required_concepts:
+        - simultaneous hits
+        - groove pulse
+        - eighth-note subdivision
+      patterns:
+        - id: basic-rock-groove
+          title: Basic Rock Groove
+          role: groove
+          notation: "[RK] R [RL] R [RK] R [RL] R"
+      exercises:
+        - title: Groove Loop
+          instructions: Loop the groove until it feels relaxed and even.
+          subdivision: 8
+          tempo:
+            start: 70
+            target: 110
+      coaching_notes:
+        - R is the time hand.
+        - K and L should land cleanly with the hand notes.
+      mastery:
+        - Play the groove for two minutes without rushing.
+
+    - id: accents-and-ghosts
+      number: 3
+      title: Accents and Ghosts
+      objective: Shape patterns with accented notes and ghost notes.
+      skill_focus: dynamics
+      estimated_minutes: 25
+      required_concepts:
+        - accents
+        - ghost notes
+      patterns:
+        - id: accent-ghost-five
+          title: Accent Ghost Five
+          role: chop
+          notation: "^R^L^R(L)(L)"
+        - id: accent-ghost-with-kick
+          title: Accent Ghost With Kick
+          role: fill
+          notation: "^R^L^R(L)(L) K"
+      exercises:
+        - title: Contrast Drill
+          instructions: Make the accented RLR strong and the LL ghosted but controlled.
+          subdivision: 16
+          tempo:
+            start: 60
+            target: 100
+      coaching_notes:
+        - Do not let ghost notes disappear completely.
+        - Keep the accented notes relaxed.
+      mastery:
+        - Clear dynamic contrast at 100 BPM.
+
+    - id: simultaneous-hits
+      number: 4
+      title: Simultaneous Hits
+      objective: Use bracketed hits to place multiple voices on the same beat.
+      skill_focus: coordination
+      estimated_minutes: 20
+      required_concepts:
+        - "[XK]"
+        - "[RL]"
+        - "[RK]"
+      patterns:
+        - id: crash-kick-resolution
+          title: Crash Kick Resolution
+          role: fill
+          notation: "^R^L^R(L)(L) [XK]"
+        - id: hands-together
+          title: Hands Together
+          role: warmup
+          notation: "[RL] R [RL] R"
+      exercises:
+        - title: Resolution Drill
+          instructions: Practice landing the final bracketed hit cleanly as one event.
+          subdivision: 16
+          tempo:
+            start: 60
+            target: 100
+      coaching_notes:
+        - Brackets mean same slot, not sequential notes.
+        - The final hit should feel like a confident landing point.
+      mastery:
+        - Land [XK] cleanly without flam between limbs.
+
+    - id: five-note-groupings
+      number: 5
+      title: Five-Note Groupings
+      objective: Learn to feel 5-note phrases inside a 16th-note grid.
+      skill_focus: grouping
+      estimated_minutes: 30
+      required_concepts:
+        - spaces as grouping
+        - five-note phrases
+        - sixteenth-note subdivision
+      patterns:
+        - id: raw-five-flow
+          title: Raw Five Flow
+          role: chop
+          notation: "RLRLL K RLRLL RLRLL X"
+        - id: shaped-five-flow
+          title: Shaped Five Flow
+          role: fill
+          notation: "^R^L^R(L)(L) K ^R^L^R(L)(L) ^R^L^R(L)(L) [XK]"
+      exercises:
+        - title: Raw To Shaped
+          instructions: Play the raw pattern first, then the shaped version.
+          subdivision: 16
+          tempo:
+            start: 60
+            target: 100
+      coaching_notes:
+        - The spaces show 5 / 1 / 5 / 5 / 1 phrasing.
+        - Do not mistake grouping for tuplets.
+      mastery:
+        - Play the shaped fill at 100 BPM without losing the grid.
+
+    - id: groove-to-fill-flow
+      number: 6
+      title: Groove to Fill Flow
+      objective: Move from groove to fill and back to groove without losing time.
+      skill_focus: flow
+      estimated_minutes: 30
+      required_concepts:
+        - groove role
+        - fill role
+        - beat-one landing
+      patterns:
+        - id: basic-rock-groove
+          title: Basic Rock Groove
+          role: groove
+          notation: "[RK] R [RL] R [RK] R [RL] R"
+        - id: shaped-five-flow
+          title: Shaped Five Flow
+          role: fill
+          notation: "^R^L^R(L)(L) K ^R^L^R(L)(L) ^R^L^R(L)(L) [XK]"
+      exercises:
+        - title: Four Bars And Fill
+          instructions: Play four bars of groove, then one fill, then return to groove.
+          subdivision: 16
+          tempo:
+            start: 70
+            target: 110
+          flow:
+            - pattern: basic-rock-groove
+              repeat: 4
+            - pattern: shaped-five-flow
+              repeat: 1
+      coaching_notes:
+        - Count through the fill.
+        - The crash/kick resolution should land on beat 1.
+      mastery:
+        - Complete the exercise three times in a row without rushing the fill.
+
+    - id: triplet-feel
+      number: 7
+      title: Triplet Feel
+      objective: Build comfort with triplet timing without treating groupings as tuplets.
+      skill_focus: triplets
+      estimated_minutes: 25
+      required_concepts:
+        - triplet subdivision
+      patterns:
+        - id: triplet-hands
+          title: Triplet Hands
+          role: warmup
+          notation: R L R L R L
+        - id: triplet-kick
+          title: Triplet With Kick
+          role: groove
+          notation: "[RK] R L [RL] R L"
+      exercises:
+        - title: Triplet Control
+          instructions: Keep all notes evenly spaced in triplet feel.
+          subdivision: triplet
+          tempo:
+            start: 60
+            target: 100
+      coaching_notes:
+        - Triplet is timing metadata.
+        - Grouping spaces do not create triplet timing.
+      mastery:
+        - Play triplet patterns evenly at 100 BPM.
+
+    - id: subdivision-transitions
+      number: 8
+      title: Subdivision Transitions
+      objective: Switch between 8ths, triplets, and 16ths without freezing.
+      skill_focus: subdivision
+      estimated_minutes: 30
+      required_concepts:
+        - eighths
+        - triplets
+        - sixteenths
+      patterns:
+        - id: transition-base
+          title: Transition Base
+          role: warmup
+          notation: R L R L
+      exercises:
+        - title: 8ths to Triplets
+          instructions: Play the same hand pattern first as 8ths, then as triplets.
+          subdivision_sequence:
+            - 8
+            - triplet
+          tempo:
+            start: 60
+            target: 100
+        - title: Triplets to 16ths
+          instructions: Play the same hand pattern first as triplets, then as 16ths.
+          subdivision_sequence:
+            - triplet
+            - 16
+          tempo:
+            start: 60
+            target: 100
+      coaching_notes:
+        - Hear the new grid before switching.
+        - Slow down if you hesitate.
+      mastery:
+        - Switch subdivisions cleanly at 90 BPM.
