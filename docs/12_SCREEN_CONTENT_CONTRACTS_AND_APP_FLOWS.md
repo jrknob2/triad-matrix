@@ -372,11 +372,11 @@ Required controls:
 
 Rules:
 
-- for the POC, Print may be a stub that logs `Print lesson requested.`
+- Print opens the native print flow with a generated PDF lesson document
 - lesson detail must show objective, skill focus, estimated time, required concepts, patterns, exercises, coaching notes, and mastery target
 - pattern rows must not show raw playable Drumcabulary notation strings
 - sheet notation previews may appear when the existing renderer can display the internally-authored pattern
-- this flow must not create PDF infrastructure unless an export path already exists
+- print failures must be surfaced; they must not silently fall back to a fake success state
 
 ### Flow D: Matrix Discovery And Phrase Building
 
@@ -560,6 +560,7 @@ Coach answers:
 - lesson detail with objective, skill focus, estimated time, required concepts, pattern list, exercise list, coaching notes, and mastery target
 - pattern names, roles, and optional sheet notation previews using the existing renderer
 - Print action
+- print export generated from the same lesson plan data
 
 ### Forbidden Content
 
@@ -583,7 +584,8 @@ Coach answers:
 
 - lesson rows open lesson detail
 - Print may call existing export infrastructure if available
-- if no print/export path exists, Print is a visible stub that logs `Print lesson requested.`
+- Print opens the native print flow with a generated PDF lesson document
+- print failures must be surfaced; they must not silently fall back to a fake success state
 - Back returns from lesson detail to the lesson list
 - no control may start a practice session or mutate user progress
 
@@ -629,6 +631,7 @@ Required pattern fields:
 Rule:
 
 - `notation` is an internal asset field for validation and sheet preview rendering; it is not displayed as raw text in the Coach POC
+- print export may include authored pattern notation text so the generated lesson document remains playable even before sheet previews are embedded in PDFs
 
 Required exercise fields:
 

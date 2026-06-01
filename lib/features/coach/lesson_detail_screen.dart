@@ -4,6 +4,7 @@ import '../app/drumcabulary_theme.dart';
 import '../app/drumcabulary_ui.dart';
 import '../practice/widgets/sheet_notation_display.dart';
 import 'lesson_plan.dart';
+import 'lesson_print_export_service.dart';
 
 class LessonDetailScreen extends StatelessWidget {
   final LessonPlan lessonPlan;
@@ -59,12 +60,19 @@ class LessonDetailScreen extends StatelessWidget {
     );
   }
 
-  void _requestPrint(BuildContext context) {
-    // TODO: Connect to the print/share export path when that infrastructure exists.
-    debugPrint('Print lesson requested: ${lesson.id}');
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Print lesson requested.')));
+  Future<void> _requestPrint(BuildContext context) async {
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    try {
+      await LessonPrintExportService.printLesson(
+        lessonPlan: lessonPlan,
+        lesson: lesson,
+      );
+    } on Object catch (error, stackTrace) {
+      debugPrint('Lesson print failed: $error\n$stackTrace');
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Lesson print failed.')),
+      );
+    }
   }
 }
 
