@@ -647,6 +647,7 @@ Optional exercise fields:
 - Coach list should be compact and scannable, not a stack of large cards
 - the lesson detail should favor printable structure over interactive controls
 - use section headings and readable pattern rows
+- lesson sheet previews should use the primary sheet renderer path, not the debug/native fallback path
 - do not expose app-internal implementation language in the lesson content
 - do not expose raw pattern notation strings
 - the lesson plan order comes from the lesson `number` field

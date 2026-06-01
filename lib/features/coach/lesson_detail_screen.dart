@@ -232,7 +232,6 @@ class _PatternRow extends StatelessWidget {
           selectable: false,
           compactLayout: true,
           minNoteWidth: 32,
-          debugUseNativeFallback: true,
         ),
       ],
     );
