@@ -232,3 +232,287 @@ lesson_plan:
         - Slow down if you hesitate.
       mastery:
         - Switch subdivisions cleanly at 90 BPM.
+
+    - id: triplet-vocabulary-1
+      number: 8
+      title: Triplet Vocabulary 1
+      objective: Learn five triplet vocabulary fragments, combine them into six-note phrases, and apply them inside a simple groove.
+      skill_focus: triplets
+      estimated_minutes: 35
+      required_concepts:
+        - triplet subdivision
+        - ghost notes
+        - kick placement
+        - six-note phrase combinations
+        - groove application
+        - hand voice movement
+      patterns:
+        - id: triplet-vocab-a
+          title: A - Right Ghost Ghost
+          role: vocabulary
+          notation: "R(L)(L)"
+        - id: triplet-vocab-b
+          title: B - Right Left Kick
+          role: vocabulary
+          notation: "RLK"
+        - id: triplet-vocab-c
+          title: C - Right Kick Left
+          role: vocabulary
+          notation: "RKL"
+        - id: triplet-vocab-d
+          title: D - Kick Right Left
+          role: vocabulary
+          notation: "KRL"
+        - id: triplet-vocab-f
+          title: F - Ghost Ghost Left
+          role: vocabulary
+          notation: "(R)(R)L"
+        - id: basic-triplet-groove
+          title: Basic Triplet Groove
+          role: groove
+          notation: "[RK] R L [RL] R L"
+        - id: six-ab
+          title: Six-Note A + B
+          role: fill
+          notation: "R(L)(L) RLK"
+        - id: six-ac
+          title: Six-Note A + C
+          role: fill
+          notation: "R(L)(L) RKL"
+        - id: six-ad
+          title: Six-Note A + D
+          role: fill
+          notation: "R(L)(L) KRL"
+        - id: six-bc
+          title: Six-Note B + C
+          role: fill
+          notation: "RLK RKL"
+        - id: six-cd
+          title: Six-Note C + D
+          role: fill
+          notation: "RKL KRL"
+        - id: six-af
+          title: Six-Note A + F
+          role: fill
+          notation: "R(L)(L) (R)(R)L"
+        - id: six-fb
+          title: Six-Note F + B
+          role: fill
+          notation: "(R)(R)L RLK"
+        - id: six-fc
+          title: Six-Note F + C
+          role: fill
+          notation: "(R)(R)L RKL"
+      exercises:
+        - title: Practice A
+          instructions: Loop A until the ghost notes are even and quiet.
+          subdivision: triplet
+          tempo:
+            start: 60
+            target: 100
+          flow:
+            - pattern: triplet-vocab-a
+              repeat: 8
+
+        - title: Practice B
+          instructions: Loop B and keep the kick evenly spaced with the hands.
+          subdivision: triplet
+          tempo:
+            start: 60
+            target: 100
+          flow:
+            - pattern: triplet-vocab-b
+              repeat: 8
+
+        - title: Practice C
+          instructions: Loop C and keep the kick from rushing.
+          subdivision: triplet
+          tempo:
+            start: 60
+            target: 100
+          flow:
+            - pattern: triplet-vocab-c
+              repeat: 8
+
+        - title: Practice D
+          instructions: Loop D and make the kick feel like part of the phrase, not a pickup.
+          subdivision: triplet
+          tempo:
+            start: 60
+            target: 100
+          flow:
+            - pattern: triplet-vocab-d
+              repeat: 8
+
+        - title: Practice F
+          instructions: Loop F and keep both ghosted right-hand notes controlled.
+          subdivision: triplet
+          tempo:
+            start: 60
+            target: 100
+          flow:
+            - pattern: triplet-vocab-f
+              repeat: 8
+
+        - title: Move A Between Voices
+          instructions: Loop A while moving the right hand from snare to rack tom, floor tom, and back to snare; keep the ghost notes quiet.
+          subdivision: triplet
+          tempo:
+            start: 60
+            target: 100
+          flow:
+            - pattern: triplet-vocab-a
+              repeat: 8
+
+        - title: Move F Between Voices
+          instructions: Loop F while moving the left-hand landing note between snare and toms; keep the ghosted right-hand notes controlled.
+          subdivision: triplet
+          tempo:
+            start: 60
+            target: 100
+          flow:
+            - pattern: triplet-vocab-f
+              repeat: 8
+
+        - title: Combine A + B
+          instructions: Play the six-note phrase A plus B as one continuous phrase.
+          subdivision: triplet
+          tempo:
+            start: 60
+            target: 100
+          flow:
+            - pattern: six-ab
+              repeat: 8
+
+        - title: Combine A + C
+          instructions: Play the six-note phrase A plus C as one continuous phrase.
+          subdivision: triplet
+          tempo:
+            start: 60
+            target: 100
+          flow:
+            - pattern: six-ac
+              repeat: 8
+
+        - title: Combine A + D
+          instructions: Play the six-note phrase A plus D as one continuous phrase.
+          subdivision: triplet
+          tempo:
+            start: 60
+            target: 100
+          flow:
+            - pattern: six-ad
+              repeat: 8
+
+        - title: Combine B + C
+          instructions: Play the six-note phrase B plus C as one continuous phrase.
+          subdivision: triplet
+          tempo:
+            start: 60
+            target: 100
+          flow:
+            - pattern: six-bc
+              repeat: 8
+
+        - title: Combine C + D
+          instructions: Play the six-note phrase C plus D as one continuous phrase.
+          subdivision: triplet
+          tempo:
+            start: 60
+            target: 100
+          flow:
+            - pattern: six-cd
+              repeat: 8
+
+        - title: Combine A + F
+          instructions: Play the six-note phrase A plus F with controlled ghost notes.
+          subdivision: triplet
+          tempo:
+            start: 60
+            target: 100
+          flow:
+            - pattern: six-af
+              repeat: 8
+
+        - title: Combine F + B
+          instructions: Play the six-note phrase F plus B without letting the ghost notes drag.
+          subdivision: triplet
+          tempo:
+            start: 60
+            target: 100
+          flow:
+            - pattern: six-fb
+              repeat: 8
+
+        - title: Combine F + C
+          instructions: Play the six-note phrase F plus C and keep the kick placement relaxed.
+          subdivision: triplet
+          tempo:
+            start: 60
+            target: 100
+          flow:
+            - pattern: six-fc
+              repeat: 8
+
+        - title: Voice A + D Around The Kit
+          instructions: Play A+D as one phrase while moving the hand notes around the toms without changing the triplet spacing.
+          subdivision: triplet
+          tempo:
+            start: 60
+            target: 100
+          flow:
+            - pattern: six-ad
+              repeat: 8
+
+        - title: Groove With A + B
+          instructions: Play four repeats of the groove, then one A+B six-note phrase, then return to the groove.
+          subdivision: triplet
+          tempo:
+            start: 60
+            target: 100
+          flow:
+            - pattern: basic-triplet-groove
+              repeat: 4
+            - pattern: six-ab
+              repeat: 1
+            - pattern: basic-triplet-groove
+              repeat: 4
+
+        - title: Groove With A + D
+          instructions: Play four repeats of the groove, then one A+D six-note phrase, then return to the groove.
+          subdivision: triplet
+          tempo:
+            start: 60
+            target: 100
+          flow:
+            - pattern: basic-triplet-groove
+              repeat: 4
+            - pattern: six-ad
+              repeat: 1
+            - pattern: basic-triplet-groove
+              repeat: 4
+
+        - title: Groove With F + C
+          instructions: Play four repeats of the groove, then one F+C six-note phrase, then return to the groove.
+          subdivision: triplet
+          tempo:
+            start: 60
+            target: 100
+          flow:
+            - pattern: basic-triplet-groove
+              repeat: 4
+            - pattern: six-fc
+              repeat: 1
+            - pattern: basic-triplet-groove
+              repeat: 4
+      coaching_notes:
+        - Keep the triplet spacing even.
+        - Do not let ghost notes collapse into buzzes.
+        - Treat each six-note combination as one phrase, not two disconnected triads.
+        - Change drum voices without changing the sticking, spacing, or dynamic shape.
+        - When applying the phrase to the groove, count through the groove and the fill.
+        - The goal is smooth entry and exit, not speed.
+      mastery:
+        - Play each individual triad at 100 BPM with even triplet spacing.
+        - Play at least four six-note combinations at 90 BPM without hesitation.
+        - Apply three six-note phrases inside the groove without losing time.
