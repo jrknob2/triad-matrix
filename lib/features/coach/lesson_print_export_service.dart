@@ -5,6 +5,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
 import 'lesson_plan.dart';
+import 'lesson_sheet_notation_svg_renderer.dart';
 
 class LessonPrintExportService {
   const LessonPrintExportService._();
@@ -13,13 +14,21 @@ class LessonPrintExportService {
     required LessonPlan lessonPlan,
     required Lesson lesson,
   }) async {
+    final LessonSheetNotationSvgRenderer notationRenderer =
+        LessonSheetNotationSvgRenderer();
     await Printing.layoutPdf(
       name: _fileNameFor(lessonPlan: lessonPlan, lesson: lesson),
-      onLayout: (PdfPageFormat format) {
+      onLayout: (PdfPageFormat format) async {
+        final Map<String, String> notationSvgsByPatternId =
+            await notationRenderer.renderLesson(
+              lesson: lesson,
+              pageFormat: format,
+            );
         return buildLessonPdf(
           lessonPlan: lessonPlan,
           lesson: lesson,
           pageFormat: format,
+          notationSvgsByPatternId: notationSvgsByPatternId,
         );
       },
     );
@@ -29,9 +38,15 @@ class LessonPrintExportService {
     required LessonPlan lessonPlan,
     required Lesson lesson,
   }) async {
+    final Map<String, String> notationSvgsByPatternId =
+        await LessonSheetNotationSvgRenderer().renderLesson(
+          lesson: lesson,
+          pageFormat: PdfPageFormat.a4,
+        );
     final Uint8List bytes = await buildLessonPdf(
       lessonPlan: lessonPlan,
       lesson: lesson,
+      notationSvgsByPatternId: notationSvgsByPatternId,
     );
     await Printing.sharePdf(
       bytes: bytes,
@@ -42,8 +57,19 @@ class LessonPrintExportService {
   static Future<Uint8List> buildLessonPdf({
     required LessonPlan lessonPlan,
     required Lesson lesson,
+    required Map<String, String> notationSvgsByPatternId,
     PdfPageFormat pageFormat = PdfPageFormat.a4,
   }) async {
+    final List<String> missingPatternIds = <String>[
+      for (final LessonPattern pattern in lesson.patterns)
+        if (!notationSvgsByPatternId.containsKey(pattern.id)) pattern.id,
+    ];
+    if (missingPatternIds.isNotEmpty) {
+      throw StateError(
+        'Missing rendered sheet notation for patterns: ${missingPatternIds.join(', ')}',
+      );
+    }
+
     final pw.Document document = pw.Document(
       title: '${lessonPlan.title} - ${lesson.title}',
       author: 'Drumcabulary',
@@ -102,7 +128,7 @@ class LessonPrintExportService {
             ]),
             _section('Patterns', <pw.Widget>[
               for (final LessonPattern pattern in lesson.patterns)
-                _patternBlock(pattern),
+                _patternBlock(pattern, notationSvgsByPatternId[pattern.id]!),
             ]),
             _section('Exercises', <pw.Widget>[
               for (final LessonExercise exercise in lesson.exercises)
@@ -139,7 +165,7 @@ class LessonPrintExportService {
     );
   }
 
-  static pw.Widget _patternBlock(LessonPattern pattern) {
+  static pw.Widget _patternBlock(LessonPattern pattern, String notationSvg) {
     return pw.Container(
       margin: const pw.EdgeInsets.only(bottom: 10),
       padding: const pw.EdgeInsets.only(left: 8),
@@ -154,9 +180,9 @@ class LessonPrintExportService {
             style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
           ),
           pw.SizedBox(height: 3),
-          pw.Text(
-            pattern.notation,
-            style: pw.TextStyle(font: pw.Font.courier(), fontSize: 11),
+          pw.Container(
+            constraints: const pw.BoxConstraints(maxHeight: 98),
+            child: pw.SvgImage(svg: notationSvg, fit: pw.BoxFit.contain),
           ),
         ],
       ),

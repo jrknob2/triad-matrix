@@ -376,6 +376,7 @@ Rules:
 - lesson detail must show objective, skill focus, estimated time, required concepts, patterns, exercises, coaching notes, and mastery target
 - pattern rows must not show raw playable Drumcabulary notation strings
 - sheet notation previews may appear when the existing renderer can display the internally-authored pattern
+- generated lesson PDFs must embed rendered sheet notation for patterns, not substitute raw Drumcabulary notation strings
 - print failures must be surfaced; they must not silently fall back to a fake success state
 
 ### Flow D: Matrix Discovery And Phrase Building
@@ -560,7 +561,7 @@ Coach answers:
 - lesson detail with objective, skill focus, estimated time, required concepts, pattern list, exercise list, coaching notes, and mastery target
 - pattern names, roles, and optional sheet notation previews using the existing renderer
 - Print action
-- print export generated from the same lesson plan data
+- print export generated from the same lesson plan data and sheet renderer output
 
 ### Forbidden Content
 
@@ -586,6 +587,7 @@ Coach answers:
 - Print may call existing export infrastructure if available
 - Print opens the native print flow with a generated PDF lesson document
 - print failures must be surfaced; they must not silently fall back to a fake success state
+- if sheet notation rendering is unavailable, print must fail visibly instead of substituting raw Drumcabulary notation strings
 - Back returns from lesson detail to the lesson list
 - no control may start a practice session or mutate user progress
 
@@ -631,7 +633,7 @@ Required pattern fields:
 Rule:
 
 - `notation` is an internal asset field for validation and sheet preview rendering; it is not displayed as raw text in the Coach POC
-- print export may include authored pattern notation text so the generated lesson document remains playable even before sheet previews are embedded in PDFs
+- print export uses `notation` to render sheet notation images; it must not print raw notation strings as a replacement for sheet notation
 
 Required exercise fields:
 
