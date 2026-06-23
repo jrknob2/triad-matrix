@@ -8,7 +8,9 @@ void main() {
 
   test('builds a printable lesson PDF', () async {
     final LessonPlan plan = await LessonPlanLoader.loadFlowFoundations();
-    final Lesson lesson = plan.lessons.last;
+    final Lesson lesson = plan.lessons.singleWhere(
+      (Lesson lesson) => lesson.id == 'the-money-beat',
+    );
     final Map<String, String> notationSvgsByPatternId = <String, String>{
       for (final LessonPattern pattern in lesson.patterns)
         pattern.id: '''
@@ -35,7 +37,9 @@ void main() {
 
   test('refuses to export when rendered notation is missing', () async {
     final LessonPlan plan = await LessonPlanLoader.loadFlowFoundations();
-    final Lesson lesson = plan.lessons.last;
+    final Lesson lesson = plan.lessons.singleWhere(
+      (Lesson lesson) => lesson.id == 'the-money-beat',
+    );
 
     expect(
       () => LessonPrintExportService.buildLessonPdf(

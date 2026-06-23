@@ -62,6 +62,7 @@ No active screen should contain:
 
 - lesson YAML stores authored Drumcabulary notation strings
 - users do not author or edit notation strings in MVP
+- lesson content may use existing explicit voice override notation when an example depends on specific kit voices
 - the shared sheet-notation renderer is the display path for lesson notation examples
 - rendered notation may expose an ear-icon preview that plays the displayed notes through the existing sample engine
 - while notation preview is playing, the notation surface should show an animated vertical playhead aligned to the rendered note positions

@@ -8,29 +8,74 @@ void main() {
 
   test('loads the Flow Foundations lesson plan from assets', () async {
     final LessonPlan plan = await LessonPlanLoader.loadFlowFoundations();
+    Lesson lessonById(String id) {
+      return plan.lessons.singleWhere((Lesson lesson) => lesson.id == id);
+    }
 
     expect(plan.id, 'flow-foundations');
     expect(plan.title, 'Flow Foundations');
-    expect(plan.lessons, hasLength(8));
-    expect(plan.lessons.map((Lesson lesson) => lesson.number), <int>[
-      1,
-      2,
-      3,
-      4,
-      5,
-      6,
-      7,
-      8,
-    ]);
+    expect(plan.lessons, hasLength(9));
+    expect(
+      plan.lessons.map((Lesson lesson) => lesson.number),
+      List<int>.generate(plan.lessons.length, (int index) => index + 1),
+    );
     expect(plan.lessons.first.title, 'Groove Foundation');
     expect(
       plan.lessons.map((Lesson lesson) => lesson.id),
       isNot(contains('notation-basics')),
     );
-    expect(plan.lessons.first.patterns.first.title, 'Basic Rock Groove');
-    expect(plan.lessons[4].exercises.single.flow, hasLength(2));
+    expect(
+      plan.lessons.map((Lesson lesson) => lesson.id),
+      contains('the-money-beat'),
+    );
+    expect(
+      lessonById('groove-foundation').patterns.first.title,
+      'Basic Rock Groove',
+    );
+    expect(
+      lessonById('groove-to-fill-flow').exercises.single.flow,
+      hasLength(2),
+    );
 
-    final Lesson tripletVocabulary = plan.lessons.last;
+    final Lesson moneyBeat = lessonById('the-money-beat');
+    expect(moneyBeat.number, 2);
+    expect(moneyBeat.title, 'The Money Beat');
+    expect(moneyBeat.patterns, hasLength(3));
+    expect(moneyBeat.exercises, hasLength(3));
+
+    final Map<String, LessonPattern> moneyPatternsById =
+        <String, LessonPattern>{
+          for (final LessonPattern pattern in moneyBeat.patterns)
+            pattern.id: pattern,
+        };
+    expect(
+      moneyPatternsById['money-beat-one-bar']!.notation,
+      '[HH K:R] [HH:R] [HH S:R] [HH:R] [HH K:R] [HH:R] [HH S:R] [HH:R]',
+    );
+    final List<DrumSheetNotationNote> moneyBeatNotes =
+        DrumSheetNotationDocument.fromPattern(
+          moneyPatternsById['money-beat-four-bars']!.notation,
+        ).flattenedNotes;
+    expect(moneyBeatNotes, hasLength(32));
+    expect(moneyBeatNotes[0].voices, <DrumSheetVoice>[
+      DrumSheetVoice.hihat,
+      DrumSheetVoice.kick,
+    ]);
+    expect(moneyBeatNotes[2].voices, <DrumSheetVoice>[
+      DrumSheetVoice.hihat,
+      DrumSheetVoice.snare,
+    ]);
+    expect(moneyBeatNotes[24].sticking, 'XK');
+    expect(moneyBeatNotes[24].voices, <DrumSheetVoice>[
+      DrumSheetVoice.crash,
+      DrumSheetVoice.kick,
+    ]);
+    expect(moneyBeatNotes[28].voices, <DrumSheetVoice>[
+      DrumSheetVoice.hihat,
+      DrumSheetVoice.kick,
+    ]);
+
+    final Lesson tripletVocabulary = lessonById('triplet-vocabulary-1');
     expect(tripletVocabulary.id, 'triplet-vocabulary-1');
     expect(tripletVocabulary.title, 'Triplet Vocabulary 1');
     expect(tripletVocabulary.patterns, hasLength(14));

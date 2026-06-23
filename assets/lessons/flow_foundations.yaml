@@ -33,8 +33,73 @@ lesson_plan:
       mastery:
         - Play the groove for two minutes without rushing.
 
-    - id: accents-and-ghosts
+    - id: the-money-beat
       number: 2
+      title: The Money Beat
+      objective: Learn the foundational 4/4 drum beat with steady eighth-note hi-hat, kick on 1 and 3, and snare on 2 and 4.
+      skill_focus: groove
+      estimated_minutes: 25
+      required_concepts:
+        - 4/4 time
+        - eighth-note count
+        - hi-hat pulse
+        - kick on 1 and 3
+        - snare backbeat on 2 and 4
+        - crash plus kick phrase entry
+      patterns:
+        - id: money-beat-hi-hat-pulse
+          title: Hi-Hat Eighths
+          role: warmup
+          notation: "[HH:R] [HH:R] [HH:R] [HH:R] [HH:R] [HH:R] [HH:R] [HH:R]"
+        - id: money-beat-one-bar
+          title: Money Beat - One Bar
+          role: groove
+          notation: "[HH K:R] [HH:R] [HH S:R] [HH:R] [HH K:R] [HH:R] [HH S:R] [HH:R]"
+        - id: money-beat-four-bars
+          title: Money Beat - Four Bars With Crash
+          role: groove
+          notation: "[HH K:R] [HH:R] [HH S:R] [HH:R] [HH K:R] [HH:R] [HH S:R] [HH:R] [HH K:R] [HH:R] [HH S:R] [HH:R] [HH K:R] [HH:R] [HH S:R] [HH:R] [HH K:R] [HH:R] [HH S:R] [HH:R] [HH K:R] [HH:R] [HH S:R] [HH:R] [XK] [HH:R] [HH S:R] [HH:R] [HH K:R] [HH:R] [HH S:R] [HH:R]"
+      exercises:
+        - title: Count The Hi-Hat
+          instructions: Count 1 & 2 & 3 & 4 & while playing steady eighth notes on the hi-hat.
+          subdivision: 8
+          tempo:
+            start: 60
+            target: 100
+          flow:
+            - pattern: money-beat-hi-hat-pulse
+              repeat: 8
+
+        - title: Add Kick And Snare
+          instructions: Keep the hi-hat even, place the kick on 1 and 3, and place the snare on 2 and 4.
+          subdivision: 8
+          tempo:
+            start: 60
+            target: 100
+          flow:
+            - pattern: money-beat-one-bar
+              repeat: 8
+
+        - title: Four-Bar Phrase With Crash
+          instructions: Play four measures; on measure 4, use crash plus kick on beat 1 instead of hi-hat plus kick.
+          subdivision: 8
+          tempo:
+            start: 60
+            target: 100
+          flow:
+            - pattern: money-beat-four-bars
+              repeat: 4
+      coaching_notes:
+        - Count out loud until the placement feels automatic.
+        - Keep the hi-hat steady before adding volume or speed.
+        - Make the snare backbeat clear without pulling the tempo forward.
+        - Treat the crash plus kick as the start of the fourth measure, not a fill.
+      mastery:
+        - Play the one-bar beat at 100 BPM with even hi-hat notes.
+        - Play the four-measure phrase with the measure-four crash landing cleanly on beat 1.
+
+    - id: accents-and-ghosts
+      number: 3
       title: Accents and Ghosts
       objective: Shape patterns with accented notes and ghost notes.
       skill_focus: dynamics
@@ -65,7 +130,7 @@ lesson_plan:
         - Clear dynamic contrast at 100 BPM.
 
     - id: simultaneous-hits
-      number: 3
+      number: 4
       title: Simultaneous Hits
       objective: Use bracketed hits to place multiple voices on the same beat.
       skill_focus: coordination
@@ -97,7 +162,7 @@ lesson_plan:
         - Land [XK] cleanly without flam between limbs.
 
     - id: five-note-groupings
-      number: 4
+      number: 5
       title: Five-Note Groupings
       objective: Learn to feel 5-note phrases inside a 16th-note grid.
       skill_focus: grouping
@@ -129,7 +194,7 @@ lesson_plan:
         - Play the shaped fill at 100 BPM without losing the grid.
 
     - id: groove-to-fill-flow
-      number: 5
+      number: 6
       title: Groove to Fill Flow
       objective: Move from groove to fill and back to groove without losing time.
       skill_focus: flow
@@ -166,7 +231,7 @@ lesson_plan:
         - Complete the exercise three times in a row without rushing the fill.
 
     - id: triplet-feel
-      number: 6
+      number: 7
       title: Triplet Feel
       objective: Build comfort with triplet timing without treating groupings as tuplets.
       skill_focus: triplets
@@ -196,7 +261,7 @@ lesson_plan:
         - Play triplet patterns evenly at 100 BPM.
 
     - id: subdivision-transitions
-      number: 7
+      number: 8
       title: Subdivision Transitions
       objective: Switch between 8ths, triplets, and 16ths without freezing.
       skill_focus: subdivision
@@ -234,7 +299,7 @@ lesson_plan:
         - Switch subdivisions cleanly at 90 BPM.
 
     - id: triplet-vocabulary-1
-      number: 8
+      number: 9
       title: Triplet Vocabulary 1
       objective: Learn five triplet vocabulary fragments, combine them into six-note phrases, and apply them inside a simple groove.
       skill_focus: triplets
