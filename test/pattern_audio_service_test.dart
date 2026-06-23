@@ -67,7 +67,76 @@ void main() {
       expect(plan.cues[0].sample, PatternAudioSampleV1.snareAccent);
       expect(plan.cues[1].sample, PatternAudioSampleV1.hihat);
       expect(plan.cues[2].sample, PatternAudioSampleV1.floorTom);
-      expect(plan.cues[1].volume, lessThan(plan.cues[2].volume));
+      expect(plan.cues[0].volume, 1.0);
+      expect(plan.cues[1].volume, 0.6);
+      expect(plan.cues[2].volume, 0.8);
+    });
+
+    test('uses mixer defaults and ignores ghost marking on kicks', () {
+      final PatternAudioPlanV1 plan = PatternAudioService.buildPlan(
+        tokens: const <PatternTokenV1>[
+          PatternTokenV1.right,
+          PatternTokenV1.left,
+          PatternTokenV1.kick,
+        ],
+        markings: const <PatternNoteMarkingV1>[
+          PatternNoteMarkingV1.normal,
+          PatternNoteMarkingV1.ghost,
+          PatternNoteMarkingV1.ghost,
+        ],
+        voices: const <DrumVoiceV1>[
+          DrumVoiceV1.snare,
+          DrumVoiceV1.snare,
+          DrumVoiceV1.kick,
+        ],
+        grouping: PatternGroupingV1.none,
+        timing: const PatternTimingV1.auto(),
+        bpm: 60,
+      );
+
+      expect(
+        plan.cues.map((PatternAudioCueV1 cue) => cue.volume).toList(),
+        <double>[0.8, 0.6, 1.0],
+      );
+      expect(plan.cues[2].sample, PatternAudioSampleV1.kick);
+    });
+
+    test('accepts a custom mixer config', () {
+      final PatternAudioPlanV1 plan = PatternAudioService.buildPlan(
+        tokens: const <PatternTokenV1>[
+          PatternTokenV1.right,
+          PatternTokenV1.right,
+          PatternTokenV1.right,
+          PatternTokenV1.kick,
+        ],
+        markings: const <PatternNoteMarkingV1>[
+          PatternNoteMarkingV1.normal,
+          PatternNoteMarkingV1.normal,
+          PatternNoteMarkingV1.ghost,
+          PatternNoteMarkingV1.normal,
+        ],
+        voices: const <DrumVoiceV1>[
+          DrumVoiceV1.snare,
+          DrumVoiceV1.hihat,
+          DrumVoiceV1.floorTom,
+          DrumVoiceV1.kick,
+        ],
+        grouping: PatternGroupingV1.none,
+        timing: const PatternTimingV1.auto(),
+        bpm: 60,
+        mixerConfig: const PatternAudioMixerConfigV1(
+          kickVolume: 0.95,
+          normalNonCymbalVolume: 0.7,
+          normalCymbalVolume: 0.5,
+          ghostVolume: 0.35,
+          accentVolume: 0.9,
+        ),
+      );
+
+      expect(
+        plan.cues.map((PatternAudioCueV1 cue) => cue.volume).toList(),
+        <double>[0.7, 0.5, 0.35, 0.95],
+      );
     });
 
     test('maps expressive tokens without expanding timing positions', () {

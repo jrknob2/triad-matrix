@@ -65,6 +65,7 @@ No active screen should contain:
 - the shared sheet-notation renderer is the display path for lesson notation examples
 - rendered notation may expose an ear-icon preview that plays the displayed notes through the existing sample engine
 - while notation preview is playing, the notation surface should show an animated vertical playhead aligned to the rendered note positions
+- notation preview audio should use an explicit mixer config for relative sample levels; default preview levels are kick `1.0`, normal non-cymbal hits `0.8`, and ghosts `0.6`, with kick hits ignoring ghost marking
 - renderer failures must be visible
 - raw notation strings must not silently replace failed sheet rendering in app or PDF output
 - PDF/export output should use the same notation rendering contract as the on-screen lesson detail

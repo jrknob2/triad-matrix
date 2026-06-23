@@ -44,6 +44,26 @@ class PatternAudioPlanV1 {
   const PatternAudioPlanV1({required this.cues, required this.cycleDuration});
 }
 
+class PatternAudioMixerConfigV1 {
+  final double kickVolume;
+  final double normalNonCymbalVolume;
+  final double normalCymbalVolume;
+  final double ghostVolume;
+  final double accentVolume;
+
+  const PatternAudioMixerConfigV1({
+    this.kickVolume = 1.0,
+    this.normalNonCymbalVolume = 0.8,
+    this.normalCymbalVolume = 0.8,
+    this.ghostVolume = 0.6,
+    this.accentVolume = 1.0,
+  }) : assert(kickVolume >= 0 && kickVolume <= 1),
+       assert(normalNonCymbalVolume >= 0 && normalNonCymbalVolume <= 1),
+       assert(normalCymbalVolume >= 0 && normalCymbalVolume <= 1),
+       assert(ghostVolume >= 0 && ghostVolume <= 1),
+       assert(accentVolume >= 0 && accentVolume <= 1);
+}
+
 class PatternAudioService {
   static const int _playerPoolSize = 4;
   static const Map<PatternAudioSampleV1, String> assetPaths =
@@ -108,6 +128,7 @@ class PatternAudioService {
     required PatternTimingV1 timing,
     required int bpm,
     AccentVoiceV1 accentVoice = AccentVoiceV1.snare,
+    PatternAudioMixerConfigV1 mixerConfig = const PatternAudioMixerConfigV1(),
     Map<int, List<DrumVoiceV1>> additionalVoicesByIndex =
         const <int, List<DrumVoiceV1>>{},
     Duration startElapsed = Duration.zero,
@@ -123,6 +144,7 @@ class PatternAudioService {
       timing: timing,
       bpm: bpm,
       accentVoice: accentVoice,
+      mixerConfig: mixerConfig,
       additionalVoicesByIndex: additionalVoicesByIndex,
     );
     if (plan.cues.isEmpty || plan.cycleDuration <= Duration.zero) return;
@@ -168,6 +190,7 @@ class PatternAudioService {
     required PatternTimingV1 timing,
     required int bpm,
     AccentVoiceV1 accentVoice = AccentVoiceV1.snare,
+    PatternAudioMixerConfigV1 mixerConfig = const PatternAudioMixerConfigV1(),
     Map<int, List<DrumVoiceV1>> additionalVoicesByIndex =
         const <int, List<DrumVoiceV1>>{},
   }) {
@@ -217,7 +240,12 @@ class PatternAudioService {
             marking: marking,
             accentVoice: accentVoice,
           ),
-          volume: _volumeFor(token: token, voice: voice, marking: marking),
+          volume: _volumeFor(
+            token: token,
+            voice: voice,
+            marking: marking,
+            mixerConfig: mixerConfig,
+          ),
         ),
       );
       for (final DrumVoiceV1 additionalVoice
@@ -239,6 +267,7 @@ class PatternAudioService {
               token: _tokenForAdditionalVoice(additionalVoice),
               voice: additionalVoice,
               marking: PatternNoteMarkingV1.normal,
+              mixerConfig: mixerConfig,
             ),
           ),
         );
@@ -385,18 +414,24 @@ class PatternAudioService {
     required PatternTokenV1 token,
     required DrumVoiceV1 voice,
     required PatternNoteMarkingV1 marking,
+    required PatternAudioMixerConfigV1 mixerConfig,
   }) {
     if (token.isKick || voice == DrumVoiceV1.kick) {
-      return switch (marking) {
-        PatternNoteMarkingV1.accent => 1.0,
-        PatternNoteMarkingV1.ghost => 0.45,
-        PatternNoteMarkingV1.normal => 0.92,
-      };
+      return mixerConfig.kickVolume;
     }
     return switch (marking) {
-      PatternNoteMarkingV1.accent => 1.0,
-      PatternNoteMarkingV1.ghost => 0.42,
-      PatternNoteMarkingV1.normal => 0.88,
+      PatternNoteMarkingV1.accent => mixerConfig.accentVolume,
+      PatternNoteMarkingV1.ghost => mixerConfig.ghostVolume,
+      PatternNoteMarkingV1.normal =>
+        _isCymbalVoice(voice)
+            ? mixerConfig.normalCymbalVolume
+            : mixerConfig.normalNonCymbalVolume,
     };
+  }
+
+  static bool _isCymbalVoice(DrumVoiceV1 voice) {
+    return voice == DrumVoiceV1.hihat ||
+        voice == DrumVoiceV1.crash ||
+        voice == DrumVoiceV1.ride;
   }
 }
