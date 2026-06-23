@@ -7,6 +7,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../../core/practice/practice_domain_v1.dart';
 import '../pattern_audio_service.dart';
+import '../pattern_playback_scheduler.dart';
 
 enum DrumSheetNoteValue {
   whole,
@@ -302,6 +303,10 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay> {
   List<Rect> _hitRects = <Rect>[];
   WebViewController? _controller;
   PatternAudioService? _audioPreview;
+  Timer? _playheadTicker;
+  final Stopwatch _playheadStopwatch = Stopwatch();
+  _SheetNotationAudioPlan? _audioPreviewPlan;
+  _NotationPlayheadFrame? _playheadFrame;
   bool _hostLoaded = false;
   bool _audioPreviewRunning = false;
   bool _audioPreviewPreparing = false;
@@ -310,6 +315,7 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay> {
   String? _lastPayloadJson;
   String? _lastRenderPayloadJson;
   String? _lastSelectionJson;
+  String? _lastPlayheadJson;
 
   @override
   void initState() {
@@ -353,6 +359,7 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay> {
             _lastPayloadJson = null;
             _lastRenderPayloadJson = null;
             _lastSelectionJson = null;
+            _lastPlayheadJson = null;
             _renderToWebView(width: _lastLayoutWidth);
           },
         ),
@@ -382,6 +389,8 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay> {
     if (_activeAudioPreviewOwner == this) {
       _activeAudioPreviewOwner = null;
     }
+    _playheadTicker?.cancel();
+    _playheadStopwatch.stop();
     unawaited(_audioPreview?.dispose());
     super.dispose();
   }
@@ -499,10 +508,16 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay> {
       );
       if (!mounted) return;
       _activeAudioPreviewOwner = this;
+      _audioPreviewPlan = plan;
+      _playheadStopwatch
+        ..reset()
+        ..start();
+      _startPlayheadTicker();
       setState(() {
         _audioPreviewRunning = true;
         _audioPreviewPreparing = false;
       });
+      _updatePlayheadFrame();
     } on Object catch (error, stackTrace) {
       debugPrint(
         'Drum sheet notation audio preview failed: $error\n$stackTrace',
@@ -523,6 +538,14 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay> {
   }
 
   Future<void> _stopAudioPreview() async {
+    _playheadTicker?.cancel();
+    _playheadTicker = null;
+    _playheadStopwatch
+      ..stop()
+      ..reset();
+    _audioPreviewPlan = null;
+    _playheadFrame = null;
+    _sendPlayheadToWebView(null);
     await _audioPreview?.stop();
     if (_activeAudioPreviewOwner == this) {
       _activeAudioPreviewOwner = null;
@@ -532,6 +555,33 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay> {
       _audioPreviewRunning = false;
       _audioPreviewPreparing = false;
     });
+  }
+
+  void _startPlayheadTicker() {
+    _playheadTicker?.cancel();
+    _playheadTicker = Timer.periodic(
+      const Duration(milliseconds: 33),
+      (_) => _updatePlayheadFrame(),
+    );
+  }
+
+  void _updatePlayheadFrame() {
+    final _SheetNotationAudioPlan? plan = _audioPreviewPlan;
+    if (plan == null || !_playheadStopwatch.isRunning) {
+      _playheadFrame = null;
+      _sendPlayheadToWebView(null);
+      return;
+    }
+    final _NotationPlayheadFrame? frame = _playheadFrameForElapsed(
+      elapsed: _playheadStopwatch.elapsed,
+      plan: plan,
+      bpm: widget.audioPreviewBpm,
+    );
+    _playheadFrame = frame;
+    _sendPlayheadToWebView(frame);
+    if (widget.debugUseNativeFallback && mounted) {
+      setState(() {});
+    }
   }
 
   Widget _buildNativeFallback(BuildContext context) {
@@ -575,8 +625,31 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay> {
             },
           ),
         );
+        final Widget notation = SizedBox(
+          width: width,
+          height: layout.height,
+          child: Stack(
+            children: <Widget>[
+              paint,
+              if (_playheadFrame != null)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: CustomPaint(
+                      painter: _DrumSheetPlayheadPainter(
+                        layout: layout,
+                        frame: _playheadFrame!,
+                        color: widget.darkTheme
+                            ? const Color(0xFF93C5FD)
+                            : const Color(0xFF1D4ED8),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
         if (!widget.selectable && widget.onSelectionChanged == null) {
-          return paint;
+          return notation;
         }
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
@@ -594,7 +667,7 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay> {
             }
             widget.onSelectionChanged?.call(next);
           },
-          child: paint,
+          child: notation,
         );
       },
     );
@@ -638,6 +711,7 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay> {
           .catchError((Object error) {
             debugPrint('Drum sheet notation selection update failed: $error');
           });
+      _sendPlayheadToWebView(_playheadFrame);
       return;
     }
     _controller
@@ -653,6 +727,31 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay> {
 ''')
         .catchError((Object error) {
           debugPrint('Drum sheet notation JavaScript render failed: $error');
+        });
+    _lastPlayheadJson = null;
+    _sendPlayheadToWebView(_playheadFrame);
+  }
+
+  void _sendPlayheadToWebView(_NotationPlayheadFrame? frame) {
+    if (widget.debugUseNativeFallback || !_hostLoaded) return;
+    final String playheadJson = jsonEncode(
+      frame?.toJson() ?? const <String, Object?>{'visible': false},
+    );
+    if (_lastPlayheadJson == playheadJson) return;
+    _lastPlayheadJson = playheadJson;
+    final String encodedPlayhead = jsonEncode(playheadJson);
+    _controller
+        ?.runJavaScript('''
+(() => {
+  const playhead = JSON.parse($encodedPlayhead);
+  if (window.DrumcabularySheetNotation == null) {
+    return;
+  }
+  window.DrumcabularySheetNotation.setPlayhead(playhead);
+})();
+''')
+        .catchError((Object error) {
+          debugPrint('Drum sheet notation playhead update failed: $error');
         });
   }
 
@@ -734,6 +833,8 @@ class _SheetNotationAudioPlan {
   final List<DrumVoiceV1> voices;
   final PatternTimingV1 timing;
   final Map<int, List<DrumVoiceV1>> additionalVoicesByIndex;
+  final List<_SheetNotationPlayheadEvent> playheadEvents;
+  final double totalBeatCount;
 
   const _SheetNotationAudioPlan({
     required this.tokens,
@@ -741,7 +842,44 @@ class _SheetNotationAudioPlan {
     required this.voices,
     required this.timing,
     required this.additionalVoicesByIndex,
+    required this.playheadEvents,
+    required this.totalBeatCount,
   });
+}
+
+@immutable
+class _SheetNotationPlayheadEvent {
+  final int tokenIndex;
+  final double startBeat;
+  final double beatDuration;
+
+  const _SheetNotationPlayheadEvent({
+    required this.tokenIndex,
+    required this.startBeat,
+    required this.beatDuration,
+  });
+}
+
+@immutable
+class _NotationPlayheadFrame {
+  final int tokenIndex;
+  final int nextTokenIndex;
+  final double progress;
+
+  const _NotationPlayheadFrame({
+    required this.tokenIndex,
+    required this.nextTokenIndex,
+    required this.progress,
+  });
+
+  Map<String, Object?> toJson() {
+    return <String, Object?>{
+      'visible': true,
+      'tokenIndex': tokenIndex,
+      'nextTokenIndex': nextTokenIndex,
+      'progress': progress,
+    };
+  }
 }
 
 _SheetNotationAudioPlan _audioPlanForDocument(
@@ -788,16 +926,72 @@ _SheetNotationAudioPlan _audioPlanForDocument(
     }
   }
 
+  final PatternTimingV1 timing = PatternTimingV1.explicit(
+    spans: List<PatternTimingSpanV1>.unmodifiable(spans),
+  );
+  final PatternPlaybackPlanV1 playbackPlan =
+      PatternPlaybackSchedulerV1.buildPlan(
+        tokens: tokens,
+        grouping: PatternGroupingV1.none,
+        timing: timing,
+      );
+
   return _SheetNotationAudioPlan(
     tokens: List<PatternTokenV1>.unmodifiable(tokens),
     markings: List<PatternNoteMarkingV1>.unmodifiable(markings),
     voices: List<DrumVoiceV1>.unmodifiable(voices),
-    timing: PatternTimingV1.explicit(
-      spans: List<PatternTimingSpanV1>.unmodifiable(spans),
-    ),
+    timing: timing,
     additionalVoicesByIndex: Map<int, List<DrumVoiceV1>>.unmodifiable(
       additionalVoicesByIndex,
     ),
+    playheadEvents: List<_SheetNotationPlayheadEvent>.unmodifiable(
+      playbackPlan.events.map(
+        (PatternPlaybackEventV1 event) => _SheetNotationPlayheadEvent(
+          tokenIndex: event.tokenIndex,
+          startBeat: event.startBeat,
+          beatDuration: event.beatDuration,
+        ),
+      ),
+    ),
+    totalBeatCount: playbackPlan.totalBeatCount,
+  );
+}
+
+_NotationPlayheadFrame? _playheadFrameForElapsed({
+  required Duration elapsed,
+  required _SheetNotationAudioPlan plan,
+  required int bpm,
+}) {
+  if (bpm <= 0 || plan.playheadEvents.isEmpty || plan.totalBeatCount <= 0) {
+    return null;
+  }
+
+  final double microsPerBeat = Duration.microsecondsPerMinute / bpm;
+  final double beatsElapsed = elapsed.inMicroseconds / microsPerBeat;
+  final double beatInCycle = beatsElapsed % plan.totalBeatCount;
+
+  for (int index = 0; index < plan.playheadEvents.length; index += 1) {
+    final _SheetNotationPlayheadEvent event = plan.playheadEvents[index];
+    final double endBeat = event.startBeat + event.beatDuration;
+    if (beatInCycle >= event.startBeat && beatInCycle < endBeat) {
+      final _SheetNotationPlayheadEvent next =
+          plan.playheadEvents[(index + 1) % plan.playheadEvents.length];
+      final double progress = event.beatDuration <= 0
+          ? 0
+          : ((beatInCycle - event.startBeat) / event.beatDuration).clamp(0, 1);
+      return _NotationPlayheadFrame(
+        tokenIndex: event.tokenIndex,
+        nextTokenIndex: next.tokenIndex,
+        progress: progress,
+      );
+    }
+  }
+
+  final _SheetNotationPlayheadEvent fallback = plan.playheadEvents.last;
+  return _NotationPlayheadFrame(
+    tokenIndex: fallback.tokenIndex,
+    nextTokenIndex: plan.playheadEvents.first.tokenIndex,
+    progress: 1,
   );
 }
 
@@ -1478,6 +1672,77 @@ class _SheetSystem {
     required this.noteSpacing,
     required this.beamBreaks,
   });
+}
+
+@immutable
+class _PlayheadLine {
+  final double x;
+  final double y1;
+  final double y2;
+
+  const _PlayheadLine({required this.x, required this.y1, required this.y2});
+}
+
+class _DrumSheetPlayheadPainter extends CustomPainter {
+  final _SheetLayout layout;
+  final _NotationPlayheadFrame frame;
+  final Color color;
+
+  const _DrumSheetPlayheadPainter({
+    required this.layout,
+    required this.frame,
+    required this.color,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final _PlayheadLine? current = _playheadLineForIndex(
+      layout,
+      frame.tokenIndex,
+    );
+    if (current == null) return;
+
+    double x = current.x;
+    final _PlayheadLine? next = _playheadLineForIndex(
+      layout,
+      frame.nextTokenIndex,
+    );
+    if (next != null && _sameNativeSystem(current, next) && next.x >= x) {
+      x = current.x + (next.x - current.x) * frame.progress;
+    }
+
+    final Paint paint = Paint()
+      ..color = color
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = 2.5;
+    canvas.drawLine(Offset(x, current.y1), Offset(x, current.y2), paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _DrumSheetPlayheadPainter oldDelegate) {
+    return oldDelegate.layout != layout ||
+        oldDelegate.frame != frame ||
+        oldDelegate.color != color;
+  }
+}
+
+_PlayheadLine? _playheadLineForIndex(_SheetLayout layout, int tokenIndex) {
+  for (final _SheetSystem system in layout.systems) {
+    for (int localIndex = 0; localIndex < system.entries.length; localIndex++) {
+      if (system.entries[localIndex].index != tokenIndex) continue;
+      final double x = _nativeNoteX(system, localIndex);
+      return _PlayheadLine(x: x, y1: system.y - 34, y2: system.y + 72);
+    }
+  }
+  return null;
+}
+
+double _nativeNoteX(_SheetSystem system, int localIndex) {
+  return system.x + 46 + localIndex * system.noteSpacing;
+}
+
+bool _sameNativeSystem(_PlayheadLine left, _PlayheadLine right) {
+  return (left.y1 - right.y1).abs() < 4 && (left.y2 - right.y2).abs() < 4;
 }
 
 List<List<_NoteEntry>> _systemsForEntries(

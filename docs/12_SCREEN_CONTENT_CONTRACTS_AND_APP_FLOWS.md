@@ -64,6 +64,7 @@ No active screen should contain:
 - users do not author or edit notation strings in MVP
 - the shared sheet-notation renderer is the display path for lesson notation examples
 - rendered notation may expose an ear-icon preview that plays the displayed notes through the existing sample engine
+- while notation preview is playing, the notation surface should show an animated vertical playhead aligned to the rendered note positions
 - renderer failures must be visible
 - raw notation strings must not silently replace failed sheet rendering in app or PDF output
 - PDF/export output should use the same notation rendering contract as the on-screen lesson detail
@@ -124,6 +125,7 @@ Required content:
 - patterns
 - rendered notation examples
 - notation audio preview action
+- animated notation playhead while preview audio runs
 - exercises
 - coaching notes
 - mastery target
@@ -214,6 +216,7 @@ Lesson Detail must show:
 - required concepts
 - patterns with rendered notation
 - ear-icon preview controls for rendered notation
+- animated vertical playhead over rendered notation during preview
 - exercises with authored metadata
 - coaching notes
 - mastery targets

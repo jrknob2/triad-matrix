@@ -78,6 +78,23 @@
         stroke-width: 2.5;
       }
 
+      .drum-playhead-overlay {
+        pointer-events: none;
+      }
+
+      .drum-playhead-overlay line {
+        filter: drop-shadow(0 0 2px rgba(29, 78, 216, 0.55));
+        fill: none;
+        stroke: #1d4ed8;
+        stroke-linecap: round;
+        stroke-width: 2.5;
+      }
+
+      #notation.dark .drum-playhead-overlay line {
+        filter: drop-shadow(0 0 3px rgba(147, 197, 253, 0.8));
+        stroke: #93c5fd;
+      }
+
       .empty-notation {
         min-height: 96px;
       }
@@ -101,6 +118,7 @@
       let renderedNotes = [];
       let selectionTargetsByIndex = new Map();
       const selectedIndexes = new Set();
+      let playheadState = { visible: false };
 
       globalThis.DrumcabularySheetNotation = {
         render(payload) {
@@ -119,8 +137,10 @@
               renderedNotes = [];
               selectionTargetsByIndex = new Map();
               selectedIndexes.clear();
+              playheadState = { visible: false };
               notation.innerHTML = '<div class="empty-notation"></div>';
               renderSelection();
+              renderPlayhead();
               postHeight();
               return;
             }
@@ -137,6 +157,7 @@
             notation.innerHTML = result.svg;
             attachNoteSelection();
             renderSelection();
+            renderPlayhead();
             postHeight();
           } catch (error) {
             console.error(error);
@@ -151,6 +172,12 @@
           }
           renderSelection();
           postSelection();
+        },
+        setPlayhead(state) {
+          playheadState = state && typeof state === 'object'
+            ? state
+            : { visible: false };
+          renderPlayhead();
         },
       };
 
@@ -252,6 +279,61 @@
         if (overlay != null && overlay.childNodes.length > 0) {
           svg.appendChild(overlay);
         }
+      }
+
+      function renderPlayhead() {
+        notation.querySelector('.drum-playhead-overlay')?.remove();
+        if (playheadState?.visible !== true) return;
+        const svg = notation.querySelector('svg');
+        if (svg == null) return;
+        const target = selectionTargetsByIndex.get(Number(playheadState.tokenIndex));
+        if (target == null) return;
+        const currentLine = playheadLineForTarget(target);
+        if (currentLine == null) return;
+
+        let x = currentLine.x;
+        const nextTarget = selectionTargetsByIndex.get(Number(playheadState.nextTokenIndex));
+        const nextLine = nextTarget == null ? null : playheadLineForTarget(nextTarget);
+        const progress = clamp(Number(playheadState.progress), 0, 1);
+        if (
+          nextLine != null &&
+          sameSystem(currentLine, nextLine) &&
+          nextLine.x >= currentLine.x
+        ) {
+          x = currentLine.x + (nextLine.x - currentLine.x) * progress;
+        }
+
+        const overlay = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        overlay.setAttribute('class', 'drum-playhead-overlay');
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', String(x));
+        line.setAttribute('x2', String(x));
+        line.setAttribute('y1', String(currentLine.y1));
+        line.setAttribute('y2', String(currentLine.y2));
+        overlay.appendChild(line);
+        svg.appendChild(overlay);
+      }
+
+      function playheadLineForTarget(target) {
+        if (target == null) return null;
+        const bounds = target.bounds;
+        const selection = target.note?.selection ?? {};
+        const y1 = Number.isFinite(selection.stemY1)
+          ? selection.stemY1
+          : Math.max(0, bounds.y - 3);
+        const y2 = Number.isFinite(selection.stemY2)
+          ? selection.stemY2
+          : bounds.y + bounds.height + 3;
+        return { x: target.x, y1, y2 };
+      }
+
+      function sameSystem(left, right) {
+        return Math.abs(left.y1 - right.y1) < 4 && Math.abs(left.y2 - right.y2) < 4;
+      }
+
+      function clamp(value, min, max) {
+        if (!Number.isFinite(value)) return min;
+        return Math.min(max, Math.max(min, value));
       }
 
       function addSelectionOverlayLine(overlay, index) {
