@@ -296,7 +296,8 @@ class DrumSheetNotationDisplay extends StatefulWidget {
       _DrumSheetNotationDisplayState();
 }
 
-class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay> {
+class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
+    with WidgetsBindingObserver {
   static const String _hostAsset = 'web/sheet_notation/app_host.html';
   static _DrumSheetNotationDisplayState? _activeAudioPreviewOwner;
 
@@ -320,6 +321,7 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     if (!widget.debugUseNativeFallback) {
       _ensureWebViewController();
     }
@@ -389,10 +391,22 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay> {
     if (_activeAudioPreviewOwner == this) {
       _activeAudioPreviewOwner = null;
     }
+    WidgetsBinding.instance.removeObserver(this);
     _playheadTicker?.cancel();
     _playheadStopwatch.stop();
     unawaited(_audioPreview?.dispose());
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!_audioPreviewRunning && !_audioPreviewPreparing) return;
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.detached) {
+      unawaited(_stopAudioPreview());
+    }
   }
 
   @override
@@ -1708,9 +1722,15 @@ class _DrumSheetPlayheadPainter extends CustomPainter {
     if (current == null) return;
 
     double x = current.x;
-    final _PlayheadLine? next = frame.extendsToCycleEnd
+    final _PlayheadLine? requestedNext = frame.extendsToCycleEnd
         ? _playheadCycleEndLineForIndex(layout, frame.tokenIndex)
         : _playheadLineForIndex(layout, frame.nextTokenIndex);
+    final _PlayheadLine? next =
+        requestedNext != null &&
+            _sameNativeSystem(current, requestedNext) &&
+            requestedNext.x >= x
+        ? requestedNext
+        : _playheadCycleEndLineForIndex(layout, frame.tokenIndex);
     if (next != null && _sameNativeSystem(current, next) && next.x >= x) {
       x = current.x + (next.x - current.x) * frame.progress;
     }

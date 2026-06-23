@@ -55,7 +55,7 @@ class PatternAudioMixerConfigV1 {
     this.kickVolume = 1.0,
     this.normalNonCymbalVolume = 0.8,
     this.normalCymbalVolume = 0.8,
-    this.ghostVolume = 0.3,
+    this.ghostVolume = 0.1,
     this.accentVolume = 1.0,
   }) : assert(kickVolume >= 0 && kickVolume <= 1),
        assert(normalNonCymbalVolume >= 0 && normalNonCymbalVolume <= 1),
@@ -66,6 +66,7 @@ class PatternAudioMixerConfigV1 {
 
 class PatternAudioService {
   static const int _playerPoolSize = 4;
+  static const Duration _staleCueTolerance = Duration(milliseconds: 90);
   static const Map<PatternAudioSampleV1, String> assetPaths =
       <PatternAudioSampleV1, String>{
         PatternAudioSampleV1.snare: 'assets/audio/snare.wav',
@@ -99,16 +100,48 @@ class PatternAudioService {
           sample: 0,
       };
 
-  bool _prepared = false;
+  final Set<PatternAudioSampleV1> _preparedSamples = <PatternAudioSampleV1>{};
+  Future<void>? _prepareFuture;
   bool _running = false;
   Timer? _cycleTimer;
   final List<Timer> _cueTimers = <Timer>[];
 
-  Future<void> prepare() async {
-    if (_prepared) return;
+  Future<void> prepare({Iterable<PatternAudioSampleV1>? samples}) async {
+    final Set<PatternAudioSampleV1> requiredSamples = samples == null
+        ? Set<PatternAudioSampleV1>.of(PatternAudioSampleV1.values)
+        : samples.toSet();
+    if (requiredSamples.isEmpty) return;
+
+    while (true) {
+      final Set<PatternAudioSampleV1> missingSamples = requiredSamples.where((
+        PatternAudioSampleV1 sample,
+      ) {
+        return !_preparedSamples.contains(sample);
+      }).toSet();
+      if (missingSamples.isEmpty) return;
+
+      final Future<void>? activePrepare = _prepareFuture;
+      if (activePrepare != null) {
+        await activePrepare;
+        continue;
+      }
+
+      final Future<void> nextPrepare = _prepareSamples(missingSamples);
+      _prepareFuture = nextPrepare;
+      try {
+        await nextPrepare;
+      } finally {
+        if (identical(_prepareFuture, nextPrepare)) {
+          _prepareFuture = null;
+        }
+      }
+    }
+  }
+
+  Future<void> _prepareSamples(Set<PatternAudioSampleV1> samples) async {
     final AudioSession session = await AudioSession.instance;
     await session.configure(const AudioSessionConfiguration.music());
-    for (final PatternAudioSampleV1 sample in PatternAudioSampleV1.values) {
+    for (final PatternAudioSampleV1 sample in samples) {
       final String assetPath = assetPaths[sample]!;
       for (final AudioPlayer player in _playersBySample[sample]!) {
         await player.setAsset(assetPath);
@@ -116,8 +149,8 @@ class PatternAudioService {
         await player.seek(Duration.zero);
         await player.pause();
       }
+      _preparedSamples.add(sample);
     }
-    _prepared = true;
   }
 
   Future<void> start({
@@ -133,9 +166,6 @@ class PatternAudioService {
         const <int, List<DrumVoiceV1>>{},
     Duration startElapsed = Duration.zero,
   }) async {
-    await prepare();
-    await stop();
-
     final PatternAudioPlanV1 plan = buildPlan(
       tokens: tokens,
       markings: markings,
@@ -148,6 +178,11 @@ class PatternAudioService {
       additionalVoicesByIndex: additionalVoicesByIndex,
     );
     if (plan.cues.isEmpty || plan.cycleDuration <= Duration.zero) return;
+
+    await stop();
+    await prepare(
+      samples: plan.cues.map((PatternAudioCueV1 cue) => cue.sample),
+    );
 
     _running = true;
     final Duration phase = _normalizedPhase(
@@ -167,8 +202,12 @@ class PatternAudioService {
     _cueTimers.clear();
     for (final List<AudioPlayer> players in _playersBySample.values) {
       for (final AudioPlayer player in players) {
-        await player.pause();
-        await player.seek(Duration.zero);
+        try {
+          await player.pause();
+          await player.seek(Duration.zero);
+        } catch (_) {
+          // Some players may not have an asset loaded yet.
+        }
       }
     }
   }
@@ -301,6 +340,7 @@ class PatternAudioService {
   }) {
     if (!_running) return;
     _cueTimers.removeWhere((Timer timer) => !timer.isActive);
+    final Stopwatch cycleStopwatch = Stopwatch()..start();
     for (final PatternAudioCueV1 cue in plan.cues) {
       if (phase > Duration.zero && cue.offset < phase) {
         continue;
@@ -309,6 +349,7 @@ class PatternAudioService {
       _cueTimers.add(
         Timer(delay, () {
           if (!_running) return;
+          if (cycleStopwatch.elapsed - delay > _staleCueTolerance) return;
           unawaited(_triggerCue(cue));
         }),
       );

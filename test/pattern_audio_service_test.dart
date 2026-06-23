@@ -68,7 +68,7 @@ void main() {
       expect(plan.cues[1].sample, PatternAudioSampleV1.hihat);
       expect(plan.cues[2].sample, PatternAudioSampleV1.floorTom);
       expect(plan.cues[0].volume, 1.0);
-      expect(plan.cues[1].volume, 0.3);
+      expect(plan.cues[1].volume, 0.1);
       expect(plan.cues[2].volume, 0.8);
     });
 
@@ -96,7 +96,7 @@ void main() {
 
       expect(
         plan.cues.map((PatternAudioCueV1 cue) => cue.volume).toList(),
-        <double>[0.8, 0.3, 1.0],
+        <double>[0.8, 0.1, 1.0],
       );
       expect(plan.cues[2].sample, PatternAudioSampleV1.kick);
     });

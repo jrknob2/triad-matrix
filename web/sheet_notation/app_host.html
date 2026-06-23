@@ -293,9 +293,14 @@
 
         let x = currentLine.x;
         const nextTarget = selectionTargetsByIndex.get(Number(playheadState.nextTokenIndex));
-        const nextLine = playheadState.extendsToCycleEnd === true
+        const requestedNextLine = playheadState.extendsToCycleEnd === true
           ? playheadCycleEndLineForTarget(target, currentLine)
           : nextTarget == null ? null : playheadLineForTarget(nextTarget);
+        const nextLine = requestedNextLine != null &&
+          sameSystem(currentLine, requestedNextLine) &&
+          requestedNextLine.x >= currentLine.x
+            ? requestedNextLine
+            : playheadCycleEndLineForTarget(target, currentLine);
         const progress = clamp(Number(playheadState.progress), 0, 1);
         if (
           nextLine != null &&
