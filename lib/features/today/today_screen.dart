@@ -1,29 +1,13 @@
 import 'package:flutter/material.dart';
 
-import '../../core/practice/practice_domain_v1.dart';
-import '../../state/app_controller.dart';
 import '../app/drumcabulary_theme.dart';
 import '../app/drumcabulary_ui.dart';
 import '../coach/lesson_detail_screen.dart';
 import '../coach/lesson_plan.dart';
 import '../coach/lesson_plan_loader.dart';
 
-typedef OpenMatrixCallback =
-    void Function({
-      LearningLaneV1? lane,
-      Set<TriadMatrixFilterV1>? filters,
-      List<String>? selectedItemIds,
-    });
-
 class TodayScreen extends StatefulWidget {
-  const TodayScreen({
-    super.key,
-    required AppController controller,
-    required OpenMatrixCallback onOpenMatrix,
-    required VoidCallback onOpenFocus,
-    required ValueChanged<String> onOpenItem,
-    required void Function(String, PracticeModeV1) onPracticeItemInMode,
-  });
+  const TodayScreen({super.key});
 
   @override
   State<TodayScreen> createState() => _TodayScreenState();
@@ -40,23 +24,23 @@ class _TodayScreenState extends State<TodayScreen> {
         future: _lessonPlanFuture,
         builder: (BuildContext context, AsyncSnapshot<LessonPlan> snapshot) {
           if (snapshot.hasError) {
-            return _CoachLoadError(error: snapshot.error);
+            return _LessonLoadError(error: snapshot.error);
           }
           final LessonPlan? lessonPlan = snapshot.data;
           if (lessonPlan == null) {
             return const Center(child: CircularProgressIndicator());
           }
-          return _CoachLessonPlanView(lessonPlan: lessonPlan);
+          return _LessonPlanView(lessonPlan: lessonPlan);
         },
       ),
     );
   }
 }
 
-class _CoachLessonPlanView extends StatelessWidget {
+class _LessonPlanView extends StatelessWidget {
   final LessonPlan lessonPlan;
 
-  const _CoachLessonPlanView({required this.lessonPlan});
+  const _LessonPlanView({required this.lessonPlan});
 
   @override
   Widget build(BuildContext context) {
@@ -221,10 +205,10 @@ class _LessonNumberBadge extends StatelessWidget {
   }
 }
 
-class _CoachLoadError extends StatelessWidget {
+class _LessonLoadError extends StatelessWidget {
   final Object? error;
 
-  const _CoachLoadError({required this.error});
+  const _LessonLoadError({required this.error});
 
   @override
   Widget build(BuildContext context) {
