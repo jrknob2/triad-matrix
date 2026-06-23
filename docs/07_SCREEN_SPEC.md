@@ -97,6 +97,7 @@ Lesson Detail presents one lesson as a clean printable handout.
 - show required concepts
 - show pattern rows
 - render pattern notation with the shared sheet-notation renderer
+- provide an ear-icon action for lightweight notation audio preview
 - show exercise rows
 - show tempo, subdivision, subdivision sequence, and flow metadata when authored
 - show coaching notes
@@ -105,7 +106,7 @@ Lesson Detail presents one lesson as a clean printable handout.
 
 ### Must Not Do
 
-- start playback
+- start a live practice playback session
 - run a BPM clock
 - log completion
 - assess user performance
@@ -126,10 +127,15 @@ Shows a visible rendering error for the affected notation example.
 
 Hands off to the existing print/share export path.
 
+#### State D: Notation Audio Preview
+
+Plays or stops the selected notation example through the lightweight sample-preview path.
+
 ### Acceptance Criteria
 
 - all lesson YAML fields are represented clearly
 - notation examples render on screen
+- notation examples can be previewed with the ear icon
 - print/share output includes rendered notation
 - renderer or export failures are visible during development
 - no practice, progress, or assessment state appears

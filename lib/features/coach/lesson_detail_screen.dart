@@ -194,6 +194,7 @@ class _PatternList extends StatelessWidget {
           _PatternRow(
             pattern: lesson.patterns[index],
             subdivision: _subdivisionForLesson(lesson),
+            previewBpm: _previewBpmForLesson(lesson),
           ),
         ],
       ],
@@ -204,8 +205,13 @@ class _PatternList extends StatelessWidget {
 class _PatternRow extends StatelessWidget {
   final LessonPattern pattern;
   final DrumSheetNoteValue subdivision;
+  final int previewBpm;
 
-  const _PatternRow({required this.pattern, required this.subdivision});
+  const _PatternRow({
+    required this.pattern,
+    required this.subdivision,
+    required this.previewBpm,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -240,6 +246,8 @@ class _PatternRow extends StatelessWidget {
           selectable: false,
           compactLayout: true,
           minNoteWidth: 32,
+          audioPreviewEnabled: true,
+          audioPreviewBpm: previewBpm,
         ),
       ],
     );
@@ -423,6 +431,14 @@ DrumSheetNoteValue _subdivisionForLesson(Lesson lesson) {
     }
   }
   return DrumSheetNoteValue.eighth;
+}
+
+int _previewBpmForLesson(Lesson lesson) {
+  for (final LessonExercise exercise in lesson.exercises) {
+    final TempoTarget? tempo = exercise.tempo;
+    if (tempo != null) return tempo.start;
+  }
+  return 92;
 }
 
 DrumSheetNoteValue? _subdivisionValue(String? value) {

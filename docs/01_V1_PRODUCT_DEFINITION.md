@@ -65,7 +65,7 @@ A lesson contains:
 
 ### Pattern
 
-A named musical idea using authored Drumcabulary notation. Pattern notation is source content for rendering, not a user-editable field in MVP.
+A named musical idea using authored Drumcabulary notation. Pattern notation is source content for rendering and lightweight audio preview, not a user-editable field in MVP.
 
 ### Exercise
 
@@ -80,7 +80,7 @@ These features are useful later, but they are outside the current MVP:
 - live practice sessions
 - start/stop player
 - BPM timing engine
-- audio playback
+- full practice audio playback
 - progress tracking
 - assessment evaluator
 - user-specific recommendation engine
@@ -98,8 +98,9 @@ These features are useful later, but they are outside the current MVP:
 1. Lesson content comes from authored YAML assets.
 2. MVP screens must not expose practice, Matrix, Library, Progress, assessment, or recommendation entry points.
 3. Pattern notation may be stored and rendered, but users do not author notation strings in MVP.
-4. Sheet notation rendering failures should be visible; fallbacks must not replace broken rendering with misleading raw notation.
-5. Print/export output should match the lesson detail contract as closely as the current infrastructure allows.
+4. Rendered notation may expose a lightweight hear-it preview using the existing sample engine.
+5. Sheet notation rendering failures should be visible; fallbacks must not replace broken rendering with misleading raw notation.
+6. Print/export output should match the lesson detail contract as closely as the current infrastructure allows.
 
 ---
 

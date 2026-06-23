@@ -20,7 +20,7 @@ An item belongs in `Consider Now` when it affects:
 
 An item belongs in `Decision Needed Soon` when the implementation can wait, but the lesson content model needs a choice before more content is authored.
 
-An item belongs in `Post-MVP` when it introduces practice sessions, progress, personalization, authoring, audio, or broader app navigation.
+An item belongs in `Post-MVP` when it introduces practice sessions, progress, personalization, authoring, full practice audio, or broader app navigation.
 
 ---
 
@@ -63,7 +63,20 @@ Initial thought:
 - verify rendered notation in PDF output
 - keep PDF layout clean and close to the lesson detail contract
 
-### 4. Lesson content pass
+### 4. Lightweight notation audio preview
+
+Why now:
+
+- hearing the rendered example helps validate that notation content is musical, not just visually correct
+- the sample engine already exists and can be reused without restoring live practice sessions
+
+Initial thought:
+
+- keep the action local to rendered notation
+- use an ear icon
+- do not add transport controls, session state, metronome controls, or tracking
+
+### 5. Lesson content pass
 
 Why now:
 
@@ -117,7 +130,7 @@ Current implementation:
 - live practice sessions
 - start/stop player
 - BPM timing engine
-- audio playback
+- full practice audio playback
 - progress tracking
 - assessment evaluator
 - user-specific recommendation engine

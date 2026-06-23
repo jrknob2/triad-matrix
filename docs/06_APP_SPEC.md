@@ -12,7 +12,7 @@ The current MVP replaces the previous five-tab practice product with a single le
 
 Drumcabulary is currently a drummer-first lesson plan app for curated vocabulary, notation examples, exercise guidance, and printable practice material.
 
-The MVP source of truth is bundled lesson YAML plus the shared sheet-notation renderer.
+The MVP source of truth is bundled lesson YAML plus the shared sheet-notation renderer. Rendered notation may also offer a lightweight hear-it preview backed by the existing sample engine.
 
 ---
 
@@ -91,6 +91,7 @@ Responsible for:
 - required notation concepts
 - pattern list
 - rendered pattern notation
+- lightweight notation audio preview
 - exercise list
 - coaching notes
 - mastery target
@@ -163,5 +164,5 @@ The following systems remain available as historical implementation or future wo
 - Working On / Maintain state
 - recommendation logic
 - assessment and session summary
-- audio and timing engine
+- full practice audio and timing engine
 - user notation authoring

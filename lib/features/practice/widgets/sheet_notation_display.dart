@@ -1,8 +1,12 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+
+import '../../../core/practice/practice_domain_v1.dart';
+import '../pattern_audio_service.dart';
 
 enum DrumSheetNoteValue {
   whole,
@@ -259,6 +263,9 @@ class DrumSheetNotationDisplay extends StatefulWidget {
   final bool darkTheme;
   final Color? backgroundColor;
   final bool debugUseNativeFallback;
+  final bool audioPreviewEnabled;
+  final int audioPreviewBpm;
+  final AccentVoiceV1 audioPreviewAccentVoice;
 
   const DrumSheetNotationDisplay({
     super.key,
@@ -278,6 +285,9 @@ class DrumSheetNotationDisplay extends StatefulWidget {
     this.darkTheme = false,
     this.backgroundColor,
     this.debugUseNativeFallback = false,
+    this.audioPreviewEnabled = false,
+    this.audioPreviewBpm = 92,
+    this.audioPreviewAccentVoice = AccentVoiceV1.snare,
   });
 
   @override
@@ -287,10 +297,14 @@ class DrumSheetNotationDisplay extends StatefulWidget {
 
 class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay> {
   static const String _hostAsset = 'web/sheet_notation/app_host.html';
+  static _DrumSheetNotationDisplayState? _activeAudioPreviewOwner;
 
   List<Rect> _hitRects = <Rect>[];
   WebViewController? _controller;
+  PatternAudioService? _audioPreview;
   bool _hostLoaded = false;
+  bool _audioPreviewRunning = false;
+  bool _audioPreviewPreparing = false;
   double _webViewHeight = 160;
   double? _lastLayoutWidth;
   String? _lastPayloadJson;
@@ -354,11 +368,33 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay> {
     if (!widget.debugUseNativeFallback) {
       _ensureWebViewController();
     }
+    if (_audioPreviewRunning &&
+        (oldWidget.document != widget.document ||
+            oldWidget.audioPreviewBpm != widget.audioPreviewBpm ||
+            oldWidget.audioPreviewAccentVoice !=
+                widget.audioPreviewAccentVoice)) {
+      unawaited(_stopAudioPreview());
+    }
+  }
+
+  @override
+  void dispose() {
+    if (_activeAudioPreviewOwner == this) {
+      _activeAudioPreviewOwner = null;
+    }
+    unawaited(_audioPreview?.dispose());
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (widget.debugUseNativeFallback) return _buildNativeFallback(context);
+    final Widget notation = widget.debugUseNativeFallback
+        ? _buildNativeFallback(context)
+        : _buildWebViewNotation();
+    return _buildAudioPreviewShell(context, notation);
+  }
+
+  Widget _buildWebViewNotation() {
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final WebViewController controller = _ensureWebViewController();
@@ -379,6 +415,123 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay> {
         );
       },
     );
+  }
+
+  Widget _buildAudioPreviewShell(BuildContext context, Widget notation) {
+    if (!widget.audioPreviewEnabled) return notation;
+    final bool canPreview =
+        widget.audioPreviewBpm > 0 &&
+        widget.document.flattenedNotes.any(
+          (DrumSheetNotationNote note) => !note.rest,
+        );
+    final ColorScheme colorScheme = Theme.of(context).colorScheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Align(
+          alignment: Alignment.centerRight,
+          child: IconButton(
+            tooltip: _audioPreviewRunning
+                ? 'Stop notation audio'
+                : 'Hear notation',
+            onPressed: canPreview && !_audioPreviewPreparing
+                ? _toggleAudioPreview
+                : null,
+            icon: _audioPreviewPreparing
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.hearing_rounded),
+            style: IconButton.styleFrom(
+              backgroundColor: _audioPreviewRunning
+                  ? colorScheme.primaryContainer
+                  : null,
+              foregroundColor: _audioPreviewRunning
+                  ? colorScheme.onPrimaryContainer
+                  : null,
+            ),
+          ),
+        ),
+        notation,
+      ],
+    );
+  }
+
+  Future<void> _toggleAudioPreview() async {
+    if (_audioPreviewRunning) {
+      await _stopAudioPreview();
+      return;
+    }
+    await _startAudioPreview();
+  }
+
+  Future<void> _startAudioPreview() async {
+    if (_audioPreviewPreparing) return;
+    setState(() => _audioPreviewPreparing = true);
+    try {
+      final _SheetNotationAudioPlan plan = _audioPlanForDocument(
+        widget.document,
+      );
+      if (plan.tokens.isEmpty ||
+          plan.tokens.every((PatternTokenV1 token) => token.isRest)) {
+        return;
+      }
+
+      final _DrumSheetNotationDisplayState? activeOwner =
+          _activeAudioPreviewOwner;
+      if (activeOwner != null && activeOwner != this) {
+        await activeOwner._stopAudioPreview();
+      }
+
+      final PatternAudioService audioPreview = _audioPreview ??=
+          PatternAudioService();
+      await audioPreview.start(
+        tokens: plan.tokens,
+        markings: plan.markings,
+        voices: plan.voices,
+        grouping: PatternGroupingV1.none,
+        timing: plan.timing,
+        bpm: widget.audioPreviewBpm,
+        accentVoice: widget.audioPreviewAccentVoice,
+        additionalVoicesByIndex: plan.additionalVoicesByIndex,
+      );
+      if (!mounted) return;
+      _activeAudioPreviewOwner = this;
+      setState(() {
+        _audioPreviewRunning = true;
+        _audioPreviewPreparing = false;
+      });
+    } on Object catch (error, stackTrace) {
+      debugPrint(
+        'Drum sheet notation audio preview failed: $error\n$stackTrace',
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.maybeOf(
+        context,
+      )?.showSnackBar(const SnackBar(content: Text('Notation audio failed.')));
+      setState(() {
+        _audioPreviewRunning = false;
+        _audioPreviewPreparing = false;
+      });
+    } finally {
+      if (mounted && _audioPreviewPreparing) {
+        setState(() => _audioPreviewPreparing = false);
+      }
+    }
+  }
+
+  Future<void> _stopAudioPreview() async {
+    await _audioPreview?.stop();
+    if (_activeAudioPreviewOwner == this) {
+      _activeAudioPreviewOwner = null;
+    }
+    if (!mounted) return;
+    setState(() {
+      _audioPreviewRunning = false;
+      _audioPreviewPreparing = false;
+    });
   }
 
   Widget _buildNativeFallback(BuildContext context) {
@@ -571,6 +724,165 @@ Map<String, Object?> _documentJson(DrumSheetNotationDocument document) {
           ],
         },
     ],
+  };
+}
+
+@immutable
+class _SheetNotationAudioPlan {
+  final List<PatternTokenV1> tokens;
+  final List<PatternNoteMarkingV1> markings;
+  final List<DrumVoiceV1> voices;
+  final PatternTimingV1 timing;
+  final Map<int, List<DrumVoiceV1>> additionalVoicesByIndex;
+
+  const _SheetNotationAudioPlan({
+    required this.tokens,
+    required this.markings,
+    required this.voices,
+    required this.timing,
+    required this.additionalVoicesByIndex,
+  });
+}
+
+_SheetNotationAudioPlan _audioPlanForDocument(
+  DrumSheetNotationDocument document,
+) {
+  final List<DrumSheetNotationNote> notes = document.flattenedNotes;
+  final List<PatternTokenV1> tokens = <PatternTokenV1>[];
+  final List<PatternNoteMarkingV1> markings = <PatternNoteMarkingV1>[];
+  final List<DrumVoiceV1> voices = <DrumVoiceV1>[];
+  final List<PatternTimingSpanV1> spans = <PatternTimingSpanV1>[];
+  final Map<int, List<DrumVoiceV1>> additionalVoicesByIndex =
+      <int, List<DrumVoiceV1>>{};
+
+  for (int index = 0; index < notes.length; index += 1) {
+    final DrumSheetNotationNote note = notes[index];
+    final PatternTokenV1 token = _audioTokenForSheetNote(note);
+    final List<DrumVoiceV1> noteVoices = note.voices
+        .map(_audioVoiceForSheetVoice)
+        .toList(growable: false);
+    final DrumVoiceV1 primaryVoice = _primaryAudioVoiceForNote(
+      note,
+      token,
+      noteVoices,
+    );
+    final List<DrumVoiceV1> additionalVoices = <DrumVoiceV1>[
+      for (final DrumVoiceV1 voice in noteVoices)
+        if (voice != primaryVoice) voice,
+    ];
+
+    tokens.add(token);
+    markings.add(_audioMarkingForSheetNote(note));
+    voices.add(primaryVoice);
+    spans.add(
+      PatternTimingSpanV1(
+        startIndex: index,
+        tokenCount: 1,
+        beatCount: _beatCountForSheetValue(
+          note.resolvedValue(document.subdivision),
+        ),
+      ),
+    );
+    if (additionalVoices.isNotEmpty) {
+      additionalVoicesByIndex[index] = additionalVoices;
+    }
+  }
+
+  return _SheetNotationAudioPlan(
+    tokens: List<PatternTokenV1>.unmodifiable(tokens),
+    markings: List<PatternNoteMarkingV1>.unmodifiable(markings),
+    voices: List<DrumVoiceV1>.unmodifiable(voices),
+    timing: PatternTimingV1.explicit(
+      spans: List<PatternTimingSpanV1>.unmodifiable(spans),
+    ),
+    additionalVoicesByIndex: Map<int, List<DrumVoiceV1>>.unmodifiable(
+      additionalVoicesByIndex,
+    ),
+  );
+}
+
+PatternTokenV1 _audioTokenForSheetNote(DrumSheetNotationNote note) {
+  if (note.rest) return PatternTokenV1.rest;
+  if (note.flam) return PatternTokenV1.flam;
+
+  final String sticking = note.sticking.trim().toUpperCase();
+  for (int index = 0; index < sticking.length; index += 1) {
+    final String char = sticking[index];
+    switch (char) {
+      case 'R':
+        return PatternTokenV1.right;
+      case 'L':
+        return PatternTokenV1.left;
+      case 'K':
+        return PatternTokenV1.kick;
+      case 'F':
+        return PatternTokenV1.flam;
+      case 'X':
+        return PatternTokenV1.accent;
+      case '_':
+        return PatternTokenV1.rest;
+    }
+  }
+
+  if (note.voices.contains(DrumSheetVoice.kick)) {
+    return PatternTokenV1.kick;
+  }
+  if (note.voices.contains(DrumSheetVoice.crash) ||
+      note.voices.contains(DrumSheetVoice.ride)) {
+    return PatternTokenV1.accent;
+  }
+  return PatternTokenV1.right;
+}
+
+PatternNoteMarkingV1 _audioMarkingForSheetNote(DrumSheetNotationNote note) {
+  if (note.accent) return PatternNoteMarkingV1.accent;
+  if (note.ghost) return PatternNoteMarkingV1.ghost;
+  return PatternNoteMarkingV1.normal;
+}
+
+DrumVoiceV1 _primaryAudioVoiceForNote(
+  DrumSheetNotationNote note,
+  PatternTokenV1 token,
+  List<DrumVoiceV1> voices,
+) {
+  if (token.isKick) return DrumVoiceV1.kick;
+  if (token.kind == PatternTokenKindV1.accent) {
+    for (final DrumVoiceV1 voice in voices) {
+      if (voice == DrumVoiceV1.crash ||
+          voice == DrumVoiceV1.ride ||
+          voice == DrumVoiceV1.hihat) {
+        return voice;
+      }
+    }
+    return DrumVoiceV1.crash;
+  }
+  for (final DrumVoiceV1 voice in voices) {
+    if (voice != DrumVoiceV1.kick) return voice;
+  }
+  return DrumVoiceV1.snare;
+}
+
+DrumVoiceV1 _audioVoiceForSheetVoice(DrumSheetVoice voice) {
+  return switch (voice) {
+    DrumSheetVoice.hihat => DrumVoiceV1.hihat,
+    DrumSheetVoice.ride => DrumVoiceV1.ride,
+    DrumSheetVoice.crash => DrumVoiceV1.crash,
+    DrumSheetVoice.snare => DrumVoiceV1.snare,
+    DrumSheetVoice.tom1 => DrumVoiceV1.rackTom,
+    DrumSheetVoice.tom2 => DrumVoiceV1.tom2,
+    DrumSheetVoice.floorTom => DrumVoiceV1.floorTom,
+    DrumSheetVoice.kick => DrumVoiceV1.kick,
+  };
+}
+
+double _beatCountForSheetValue(DrumSheetNoteValue value) {
+  return switch (value) {
+    DrumSheetNoteValue.whole => 4,
+    DrumSheetNoteValue.half => 2,
+    DrumSheetNoteValue.quarter => 1,
+    DrumSheetNoteValue.eighth => 0.5,
+    DrumSheetNoteValue.sixteenth => 0.25,
+    DrumSheetNoteValue.thirtySecond => 0.125,
   };
 }
 

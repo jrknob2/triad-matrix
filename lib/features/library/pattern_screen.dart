@@ -197,6 +197,10 @@ class _PatternScreenState extends State<PatternScreen> {
                         selectable: true,
                         compactLayout: true,
                         minNoteWidth: 34,
+                        audioPreviewEnabled: true,
+                        audioPreviewBpm: widget.controller.profile.defaultBpm,
+                        audioPreviewAccentVoice:
+                            widget.controller.profile.accentVoice,
                       ),
                       const SizedBox(height: 10),
                       _PatternContextPills(

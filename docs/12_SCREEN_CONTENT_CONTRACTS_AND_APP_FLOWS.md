@@ -63,6 +63,7 @@ No active screen should contain:
 - lesson YAML stores authored Drumcabulary notation strings
 - users do not author or edit notation strings in MVP
 - the shared sheet-notation renderer is the display path for lesson notation examples
+- rendered notation may expose an ear-icon preview that plays the displayed notes through the existing sample engine
 - renderer failures must be visible
 - raw notation strings must not silently replace failed sheet rendering in app or PDF output
 - PDF/export output should use the same notation rendering contract as the on-screen lesson detail
@@ -122,13 +123,14 @@ Required content:
 - required concepts
 - patterns
 - rendered notation examples
+- notation audio preview action
 - exercises
 - coaching notes
 - mastery target
 
 Forbidden content:
 
-- playback controls
+- live practice playback controls
 - live BPM controls
 - assessment prompts
 - completion toggles
@@ -211,6 +213,7 @@ Lesson Detail must show:
 - estimated time
 - required concepts
 - patterns with rendered notation
+- ear-icon preview controls for rendered notation
 - exercises with authored metadata
 - coaching notes
 - mastery targets
