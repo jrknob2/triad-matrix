@@ -55,7 +55,7 @@ class PatternAudioMixerConfigV1 {
     this.kickVolume = 1.0,
     this.normalNonCymbalVolume = 0.8,
     this.normalCymbalVolume = 0.8,
-    this.ghostVolume = 0.6,
+    this.ghostVolume = 0.3,
     this.accentVolume = 1.0,
   }) : assert(kickVolume >= 0 && kickVolume <= 1),
        assert(normalNonCymbalVolume >= 0 && normalNonCymbalVolume <= 1),

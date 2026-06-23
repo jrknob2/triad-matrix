@@ -865,11 +865,13 @@ class _NotationPlayheadFrame {
   final int tokenIndex;
   final int nextTokenIndex;
   final double progress;
+  final bool extendsToCycleEnd;
 
   const _NotationPlayheadFrame({
     required this.tokenIndex,
     required this.nextTokenIndex,
     required this.progress,
+    this.extendsToCycleEnd = false,
   });
 
   Map<String, Object?> toJson() {
@@ -878,6 +880,7 @@ class _NotationPlayheadFrame {
       'tokenIndex': tokenIndex,
       'nextTokenIndex': nextTokenIndex,
       'progress': progress,
+      'extendsToCycleEnd': extendsToCycleEnd,
     };
   }
 }
@@ -983,6 +986,7 @@ _NotationPlayheadFrame? _playheadFrameForElapsed({
         tokenIndex: event.tokenIndex,
         nextTokenIndex: next.tokenIndex,
         progress: progress,
+        extendsToCycleEnd: index == plan.playheadEvents.length - 1,
       );
     }
   }
@@ -992,6 +996,7 @@ _NotationPlayheadFrame? _playheadFrameForElapsed({
     tokenIndex: fallback.tokenIndex,
     nextTokenIndex: plan.playheadEvents.first.tokenIndex,
     progress: 1,
+    extendsToCycleEnd: true,
   );
 }
 
@@ -1703,10 +1708,9 @@ class _DrumSheetPlayheadPainter extends CustomPainter {
     if (current == null) return;
 
     double x = current.x;
-    final _PlayheadLine? next = _playheadLineForIndex(
-      layout,
-      frame.nextTokenIndex,
-    );
+    final _PlayheadLine? next = frame.extendsToCycleEnd
+        ? _playheadCycleEndLineForIndex(layout, frame.tokenIndex)
+        : _playheadLineForIndex(layout, frame.nextTokenIndex);
     if (next != null && _sameNativeSystem(current, next) && next.x >= x) {
       x = current.x + (next.x - current.x) * frame.progress;
     }
@@ -1732,6 +1736,28 @@ _PlayheadLine? _playheadLineForIndex(_SheetLayout layout, int tokenIndex) {
       if (system.entries[localIndex].index != tokenIndex) continue;
       final double x = _nativeNoteX(system, localIndex);
       return _PlayheadLine(x: x, y1: system.y - 34, y2: system.y + 72);
+    }
+  }
+  return null;
+}
+
+_PlayheadLine? _playheadCycleEndLineForIndex(
+  _SheetLayout layout,
+  int tokenIndex,
+) {
+  for (final _SheetSystem system in layout.systems) {
+    for (int localIndex = 0; localIndex < system.entries.length; localIndex++) {
+      if (system.entries[localIndex].index != tokenIndex) continue;
+      final double currentX = _nativeNoteX(system, localIndex);
+      final double endX = math.min(
+        system.x + system.width - 4,
+        _nativeNoteX(system, localIndex + 1),
+      );
+      return _PlayheadLine(
+        x: math.max(currentX, endX),
+        y1: system.y - 34,
+        y2: system.y + 72,
+      );
     }
   }
   return null;

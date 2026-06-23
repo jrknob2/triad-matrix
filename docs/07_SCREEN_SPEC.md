@@ -98,7 +98,7 @@ Lesson Detail presents one lesson as a clean printable handout.
 - show pattern rows
 - render pattern notation with the shared sheet-notation renderer
 - provide an ear-icon action for lightweight notation audio preview
-- animate a vertical playhead line over rendered notation while preview audio runs
+- animate a vertical playhead line over rendered notation while preview audio runs, including the final note slot before the preview loops
 - show exercise rows
 - show tempo, subdivision, subdivision sequence, and flow metadata when authored
 - show coaching notes
@@ -130,14 +130,14 @@ Hands off to the existing print/share export path.
 
 #### State D: Notation Audio Preview
 
-Plays or stops the selected notation example through the lightweight sample-preview path. While playing, a vertical line moves across the rendered notation in time with the preview.
+Plays or stops the selected notation example through the lightweight sample-preview path. While playing, a vertical line moves across the rendered notation in time with the preview and continues past the last rendered note before looping.
 
 ### Acceptance Criteria
 
 - all lesson YAML fields are represented clearly
 - notation examples render on screen
 - notation examples can be previewed with the ear icon
-- notation preview shows a moving playhead aligned to the rendered notes
+- notation preview shows a moving playhead aligned to the rendered notes and the final note slot before looping
 - print/share output includes rendered notation
 - renderer or export failures are visible during development
 - no practice, progress, or assessment state appears

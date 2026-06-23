@@ -293,7 +293,9 @@
 
         let x = currentLine.x;
         const nextTarget = selectionTargetsByIndex.get(Number(playheadState.nextTokenIndex));
-        const nextLine = nextTarget == null ? null : playheadLineForTarget(nextTarget);
+        const nextLine = playheadState.extendsToCycleEnd === true
+          ? playheadCycleEndLineForTarget(target, currentLine)
+          : nextTarget == null ? null : playheadLineForTarget(nextTarget);
         const progress = clamp(Number(playheadState.progress), 0, 1);
         if (
           nextLine != null &&
@@ -325,6 +327,33 @@
           ? selection.stemY2
           : bounds.y + bounds.height + 3;
         return { x: target.x, y1, y2 };
+      }
+
+      function playheadCycleEndLineForTarget(target, currentLine) {
+        if (target == null || currentLine == null) return null;
+        const sameSystemLines = [...selectionTargetsByIndex.values()]
+          .map((candidate) => playheadLineForTarget(candidate))
+          .filter((line) => line != null && sameSystem(currentLine, line))
+          .sort((left, right) => left.x - right.x);
+        const previousLine = [...sameSystemLines]
+          .reverse()
+          .find((line) => line.x < currentLine.x - 0.5);
+        const inferredSpacing = previousLine == null
+          ? Math.max(34, target.bounds.width + 24)
+          : Math.max(24, currentLine.x - previousLine.x);
+        const svg = notation.querySelector('svg');
+        const viewBoxWidth = svg?.viewBox?.baseVal?.width;
+        const width = Number.isFinite(viewBoxWidth) && viewBoxWidth > 0
+          ? viewBoxWidth
+          : Number(svg?.getAttribute('width'));
+        const maxX = Number.isFinite(width) && width > currentLine.x
+          ? width - 8
+          : currentLine.x + inferredSpacing;
+        return {
+          x: Math.max(currentLine.x, Math.min(currentLine.x + inferredSpacing, maxX)),
+          y1: currentLine.y1,
+          y2: currentLine.y2,
+        };
       }
 
       function sameSystem(left, right) {
