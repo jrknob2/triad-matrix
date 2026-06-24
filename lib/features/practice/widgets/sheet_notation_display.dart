@@ -2308,7 +2308,7 @@ class _DrumSheetNotationPainter extends CustomPainter {
     _drawText(
       canvas,
       sticking,
-      Offset(_noteX(system, localIndex) - 8, system.y + 52),
+      Offset(_noteX(system, localIndex), system.y + 52),
       stickingStyle,
     );
   }
