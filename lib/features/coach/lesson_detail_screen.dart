@@ -31,11 +31,6 @@ class LessonDetailScreen extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             _LessonSection(
-              title: 'Required Concepts',
-              child: _ConceptWrap(items: lesson.requiredConcepts),
-            ),
-            const SizedBox(height: 14),
-            _LessonSection(
               title: 'Patterns',
               child: _PatternList(lesson: lesson),
             ),
@@ -155,27 +150,6 @@ class _LessonSection extends StatelessWidget {
           child,
         ],
       ),
-    );
-  }
-}
-
-class _ConceptWrap extends StatelessWidget {
-  final List<String> items;
-
-  const _ConceptWrap({required this.items});
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: <Widget>[
-        for (final String item in items)
-          Chip(
-            label: Text(item),
-            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          ),
-      ],
     );
   }
 }

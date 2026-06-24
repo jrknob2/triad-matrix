@@ -76,6 +76,7 @@ export function createFakeVexFlow() {
       this.attributes = {};
       this.modifiers = [];
       this.keyStyles = [];
+      this.xShift = 0;
       calls.notes.push(this);
     }
 
@@ -92,6 +93,15 @@ export function createFakeVexFlow() {
     setAttribute(name, value) {
       this.attributes[name] = value;
       return this;
+    }
+
+    setXShift(value) {
+      this.xShift = value;
+      return this;
+    }
+
+    getXShift() {
+      return this.xShift;
     }
   }
 

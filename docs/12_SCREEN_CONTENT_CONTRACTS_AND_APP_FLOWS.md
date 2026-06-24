@@ -131,7 +131,6 @@ Required content:
 - objective
 - skill focus
 - estimated time
-- required concepts
 - patterns
 - rendered notation examples
 - notation audio preview action
@@ -223,7 +222,6 @@ Lesson Detail must show:
 - objective
 - skill focus
 - estimated time
-- required concepts
 - patterns with rendered notation
 - ear-icon preview controls for rendered notation
 - animated vertical playhead over rendered notation during preview

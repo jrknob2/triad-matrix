@@ -87,9 +87,10 @@ class LessonSheetNotationSvgRenderer {
       'finalRepeat': true,
       'grouping': _groupingTextFromPattern(pattern.notation),
       'minNoteWidth': 32,
-      'staffY': 0,
+      'staffY': 16,
       'staffHeight': 124,
       'systemGapY': 126,
+      'groupGap': 14,
       'paddingRight': 34,
       'preserveMeasures': true,
     });

@@ -11,16 +11,12 @@ lesson_plan:
       objective: Build a simple rock groove using simultaneous hand and kick/snare hits.
       skill_focus: groove
       estimated_minutes: 20
-      required_concepts:
-        - simultaneous hits
-        - groove pulse
-        - eighth-note subdivision
       patterns:
         - id: basic-rock-groove
           title: Basic Rock Groove
           role: groove
           subdivision: 8
-          notation: "[RK] R [RL] R [RK] R [RL] R"
+          notation: "[RK]R [RL]R [RK]R [RL]R"
       exercises:
         - title: Groove Loop
           instructions: Loop the groove until it feels relaxed and even.
@@ -40,13 +36,6 @@ lesson_plan:
       objective: Learn the foundational 4/4 drum beat with steady eighth-note hi-hat, kick on 1 and 3, and snare on 2 and 4.
       skill_focus: groove
       estimated_minutes: 25
-      required_concepts:
-        - 4/4 time
-        - eighth-note count
-        - hi-hat pulse
-        - kick on 1 and 3
-        - snare backbeat on 2 and 4
-        - crash plus kick phrase entry
       patterns:
         - id: money-beat-hi-hat-pulse
           title: Hi-Hat Eighths
@@ -54,20 +43,20 @@ lesson_plan:
           subdivision: 8
           time_signature: "4/4"
           repeat_count: 8
-          notation: "[HH:R] [HH:R] [HH:R] [HH:R] [HH:R] [HH:R] [HH:R] [HH:R]"
+          notation: "[HH:R][HH:R] [HH:R][HH:R] [HH:R][HH:R] [HH:R][HH:R]"
         - id: money-beat-one-bar
           title: Money Beat - One Bar
           role: groove
           subdivision: 8
           time_signature: "4/4"
           repeat_count: 4
-          notation: "[HH K:R] [HH:R] [HH S:R] [HH:R] [HH K:R] [HH:R] [HH S:R] [HH:R]"
+          notation: "[HH K:R][HH:R] [HH S:R][HH:R] [HH K:R][HH:R] [HH S:R][HH:R]"
         - id: money-beat-four-bars
           title: Money Beat - Four Bars With Crash
           role: groove
           subdivision: 8
           time_signature: "4/4"
-          notation: "[HH K:R] [HH:R] [HH S:R] [HH:R] [HH K:R] [HH:R] [HH S:R] [HH:R] [HH K:R] [HH:R] [HH S:R] [HH:R] [HH K:R] [HH:R] [HH S:R] [HH:R] [HH K:R] [HH:R] [HH S:R] [HH:R] [HH K:R] [HH:R] [HH S:R] [HH:R] [XK] [HH:R] [HH S:R] [HH:R] [HH K:R] [HH:R] [HH S:R] [HH:R]"
+          notation: "[HH K:R][HH:R] [HH S:R][HH:R] [HH K:R][HH:R] [HH S:R][HH:R] [HH K:R][HH:R] [HH S:R][HH:R] [HH K:R][HH:R] [HH S:R][HH:R] [HH K:R][HH:R] [HH S:R][HH:R] [HH K:R][HH:R] [HH S:R][HH:R] [XK][HH:R] [HH S:R][HH:R] [HH K:R][HH:R] [HH S:R][HH:R]"
       exercises:
         - title: Count The Hi-Hat
           instructions: Count 1 & 2 & 3 & 4 & while playing steady eighth notes on the hi-hat.
@@ -113,9 +102,6 @@ lesson_plan:
       objective: Shape patterns with accented notes and ghost notes.
       skill_focus: dynamics
       estimated_minutes: 25
-      required_concepts:
-        - accents
-        - ghost notes
       patterns:
         - id: accent-ghost-five
           title: Accent Ghost Five
@@ -146,10 +132,6 @@ lesson_plan:
       objective: Use bracketed hits to place multiple voices on the same beat.
       skill_focus: coordination
       estimated_minutes: 20
-      required_concepts:
-        - "[XK]"
-        - "[RL]"
-        - "[RK]"
       patterns:
         - id: crash-kick-resolution
           title: Crash Kick Resolution
@@ -160,7 +142,7 @@ lesson_plan:
           title: Hands Together
           role: warmup
           subdivision: 16
-          notation: "[RL] R [RL] R"
+          notation: "[RL]R [RL]R"
       exercises:
         - title: Resolution Drill
           instructions: Practice landing the final bracketed hit cleanly as one event.
@@ -180,10 +162,6 @@ lesson_plan:
       objective: Learn to feel 5-note phrases inside a 16th-note grid.
       skill_focus: grouping
       estimated_minutes: 30
-      required_concepts:
-        - spaces as grouping
-        - five-note phrases
-        - sixteenth-note subdivision
       patterns:
         - id: raw-five-flow
           title: Raw Five Flow
@@ -214,16 +192,12 @@ lesson_plan:
       objective: Move from groove to fill and back to groove without losing time.
       skill_focus: flow
       estimated_minutes: 30
-      required_concepts:
-        - groove role
-        - fill role
-        - beat-one landing
       patterns:
         - id: basic-rock-groove
           title: Basic Rock Groove
           role: groove
           subdivision: 8
-          notation: "[RK] R [RL] R [RK] R [RL] R"
+          notation: "[RK]R [RL]R [RK]R [RL]R"
         - id: shaped-five-flow
           title: Shaped Five Flow
           role: fill
@@ -253,19 +227,17 @@ lesson_plan:
       objective: Build comfort with triplet timing without treating groupings as tuplets.
       skill_focus: triplets
       estimated_minutes: 25
-      required_concepts:
-        - triplet subdivision
       patterns:
         - id: triplet-hands
           title: Triplet Hands
           role: warmup
           subdivision: triplet
-          notation: R L R L R L
+          notation: RLR LRL
         - id: triplet-kick
           title: Triplet With Kick
           role: groove
           subdivision: triplet
-          notation: "[RK] R L [RL] R L"
+          notation: "[RK]RL [RL]RL"
       exercises:
         - title: Triplet Control
           instructions: Keep all notes evenly spaced in triplet feel.
@@ -285,16 +257,12 @@ lesson_plan:
       objective: Switch between 8ths, triplets, and 16ths without freezing.
       skill_focus: subdivision
       estimated_minutes: 30
-      required_concepts:
-        - eighths
-        - triplets
-        - sixteenths
       patterns:
         - id: transition-base
           title: Transition Base
           role: warmup
           subdivision: 8
-          notation: R L R L
+          notation: RL RL
       exercises:
         - title: 8ths to Triplets
           instructions: Play the same hand pattern first as 8ths, then as triplets.
@@ -324,13 +292,6 @@ lesson_plan:
       objective: Learn five triplet vocabulary fragments, combine them into six-note phrases, and apply them inside a simple groove.
       skill_focus: triplets
       estimated_minutes: 35
-      required_concepts:
-        - triplet subdivision
-        - ghost notes
-        - kick placement
-        - six-note phrase combinations
-        - groove application
-        - hand voice movement
       patterns:
         - id: triplet-vocab-a
           title: A - Right Ghost Ghost
@@ -361,7 +322,7 @@ lesson_plan:
           title: Basic Triplet Groove
           role: groove
           subdivision: triplet
-          notation: "[RK] R L [RL] R L"
+          notation: "[RK]RL [RL]RL"
         - id: six-ab
           title: Six-Note A + B
           role: fill

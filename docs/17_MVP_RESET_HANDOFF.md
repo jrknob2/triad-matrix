@@ -113,7 +113,7 @@ File:
 
 Current behavior:
 
-- Shows lesson title, objective, skill focus, estimated time, required concepts, patterns, exercises, coaching notes, mastery target, and Print.
+- Shows lesson title, objective, skill focus, estimated time, patterns, exercises, coaching notes, mastery target, and Print.
 - Pattern rows render sheet notation through the shared `DrumSheetNotationDisplay`.
 - Pattern rows have an ear-icon preview action.
 - Raw notation strings are intentionally not shown to users.
@@ -325,7 +325,7 @@ Recommended checks after MVP surface changes:
 Highest-value next refinement areas:
 
 1. Lesson content pass
-   - tighten lesson order, language, concepts, and mastery targets
+   - tighten lesson order, language, exercises, coaching notes, and mastery targets
    - decide whether `The Money Beat` should become lesson 1 or stay after `Groove Foundation`
 
 2. Notation display quality pass

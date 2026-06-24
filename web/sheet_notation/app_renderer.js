@@ -237,11 +237,12 @@ const DEFAULT_RENDER_OPTIONS = Object.freeze({
   minNoteWidth: 39,
   systemEndReserve: 28,
   noteSpacing: 34,
+  groupGap: 12,
   systemGapY: 140,
   finalRepeat: true,
   preserveMeasures: false,
   grouping: null,
-  repeatClefEverySystem: true,
+  repeatClefEverySystem: false,
   standardAccents: true,
   stemMode: 'single',
   flatBeams: true,
@@ -314,6 +315,7 @@ function renderDrumNotationSvgWithMetadata(documentJson, options = {}) {
     new VF.Formatter()
       .joinVoices([voice])
       .format([voice], formatterWidth);
+    applyGroupSpacing(notes, system, renderOptions);
     const beams = createBeams(
       VF,
       notes,
@@ -589,13 +591,54 @@ function drawTuplets(context, tuplets) {
 }
 
 function formatterWidthForSystem(system, options) {
+  const groupGap = groupGapForSystem(system, options);
   if (system.preserveMeasure === true) {
-    return options.formatterWidth ?? options.measureWidth;
+    return Math.max(
+      24,
+      (options.formatterWidth ?? options.measureWidth) - groupGap,
+    );
   }
   const widthForNotes =
     system.entries.length * options.noteSpacing + options.systemEndReserve;
   const maxWidth = options.formatterWidth ?? options.measureWidth;
-  return Math.min(maxWidth, widthForNotes);
+  return Math.max(24, Math.min(maxWidth, widthForNotes) - groupGap);
+}
+
+function applyGroupSpacing(vexNotes, system, options) {
+  const gap = normalizedGroupGap(options);
+  if (gap <= 0 || system.beamBreaks.size === 0) return;
+  const breaks = [...system.beamBreaks]
+    .filter((index) => index > 0 && index < vexNotes.length)
+    .sort((left, right) => left - right);
+  if (breaks.length === 0) return;
+
+  let breakIndex = 0;
+  let xShift = 0;
+  for (let noteIndex = 0; noteIndex < vexNotes.length; noteIndex += 1) {
+    while (breakIndex < breaks.length && breaks[breakIndex] === noteIndex) {
+      xShift += gap;
+      breakIndex += 1;
+    }
+    if (xShift <= 0 || typeof vexNotes[noteIndex].setXShift !== 'function') {
+      continue;
+    }
+    const existing =
+      typeof vexNotes[noteIndex].getXShift === 'function'
+        ? vexNotes[noteIndex].getXShift()
+        : 0;
+    vexNotes[noteIndex].setXShift(existing + xShift);
+  }
+}
+
+function groupGapForSystem(system, options) {
+  return [...system.beamBreaks].filter(
+    (index) => index > 0 && index < system.entries.length,
+  ).length * normalizedGroupGap(options);
+}
+
+function normalizedGroupGap(options) {
+  const gap = Number(options.groupGap);
+  return Number.isFinite(gap) && gap > 0 ? gap : 0;
 }
 
 function appendRepeatCountLabel(host, document, options, systemCount) {
@@ -613,8 +656,8 @@ function appendRepeatCountLabel(host, document, options, systemCount) {
     'http://www.w3.org/2000/svg',
     'text',
   );
-  text.setAttribute('x', String(layout.x + options.measureWidth - 28));
-  text.setAttribute('y', String(Math.max(14, layout.y - 8)));
+  text.setAttribute('x', String(layout.x + options.measureWidth - 2));
+  text.setAttribute('y', String(Math.max(12, layout.y - 6)));
   text.setAttribute('font-family', 'Arial, sans-serif');
   text.setAttribute('font-size', '15');
   text.setAttribute('font-weight', '700');

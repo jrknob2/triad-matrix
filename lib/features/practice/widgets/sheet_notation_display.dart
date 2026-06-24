@@ -852,12 +852,13 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
         if (widget.backgroundColor != null)
           'backgroundColor': _cssColor(widget.backgroundColor!),
         if (widget.compactLayout) ...<String, Object?>{
-          'staffY': 0,
+          'staffY': 16,
           'staffHeight': 124,
           'systemGapY': 108,
           'paddingRight': 4,
           'systemEndReserve': 16,
           'noteSpacing': 30,
+          'groupGap': 14,
         },
       },
     };
@@ -869,7 +870,7 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
     }
     final int systems = math.max(1, widget.document.measures.length);
     if (widget.compactLayout) {
-      return 124 + math.max(0, systems - 1) * 108;
+      return 140 + math.max(0, systems - 1) * 108;
     }
     return 10 + 126 + math.max(0, systems - 1) * 140;
   }

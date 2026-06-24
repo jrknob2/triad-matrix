@@ -28,7 +28,7 @@ V1 must support:
 1. loading an ordered lesson plan from bundled YAML
 2. showing a compact lesson list
 3. opening a printable lesson detail view
-4. displaying objectives, skill focus, required concepts, patterns, exercises, coaching notes, and mastery targets
+4. displaying objectives, skill focus, patterns, exercises, coaching notes, and mastery targets
 5. rendering authored notation examples with the shared sheet-notation renderer
 6. exporting or printing lesson detail through the existing print/share path
 7. validating required YAML fields so broken lesson assets fail visibly
@@ -57,7 +57,6 @@ A lesson contains:
 - objective
 - skill focus
 - estimated time
-- required concepts
 - patterns
 - exercises
 - coaching notes

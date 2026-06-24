@@ -94,7 +94,6 @@ Lesson Detail presents one lesson as a clean printable handout.
 - show objective
 - show skill focus
 - show estimated time
-- show required concepts
 - show pattern rows
 - render pattern notation with the shared sheet-notation renderer
 - render authored pattern timing metadata, including subdivision, triplet feel, time signature, and repeat count when present

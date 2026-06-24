@@ -643,9 +643,9 @@ describe('svg rendering', () => {
     assert.equal(VF.calls.staves[0].y, 10);
     assert.equal(VF.calls.staves[1].x, 8);
     assert.equal(VF.calls.staves[1].y, 150);
-    assert.equal(VF.calls.staves[0].clef, 'percussion');
     assert.equal(VF.calls.staves[0].timeSignature, '4/4');
-    assert.equal(VF.calls.staves[1].clef, 'percussion');
+    assert.equal(VF.calls.staves[0].clef, undefined);
+    assert.equal(VF.calls.staves[1].clef, undefined);
     assert.equal(VF.calls.staves[1].timeSignature, undefined);
     assert.equal(VF.calls.staves[1].endBarType, 5);
     assert.equal(VF.calls.voices[0].formatterWidth, 612);
@@ -722,6 +722,34 @@ describe('svg rendering', () => {
       [3, 5, 3, 5, 3, 5, 3, 5, 4],
     );
     assert.equal(VF.calls.staves.length, 5);
+  });
+
+  test('grouping string adds visual phrase gaps without adding notes', () => {
+    const VF = createFakeVexFlow();
+    renderDrumNotationSvg(
+      {
+        subdivision: '8n',
+        measures: [
+          {
+            notes: [
+              { voices: ['snare'], sticking: 'R' },
+              { voices: ['snare'], sticking: 'L' },
+              { voices: ['snare'], sticking: 'R' },
+              { voices: ['snare'], sticking: 'L' },
+              { voices: ['kick'], sticking: 'K' },
+              { voices: ['snare'], sticking: 'R' },
+            ],
+          },
+        ],
+      },
+      { vexFlow: VF, grouping: '33', groupGap: 18 },
+    );
+
+    assert.equal(VF.calls.notes.length, 6);
+    assert.deepEqual(
+      VF.calls.notes.map((note) => note.xShift),
+      [0, 0, 0, 18, 18, 18],
+    );
   });
 
   test('triplet feel renders tuplets over eighth-note groups', () => {

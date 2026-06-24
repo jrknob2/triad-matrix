@@ -88,7 +88,6 @@ Responsible for:
 - objective
 - skill focus
 - estimated time
-- required notation concepts
 - pattern list
 - rendered pattern notation
 - lightweight notation audio preview

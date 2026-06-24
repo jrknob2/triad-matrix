@@ -50,7 +50,7 @@ void main() {
         };
     expect(
       moneyPatternsById['money-beat-one-bar']!.notation,
-      '[HH K:R] [HH:R] [HH S:R] [HH:R] [HH K:R] [HH:R] [HH S:R] [HH:R]',
+      '[HH K:R][HH:R] [HH S:R][HH:R] [HH K:R][HH:R] [HH S:R][HH:R]',
     );
     expect(moneyPatternsById['money-beat-one-bar']!.subdivision, '8');
     expect(moneyPatternsById['money-beat-one-bar']!.timeSignature, '4/4');

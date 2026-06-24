@@ -60,7 +60,6 @@ class Lesson {
   final String objective;
   final String skillFocus;
   final int estimatedMinutes;
-  final List<String> requiredConcepts;
   final List<LessonPattern> patterns;
   final List<LessonExercise> exercises;
   final List<String> coachingNotes;
@@ -73,7 +72,6 @@ class Lesson {
     required this.objective,
     required this.skillFocus,
     required this.estimatedMinutes,
-    required this.requiredConcepts,
     required this.patterns,
     required this.exercises,
     required this.coachingNotes,
@@ -108,7 +106,6 @@ class Lesson {
       objective: _requiredString(yaml, 'objective', path),
       skillFocus: _requiredString(yaml, 'skill_focus', path),
       estimatedMinutes: _requiredInt(yaml, 'estimated_minutes', path),
-      requiredConcepts: _requiredStringList(yaml, 'required_concepts', path),
       patterns: patterns,
       exercises: exercises,
       coachingNotes: _requiredStringList(yaml, 'coaching_notes', path),

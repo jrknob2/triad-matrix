@@ -123,9 +123,6 @@ class LessonPrintExportService {
               '${lesson.estimatedMinutes} min',
             ]),
             pw.SizedBox(height: 22),
-            _section('Required Concepts', <pw.Widget>[
-              _bulletList(lesson.requiredConcepts),
-            ]),
             _section('Patterns', <pw.Widget>[
               for (final LessonPattern pattern in lesson.patterns)
                 _patternBlock(pattern, notationSvgsByPatternId[pattern.id]!),

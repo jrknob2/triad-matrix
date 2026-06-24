@@ -35,6 +35,7 @@ export type DrumNotationRenderOptions = {
   minNoteWidth?: number;
   systemEndReserve?: number;
   noteSpacing?: number;
+  groupGap?: number;
   systemGapY?: number;
   finalRepeat?: boolean;
   preserveMeasures?: boolean;
