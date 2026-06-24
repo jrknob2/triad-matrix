@@ -14,6 +14,11 @@ Drumcabulary is currently a drummer-first lesson plan app for curated vocabulary
 
 The MVP source of truth is bundled lesson YAML plus the shared sheet-notation renderer. Rendered notation may also offer a lightweight hear-it preview backed by the existing sample engine.
 
+Notation language and rendering details are owned by:
+
+- `docs/18_NOTATION_LANGUAGE_CONTRACT.md`
+- `docs/19_NOTATION_RENDERING_PIPELINE_DESIGN.md`
+
 ---
 
 ## App Map

@@ -7,9 +7,14 @@ The notation language itself is defined in one place:
 
 - `../../docs/18_NOTATION_LANGUAGE_CONTRACT.md`
 
+The app rendering pipeline is defined in:
+
+- `../../docs/19_NOTATION_RENDERING_PIPELINE_DESIGN.md`
+
 Do not redefine notation grammar, token meaning, grouping behavior, voice
 labels, durations, triplet behavior, or YAML authoring rules in this README.
-Update the contract first, then update this runtime and its tests.
+Do not redefine Flutter/WebView/PDF pipeline ownership here. Update the relevant
+contract first, then update this runtime and its tests.
 
 ## Runtime Scope
 

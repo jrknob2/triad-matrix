@@ -67,6 +67,7 @@ Active contract docs:
 - `docs/13_COMMUNICATION_STYLE_CONTRACT.md`
 - `docs/15_MVP_TRIAGE_AND_PASS_ORDER.md`
 - `docs/18_NOTATION_LANGUAGE_CONTRACT.md`
+- `docs/19_NOTATION_RENDERING_PIPELINE_DESIGN.md`
 
 Use those documents as source of truth before changing UI or flow behavior.
 
@@ -185,71 +186,23 @@ Content direction:
 
 ## Notation And Audio Preview
 
-Primary Flutter widget:
-
-- `lib/features/practice/widgets/sheet_notation_display.dart`
-
-Web renderer host:
-
-- `web/sheet_notation/app_host.html`
-
-Renderer implementation:
-
-- `web/sheet_notation/renderer.js`
-- `web/sheet_notation/app_renderer.js`
-
 Current notation contract:
 
 - `docs/18_NOTATION_LANGUAGE_CONTRACT.md` is the single source of truth for
   grammar, token meaning, metadata, voice labels, duration labels, grouping,
   triplet behavior, render-document rules, and valid/invalid examples.
-- The shared sheet notation renderer remains the display path on screen and in
-  PDF/export.
-
-Audio preview:
-
-- Uses the existing `PatternAudioService`.
-- Triggered from an ear icon near rendered notation.
-- Not a full practice player.
-- No visible transport controls, BPM controls, session state, or tracking.
-
-Current mixer defaults:
-
-- kick: `1.0`
-- normal non-cymbal: `0.8`
-- normal cymbal: `0.8`
-- ghost: `0.1`
-- accent: `1.0`
-- kick ignores ghost marking.
-
-Current playback behavior:
-
-- Preview prepares only samples required by the selected notation.
-- Stale delayed cue callbacks are skipped to avoid catch-up bursts.
-- Preview stops when the app becomes inactive, hidden, paused, or detached.
-- Preview uses a fixed local BPM for now; exercise tempo is displayed as lesson guidance, not used as a live speed control.
-- Eighth, sixteenth, and triplet-eighth patterns share the same written-bar cursor speed at the fixed preview BPM.
-- Pattern `repeat_count` is honored by preview audio and playhead movement.
-- Playhead continues through line/bar ends before wrapping or looping.
-
-Remaining caveat:
-
-- Audio preview smoothness should still be checked on device/simulator by ear. Timer-based one-shot sample playback is adequate for MVP preview, but it is not a production-grade sequencer.
+- `docs/19_NOTATION_RENDERING_PIPELINE_DESIGN.md` is the single source of truth
+  for the current YAML-to-screen/PDF/audio rendering pipeline.
 
 ---
 
 ## Print / Export
 
-Files:
-
-- `lib/features/coach/lesson_print_export_service.dart`
-- `lib/features/coach/lesson_sheet_notation_svg_renderer.dart`
-
 Current behavior:
 
 - Lesson Detail has a Print action.
-- Export requires rendered notation SVGs.
-- Missing rendered notation should fail visibly instead of falling back to raw notation strings.
+- Export behavior and rendering failure policy are defined in
+  `docs/19_NOTATION_RENDERING_PIPELINE_DESIGN.md`.
 
 Known caveat:
 

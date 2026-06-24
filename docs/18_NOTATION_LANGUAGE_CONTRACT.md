@@ -659,6 +659,11 @@ contract is this document.
 Any behavior difference between rendered notation and audio preview is a bug
 unless explicitly documented here.
 
+Detailed rendering-pipeline ownership, including Flutter, WebView, VexFlow,
+audio preview, print/export, and known renderer limitations, is defined in:
+
+- `docs/19_NOTATION_RENDERING_PIPELINE_DESIGN.md`
+
 ## Current Known Non-Language Issues
 
 The iOS/WebView sheet renderer has known visual alignment issues with sticking
@@ -696,4 +701,3 @@ Do not edit `web/sheet_notation/app_renderer.js` by hand. Regenerate it with:
 ```sh
 npm run build:sheet-notation-app
 ```
-
