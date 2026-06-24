@@ -15,76 +15,24 @@ text-first, and valid as a fragment by default. Practice behavior such as
 tempo plans, subdivision drills, cycles, loops, and beat-alignment helpers lives
 outside pattern text in `PracticeContext`.
 
-## Core Pattern Vocabulary
-
-Valid base tokens:
-
-- `R` = right hand
-- `L` = left hand
-- `K` = kick
-- `F` = flam
-- `X` = accent / crash / big hit
-- `_` = rest
-
-`B` is not valid pattern vocabulary. Use `[RL]` for both hands together or a
-bracketed voice group such as `[XK]` for multiple voices on the same slot.
-
 ## Pattern Grammar
 
-Plain tokens:
+Pattern grammar is owned by:
 
-```text
-R L K F X _
-```
+- `docs/18_NOTATION_LANGUAGE_CONTRACT.md`
 
-Accent:
+Do not redefine valid tokens, accent syntax, ghost syntax, simultaneous hits,
+voice overrides, duration overrides, grouping spaces, subdivision behavior, or
+render-document behavior in this file.
 
-```text
-^R
-^L
-^K
-^F
-^X
-```
+This file only owns the product boundary between saved pattern text and practice
+context.
 
-Ghost:
+Pattern text is the playable phrase only. Practice behavior such as tempo
+plans, subdivision drills, cycles, loops, and beat-alignment helpers lives
+outside pattern text in `PracticeContext`.
 
-```text
-(R)
-(L)
-(K)
-(F)
-(X)
-```
-
-Multiple voices on one beat:
-
-```text
-[XK]
-[RK]
-[RL]
-[RKL]
-```
-
-A bracketed multi-voice beat occupies one beat/slot. Its contents are multiple
-valid note tokens and optional note-local modifiers. `_` is not allowed inside a
-multi-voice beat. UI should describe this as voice assignment or multiple voices
-on one beat.
-
-Override brackets keep their existing meaning when they contain `:`:
-
-```text
-[T1:L]
-[FT:R]
-[32:R]
-[T1 16:L]
-```
-
-Parser rule: brackets with `:` are overrides; brackets without `:` are
-multi-voice beats.
-
-Spaces are visual/phrasing group breaks. They do not change playback timing by
-themselves and must be preserved by authoring surfaces.
+## Pattern Text Editing Rules
 
 Compact pattern readouts must use the saved authored pattern text exactly when
 it exists. They must not rebuild display text from a parsed token sequence when

@@ -66,6 +66,7 @@ Active contract docs:
 - `docs/12_SCREEN_CONTENT_CONTRACTS_AND_APP_FLOWS.md`
 - `docs/13_COMMUNICATION_STYLE_CONTRACT.md`
 - `docs/15_MVP_TRIAGE_AND_PASS_ORDER.md`
+- `docs/18_NOTATION_LANGUAGE_CONTRACT.md`
 
 Use those documents as source of truth before changing UI or flow behavior.
 
@@ -169,6 +170,9 @@ Schema expectations:
 - Pattern `repeat_count` drives notation repeat bars and local preview repetition.
 - Exercises can include subdivision, subdivision sequence, tempo, and flow.
 - Flow steps reference lesson-local pattern ids.
+- Notation grammar, token meaning, voice labels, duration labels, grouping
+  behavior, triplet behavior, and render-document rules are owned by
+  `docs/18_NOTATION_LANGUAGE_CONTRACT.md`.
 
 Content direction:
 
@@ -196,22 +200,11 @@ Renderer implementation:
 
 Current notation contract:
 
-- Lesson YAML stores Drumcabulary notation strings.
-- Users do not author notation strings in MVP.
-- Existing explicit voice override notation may be used in YAML when examples need specific kit voices, such as hi-hat, snare, kick, or crash.
-- Pattern metadata owns the rendering/playback feel: `subdivision`, `time_signature`, and `repeat_count`.
-- Triplet examples use `subdivision: triplet` and render with standard triplet grouping marks.
-- Time signatures render as actual time signatures; omitted values default to `4/4`.
-- Repeated written patterns render with an end-repeat bar, without a start-repeat bar or separate repeat-count text label.
-- Limb assignment labels render above the staff and noteheads, centered on the final rendered note positions after time-signature and spacing adjustments.
-- The shared sheet notation renderer is the display path on screen and in PDF/export.
-
-Examples of current authored notation:
-
-- `[RK] R [RL] R [RK] R [RL] R`
-- `[XK]`
-- `[HH K:R] [HH:R] [HH S:R] [HH:R]`
-- `R(L)(L) RLK`
+- `docs/18_NOTATION_LANGUAGE_CONTRACT.md` is the single source of truth for
+  grammar, token meaning, metadata, voice labels, duration labels, grouping,
+  triplet behavior, render-document rules, and valid/invalid examples.
+- The shared sheet notation renderer remains the display path on screen and in
+  PDF/export.
 
 Audio preview:
 

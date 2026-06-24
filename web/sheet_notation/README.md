@@ -1,73 +1,58 @@
-# Drumcabulary Sheet Notation POC
+# Drumcabulary Sheet Notation Runtime
 
-This folder is a sheet-music-only proof of concept for rendering Drumcabulary notation with VexFlow.
+This folder implements the sheet-notation runtime for the Drumcabulary notation
+language.
 
-It intentionally excludes:
+The notation language itself is defined in one place:
 
-- tempo
-- BPM
-- metronome data
-- playback
-- audio samples
-- practice tracking
-- app UI state
+- `../../docs/18_NOTATION_LANGUAGE_CONTRACT.md`
+
+Do not redefine notation grammar, token meaning, grouping behavior, voice
+labels, durations, triplet behavior, or YAML authoring rules in this README.
+Update the contract first, then update this runtime and its tests.
+
+## Runtime Scope
 
 The renderer accepts render-ready JSON and returns SVG markup.
 
-Accents are shown with the sticking label, for example `^R`, instead of as VexFlow articulations above the note. That keeps them readable when beams and stems are dense.
+Runtime responsibilities:
 
-The default rhythmic subdivision is eighth notes (`8n`). Individual notes can still provide `value`, and the demo pattern field supports bracketed duration overrides such as `[32:R L]` for short runs that should differ from the default subdivision.
+- validate render-ready notation documents
+- map Drumcabulary voices and durations to VexFlow concepts
+- render SVG sheet notation
+- expose metadata for interactive WebView use
+- support generated WebView bundle output
 
-Limb/sticking and drum voice are separate. `R` and `L` default to snare, but bracket overrides can assign another voice without changing the sticking label: `[T1:L]` renders left-hand sticking on tom 1. Duration and voice can be combined with the same syntax, for example `[T2 16:R]`.
+Runtime exclusions:
 
-Accent and ghost decorations can be placed inside or outside brackets when the result is musically valid: `^[T1:R]`, `[T1:^R]`, `[T1:(L)]`, and `([T1:L])` are valid. Accented ghost notes are intentionally invalid, so `^(L)`, `^[T1:(L)]`, and `[T1:^(L)]` are rejected.
+- lesson YAML schema ownership
+- product flow ownership
+- progress tracking
+- assessment
+- user recommendation logic
+- notation-language contract ownership
 
-The demo also lets selected notes be assigned duration or voice overrides, which writes the same bracket syntax back into the pattern field.
+## Files
 
-Top-level spaces in the demo pattern field define grouping for beaming and wrapping. For example, `RLR LK` renders as groups of 3 and 2 and updates the Beat grouping field to `32`. Editing the Beat grouping field rewrites the pattern spaces to match. Spaces inside override brackets, such as `[32:R L]`, remain part of the override expression and do not create top-level grouping.
+- `types.d.ts`: JSON contract types for the runtime API.
+- `document.js`: render-document parsing and validation.
+- `duration.js`: note-value conversion helpers.
+- `voice_mapping.js`: drum voice to staff-position mapping.
+- `renderer.js`: VexFlow SVG renderer.
+- `demo.js`: demo phrase data and render helper.
+- `demo.html`: browser demo.
+- `server.mjs`: local static server for the demo.
+- `app_host.html`: Flutter WebView host page.
+- `app_renderer.js`: generated WebView renderer bundle.
+- `build_app_renderer_bundle.mjs`: bundle generator for `app_renderer.js`.
 
-The browser demo includes an optional input legend for the current POC tokens.
+Do not edit `app_renderer.js` by hand. Regenerate it from source files with:
 
-The default demo uses a shorter staff with compressed spacing:
-
-```js
-renderDrumNotationSvg(documentJson, {
-  availableWidth: container.clientWidth,
-  paddingRight: 12,
-  notesPerSystem: 'auto',
-  grouping: '3535',
-  systemGapY: 140,
-});
+```sh
+npm run build:sheet-notation-app
 ```
 
-`availableWidth` makes the renderer fit the SVG to its container. `measureWidth` can still override staff length when fixed sizing is needed. `formatterWidth` controls note compression inside that staff; if omitted, it is derived from `formatterWidthScale`. `paddingRight` gives trailing modifiers like flams and parentheses room so they do not clip. `notesPerSystem: "auto"` wraps note chunks based on available width and `minNoteWidth`; pass a number to force a specific chunk size. `grouping` accepts strings such as `"3535"` and keeps beams and responsive system breaks aligned to those groups when possible. `systemGapY` controls the vertical distance between wrapped staff rows.
-
-For interactive browser/WebView use, call:
-
-```js
-const { svg, notes } = renderDrumNotationSvgWithMetadata(documentJson, options);
-```
-
-The demo uses that metadata to support note selection and print selected note details below the SVG.
-
-The pattern input is lenient while editing. Incomplete input such as `^`, `(`, or `[32:` is ignored until the user finishes the token, so the renderer does not fail during normal typing.
-
-```js
-import { renderDrumNotationSvg } from './renderer.js';
-
-const svg = renderDrumNotationSvg({
-  subdivision: '8n',
-  measures: [
-    {
-      notes: [
-        { voices: ['snare'], sticking: 'R' },
-        { voices: ['snare'], sticking: 'L' },
-        { value: '16n', voices: ['kick'], sticking: 'K' },
-      ],
-    },
-  ],
-});
-```
+## Browser Demo
 
 Run the browser demo from the repo root:
 
@@ -81,7 +66,10 @@ Then open:
 http://127.0.0.1:8087/demo.html
 ```
 
-Do not open `demo.html` directly with `file://`; the demo uses browser ES modules and should be served over HTTP.
+Do not open `demo.html` directly with `file://`; the demo uses browser ES
+modules and should be served over HTTP.
+
+## Runtime API
 
 For browser/WebView usage, load VexFlow globally and call:
 
@@ -89,31 +77,41 @@ For browser/WebView usage, load VexFlow globally and call:
 window.renderDrumNotationSvg(documentJson);
 ```
 
-## Files
+For interactive browser/WebView usage, call:
 
-- `types.d.ts`: JSON contract types.
-- `document.js`: parsing and validation.
-- `duration.js`: Drumcabulary duration to VexFlow duration conversion.
-- `voice_mapping.js`: one drum voice mapping table.
-- `renderer.js`: VexFlow SVG renderer.
-- `demo.js`: demo phrase data and render helper.
-- `demo.html`: browser demo using VexFlow from a CDN.
-- `server.mjs`: tiny local static server for the demo.
+```js
+const { svg, notes } = renderDrumNotationSvgWithMetadata(documentJson, options);
+```
 
-## Flam And Ghost Notes
+The metadata result exposes selectable note information for the Flutter WebView
+integration.
 
-Flams are isolated behind `attachFlam`. If the loaded VexFlow build does not expose `GraceNote` and `GraceNoteGroup`, the note is marked with an internal `__drumcabularyFlam` flag rather than failing.
+## Renderer Options
 
-Ghost note rendering is isolated behind `attachGhost`. When VexFlow exposes `Parenthesis`, `ghost: true` adds left and right parentheses around the notehead while keeping the sticking label plain, for example `L`. If `Parenthesis` is unavailable, the note is marked with `__drumcabularyGhost` rather than failing.
+Common options:
+
+```js
+renderDrumNotationSvg(documentJson, {
+  availableWidth: container.clientWidth,
+  paddingRight: 12,
+  notesPerSystem: 'auto',
+  grouping: '3535',
+  systemGapY: 140,
+});
+```
+
+Renderer options tune layout only. They do not define notation language rules.
 
 ## Stem Mode
 
-The renderer defaults to `stemMode: "single"` for this proof of concept. That renders the whole measure as one compact rhythmic voice, which keeps mixed hand/foot vocabulary readable and keeps sixteenth-note beaming continuous.
+The renderer defaults to `stemMode: "single"` for the current proof of concept.
+That renders the whole measure as one compact rhythmic voice.
 
-If you want to inspect the raw voice mapping stem directions, pass:
+For debugging the raw voice mapping stem directions, pass:
 
 ```js
 renderDrumNotationSvg(documentJson, { stemMode: 'mapped' });
 ```
 
-`mapped` mode uses the `stemDirection` values in `voice_mapping.js`, which can create separate up/down visual groupings.
+`mapped` mode uses `voice_mapping.js` stem directions and can create separate
+up/down visual groupings.
