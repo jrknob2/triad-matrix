@@ -4,6 +4,7 @@ import { DRUM_VOICE_IDS } from './voice_mapping.js';
 const NOTE_VALUE_SET = new Set(DRUM_NOTE_VALUES);
 const VOICE_ID_SET = new Set(DRUM_VOICE_IDS);
 const DEFAULT_SUBDIVISION = '8n';
+const FEEL_SET = new Set(['straight', 'triplet']);
 
 export function parseDrumNotationDocument(input) {
   const raw = typeof input === 'string' ? JSON.parse(input) : input;
@@ -14,6 +15,9 @@ export function parseDrumNotationDocument(input) {
 
   return {
     subdivision: optionalNoteValue(raw.subdivision, 'subdivision') ?? DEFAULT_SUBDIVISION,
+    feel: optionalFeel(raw.feel, 'feel') ?? 'straight',
+    timeSignature: optionalTimeSignature(raw.timeSignature, 'timeSignature') ?? '4/4',
+    repeatCount: optionalPositiveInteger(raw.repeatCount, 'repeatCount'),
     measures: raw.measures.map(parseMeasure),
   };
 }
@@ -53,6 +57,33 @@ function optionalNoteValue(value, path) {
   if (value == null) return undefined;
   if (!NOTE_VALUE_SET.has(value)) {
     throw new Error(`${path} is unsupported: ${String(value)}`);
+  }
+  return value;
+}
+
+function optionalFeel(value, path) {
+  if (value == null) return undefined;
+  assertString(value, path);
+  if (!FEEL_SET.has(value)) {
+    throw new Error(`${path} is unsupported: ${String(value)}`);
+  }
+  return value;
+}
+
+function optionalTimeSignature(value, path) {
+  if (value == null) return undefined;
+  assertString(value, path);
+  const trimmed = value.trim();
+  if (!/^\d+\s*\/\s*\d+$/.test(trimmed)) {
+    throw new Error(`${path} must be a time signature like 4/4.`);
+  }
+  return trimmed.replace(/\s+/g, '');
+}
+
+function optionalPositiveInteger(value, path) {
+  if (value == null) return undefined;
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new Error(`${path} must be a positive integer.`);
   }
   return value;
 }

@@ -63,9 +63,16 @@ No active screen should contain:
 - lesson YAML stores authored Drumcabulary notation strings
 - users do not author or edit notation strings in MVP
 - lesson content may use existing explicit voice override notation when an example depends on specific kit voices
+- pattern-level timing metadata may include `subdivision`, `time_signature`, and `repeat_count`
+- omitted pattern time signatures default to `4/4`
+- `subdivision: triplet` is a timing/display feel and should render standard triplet grouping marks without creating new Drumcabulary text tokens
+- repeated written patterns should render with repeat bars and an `Nx` repeat-count label when `repeat_count` is authored
 - the shared sheet-notation renderer is the display path for lesson notation examples
 - rendered notation may expose an ear-icon preview that plays the displayed notes through the existing sample engine
 - while notation preview is playing, the notation surface should show an animated vertical playhead aligned to the rendered note positions and continue through each line/bar end before wrapping or looping
+- notation preview uses a fixed preview BPM for now; authored exercise tempo is lesson guidance, not an active preview speed control
+- notation preview timing should preserve written bar speed across eighth, sixteenth, and triplet-eighth subdivisions
+- notation preview playback and playhead movement should honor pattern `repeat_count`
 - notation preview audio should use an explicit mixer config for relative sample levels; default preview levels are kick `1.0`, normal non-cymbal hits `0.8`, and ghosts `0.1`, with kick hits ignoring ghost marking
 - notation preview audio must stop on app inactive, hidden, paused, or detached lifecycle states instead of catching up missed notes on return
 - renderer failures must be visible

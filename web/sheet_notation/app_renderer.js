@@ -102,6 +102,7 @@ function voiceMappingFor(voiceId) {
 const NOTE_VALUE_SET = new Set(DRUM_NOTE_VALUES);
 const VOICE_ID_SET = new Set(DRUM_VOICE_IDS);
 const DEFAULT_SUBDIVISION = '8n';
+const FEEL_SET = new Set(['straight', 'triplet']);
 
 function parseDrumNotationDocument(input) {
   const raw = typeof input === 'string' ? JSON.parse(input) : input;
@@ -112,6 +113,9 @@ function parseDrumNotationDocument(input) {
 
   return {
     subdivision: optionalNoteValue(raw.subdivision, 'subdivision') ?? DEFAULT_SUBDIVISION,
+    feel: optionalFeel(raw.feel, 'feel') ?? 'straight',
+    timeSignature: optionalTimeSignature(raw.timeSignature, 'timeSignature') ?? '4/4',
+    repeatCount: optionalPositiveInteger(raw.repeatCount, 'repeatCount'),
     measures: raw.measures.map(parseMeasure),
   };
 }
@@ -151,6 +155,33 @@ function optionalNoteValue(value, path) {
   if (value == null) return undefined;
   if (!NOTE_VALUE_SET.has(value)) {
     throw new Error(`${path} is unsupported: ${String(value)}`);
+  }
+  return value;
+}
+
+function optionalFeel(value, path) {
+  if (value == null) return undefined;
+  assertString(value, path);
+  if (!FEEL_SET.has(value)) {
+    throw new Error(`${path} is unsupported: ${String(value)}`);
+  }
+  return value;
+}
+
+function optionalTimeSignature(value, path) {
+  if (value == null) return undefined;
+  assertString(value, path);
+  const trimmed = value.trim();
+  if (!/^\d+\s*\/\s*\d+$/.test(trimmed)) {
+    throw new Error(`${path} must be a time signature like 4/4.`);
+  }
+  return trimmed.replace(/\s+/g, '');
+}
+
+function optionalPositiveInteger(value, path) {
+  if (value == null) return undefined;
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new Error(`${path} must be a positive integer.`);
   }
   return value;
 }
@@ -208,6 +239,7 @@ const DEFAULT_RENDER_OPTIONS = Object.freeze({
   noteSpacing: 34,
   systemGapY: 140,
   finalRepeat: true,
+  preserveMeasures: false,
   grouping: null,
   repeatClefEverySystem: true,
   standardAccents: true,
@@ -255,6 +287,12 @@ function renderDrumNotationSvgWithMetadata(documentJson, options = {}) {
     if (layout.isSystemStart && renderOptions.repeatClefEverySystem) {
       stave.addClef('percussion');
     }
+    if (index === 0 && typeof stave.addTimeSignature === 'function') {
+      stave.addTimeSignature(document.timeSignature);
+    }
+    if (document.repeatCount > 1 && index === 0) {
+      setStartRepeatBar(VF, stave);
+    }
     if (renderOptions.finalRepeat === true && index === systems.length - 1) {
       setEndRepeatBar(VF, stave);
     }
@@ -268,8 +306,8 @@ function renderDrumNotationSvgWithMetadata(documentJson, options = {}) {
       }),
     );
     const voice = new VF.Voice({
-      num_beats: system.entries.length,
-      beat_value: beatValueForSystem(system),
+      num_beats: numBeatsForSystem(system, document),
+      beat_value: beatValueForSystem(system, document),
     }).setStrict(false);
     voice.addTickables(notes);
     const formatterWidth = formatterWidthForSystem(system, renderOptions);
@@ -282,9 +320,13 @@ function renderDrumNotationSvgWithMetadata(documentJson, options = {}) {
       system,
       renderOptions,
     );
+    const tuplets = createTuplets(VF, notes, system, document);
     voice.draw(context, stave);
     drawBeams(context, beams);
+    drawTuplets(context, tuplets);
   }
+
+  appendRepeatCountLabel(host, document, renderOptions, systemCount);
 
   return {
     svg: extractSvg(host),
@@ -520,11 +562,65 @@ function drawBeams(context, beams) {
   beams.forEach((beam) => beam.setContext(context).draw());
 }
 
+function createTuplets(VF, vexNotes, system, document) {
+  if (document.feel !== 'triplet' || typeof VF.Tuplet !== 'function') return [];
+  const tuplets = [];
+  for (let index = 0; index + 2 < vexNotes.length; index += 3) {
+    const entries = system.entries.slice(index, index + 3);
+    if (entries.length < 3) continue;
+    if (!entries.every((entry) => entry.value === '8n')) continue;
+    tuplets.push(new VF.Tuplet(vexNotes.slice(index, index + 3), {
+      num_notes: 3,
+      notes_occupied: 2,
+    }));
+  }
+  return tuplets;
+}
+
+function drawTuplets(context, tuplets) {
+  tuplets.forEach((tuplet) => {
+    if (typeof tuplet.setContext === 'function') {
+      tuplet.setContext(context);
+    }
+    if (typeof tuplet.draw === 'function') {
+      tuplet.draw();
+    }
+  });
+}
+
 function formatterWidthForSystem(system, options) {
+  if (system.preserveMeasure === true) {
+    return options.formatterWidth ?? options.measureWidth;
+  }
   const widthForNotes =
     system.entries.length * options.noteSpacing + options.systemEndReserve;
   const maxWidth = options.formatterWidth ?? options.measureWidth;
   return Math.min(maxWidth, widthForNotes);
+}
+
+function appendRepeatCountLabel(host, document, options, systemCount) {
+  if (!Number.isInteger(document.repeatCount) || document.repeatCount <= 1) {
+    return;
+  }
+  if (typeof globalThis.document === 'undefined') return;
+  const svg = host.querySelector?.('svg') ?? host.children?.find?.(
+    (child) => String(child.tagName).toLowerCase() === 'svg',
+  );
+  if (svg == null || typeof svg.appendChild !== 'function') return;
+
+  const layout = systemLayoutForIndex(Math.max(0, systemCount - 1), options);
+  const text = globalThis.document.createElementNS(
+    'http://www.w3.org/2000/svg',
+    'text',
+  );
+  text.setAttribute('x', String(layout.x + options.measureWidth - 28));
+  text.setAttribute('y', String(Math.max(14, layout.y - 8)));
+  text.setAttribute('font-family', 'Arial, sans-serif');
+  text.setAttribute('font-size', '15');
+  text.setAttribute('font-weight', '700');
+  text.setAttribute('text-anchor', 'end');
+  text.textContent = `${document.repeatCount}x`;
+  svg.appendChild(text);
 }
 
 function setEndRepeatBar(VF, stave) {
@@ -535,6 +631,19 @@ function setEndRepeatBar(VF, stave) {
     5;
   if (typeof stave.setEndBarType === 'function') {
     stave.setEndBarType(repeatEnd);
+  }
+}
+
+function setStartRepeatBar(VF, stave) {
+  const repeatBegin =
+    VF.BarlineType?.REPEAT_BEGIN ??
+    VF.Barline?.type?.REPEAT_BEGIN ??
+    VF.Barline?.type?.repeatBegin ??
+    4;
+  if (typeof stave.setBegBarType === 'function') {
+    stave.setBegBarType(repeatBegin);
+  } else if (typeof stave.setBeginBarType === 'function') {
+    stave.setBeginBarType(repeatBegin);
   }
 }
 
@@ -563,6 +672,14 @@ function resolveRenderOptions(options) {
 function notationSystemsForDocument(document, options) {
   const entries = noteEntriesForDocument(document);
   const grouping = parseGrouping(options.grouping);
+  if (options.preserveMeasures === true) {
+    return document.measures.map((measure, measureIndex) => {
+      const measureEntries = entries.filter(
+        (entry) => entry.measureIndex === measureIndex,
+      );
+      return systemForEntries(measureEntries, grouping, { preserveMeasure: true });
+    });
+  }
   const notesPerSystem = normalizedNotesPerSystem(options);
   if (notesPerSystem != null) {
     return systemsForEntries(entries, {
@@ -661,10 +778,11 @@ function groupedEntries(entries, grouping) {
   return groups;
 }
 
-function systemForEntries(entries, grouping) {
+function systemForEntries(entries, grouping, options = {}) {
   return {
     entries,
     beamBreaks: beamBreaksForEntries(entries, grouping),
+    preserveMeasure: options.preserveMeasure === true,
   };
 }
 
@@ -726,11 +844,22 @@ function systemLayoutForIndex(index, options) {
   };
 }
 
-function beatValueForSystem(system) {
-  const firstValue = system.entries[0]?.value;
-  if (firstValue == null) return 4;
-  const match = /^(\d+)n$/.exec(firstValue);
-  return match == null ? 4 : Number(match[1]);
+function numBeatsForSystem(system, document) {
+  return timeSignatureNumerator(document.timeSignature);
+}
+
+function beatValueForSystem(system, document) {
+  return timeSignatureDenominator(document.timeSignature);
+}
+
+function timeSignatureNumerator(timeSignature) {
+  const value = Number(String(timeSignature).split('/')[0]);
+  return Number.isFinite(value) && value > 0 ? value : 4;
+}
+
+function timeSignatureDenominator(timeSignature) {
+  const value = Number(String(timeSignature).split('/')[1]);
+  return Number.isFinite(value) && value > 0 ? value : 4;
 }
 
 function resolvedNoteForEntry(entry, document) {

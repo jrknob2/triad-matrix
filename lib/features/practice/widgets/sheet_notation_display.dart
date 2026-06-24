@@ -18,30 +18,49 @@ enum DrumSheetNoteValue {
   thirtySecond,
 }
 
+enum DrumSheetFeel { straight, triplet }
+
 enum DrumSheetVoice { hihat, ride, crash, snare, tom1, tom2, floorTom, kick }
 
 @immutable
 class DrumSheetNotationDocument {
   final DrumSheetNoteValue subdivision;
+  final DrumSheetFeel feel;
+  final String timeSignature;
+  final int? repeatCount;
   final List<DrumSheetNotationMeasure> measures;
 
   const DrumSheetNotationDocument({
     this.subdivision = DrumSheetNoteValue.eighth,
+    this.feel = DrumSheetFeel.straight,
+    this.timeSignature = '4/4',
+    this.repeatCount,
     required this.measures,
   });
 
   factory DrumSheetNotationDocument.fromPattern(
     String pattern, {
     DrumSheetNoteValue subdivision = DrumSheetNoteValue.eighth,
+    DrumSheetFeel feel = DrumSheetFeel.straight,
+    String timeSignature = '4/4',
+    int? repeatCount,
     bool lenient = false,
   }) {
+    final List<DrumSheetNotationNote> notes = DrumSheetPatternParser.parse(
+      pattern,
+      lenient: lenient,
+    );
     return DrumSheetNotationDocument(
       subdivision: subdivision,
-      measures: <DrumSheetNotationMeasure>[
-        DrumSheetNotationMeasure(
-          notes: DrumSheetPatternParser.parse(pattern, lenient: lenient),
-        ),
-      ],
+      feel: feel,
+      timeSignature: timeSignature,
+      repeatCount: repeatCount,
+      measures: _measuresForNotes(
+        notes,
+        subdivision: subdivision,
+        feel: feel,
+        timeSignature: timeSignature,
+      ),
     );
   }
 
@@ -50,6 +69,56 @@ class DrumSheetNotationDocument {
       for (final DrumSheetNotationMeasure measure in measures) ...measure.notes,
     ];
   }
+}
+
+List<DrumSheetNotationMeasure> _measuresForNotes(
+  List<DrumSheetNotationNote> notes, {
+  required DrumSheetNoteValue subdivision,
+  required DrumSheetFeel feel,
+  required String timeSignature,
+}) {
+  if (notes.isEmpty) {
+    return const <DrumSheetNotationMeasure>[
+      DrumSheetNotationMeasure(notes: <DrumSheetNotationNote>[]),
+    ];
+  }
+  final int notesPerMeasure = _notesPerMeasure(
+    subdivision: subdivision,
+    feel: feel,
+    timeSignature: timeSignature,
+  );
+  if (notesPerMeasure <= 0 || notes.length <= notesPerMeasure) {
+    return <DrumSheetNotationMeasure>[DrumSheetNotationMeasure(notes: notes)];
+  }
+  return <DrumSheetNotationMeasure>[
+    for (int index = 0; index < notes.length; index += notesPerMeasure)
+      DrumSheetNotationMeasure(
+        notes: notes.sublist(
+          index,
+          math.min(index + notesPerMeasure, notes.length),
+        ),
+      ),
+  ];
+}
+
+int _notesPerMeasure({
+  required DrumSheetNoteValue subdivision,
+  required DrumSheetFeel feel,
+  required String timeSignature,
+}) {
+  final double measureBeats = _quarterNoteBeatsForTimeSignature(timeSignature);
+  final double noteBeats = _beatCountForSheetValue(subdivision, feel: feel);
+  if (measureBeats <= 0 || noteBeats <= 0) return 0;
+  return (measureBeats / noteBeats).round();
+}
+
+double _quarterNoteBeatsForTimeSignature(String timeSignature) {
+  final List<String> parts = timeSignature.split('/');
+  if (parts.length != 2) return 4;
+  final int? numerator = int.tryParse(parts[0].trim());
+  final int? denominator = int.tryParse(parts[1].trim());
+  if (numerator == null || denominator == null || denominator <= 0) return 4;
+  return numerator * (4 / denominator);
 }
 
 @immutable
@@ -778,6 +847,7 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
         'finalRepeat': widget.finalRepeat,
         'grouping': widget.grouping,
         'minNoteWidth': widget.minNoteWidth,
+        'preserveMeasures': true,
         'theme': widget.darkTheme ? 'dark' : 'light',
         if (widget.backgroundColor != null)
           'backgroundColor': _cssColor(widget.backgroundColor!),
@@ -794,17 +864,10 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
   }
 
   double _estimatedHeightForWidth(double width) {
-    final int noteCount = widget.document.flattenedNotes.length;
-    if (noteCount == 0) return widget.compactLayout ? 112 : 140;
-    final double formatterWidth = math.max(
-      120,
-      width - (widget.compactLayout ? 20 : 48),
-    );
-    final int notesPerSystem = math.max(
-      4,
-      (formatterWidth / widget.minNoteWidth).floor(),
-    );
-    final int systems = (noteCount / notesPerSystem).ceil();
+    if (widget.document.flattenedNotes.isEmpty) {
+      return widget.compactLayout ? 112 : 140;
+    }
+    final int systems = math.max(1, widget.document.measures.length);
     if (widget.compactLayout) {
       return 124 + math.max(0, systems - 1) * 108;
     }
@@ -828,6 +891,9 @@ String _cssColor(Color color) {
 Map<String, Object?> _documentJson(DrumSheetNotationDocument document) {
   return <String, Object?>{
     'subdivision': document.subdivision.noteValueLabel,
+    'feel': document.feel.name,
+    'timeSignature': document.timeSignature,
+    if (document.repeatCount != null) 'repeatCount': document.repeatCount,
     'measures': <Object?>[
       for (final DrumSheetNotationMeasure measure in document.measures)
         <String, Object?>{
@@ -902,44 +968,78 @@ class _NotationPlayheadFrame {
 _SheetNotationAudioPlan _audioPlanForDocument(
   DrumSheetNotationDocument document,
 ) {
-  final List<DrumSheetNotationNote> notes = document.flattenedNotes;
   final List<PatternTokenV1> tokens = <PatternTokenV1>[];
   final List<PatternNoteMarkingV1> markings = <PatternNoteMarkingV1>[];
   final List<DrumVoiceV1> voices = <DrumVoiceV1>[];
   final List<PatternTimingSpanV1> spans = <PatternTimingSpanV1>[];
+  final List<int> visibleTokenIndexes = <int>[];
   final Map<int, List<DrumVoiceV1>> additionalVoicesByIndex =
       <int, List<DrumVoiceV1>>{};
+  final List<List<_IndexedSheetNotationNote>> visibleMeasures =
+      <List<_IndexedSheetNotationNote>>[];
+  int visibleIndex = 0;
+  for (final DrumSheetNotationMeasure measure in document.measures) {
+    final List<_IndexedSheetNotationNote> indexedMeasure =
+        <_IndexedSheetNotationNote>[];
+    for (final DrumSheetNotationNote note in measure.notes) {
+      indexedMeasure.add(
+        _IndexedSheetNotationNote(index: visibleIndex, note: note),
+      );
+      visibleIndex += 1;
+    }
+    visibleMeasures.add(indexedMeasure);
+  }
+  final int repeatCount = math.max(1, document.repeatCount ?? 1);
+  final double measureBeatCount = _quarterNoteBeatsForTimeSignature(
+    document.timeSignature,
+  );
 
-  for (int index = 0; index < notes.length; index += 1) {
-    final DrumSheetNotationNote note = notes[index];
-    final PatternTokenV1 token = _audioTokenForSheetNote(note);
-    final List<DrumVoiceV1> noteVoices = note.voices
-        .map(_audioVoiceForSheetVoice)
-        .toList(growable: false);
-    final DrumVoiceV1 primaryVoice = _primaryAudioVoiceForNote(
-      note,
-      token,
-      noteVoices,
-    );
-    final List<DrumVoiceV1> additionalVoices = <DrumVoiceV1>[
-      for (final DrumVoiceV1 voice in noteVoices)
-        if (voice != primaryVoice) voice,
-    ];
-
-    tokens.add(token);
-    markings.add(_audioMarkingForSheetNote(note));
-    voices.add(primaryVoice);
-    spans.add(
-      PatternTimingSpanV1(
-        startIndex: index,
-        tokenCount: 1,
-        beatCount: _beatCountForSheetValue(
+  for (int repeatIndex = 0; repeatIndex < repeatCount; repeatIndex += 1) {
+    for (final List<_IndexedSheetNotationNote> measure in visibleMeasures) {
+      double measureBeatCursor = 0;
+      for (int localIndex = 0; localIndex < measure.length; localIndex += 1) {
+        final _IndexedSheetNotationNote indexed = measure[localIndex];
+        final DrumSheetNotationNote note = indexed.note;
+        final PatternTokenV1 token = _audioTokenForSheetNote(note);
+        final List<DrumVoiceV1> noteVoices = note.voices
+            .map(_audioVoiceForSheetVoice)
+            .toList(growable: false);
+        final DrumVoiceV1 primaryVoice = _primaryAudioVoiceForNote(
+          note,
+          token,
+          noteVoices,
+        );
+        final List<DrumVoiceV1> additionalVoices = <DrumVoiceV1>[
+          for (final DrumVoiceV1 voice in noteVoices)
+            if (voice != primaryVoice) voice,
+        ];
+        double beatCount = _beatCountForSheetNote(
           note.resolvedValue(document.subdivision),
-        ),
-      ),
-    );
-    if (additionalVoices.isNotEmpty) {
-      additionalVoicesByIndex[index] = additionalVoices;
+          document.feel,
+        );
+        final bool isLastNoteInMeasure = localIndex == measure.length - 1;
+        final double beatCursorAfterNote = measureBeatCursor + beatCount;
+        if (isLastNoteInMeasure && measureBeatCount > beatCursorAfterNote) {
+          beatCount += measureBeatCount - beatCursorAfterNote;
+        }
+        final int tokenIndex = tokens.length;
+
+        tokens.add(token);
+        markings.add(_audioMarkingForSheetNote(note));
+        voices.add(primaryVoice);
+        visibleTokenIndexes.add(indexed.index);
+        spans.add(
+          PatternTimingSpanV1(
+            startIndex: tokenIndex,
+            tokenCount: 1,
+            beatCount: beatCount,
+          ),
+        );
+        if (additionalVoices.isNotEmpty) {
+          additionalVoicesByIndex[tokenIndex] = additionalVoices;
+        }
+        measureBeatCursor += beatCount;
+      }
     }
   }
 
@@ -964,7 +1064,7 @@ _SheetNotationAudioPlan _audioPlanForDocument(
     playheadEvents: List<_SheetNotationPlayheadEvent>.unmodifiable(
       playbackPlan.events.map(
         (PatternPlaybackEventV1 event) => _SheetNotationPlayheadEvent(
-          tokenIndex: event.tokenIndex,
+          tokenIndex: visibleTokenIndexes[event.tokenIndex],
           startBeat: event.startBeat,
           beatDuration: event.beatDuration,
         ),
@@ -972,6 +1072,14 @@ _SheetNotationAudioPlan _audioPlanForDocument(
     ),
     totalBeatCount: playbackPlan.totalBeatCount,
   );
+}
+
+@immutable
+class _IndexedSheetNotationNote {
+  final int index;
+  final DrumSheetNotationNote note;
+
+  const _IndexedSheetNotationNote({required this.index, required this.note});
 }
 
 _NotationPlayheadFrame? _playheadFrameForElapsed({
@@ -1088,7 +1196,30 @@ DrumVoiceV1 _audioVoiceForSheetVoice(DrumSheetVoice voice) {
   };
 }
 
-double _beatCountForSheetValue(DrumSheetNoteValue value) {
+double _beatCountForSheetNote(DrumSheetNoteValue value, DrumSheetFeel feel) {
+  if (feel == DrumSheetFeel.triplet) {
+    return switch (value) {
+      DrumSheetNoteValue.eighth => 1 / 3,
+      DrumSheetNoteValue.sixteenth => 1 / 6,
+      DrumSheetNoteValue.thirtySecond => 1 / 12,
+      _ => _beatCountForSheetValue(value),
+    };
+  }
+  return _beatCountForSheetValue(value);
+}
+
+double _beatCountForSheetValue(
+  DrumSheetNoteValue value, {
+  DrumSheetFeel feel = DrumSheetFeel.straight,
+}) {
+  if (feel == DrumSheetFeel.triplet) {
+    return switch (value) {
+      DrumSheetNoteValue.eighth => 1 / 3,
+      DrumSheetNoteValue.sixteenth => 1 / 6,
+      DrumSheetNoteValue.thirtySecond => 1 / 12,
+      _ => _beatCountForSheetValue(value),
+    };
+  }
   return switch (value) {
     DrumSheetNoteValue.whole => 4,
     DrumSheetNoteValue.half => 2,
@@ -1769,10 +1900,7 @@ _PlayheadLine? _playheadCycleEndLineForIndex(
     for (int localIndex = 0; localIndex < system.entries.length; localIndex++) {
       if (system.entries[localIndex].index != tokenIndex) continue;
       final double currentX = _nativeNoteX(system, localIndex);
-      final double endX = math.min(
-        system.x + system.width - 4,
-        _nativeNoteX(system, localIndex + 1),
-      );
+      final double endX = system.x + system.width - 4;
       return _PlayheadLine(
         x: math.max(currentX, endX),
         y1: system.y - 34,

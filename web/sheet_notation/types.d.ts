@@ -1,5 +1,8 @@
 export type DrumNotationDocument = {
   subdivision?: DrumNoteValue;
+  feel?: DrumNotationFeel;
+  timeSignature?: string;
+  repeatCount?: number;
   measures: DrumNotationMeasure[];
 };
 
@@ -34,6 +37,7 @@ export type DrumNotationRenderOptions = {
   noteSpacing?: number;
   systemGapY?: number;
   finalRepeat?: boolean;
+  preserveMeasures?: boolean;
   grouping?: string | number[];
   repeatClefEverySystem?: boolean;
   standardAccents?: boolean;
@@ -43,6 +47,8 @@ export type DrumNotationRenderOptions = {
 };
 
 export type DrumNoteValue = "1n" | "2n" | "4n" | "8n" | "16n" | "32n";
+
+export type DrumNotationFeel = "straight" | "triplet";
 
 export type DrumVoiceId =
   | "hihat"

@@ -49,6 +49,11 @@ export function createFakeVexFlow() {
       return this;
     }
 
+    setBegBarType(type) {
+      this.begBarType = type;
+      return this;
+    }
+
     setEndBarType(type) {
       this.endBarType = type;
       return this;
@@ -190,6 +195,25 @@ export function createFakeVexFlow() {
     }
   }
 
+  class Tuplet {
+    constructor(notes, options) {
+      this.notes = notes;
+      this.options = options;
+      calls.events.push('tuplet:create');
+    }
+
+    setContext(context) {
+      this.context = context;
+      return this;
+    }
+
+    draw() {
+      calls.events.push('tuplet:draw');
+      this.drawn = true;
+      return this;
+    }
+  }
+
   class GraceNote {
     constructor(options) {
       this.options = options;
@@ -224,9 +248,10 @@ export function createFakeVexFlow() {
     Voice,
     Formatter,
     Beam,
+    Tuplet,
     GraceNote,
     GraceNoteGroup,
-    BarlineType: { REPEAT_END: 5 },
+    BarlineType: { REPEAT_BEGIN: 4, REPEAT_END: 5 },
     Modifier: { Position: { ABOVE: 'above', LEFT: 'left', RIGHT: 'right' } },
   };
 }

@@ -97,8 +97,10 @@ Lesson Detail presents one lesson as a clean printable handout.
 - show required concepts
 - show pattern rows
 - render pattern notation with the shared sheet-notation renderer
+- render authored pattern timing metadata, including subdivision, triplet feel, time signature, and repeat count when present
 - provide an ear-icon action for lightweight notation audio preview
 - animate a vertical playhead line over rendered notation while preview audio runs, including line/bar ends before wrapping or looping
+- keep preview cursor speed tied to the written bar, so eighths, sixteenths, and triplet eighths share the same measure-level timing at the fixed preview BPM
 - show exercise rows
 - show tempo, subdivision, subdivision sequence, and flow metadata when authored
 - show coaching notes
@@ -131,6 +133,7 @@ Hands off to the existing print/share export path.
 #### State D: Notation Audio Preview
 
 Plays or stops the selected notation example through the lightweight sample-preview path. While playing, a vertical line moves across the rendered notation in time with the preview, continues through each line/bar end before wrapping or looping, and stops if the app leaves the foreground.
+Triplet examples render with standard triplet grouping marks. Repeated patterns render with repeat bars and repeat-count labels, and preview playback follows the authored repeat count.
 
 ### Acceptance Criteria
 

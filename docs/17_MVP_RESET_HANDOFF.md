@@ -23,6 +23,7 @@ Normal verification commands:
 - `flutter analyze`
 - `flutter test`
 - `npm run test:sheet-notation`
+- `npm run build:sheet-notation-app`
 
 Recent verification has passed for the current MVP surface and notation/audio preview work.
 
@@ -162,6 +163,10 @@ Schema expectations:
 
 - Required fields are validated.
 - Lessons are ordered by `number`.
+- Patterns can include `subdivision`, `time_signature`, and `repeat_count`.
+- Pattern `subdivision: triplet` is timing/display feel, not a new notation token.
+- Pattern `time_signature` defaults to `4/4` when omitted.
+- Pattern `repeat_count` drives notation repeat bars and local preview repetition.
 - Exercises can include subdivision, subdivision sequence, tempo, and flow.
 - Flow steps reference lesson-local pattern ids.
 
@@ -194,6 +199,10 @@ Current notation contract:
 - Lesson YAML stores Drumcabulary notation strings.
 - Users do not author notation strings in MVP.
 - Existing explicit voice override notation may be used in YAML when examples need specific kit voices, such as hi-hat, snare, kick, or crash.
+- Pattern metadata owns the rendering/playback feel: `subdivision`, `time_signature`, and `repeat_count`.
+- Triplet examples use `subdivision: triplet` and render with standard triplet grouping marks.
+- Time signatures render as actual time signatures; omitted values default to `4/4`.
+- Repeated written patterns render with repeat bars and an `Nx` label.
 - The shared sheet notation renderer is the display path on screen and in PDF/export.
 
 Examples of current authored notation:
@@ -224,6 +233,9 @@ Current playback behavior:
 - Preview prepares only samples required by the selected notation.
 - Stale delayed cue callbacks are skipped to avoid catch-up bursts.
 - Preview stops when the app becomes inactive, hidden, paused, or detached.
+- Preview uses a fixed local BPM for now; exercise tempo is displayed as lesson guidance, not used as a live speed control.
+- Eighth, sixteenth, and triplet-eighth patterns share the same written-bar cursor speed at the fixed preview BPM.
+- Pattern `repeat_count` is honored by preview audio and playhead movement.
 - Playhead continues through line/bar ends before wrapping or looping.
 
 Remaining caveat:

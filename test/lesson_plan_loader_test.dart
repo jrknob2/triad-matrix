@@ -52,10 +52,17 @@ void main() {
       moneyPatternsById['money-beat-one-bar']!.notation,
       '[HH K:R] [HH:R] [HH S:R] [HH:R] [HH K:R] [HH:R] [HH S:R] [HH:R]',
     );
-    final List<DrumSheetNotationNote> moneyBeatNotes =
+    expect(moneyPatternsById['money-beat-one-bar']!.subdivision, '8');
+    expect(moneyPatternsById['money-beat-one-bar']!.timeSignature, '4/4');
+    expect(moneyPatternsById['money-beat-one-bar']!.repeatCount, 4);
+    final DrumSheetNotationDocument moneyBeatDocument =
         DrumSheetNotationDocument.fromPattern(
           moneyPatternsById['money-beat-four-bars']!.notation,
-        ).flattenedNotes;
+          subdivision: DrumSheetNoteValue.eighth,
+        );
+    final List<DrumSheetNotationNote> moneyBeatNotes =
+        moneyBeatDocument.flattenedNotes;
+    expect(moneyBeatDocument.measures, hasLength(4));
     expect(moneyBeatNotes, hasLength(32));
     expect(moneyBeatNotes[0].voices, <DrumSheetVoice>[
       DrumSheetVoice.hihat,
@@ -86,6 +93,7 @@ void main() {
         pattern.id: pattern,
     };
     expect(patternsById['triplet-vocab-a']!.notation, 'R(L)(L)');
+    expect(patternsById['triplet-vocab-a']!.subdivision, 'triplet');
     expect(patternsById['triplet-vocab-b']!.notation, 'RLK');
     expect(patternsById['triplet-vocab-c']!.notation, 'RKL');
     expect(patternsById['triplet-vocab-d']!.notation, 'KRL');
@@ -93,6 +101,12 @@ void main() {
     expect(patternsById['six-ab']!.notation, 'R(L)(L) RLK');
     expect(patternsById['six-ad']!.notation, 'R(L)(L) KRL');
     expect(patternsById['six-fc']!.notation, '(R)(R)L RKL');
+    expect(
+      tripletVocabulary.patterns.every(
+        (LessonPattern pattern) => pattern.subdivision == 'triplet',
+      ),
+      isTrue,
+    );
     expect(
       tripletVocabulary.exercises.map(
         (LessonExercise exercise) => exercise.title,

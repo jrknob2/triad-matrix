@@ -19,6 +19,7 @@ lesson_plan:
         - id: basic-rock-groove
           title: Basic Rock Groove
           role: groove
+          subdivision: 8
           notation: "[RK] R [RL] R [RK] R [RL] R"
       exercises:
         - title: Groove Loop
@@ -50,14 +51,22 @@ lesson_plan:
         - id: money-beat-hi-hat-pulse
           title: Hi-Hat Eighths
           role: warmup
+          subdivision: 8
+          time_signature: "4/4"
+          repeat_count: 8
           notation: "[HH:R] [HH:R] [HH:R] [HH:R] [HH:R] [HH:R] [HH:R] [HH:R]"
         - id: money-beat-one-bar
           title: Money Beat - One Bar
           role: groove
+          subdivision: 8
+          time_signature: "4/4"
+          repeat_count: 4
           notation: "[HH K:R] [HH:R] [HH S:R] [HH:R] [HH K:R] [HH:R] [HH S:R] [HH:R]"
         - id: money-beat-four-bars
           title: Money Beat - Four Bars With Crash
           role: groove
+          subdivision: 8
+          time_signature: "4/4"
           notation: "[HH K:R] [HH:R] [HH S:R] [HH:R] [HH K:R] [HH:R] [HH S:R] [HH:R] [HH K:R] [HH:R] [HH S:R] [HH:R] [HH K:R] [HH:R] [HH S:R] [HH:R] [HH K:R] [HH:R] [HH S:R] [HH:R] [HH K:R] [HH:R] [HH S:R] [HH:R] [XK] [HH:R] [HH S:R] [HH:R] [HH K:R] [HH:R] [HH S:R] [HH:R]"
       exercises:
         - title: Count The Hi-Hat
@@ -111,10 +120,12 @@ lesson_plan:
         - id: accent-ghost-five
           title: Accent Ghost Five
           role: chop
+          subdivision: 16
           notation: "^R^L^R(L)(L)"
         - id: accent-ghost-with-kick
           title: Accent Ghost With Kick
           role: fill
+          subdivision: 16
           notation: "^R^L^R(L)(L) K"
       exercises:
         - title: Contrast Drill
@@ -143,10 +154,12 @@ lesson_plan:
         - id: crash-kick-resolution
           title: Crash Kick Resolution
           role: fill
+          subdivision: 16
           notation: "^R^L^R(L)(L) [XK]"
         - id: hands-together
           title: Hands Together
           role: warmup
+          subdivision: 16
           notation: "[RL] R [RL] R"
       exercises:
         - title: Resolution Drill
@@ -175,10 +188,12 @@ lesson_plan:
         - id: raw-five-flow
           title: Raw Five Flow
           role: chop
+          subdivision: 16
           notation: "RLRLL K RLRLL RLRLL X"
         - id: shaped-five-flow
           title: Shaped Five Flow
           role: fill
+          subdivision: 16
           notation: "^R^L^R(L)(L) K ^R^L^R(L)(L) ^R^L^R(L)(L) [XK]"
       exercises:
         - title: Raw To Shaped
@@ -207,10 +222,12 @@ lesson_plan:
         - id: basic-rock-groove
           title: Basic Rock Groove
           role: groove
+          subdivision: 8
           notation: "[RK] R [RL] R [RK] R [RL] R"
         - id: shaped-five-flow
           title: Shaped Five Flow
           role: fill
+          subdivision: 16
           notation: "^R^L^R(L)(L) K ^R^L^R(L)(L) ^R^L^R(L)(L) [XK]"
       exercises:
         - title: Four Bars And Fill
@@ -242,10 +259,12 @@ lesson_plan:
         - id: triplet-hands
           title: Triplet Hands
           role: warmup
+          subdivision: triplet
           notation: R L R L R L
         - id: triplet-kick
           title: Triplet With Kick
           role: groove
+          subdivision: triplet
           notation: "[RK] R L [RL] R L"
       exercises:
         - title: Triplet Control
@@ -274,6 +293,7 @@ lesson_plan:
         - id: transition-base
           title: Transition Base
           role: warmup
+          subdivision: 8
           notation: R L R L
       exercises:
         - title: 8ths to Triplets
@@ -315,58 +335,72 @@ lesson_plan:
         - id: triplet-vocab-a
           title: A - Right Ghost Ghost
           role: vocabulary
+          subdivision: triplet
           notation: "R(L)(L)"
         - id: triplet-vocab-b
           title: B - Right Left Kick
           role: vocabulary
+          subdivision: triplet
           notation: "RLK"
         - id: triplet-vocab-c
           title: C - Right Kick Left
           role: vocabulary
+          subdivision: triplet
           notation: "RKL"
         - id: triplet-vocab-d
           title: D - Kick Right Left
           role: vocabulary
+          subdivision: triplet
           notation: "KRL"
         - id: triplet-vocab-f
           title: F - Ghost Ghost Left
           role: vocabulary
+          subdivision: triplet
           notation: "(R)(R)L"
         - id: basic-triplet-groove
           title: Basic Triplet Groove
           role: groove
+          subdivision: triplet
           notation: "[RK] R L [RL] R L"
         - id: six-ab
           title: Six-Note A + B
           role: fill
+          subdivision: triplet
           notation: "R(L)(L) RLK"
         - id: six-ac
           title: Six-Note A + C
           role: fill
+          subdivision: triplet
           notation: "R(L)(L) RKL"
         - id: six-ad
           title: Six-Note A + D
           role: fill
+          subdivision: triplet
           notation: "R(L)(L) KRL"
         - id: six-bc
           title: Six-Note B + C
           role: fill
+          subdivision: triplet
           notation: "RLK RKL"
         - id: six-cd
           title: Six-Note C + D
           role: fill
+          subdivision: triplet
           notation: "RKL KRL"
         - id: six-af
           title: Six-Note A + F
           role: fill
+          subdivision: triplet
           notation: "R(L)(L) (R)(R)L"
         - id: six-fb
           title: Six-Note F + B
           role: fill
+          subdivision: triplet
           notation: "(R)(R)L RLK"
         - id: six-fc
           title: Six-Note F + C
           role: fill
+          subdivision: triplet
           notation: "(R)(R)L RKL"
       exercises:
         - title: Practice A

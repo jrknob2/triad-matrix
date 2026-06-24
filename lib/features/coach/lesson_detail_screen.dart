@@ -191,11 +191,7 @@ class _PatternList extends StatelessWidget {
       children: <Widget>[
         for (int index = 0; index < lesson.patterns.length; index += 1) ...[
           if (index > 0) const Divider(height: 28),
-          _PatternRow(
-            pattern: lesson.patterns[index],
-            subdivision: _subdivisionForLesson(lesson),
-            previewBpm: _previewBpmForLesson(lesson),
-          ),
+          _PatternRow(pattern: lesson.patterns[index]),
         ],
       ],
     );
@@ -204,14 +200,8 @@ class _PatternList extends StatelessWidget {
 
 class _PatternRow extends StatelessWidget {
   final LessonPattern pattern;
-  final DrumSheetNoteValue subdivision;
-  final int previewBpm;
 
-  const _PatternRow({
-    required this.pattern,
-    required this.subdivision,
-    required this.previewBpm,
-  });
+  const _PatternRow({required this.pattern});
 
   @override
   Widget build(BuildContext context) {
@@ -239,7 +229,10 @@ class _PatternRow extends StatelessWidget {
         DrumSheetNotationDisplay(
           document: DrumSheetNotationDocument.fromPattern(
             pattern.notation,
-            subdivision: subdivision,
+            subdivision: _subdivisionForPattern(pattern),
+            feel: _feelForPattern(pattern),
+            timeSignature: pattern.timeSignature,
+            repeatCount: pattern.repeatCount,
             lenient: true,
           ),
           grouping: _groupingTextFromPattern(pattern.notation),
@@ -247,7 +240,6 @@ class _PatternRow extends StatelessWidget {
           compactLayout: true,
           minNoteWidth: 32,
           audioPreviewEnabled: true,
-          audioPreviewBpm: previewBpm,
         ),
       ],
     );
@@ -419,32 +411,21 @@ class _MetadataPill extends StatelessWidget {
   }
 }
 
-DrumSheetNoteValue _subdivisionForLesson(Lesson lesson) {
-  for (final LessonExercise exercise in lesson.exercises) {
-    final DrumSheetNoteValue? value = _subdivisionValue(exercise.subdivision);
-    if (value != null) return value;
-    if (exercise.subdivisionSequence.isNotEmpty) {
-      final DrumSheetNoteValue? sequenceValue = _subdivisionValue(
-        exercise.subdivisionSequence.first,
-      );
-      if (sequenceValue != null) return sequenceValue;
-    }
-  }
-  return DrumSheetNoteValue.eighth;
+DrumSheetNoteValue _subdivisionForPattern(LessonPattern pattern) {
+  return _subdivisionValue(pattern.subdivision) ?? DrumSheetNoteValue.eighth;
 }
 
-int _previewBpmForLesson(Lesson lesson) {
-  for (final LessonExercise exercise in lesson.exercises) {
-    final TempoTarget? tempo = exercise.tempo;
-    if (tempo != null) return tempo.start;
-  }
-  return 92;
+DrumSheetFeel _feelForPattern(LessonPattern pattern) {
+  return pattern.subdivision == 'triplet'
+      ? DrumSheetFeel.triplet
+      : DrumSheetFeel.straight;
 }
 
 DrumSheetNoteValue? _subdivisionValue(String? value) {
   return switch (value) {
     '4' => DrumSheetNoteValue.quarter,
     '8' => DrumSheetNoteValue.eighth,
+    'triplet' => DrumSheetNoteValue.eighth,
     '16' => DrumSheetNoteValue.sixteenth,
     '32' => DrumSheetNoteValue.thirtySecond,
     _ => null,

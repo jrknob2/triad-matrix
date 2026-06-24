@@ -74,6 +74,31 @@ void main() {
     ]);
   });
 
+  test('builds measures from time signature subdivision and triplet feel', () {
+    final DrumSheetNotationDocument straight =
+        DrumSheetNotationDocument.fromPattern(
+          '[HH K:R] [HH:R] [HH S:R] [HH:R] [HH K:R] [HH:R] [HH S:R] [HH:R] '
+          '[HH K:R] [HH:R] [HH S:R] [HH:R] [HH K:R] [HH:R] [HH S:R] [HH:R]',
+          subdivision: DrumSheetNoteValue.eighth,
+          timeSignature: '4/4',
+        );
+
+    expect(straight.measures, hasLength(2));
+    expect(straight.measures.first.notes, hasLength(8));
+
+    final DrumSheetNotationDocument triplet =
+        DrumSheetNotationDocument.fromPattern(
+          'R L R L R L R L R L R L',
+          subdivision: DrumSheetNoteValue.eighth,
+          feel: DrumSheetFeel.triplet,
+          timeSignature: '4/4',
+        );
+
+    expect(triplet.measures, hasLength(1));
+    expect(triplet.measures.single.notes, hasLength(12));
+    expect(triplet.feel, DrumSheetFeel.triplet);
+  });
+
   test('parses multi-voice hand and limb beats', () {
     expect(
       DrumSheetNotationDocument.fromPattern(

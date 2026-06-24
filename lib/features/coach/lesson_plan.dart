@@ -128,12 +128,18 @@ class LessonPattern {
   final String title;
   final String role;
   final String notation;
+  final String? subdivision;
+  final String timeSignature;
+  final int? repeatCount;
 
   const LessonPattern({
     required this.id,
     required this.title,
     required this.role,
     required this.notation,
+    this.subdivision,
+    this.timeSignature = '4/4',
+    this.repeatCount,
   });
 
   factory LessonPattern.fromYaml(Map<dynamic, dynamic> yaml, String path) {
@@ -142,6 +148,10 @@ class LessonPattern {
       title: _requiredString(yaml, 'title', path),
       role: _requiredString(yaml, 'role', path),
       notation: _requiredString(yaml, 'notation', path),
+      subdivision: _optionalScalarString(yaml, 'subdivision', path),
+      timeSignature:
+          _optionalScalarString(yaml, 'time_signature', path) ?? '4/4',
+      repeatCount: _optionalPositiveInt(yaml, 'repeat_count', path),
     );
   }
 }
@@ -282,6 +292,13 @@ int _requiredInt(Map<dynamic, dynamic> map, String key, String path) {
   final Object? value = map[key];
   if (value is int) return value;
   throw LessonPlanLoadException('$path.$key must be an integer.');
+}
+
+int? _optionalPositiveInt(Map<dynamic, dynamic> map, String key, String path) {
+  final Object? value = map[key];
+  if (value == null) return null;
+  if (value is int && value > 0) return value;
+  throw LessonPlanLoadException('$path.$key must be a positive integer.');
 }
 
 List<String> _requiredStringList(

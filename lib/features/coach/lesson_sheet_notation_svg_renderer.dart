@@ -52,7 +52,6 @@ class LessonSheetNotationSvgRenderer {
     required PdfPageFormat pageFormat,
   }) async {
     final Map<String, String> svgsByPatternId = <String, String>{};
-    final DrumSheetNoteValue subdivision = _subdivisionForLesson(lesson);
     final double availableWidth = pageFormat.availableWidth.isFinite
         ? pageFormat.availableWidth
         : 520;
@@ -60,7 +59,6 @@ class LessonSheetNotationSvgRenderer {
     for (final LessonPattern pattern in lesson.patterns) {
       svgsByPatternId[pattern.id] = await renderPattern(
         pattern: pattern,
-        subdivision: subdivision,
         availableWidth: availableWidth,
       );
     }
@@ -70,7 +68,6 @@ class LessonSheetNotationSvgRenderer {
 
   Future<String> renderPattern({
     required LessonPattern pattern,
-    required DrumSheetNoteValue subdivision,
     required double availableWidth,
   }) async {
     await _ready;
@@ -78,7 +75,10 @@ class LessonSheetNotationSvgRenderer {
     final DrumSheetNotationDocument document =
         DrumSheetNotationDocument.fromPattern(
           pattern.notation,
-          subdivision: subdivision,
+          subdivision: _subdivisionForPattern(pattern),
+          feel: _feelForPattern(pattern),
+          timeSignature: pattern.timeSignature,
+          repeatCount: pattern.repeatCount,
           lenient: true,
         );
     final String documentJson = jsonEncode(_documentJson(document));
@@ -91,7 +91,7 @@ class LessonSheetNotationSvgRenderer {
       'staffHeight': 124,
       'systemGapY': 126,
       'paddingRight': 34,
-      'notesPerSystem': 'auto',
+      'preserveMeasures': true,
     });
 
     final Object result = await _controller.runJavaScriptReturningResult('''
@@ -118,6 +118,9 @@ class LessonSheetNotationSvgRenderer {
 Map<String, Object?> _documentJson(DrumSheetNotationDocument document) {
   return <String, Object?>{
     'subdivision': document.subdivision.noteValueLabel,
+    'feel': document.feel.name,
+    'timeSignature': document.timeSignature,
+    if (document.repeatCount != null) 'repeatCount': document.repeatCount,
     'measures': <Object?>[
       for (final DrumSheetNotationMeasure measure in document.measures)
         <String, Object?>{
@@ -160,24 +163,21 @@ String _displayStickingForNote(DrumSheetNotationNote note) {
   return '';
 }
 
-DrumSheetNoteValue _subdivisionForLesson(Lesson lesson) {
-  for (final LessonExercise exercise in lesson.exercises) {
-    final DrumSheetNoteValue? value = _subdivisionValue(exercise.subdivision);
-    if (value != null) return value;
-    if (exercise.subdivisionSequence.isNotEmpty) {
-      final DrumSheetNoteValue? sequenceValue = _subdivisionValue(
-        exercise.subdivisionSequence.first,
-      );
-      if (sequenceValue != null) return sequenceValue;
-    }
-  }
-  return DrumSheetNoteValue.eighth;
+DrumSheetNoteValue _subdivisionForPattern(LessonPattern pattern) {
+  return _subdivisionValue(pattern.subdivision) ?? DrumSheetNoteValue.eighth;
+}
+
+DrumSheetFeel _feelForPattern(LessonPattern pattern) {
+  return pattern.subdivision == 'triplet'
+      ? DrumSheetFeel.triplet
+      : DrumSheetFeel.straight;
 }
 
 DrumSheetNoteValue? _subdivisionValue(String? value) {
   return switch (value) {
     '4' => DrumSheetNoteValue.quarter,
     '8' => DrumSheetNoteValue.eighth,
+    'triplet' => DrumSheetNoteValue.eighth,
     '16' => DrumSheetNoteValue.sixteenth,
     '32' => DrumSheetNoteValue.thirtySecond,
     _ => null,

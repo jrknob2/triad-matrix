@@ -40,6 +40,9 @@ export function renderDemoDrumNotationSvg(options = {}) {
 export function documentFromPattern(pattern, options = {}) {
   return {
     subdivision: options.subdivision ?? '8n',
+    feel: options.feel,
+    timeSignature: options.timeSignature,
+    repeatCount: options.repeatCount,
     measures: [{ notes: notesFromPattern(pattern, { lenient: options.lenient }) }],
   };
 }

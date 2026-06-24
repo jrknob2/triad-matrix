@@ -355,7 +355,7 @@
           ? width - 8
           : currentLine.x + inferredSpacing;
         return {
-          x: Math.max(currentLine.x, Math.min(currentLine.x + inferredSpacing, maxX)),
+          x: Math.max(currentLine.x, maxX),
           y1: currentLine.y1,
           y2: currentLine.y2,
         };
