@@ -78,6 +78,8 @@ export function createFakeVexFlow() {
       this.keyStyles = [];
       this.xShift = 0;
       this.stemLength = null;
+      this.absoluteX = 0;
+      this.glyphWidth = 10;
       calls.notes.push(this);
     }
 
@@ -108,6 +110,22 @@ export function createFakeVexFlow() {
     setStemLength(value) {
       this.stemLength = value;
       return this;
+    }
+
+    getAbsoluteX() {
+      return this.absoluteX;
+    }
+
+    getGlyphWidth() {
+      return this.glyphWidth;
+    }
+
+    getCenterGlyphX() {
+      return this.absoluteX + this.xShift + this.glyphWidth / 2;
+    }
+
+    getYForTopText() {
+      return -12;
     }
   }
 
@@ -183,6 +201,9 @@ export function createFakeVexFlow() {
       this.formatWidth = width;
       voices.forEach((voice) => {
         voice.formatterWidth = width;
+        voice.tickables.forEach((note, index) => {
+          note.absoluteX = 24 + index * 32;
+        });
       });
       return this;
     }

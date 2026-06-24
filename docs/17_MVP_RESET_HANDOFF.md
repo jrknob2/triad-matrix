@@ -202,8 +202,8 @@ Current notation contract:
 - Pattern metadata owns the rendering/playback feel: `subdivision`, `time_signature`, and `repeat_count`.
 - Triplet examples use `subdivision: triplet` and render with standard triplet grouping marks.
 - Time signatures render as actual time signatures; omitted values default to `4/4`.
-- Repeated written patterns render with repeat bars, without a separate repeat-count text label.
-- Limb assignment labels render above the staff and noteheads.
+- Repeated written patterns render with an end-repeat bar, without a start-repeat bar or separate repeat-count text label.
+- Limb assignment labels render above the staff and noteheads, centered on the final rendered note positions after time-signature and spacing adjustments.
 - The shared sheet notation renderer is the display path on screen and in PDF/export.
 
 Examples of current authored notation:

@@ -132,7 +132,7 @@ Hands off to the existing print/share export path.
 #### State D: Notation Audio Preview
 
 Plays or stops the selected notation example through the lightweight sample-preview path. While playing, a vertical line moves across the rendered notation in time with the preview, continues through each line/bar end before wrapping or looping, and stops if the app leaves the foreground.
-Triplet examples render with standard triplet grouping marks. Repeated patterns render with repeat bars, and preview playback follows the authored repeat count.
+Triplet examples render with standard triplet grouping marks. Repeated patterns render with an end-repeat bar only, and preview playback follows the authored repeat count.
 
 ### Acceptance Criteria
 

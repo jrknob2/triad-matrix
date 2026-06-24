@@ -149,26 +149,26 @@ describe('voice mapping and VexFlow conversion', () => {
 
   test('multi-voice sticking keeps useful limb assignment', () => {
     const VF = createFakeVexFlow();
-    createVexFlowNote(VF, {
+    const note = createVexFlowNote(VF, {
       value: '16n',
       voices: ['crash', 'kick'],
       sticking: 'XK',
     });
 
-    assert.equal(VF.calls.annotations.length, 1);
-    assert.equal(VF.calls.annotations[0].text, 'K');
+    assert.equal(VF.calls.annotations.length, 0);
+    assert.equal(note.__drumcabularyStickingLabel, 'K');
   });
 
   test('multi-voice override sticking keeps authored hand assignment', () => {
     const VF = createFakeVexFlow();
-    createVexFlowNote(VF, {
+    const note = createVexFlowNote(VF, {
       value: '16n',
       voices: ['snare', 'hihat'],
       sticking: 'R',
     });
 
-    assert.equal(VF.calls.annotations.length, 1);
-    assert.equal(VF.calls.annotations[0].text, 'R');
+    assert.equal(VF.calls.annotations.length, 0);
+    assert.equal(note.__drumcabularyStickingLabel, 'R');
   });
 
   test('default stem direction is all up for now', () => {
@@ -248,7 +248,7 @@ describe('voice mapping and VexFlow conversion', () => {
     assert.deepEqual(note.options.keys, ['c/5', 'e/5']);
   });
 
-  test('sticking label attachment', () => {
+  test('sticking label metadata', () => {
     const VF = createFakeVexFlow();
     const note = createVexFlowNote(VF, {
       value: '16n',
@@ -256,17 +256,12 @@ describe('voice mapping and VexFlow conversion', () => {
       sticking: 'R',
     });
 
-    assert.equal(note.modifiers.length, 1);
-    assert.equal(VF.calls.annotations[0].text, 'R');
-    assert.deepEqual(VF.calls.annotations[0].font, {
-      family: 'Arial',
-      size: 12,
-      weight: '',
-    });
-    assert.equal(VF.calls.annotations[0].verticalJustification, 'top');
+    assert.equal(note.modifiers.length, 0);
+    assert.equal(VF.calls.annotations.length, 0);
+    assert.equal(note.__drumcabularyStickingLabel, 'R');
   });
 
-  test('sticking label attachment uppercases lowercase input', () => {
+  test('sticking label metadata uppercases lowercase input', () => {
     const VF = createFakeVexFlow();
     const note = createVexFlowNote(VF, {
       value: '16n',
@@ -274,11 +269,11 @@ describe('voice mapping and VexFlow conversion', () => {
       sticking: 'l',
     });
 
-    assert.equal(note.modifiers.length, 1);
-    assert.equal(VF.calls.annotations[0].text, 'L');
+    assert.equal(note.modifiers.length, 0);
+    assert.equal(note.__drumcabularyStickingLabel, 'L');
   });
 
-  test('accent uses aligned top annotation row', () => {
+  test('accent uses aligned top annotation row without owning sticking placement', () => {
     const VF = createFakeVexFlow();
     const note = createVexFlowNote(VF, {
       value: '16n',
@@ -287,10 +282,10 @@ describe('voice mapping and VexFlow conversion', () => {
       accent: true,
     });
 
-    assert.equal(note.modifiers.length, 2);
-    assert.equal(VF.calls.annotations[0].text, 'X');
-    assert.equal(VF.calls.annotations[1].text, '>');
-    assert.equal(VF.calls.annotations[1].verticalJustification, 'top');
+    assert.equal(note.modifiers.length, 1);
+    assert.equal(note.__drumcabularyStickingLabel, 'X');
+    assert.equal(VF.calls.annotations[0].text, '>');
+    assert.equal(VF.calls.annotations[0].verticalJustification, 'top');
     assert.equal(VF.calls.articulations.length, 0);
   });
 
@@ -303,13 +298,13 @@ describe('voice mapping and VexFlow conversion', () => {
       ghost: true,
     });
 
-    assert.equal(VF.calls.annotations[0].text, 'L');
     assert.deepEqual(
       VF.calls.parentheses.map((parenthesis) => parenthesis.position),
       ['left', 'right'],
     );
-    assert.equal(note.modifiers[1].modifier, VF.calls.parentheses[0]);
-    assert.equal(note.modifiers[2].modifier, VF.calls.parentheses[1]);
+    assert.equal(note.__drumcabularyStickingLabel, 'L');
+    assert.equal(note.modifiers[0].modifier, VF.calls.parentheses[0]);
+    assert.equal(note.modifiers[1].modifier, VF.calls.parentheses[1]);
     assert.equal(note.__drumcabularyGhost, true);
   });
 
@@ -634,7 +629,7 @@ describe('svg rendering', () => {
     assert.match(svg, /width="660"/);
     assert.match(svg, /height="276"/);
     assert.equal(VF.calls.notes.length, 36);
-    assert.equal(VF.calls.annotations.length, 54);
+    assert.equal(VF.calls.annotations.length, 18);
     assert.equal(VF.calls.notes[17].graceNoteGroup.notes.length, 1);
     assert.equal(VF.calls.notes[35].graceNoteGroup.notes.length, 1);
     assert.equal(VF.calls.staves.length, 2);
@@ -752,6 +747,31 @@ describe('svg rendering', () => {
     );
   });
 
+  test('sticking labels use final note x positions after phrase gaps', () => {
+    const VF = createFakeVexFlow();
+    const svg = renderDrumNotationSvg(
+      {
+        subdivision: '8n',
+        measures: [
+          {
+            notes: [
+              { voices: ['hihat'], sticking: 'R' },
+              { voices: ['hihat'], sticking: 'R' },
+              { voices: ['hihat'], sticking: 'R' },
+              { voices: ['hihat'], sticking: 'R' },
+            ],
+          },
+        ],
+      },
+      { vexFlow: VF, grouping: '22', groupGap: 18 },
+    );
+
+    const labelXs = [...svg.matchAll(/<text x="([^"]+)"/g)].map((match) =>
+      Number(match[1]),
+    );
+    assert.deepEqual(labelXs, [29, 61, 111, 143]);
+  });
+
   test('compact render options can shorten stems', () => {
     const VF = createFakeVexFlow();
     renderDrumNotationSvg(
@@ -831,7 +851,7 @@ describe('svg rendering', () => {
     assert.equal(VF.calls.voices[0].options.beat_value, 4);
   });
 
-  test('repeat count renders repeat bar metadata', () => {
+  test('repeat count renders only an end repeat bar', () => {
     const VF = createFakeVexFlow();
     renderDrumNotationSvg(
       {
@@ -848,7 +868,7 @@ describe('svg rendering', () => {
       { vexFlow: VF },
     );
 
-    assert.equal(VF.calls.staves[0].begBarType, 4);
+    assert.equal(VF.calls.staves[0].begBarType, undefined);
     assert.equal(VF.calls.staves[0].endBarType, 5);
   });
 
@@ -903,7 +923,8 @@ describe('svg rendering', () => {
     );
 
     assert.equal(result.notes[0].sticking, 'L');
-    assert.equal(VF.calls.annotations[0].text, 'L');
+    assert.equal(VF.calls.notes[0].__drumcabularyStickingLabel, 'L');
+    assert.match(result.svg, />L<\/text>/);
   });
 
   test('mapped stem mode beams do not cross mixed stem directions', () => {

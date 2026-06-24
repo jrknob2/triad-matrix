@@ -293,9 +293,6 @@ function renderDrumNotationSvgWithMetadata(documentJson, options = {}) {
     if (index === 0 && typeof stave.addTimeSignature === 'function') {
       stave.addTimeSignature(document.timeSignature);
     }
-    if (document.repeatCount > 1 && index === 0) {
-      setStartRepeatBar(VF, stave);
-    }
     if (renderOptions.finalRepeat === true && index === systems.length - 1) {
       setEndRepeatBar(VF, stave);
     }
@@ -332,6 +329,7 @@ function renderDrumNotationSvgWithMetadata(documentJson, options = {}) {
     voice.draw(context, stave);
     drawBeams(context, beams);
     drawTuplets(context, tuplets);
+    appendStickingLabels(host, VF, notes, system, layout);
   }
 
   return {
@@ -356,7 +354,7 @@ function createVexFlowNote(VF, note, options = {}) {
 
   applyNoteheads(VF, staveNote, mappings);
   applyStemLength(staveNote, note, options.stemLength);
-  attachSticking(VF, staveNote, stickingLabelFor(note));
+  attachStickingMetadata(staveNote, stickingLabelFor(note));
   if (options.standardAccents !== false) {
     attachAccent(VF, staveNote, note.accent);
   } else if (note.accent && (note.sticking == null || note.sticking === '')) {
@@ -374,6 +372,12 @@ function attachSticking(VF, staveNote, sticking) {
     .setFont(STICKING_FONT_FAMILY, STICKING_FONT_SIZE, STICKING_FONT_WEIGHT)
     .setVerticalJustification(VF.Annotation.VerticalJustify.TOP);
   staveNote.addModifier(annotation, 0);
+}
+
+function attachStickingMetadata(staveNote, sticking) {
+  staveNote.__drumcabularyStickingLabel = sticking == null
+    ? ''
+    : String(sticking).trim().toUpperCase();
 }
 
 function applyStemLength(staveNote, note, stemLength) {
@@ -602,6 +606,134 @@ function drawTuplets(context, tuplets) {
   });
 }
 
+function appendStickingLabels(host, VF, vexNotes, system, layout) {
+  const labels = vexNotes
+    .map((note, index) => ({
+      text: note.__drumcabularyStickingLabel,
+      x: stickingLabelX(VF, note),
+      entry: system.entries[index],
+    }))
+    .filter((label) =>
+      label.text != null &&
+      label.text !== '' &&
+      Number.isFinite(label.x) &&
+      label.entry?.note?.rest !== true,
+    );
+  if (labels.length === 0) return;
+
+  const y = stickingLabelY(vexNotes, layout);
+  appendSvgTextElements(
+    host,
+    labels.map((label) => ({
+      text: label.text,
+      x: label.x,
+      y,
+    })),
+  );
+}
+
+function stickingLabelX(VF, note) {
+  if (typeof note.getCenterGlyphX === 'function') {
+    const value = note.getCenterGlyphX();
+    if (Number.isFinite(value)) return value;
+  }
+  if (typeof note.getModifierStartXY === 'function') {
+    const position = VF.ModifierPosition?.ABOVE ?? VF.Modifier?.Position?.ABOVE;
+    if (position != null) {
+      try {
+        const point = note.getModifierStartXY(position, 0);
+        if (Number.isFinite(point?.x)) return point.x;
+      } catch {
+        // Fall through to the absolute-x fallback.
+      }
+    }
+  }
+  if (typeof note.getAbsoluteX === 'function') {
+    try {
+      const absoluteX = note.getAbsoluteX();
+      const xShift =
+        typeof note.getXShift === 'function' ? note.getXShift() : 0;
+      const glyphWidth =
+        typeof note.getGlyphWidth === 'function' ? note.getGlyphWidth() : 0;
+      const x = absoluteX + xShift + glyphWidth / 2;
+      if (Number.isFinite(x)) return x;
+    } catch {
+      return Number.NaN;
+    }
+  }
+  return Number.NaN;
+}
+
+function stickingLabelY(vexNotes, layout) {
+  const noteYs = vexNotes
+    .map((note) => {
+      if (typeof note.getYForTopText !== 'function') return Number.NaN;
+      try {
+        return note.getYForTopText(0);
+      } catch {
+        return Number.NaN;
+      }
+    })
+    .filter((value) => Number.isFinite(value));
+  if (noteYs.length > 0) return Math.min(...noteYs);
+  return layout.y - 10;
+}
+
+function appendSvgTextElements(host, labels) {
+  const svg = host.querySelector('svg');
+  if (svg == null) return;
+
+  if (typeof document !== 'undefined' && typeof svg.appendChild === 'function') {
+    const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    group.setAttribute('class', 'drum-sticking-labels');
+    group.setAttribute('font-family', STICKING_FONT_FAMILY);
+    group.setAttribute('font-size', String(STICKING_FONT_SIZE));
+    group.setAttribute('font-weight', STICKING_FONT_WEIGHT || 'normal');
+    group.setAttribute('fill', 'currentColor');
+    group.setAttribute('text-anchor', 'middle');
+    labels.forEach((label) => {
+      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      text.setAttribute('x', formatSvgNumber(label.x));
+      text.setAttribute('y', formatSvgNumber(label.y));
+      text.textContent = label.text;
+      group.appendChild(text);
+    });
+    svg.appendChild(group);
+    return;
+  }
+
+  if (typeof svg.outerHTML !== 'string') return;
+  const text = `<g class="drum-sticking-labels" font-family="${escapeXmlAttribute(
+    STICKING_FONT_FAMILY,
+  )}" font-size="${STICKING_FONT_SIZE}" font-weight="${escapeXmlAttribute(
+    STICKING_FONT_WEIGHT || 'normal',
+  )}" fill="currentColor" text-anchor="middle">${labels
+    .map((label) => (
+      `<text x="${formatSvgNumber(label.x)}" y="${formatSvgNumber(label.y)}">${escapeXmlText(
+        label.text,
+      )}</text>`
+    ))
+    .join('')}</g>`;
+  svg.outerHTML = svg.outerHTML.replace('</svg>', `${text}</svg>`);
+}
+
+function formatSvgNumber(value) {
+  return Number(value).toFixed(2).replace(/\.?0+$/, '');
+}
+
+function escapeXmlText(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;');
+}
+
+function escapeXmlAttribute(value) {
+  return escapeXmlText(value)
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&apos;');
+}
+
 function formatterWidthForSystem(system, options, context = {}) {
   const groupGap = groupGapForSystem(system, options);
   const startReserve = startReserveForSystem(options, context);
@@ -674,19 +806,6 @@ function setEndRepeatBar(VF, stave) {
     5;
   if (typeof stave.setEndBarType === 'function') {
     stave.setEndBarType(repeatEnd);
-  }
-}
-
-function setStartRepeatBar(VF, stave) {
-  const repeatBegin =
-    VF.BarlineType?.REPEAT_BEGIN ??
-    VF.Barline?.type?.REPEAT_BEGIN ??
-    VF.Barline?.type?.repeatBegin ??
-    4;
-  if (typeof stave.setBegBarType === 'function') {
-    stave.setBegBarType(repeatBegin);
-  } else if (typeof stave.setBeginBarType === 'function') {
-    stave.setBeginBarType(repeatBegin);
   }
 }
 
