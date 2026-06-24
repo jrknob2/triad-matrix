@@ -263,7 +263,7 @@ describe('voice mapping and VexFlow conversion', () => {
       size: 12,
       weight: '',
     });
-    assert.equal(VF.calls.annotations[0].verticalJustification, 'bottom');
+    assert.equal(VF.calls.annotations[0].verticalJustification, 'top');
   });
 
   test('sticking label attachment uppercases lowercase input', () => {
@@ -648,7 +648,7 @@ describe('svg rendering', () => {
     assert.equal(VF.calls.staves[1].clef, undefined);
     assert.equal(VF.calls.staves[1].timeSignature, undefined);
     assert.equal(VF.calls.staves[1].endBarType, 5);
-    assert.equal(VF.calls.voices[0].formatterWidth, 612);
+    assert.equal(VF.calls.voices[0].formatterWidth, 564);
     assert.equal(VF.calls.voices[1].formatterWidth, 612);
   });
 
@@ -666,7 +666,7 @@ describe('svg rendering', () => {
       VF.calls.beams.map((beam) => beam.notes.length),
       [7, 7, 7, 7, 7],
     );
-    assert.equal(VF.calls.voices[0].formatterWidth, 266);
+    assert.equal(VF.calls.voices[0].formatterWidth, 218);
     assert.equal(VF.calls.voices[5].formatterWidth, 62);
   });
 
@@ -749,6 +749,29 @@ describe('svg rendering', () => {
     assert.deepEqual(
       VF.calls.notes.map((note) => note.xShift),
       [0, 0, 0, 18, 18, 18],
+    );
+  });
+
+  test('compact render options can shorten stems', () => {
+    const VF = createFakeVexFlow();
+    renderDrumNotationSvg(
+      {
+        subdivision: '8n',
+        measures: [
+          {
+            notes: [
+              { voices: ['hihat'], sticking: 'R' },
+              { voices: ['kick'], sticking: 'K' },
+            ],
+          },
+        ],
+      },
+      { vexFlow: VF, stemLength: 28 },
+    );
+
+    assert.deepEqual(
+      VF.calls.notes.map((note) => note.stemLength),
+      [28, 28],
     );
   });
 

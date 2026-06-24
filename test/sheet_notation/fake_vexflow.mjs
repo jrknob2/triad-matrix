@@ -77,6 +77,7 @@ export function createFakeVexFlow() {
       this.modifiers = [];
       this.keyStyles = [];
       this.xShift = 0;
+      this.stemLength = null;
       calls.notes.push(this);
     }
 
@@ -102,6 +103,11 @@ export function createFakeVexFlow() {
 
     getXShift() {
       return this.xShift;
+    }
+
+    setStemLength(value) {
+      this.stemLength = value;
+      return this;
     }
   }
 

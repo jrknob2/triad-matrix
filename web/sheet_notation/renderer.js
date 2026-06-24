@@ -15,8 +15,10 @@ const DEFAULT_RENDER_OPTIONS = Object.freeze({
   notesPerSystem: null,
   minNoteWidth: 39,
   systemEndReserve: 28,
+  timeSignatureReserve: 48,
   noteSpacing: 34,
   groupGap: 12,
+  stemLength: null,
   systemGapY: 140,
   finalRepeat: true,
   preserveMeasures: false,
@@ -83,6 +85,7 @@ export function renderDrumNotationSvgWithMetadata(documentJson, options = {}) {
         stemMode: renderOptions.stemMode,
         metadata: entry,
         standardAccents: renderOptions.standardAccents,
+        stemLength: renderOptions.stemLength,
       }),
     );
     const voice = new VF.Voice({
@@ -90,7 +93,10 @@ export function renderDrumNotationSvgWithMetadata(documentJson, options = {}) {
       beat_value: beatValueForSystem(system, document),
     }).setStrict(false);
     voice.addTickables(notes);
-    const formatterWidth = formatterWidthForSystem(system, renderOptions);
+    const formatterWidth = formatterWidthForSystem(system, renderOptions, {
+      document,
+      systemIndex: index,
+    });
     new VF.Formatter()
       .joinVoices([voice])
       .format([voice], formatterWidth);
@@ -106,8 +112,6 @@ export function renderDrumNotationSvgWithMetadata(documentJson, options = {}) {
     drawBeams(context, beams);
     drawTuplets(context, tuplets);
   }
-
-  appendRepeatCountLabel(host, document, renderOptions, systemCount);
 
   return {
     svg: extractSvg(host),
@@ -130,6 +134,7 @@ export function createVexFlowNote(VF, note, options = {}) {
   const staveNote = new VF.StaveNote(noteOptions);
 
   applyNoteheads(VF, staveNote, mappings);
+  applyStemLength(staveNote, note, options.stemLength);
   attachSticking(VF, staveNote, stickingLabelFor(note));
   if (options.standardAccents !== false) {
     attachAccent(VF, staveNote, note.accent);
@@ -146,8 +151,15 @@ export function attachSticking(VF, staveNote, sticking) {
   if (sticking == null || sticking === '') return;
   const annotation = new VF.Annotation(sticking)
     .setFont(STICKING_FONT_FAMILY, STICKING_FONT_SIZE, STICKING_FONT_WEIGHT)
-    .setVerticalJustification(VF.Annotation.VerticalJustify.BOTTOM);
+    .setVerticalJustification(VF.Annotation.VerticalJustify.TOP);
   staveNote.addModifier(annotation, 0);
+}
+
+function applyStemLength(staveNote, note, stemLength) {
+  if (note.rest || typeof staveNote.setStemLength !== 'function') return;
+  const length = Number(stemLength);
+  if (!Number.isFinite(length) || length <= 0) return;
+  staveNote.setStemLength(length);
 }
 
 export function attachAccent(VF, staveNote, accent) {
@@ -369,18 +381,31 @@ function drawTuplets(context, tuplets) {
   });
 }
 
-function formatterWidthForSystem(system, options) {
+function formatterWidthForSystem(system, options, context = {}) {
   const groupGap = groupGapForSystem(system, options);
+  const startReserve = startReserveForSystem(options, context);
   if (system.preserveMeasure === true) {
     return Math.max(
       24,
-      (options.formatterWidth ?? options.measureWidth) - groupGap,
+      (options.formatterWidth ?? options.measureWidth) -
+        groupGap -
+        startReserve,
     );
   }
   const widthForNotes =
     system.entries.length * options.noteSpacing + options.systemEndReserve;
   const maxWidth = options.formatterWidth ?? options.measureWidth;
-  return Math.max(24, Math.min(maxWidth, widthForNotes) - groupGap);
+  return Math.max(
+    24,
+    Math.min(maxWidth, widthForNotes) - groupGap - startReserve,
+  );
+}
+
+function startReserveForSystem(options, context) {
+  if (context.systemIndex !== 0) return 0;
+  if (context.document?.timeSignature == null) return 0;
+  const reserve = Number(options.timeSignatureReserve);
+  return Number.isFinite(reserve) && reserve > 0 ? reserve : 0;
 }
 
 function applyGroupSpacing(vexNotes, system, options) {
@@ -418,31 +443,6 @@ function groupGapForSystem(system, options) {
 function normalizedGroupGap(options) {
   const gap = Number(options.groupGap);
   return Number.isFinite(gap) && gap > 0 ? gap : 0;
-}
-
-function appendRepeatCountLabel(host, document, options, systemCount) {
-  if (!Number.isInteger(document.repeatCount) || document.repeatCount <= 1) {
-    return;
-  }
-  if (typeof globalThis.document === 'undefined') return;
-  const svg = host.querySelector?.('svg') ?? host.children?.find?.(
-    (child) => String(child.tagName).toLowerCase() === 'svg',
-  );
-  if (svg == null || typeof svg.appendChild !== 'function') return;
-
-  const layout = systemLayoutForIndex(Math.max(0, systemCount - 1), options);
-  const text = globalThis.document.createElementNS(
-    'http://www.w3.org/2000/svg',
-    'text',
-  );
-  text.setAttribute('x', String(layout.x + options.measureWidth - 2));
-  text.setAttribute('y', String(Math.max(12, layout.y - 6)));
-  text.setAttribute('font-family', 'Arial, sans-serif');
-  text.setAttribute('font-size', '15');
-  text.setAttribute('font-weight', '700');
-  text.setAttribute('text-anchor', 'end');
-  text.textContent = `${document.repeatCount}x`;
-  svg.appendChild(text);
 }
 
 function setEndRepeatBar(VF, stave) {

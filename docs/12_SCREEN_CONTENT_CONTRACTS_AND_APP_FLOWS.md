@@ -66,8 +66,9 @@ No active screen should contain:
 - pattern-level timing metadata may include `subdivision`, `time_signature`, and `repeat_count`
 - omitted pattern time signatures default to `4/4`
 - `subdivision: triplet` is a timing/display feel and should render standard triplet grouping marks without creating new Drumcabulary text tokens
-- repeated written patterns should render with repeat bars and an `Nx` repeat-count label when `repeat_count` is authored
+- repeated written patterns should render with repeat bars when `repeat_count` is authored; do not add a separate repeat-count text label in MVP
 - the shared sheet-notation renderer is the display path for lesson notation examples
+- limb assignment labels should render above the staff and noteheads
 - rendered notation may expose an ear-icon preview that plays the displayed notes through the existing sample engine
 - while notation preview is playing, the notation surface should show an animated vertical playhead aligned to the rendered note positions and continue through each line/bar end before wrapping or looping
 - notation preview uses a fixed preview BPM for now; authored exercise tempo is lesson guidance, not an active preview speed control
