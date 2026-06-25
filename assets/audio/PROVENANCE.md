@@ -1,6 +1,7 @@
 ## Pattern Playback Audio Provenance
 
 Generated on: 2026-04-22
+Updated on: 2026-06-24
 
 These one-shot assets were generated locally for this repository to avoid license ambiguity while adding optional pattern playback.
 
@@ -31,8 +32,12 @@ License notes:
 Generation notes:
 - mono PCM WAV
 - 44.1kHz
-- short synthesized one-shots created from simple sine/noise envelopes
+- synthesized one-shots created from simple sine/noise envelopes
 - no external recordings or licensed packs were incorporated
-- `snare.wav`, `flam.wav`, `unison.wav`, and accent samples are placeholder
-  expressive-token assets copied from the existing generated one-shots; replace
-  them with distinct tightly trimmed samples when final sound design is ready
+- `accent_crash.wav` was regenerated on 2026-06-24 as a short dirty synthetic
+  crash built from saturated broadband noise and feed-forward metallic scrape
+  taps, with minimal pitched ring and a trimmed tail around 0.7 seconds.
+- `snare.wav`, `flam.wav`, `unison.wav`, `accent_snare.wav`, and
+  `accent_ride.wav` remain placeholder expressive-token assets copied from the
+  existing generated one-shots; replace them with distinct tightly trimmed
+  samples when final sound design is ready.

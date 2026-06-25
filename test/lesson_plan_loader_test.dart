@@ -1,5 +1,6 @@
 import 'package:drumcabulary/features/coach/lesson_plan.dart';
 import 'package:drumcabulary/features/coach/lesson_plan_loader.dart';
+import 'package:drumcabulary/features/practice/pattern_audio_service.dart';
 import 'package:drumcabulary/features/practice/widgets/sheet_notation_display.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -81,6 +82,29 @@ void main() {
       DrumSheetVoice.hihat,
       DrumSheetVoice.kick,
     ]);
+    final PatternAudioPlanV1 moneyBeatAudioPlan =
+        buildSheetNotationAudioPreviewPlanForTesting(
+          moneyBeatDocument,
+          bpm: 60,
+        );
+    final Set<PatternAudioSampleV1> crashKickSamples = moneyBeatAudioPlan.cues
+        .where((PatternAudioCueV1 cue) => cue.tokenIndex == 24)
+        .map((PatternAudioCueV1 cue) => cue.sample)
+        .toSet();
+    expect(crashKickSamples, <PatternAudioSampleV1>{
+      PatternAudioSampleV1.accentCrash,
+      PatternAudioSampleV1.kick,
+    });
+    expect(
+      moneyBeatAudioPlan.cues
+          .singleWhere(
+            (PatternAudioCueV1 cue) =>
+                cue.tokenIndex == 24 &&
+                cue.sample == PatternAudioSampleV1.accentCrash,
+          )
+          .volume,
+      0.6,
+    );
 
     final Lesson tripletVocabulary = lessonById('triplet-vocabulary-1');
     expect(tripletVocabulary.id, 'triplet-vocabulary-1');

@@ -8,7 +8,12 @@ rendering pipeline.
 It describes how authored lesson notation moves from YAML into Flutter models,
 sheet notation display, audio preview, and print/export.
 
-It does not define the notation language grammar. Grammar, token meaning,
+It does not define the full lesson YAML schema or data architecture. That is
+owned by:
+
+- `docs/20_LESSON_YAML_DATA_ARCHITECTURE.md`
+
+It also does not define the notation language grammar. Grammar, token meaning,
 metadata meaning, valid examples, and invalid examples are owned by:
 
 - `docs/18_NOTATION_LANGUAGE_CONTRACT.md`
@@ -46,6 +51,7 @@ Not currently supported:
 
 | Concern | Authority |
 | --- | --- |
+| Lesson YAML schema and data architecture | `docs/20_LESSON_YAML_DATA_ARCHITECTURE.md` |
 | Notation grammar and YAML authoring rules | `docs/18_NOTATION_LANGUAGE_CONTRACT.md` |
 | Rendering pipeline and display/export architecture | this document |
 | Coach lesson-screen content and flow | `docs/12_SCREEN_CONTENT_CONTRACTS_AND_APP_FLOWS.md` |

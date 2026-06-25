@@ -48,6 +48,7 @@ class PatternAudioMixerConfigV1 {
   final double kickVolume;
   final double normalNonCymbalVolume;
   final double normalCymbalVolume;
+  final double crashVolume;
   final double ghostVolume;
   final double accentVolume;
 
@@ -55,11 +56,13 @@ class PatternAudioMixerConfigV1 {
     this.kickVolume = 1.0,
     this.normalNonCymbalVolume = 0.8,
     this.normalCymbalVolume = 0.8,
+    this.crashVolume = 0.6,
     this.ghostVolume = 0.1,
     this.accentVolume = 1.0,
   }) : assert(kickVolume >= 0 && kickVolume <= 1),
        assert(normalNonCymbalVolume >= 0 && normalNonCymbalVolume <= 1),
        assert(normalCymbalVolume >= 0 && normalCymbalVolume <= 1),
+       assert(crashVolume >= 0 && crashVolume <= 1),
        assert(ghostVolume >= 0 && ghostVolume <= 1),
        assert(accentVolume >= 0 && accentVolume <= 1);
 }
@@ -136,6 +139,16 @@ class PatternAudioService {
         }
       }
     }
+  }
+
+  Future<void> reloadAssets() async {
+    final Future<void>? activePrepare = _prepareFuture;
+    if (activePrepare != null) {
+      await activePrepare;
+    }
+    await stop();
+    _preparedSamples.clear();
+    await AudioPlayer.clearAssetCache();
   }
 
   Future<void> _prepareSamples(Set<PatternAudioSampleV1> samples) async {
@@ -267,21 +280,23 @@ class PatternAudioService {
         tokens,
         event.tokenIndex,
       );
+      final PatternAudioSampleV1 sample = _sampleFor(
+        token: token,
+        voice: voice,
+        marking: marking,
+        accentVoice: accentVoice,
+      );
       cues.add(
         PatternAudioCueV1(
           tokenIndex: event.tokenIndex,
           offset: Duration(
             microseconds: (event.startBeat * microsPerBeat).round(),
           ),
-          sample: _sampleFor(
-            token: token,
-            voice: voice,
-            marking: marking,
-            accentVoice: accentVoice,
-          ),
+          sample: sample,
           volume: _volumeFor(
             token: token,
             voice: voice,
+            sample: sample,
             marking: marking,
             mixerConfig: mixerConfig,
           ),
@@ -290,21 +305,26 @@ class PatternAudioService {
       for (final DrumVoiceV1 additionalVoice
           in additionalVoicesByIndex[event.tokenIndex] ??
               const <DrumVoiceV1>[]) {
+        final PatternTokenV1 additionalToken = _tokenForAdditionalVoice(
+          additionalVoice,
+        );
+        final PatternAudioSampleV1 additionalSample = _sampleFor(
+          token: additionalToken,
+          voice: additionalVoice,
+          marking: PatternNoteMarkingV1.normal,
+          accentVoice: accentVoice,
+        );
         cues.add(
           PatternAudioCueV1(
             tokenIndex: event.tokenIndex,
             offset: Duration(
               microseconds: (event.startBeat * microsPerBeat).round(),
             ),
-            sample: _sampleFor(
-              token: _tokenForAdditionalVoice(additionalVoice),
-              voice: additionalVoice,
-              marking: PatternNoteMarkingV1.normal,
-              accentVoice: accentVoice,
-            ),
+            sample: additionalSample,
             volume: _volumeFor(
-              token: _tokenForAdditionalVoice(additionalVoice),
+              token: additionalToken,
               voice: additionalVoice,
+              sample: additionalSample,
               marking: PatternNoteMarkingV1.normal,
               mixerConfig: mixerConfig,
             ),
@@ -408,6 +428,11 @@ class PatternAudioService {
   ) {
     if (index < 0 || index >= tokens.length) return DrumVoiceV1.snare;
     if (tokens[index].isKick) return DrumVoiceV1.kick;
+    if (tokens[index].kind == PatternTokenKindV1.accent &&
+        index < voices.length &&
+        _isCymbalVoice(voices[index])) {
+      return voices[index];
+    }
     if (!tokens[index].allowsAuthoredVoice) return DrumVoiceV1.snare;
     if (index < voices.length) {
       final DrumVoiceV1 voice = voices[index];
@@ -426,6 +451,15 @@ class PatternAudioService {
       return PatternAudioSampleV1.flam;
     }
     if (token.kind == PatternTokenKindV1.accent) {
+      if (voice == DrumVoiceV1.crash) {
+        return PatternAudioSampleV1.accentCrash;
+      }
+      if (voice == DrumVoiceV1.ride) {
+        return PatternAudioSampleV1.accentRide;
+      }
+      if (voice == DrumVoiceV1.hihat) {
+        return PatternAudioSampleV1.hihat;
+      }
       return switch (accentVoice) {
         AccentVoiceV1.snare => PatternAudioSampleV1.accentSnare,
         AccentVoiceV1.crash => PatternAudioSampleV1.accentCrash,
@@ -454,11 +488,18 @@ class PatternAudioService {
   static double _volumeFor({
     required PatternTokenV1 token,
     required DrumVoiceV1 voice,
+    required PatternAudioSampleV1 sample,
     required PatternNoteMarkingV1 marking,
     required PatternAudioMixerConfigV1 mixerConfig,
   }) {
     if (token.isKick || voice == DrumVoiceV1.kick) {
       return mixerConfig.kickVolume;
+    }
+    if (sample == PatternAudioSampleV1.accentCrash) {
+      return mixerConfig.crashVolume;
+    }
+    if (token.kind == PatternTokenKindV1.accent) {
+      return mixerConfig.accentVolume;
     }
     return switch (marking) {
       PatternNoteMarkingV1.accent => mixerConfig.accentVolume,

@@ -468,6 +468,21 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
   }
 
   @override
+  void reassemble() {
+    super.reassemble();
+    unawaited(_reloadAudioPreviewAssetsForHotReload());
+  }
+
+  Future<void> _reloadAudioPreviewAssetsForHotReload() async {
+    final PatternAudioService? audioPreview = _audioPreview;
+    if (audioPreview == null) return;
+    if (_audioPreviewRunning || _audioPreviewPreparing) {
+      await _stopAudioPreview();
+    }
+    await audioPreview.reloadAssets();
+  }
+
+  @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (!_audioPreviewRunning && !_audioPreviewPreparing) return;
     if (state == AppLifecycleState.inactive ||
@@ -1074,6 +1089,25 @@ _SheetNotationAudioPlan _audioPlanForDocument(
       ),
     ),
     totalBeatCount: playbackPlan.totalBeatCount,
+  );
+}
+
+@visibleForTesting
+PatternAudioPlanV1 buildSheetNotationAudioPreviewPlanForTesting(
+  DrumSheetNotationDocument document, {
+  int bpm = 92,
+  AccentVoiceV1 accentVoice = AccentVoiceV1.snare,
+}) {
+  final _SheetNotationAudioPlan plan = _audioPlanForDocument(document);
+  return PatternAudioService.buildPlan(
+    tokens: plan.tokens,
+    markings: plan.markings,
+    voices: plan.voices,
+    grouping: PatternGroupingV1.none,
+    timing: plan.timing,
+    bpm: bpm,
+    accentVoice: accentVoice,
+    additionalVoicesByIndex: plan.additionalVoicesByIndex,
   );
 }
 

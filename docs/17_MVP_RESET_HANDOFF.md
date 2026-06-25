@@ -68,6 +68,7 @@ Active contract docs:
 - `docs/15_MVP_TRIAGE_AND_PASS_ORDER.md`
 - `docs/18_NOTATION_LANGUAGE_CONTRACT.md`
 - `docs/19_NOTATION_RENDERING_PIPELINE_DESIGN.md`
+- `docs/20_LESSON_YAML_DATA_ARCHITECTURE.md`
 
 Use those documents as source of truth before changing UI or flow behavior.
 

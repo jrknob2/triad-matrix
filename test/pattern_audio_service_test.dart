@@ -210,6 +210,35 @@ void main() {
         planFor(AccentVoiceV1.ride).cues.single.sample,
         PatternAudioSampleV1.accentRide,
       );
+      expect(planFor(AccentVoiceV1.crash).cues.single.volume, 0.6);
+    });
+
+    test('authored cymbal voices override the default accent voice', () {
+      PatternAudioPlanV1 planFor(DrumVoiceV1 voice) {
+        return PatternAudioService.buildPlan(
+          tokens: const <PatternTokenV1>[PatternTokenV1.accent],
+          markings: const <PatternNoteMarkingV1>[PatternNoteMarkingV1.normal],
+          voices: <DrumVoiceV1>[voice],
+          grouping: PatternGroupingV1.none,
+          timing: const PatternTimingV1.auto(),
+          bpm: 60,
+          accentVoice: AccentVoiceV1.snare,
+        );
+      }
+
+      expect(
+        planFor(DrumVoiceV1.crash).cues.single.sample,
+        PatternAudioSampleV1.accentCrash,
+      );
+      expect(planFor(DrumVoiceV1.crash).cues.single.volume, 0.6);
+      expect(
+        planFor(DrumVoiceV1.ride).cues.single.sample,
+        PatternAudioSampleV1.accentRide,
+      );
+      expect(
+        planFor(DrumVoiceV1.hihat).cues.single.sample,
+        PatternAudioSampleV1.hihat,
+      );
     });
 
     test('schedules simultaneous hit voices at the same offset', () {
