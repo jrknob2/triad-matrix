@@ -1,0 +1,79 @@
+lesson:
+  id: money-beat
+  title: The Money Beat
+  level: beginner
+  skill: grooves
+  order: 1
+  estimated_minutes: 25
+  overview: Learn the foundational 4/4 rock groove by adding one limb at a time.
+  objective: Build the money beat gradually from hi-hat only to full groove.
+
+  exercises:
+    - id: hh-only
+      title: Hi-Hat Only
+      why: The hi-hat is the timekeeper. Get it steady before adding anything else.
+      what: Play steady eighth notes on closed hi-hat.
+      how: Count 1 and 2 and 3 and 4 and while keeping the notes even.
+      tempo:
+        start: 60
+        target: 90
+      notation:
+        subdivision: 8
+        time_signature: "4/4"
+        repeat_count: 4
+        pattern: "[HH:R][HH:R] [HH:R][HH:R] [HH:R][HH:R] [HH:R][HH:R]"
+
+    - id: hh-snare
+      title: Add Snare
+      why: The snare creates the backbeat on 2 and 4.
+      what: Keep the hi-hat steady and add snare on beats 2 and 4.
+      how: Do not let the snare disturb the hi-hat pulse.
+      tempo:
+        start: 60
+        target: 90
+      notation:
+        subdivision: 8
+        time_signature: "4/4"
+        repeat_count: 4
+        pattern: "[HH:R][HH:R] [HH S:R][HH:R] [HH:R][HH:R] [HH S:R][HH:R]"
+
+    - id: hh-snare-kick
+      title: Add Kick
+      why: The kick completes the basic money beat.
+      what: Add kick on beats 1 and 3 while keeping snare on 2 and 4.
+      how: Listen for an even hi-hat line over solid kick and snare placement.
+      tempo:
+        start: 60
+        target: 100
+      notation:
+        subdivision: 8
+        time_signature: "4/4"
+        repeat_count: 4
+        pattern: "[HH K:R][HH:R] [HH S:R][HH:R] [HH K:R][HH:R] [HH S:R][HH:R]"
+
+    - id: full-loop
+      title: Full Money Beat Loop
+      why: Repetition turns the beat from a coordination exercise into a groove.
+      what: Loop the full money beat until the pulse feels relaxed.
+      how: Keep the hi-hat smooth while the kick and snare stay locked to their beats.
+      tempo:
+        start: 70
+        target: 100
+      notation:
+        subdivision: 8
+        time_signature: "4/4"
+        repeat_count: 8
+        pattern: "[HH K:R][HH:R] [HH S:R][HH:R] [HH K:R][HH:R] [HH S:R][HH:R]"
+
+    - id: crash-resolution
+      title: Crash Resolution
+      why: A crash plus kick gives the groove a clear phrase landing.
+      what: Replace the first hi-hat plus kick of the fourth measure with crash plus kick.
+      how: Count through all four measures so the crash lands on beat 1 without rushing.
+      tempo:
+        start: 60
+        target: 100
+      notation:
+        subdivision: 8
+        time_signature: "4/4"
+        pattern: "[HH K:R][HH:R] [HH S:R][HH:R] [HH K:R][HH:R] [HH S:R][HH:R] [HH K:R][HH:R] [HH S:R][HH:R] [HH K:R][HH:R] [HH S:R][HH:R] [HH K:R][HH:R] [HH S:R][HH:R] [HH K:R][HH:R] [HH S:R][HH:R] [XK][HH:R] [HH S:R][HH:R] [HH K:R][HH:R] [HH S:R][HH:R]"

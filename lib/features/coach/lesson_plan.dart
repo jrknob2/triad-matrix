@@ -1,96 +1,148 @@
 import 'package:flutter/foundation.dart';
 
 @immutable
-class LessonPlan {
-  final String id;
-  final String title;
-  final String subtitle;
+class ContentIndex {
   final int version;
-  final List<Lesson> lessons;
+  final List<ContentLevel> levels;
 
-  const LessonPlan({
-    required this.id,
-    required this.title,
-    required this.subtitle,
-    required this.version,
-    required this.lessons,
-  });
+  const ContentIndex({required this.version, required this.levels});
 
-  factory LessonPlan.fromYaml(Object? yaml) {
+  factory ContentIndex.fromYaml(Object? yaml) {
     final Map<dynamic, dynamic> root = _requiredMapValue(yaml, 'root');
-    final Map<dynamic, dynamic> plan = _requiredMap(
+    final Map<dynamic, dynamic> index = _requiredMap(
       root,
-      'lesson_plan',
+      'content_index',
       'root',
     );
-    final List<Lesson> lessons =
-        _requiredMapList(plan, 'lessons', 'lesson_plan').indexed
+    final List<ContentLevel> levels =
+        _requiredMapList(index, 'levels', 'content_index').indexed
             .map((entry) {
-              return Lesson.fromYaml(
+              return ContentLevel.fromYaml(
                 entry.$2,
-                'lesson_plan.lessons[${entry.$1}]',
+                'content_index.levels[${entry.$1}]',
               );
             })
             .toList(growable: false);
-
-    if (lessons.isEmpty) {
+    if (levels.isEmpty) {
       throw const LessonPlanLoadException(
-        'lesson_plan.lessons must contain at least one lesson.',
+        'content_index.levels must not be empty.',
       );
     }
-
-    final List<Lesson> orderedLessons = List<Lesson>.of(lessons)
-      ..sort((Lesson a, Lesson b) => a.number.compareTo(b.number));
-
-    return LessonPlan(
-      id: _requiredString(plan, 'id', 'lesson_plan'),
-      title: _requiredString(plan, 'title', 'lesson_plan'),
-      subtitle: _requiredString(plan, 'subtitle', 'lesson_plan'),
-      version: _requiredInt(plan, 'version', 'lesson_plan'),
-      lessons: orderedLessons,
+    _validateUnique(
+      values: levels.map((ContentLevel level) => level.id),
+      label: 'content_index.levels.id',
     );
+    return ContentIndex(
+      version: _requiredInt(index, 'version', 'content_index'),
+      levels: levels,
+    );
+  }
+}
+
+@immutable
+class ContentLevel {
+  final String id;
+  final String title;
+  final List<String> lessonFiles;
+
+  const ContentLevel({
+    required this.id,
+    required this.title,
+    required this.lessonFiles,
+  });
+
+  factory ContentLevel.fromYaml(Map<dynamic, dynamic> yaml, String path) {
+    return ContentLevel(
+      id: _requiredString(yaml, 'id', path),
+      title: _requiredString(yaml, 'title', path),
+      lessonFiles: _optionalScalarStringList(yaml, 'lesson_files', path),
+    );
+  }
+}
+
+@immutable
+class LessonContentLibrary {
+  final ContentIndex index;
+  final Map<String, Lesson> lessonsById;
+  final Map<String, List<Lesson>> lessonsByLevelId;
+
+  const LessonContentLibrary({
+    required this.index,
+    required this.lessonsById,
+    required this.lessonsByLevelId,
+  });
+
+  List<Lesson> lessonsForLevel(String levelId) {
+    return lessonsByLevelId[levelId] ?? const <Lesson>[];
+  }
+
+  List<String> skillsForLevel(String levelId) {
+    final Set<String> skills = <String>{};
+    for (final Lesson lesson in lessonsForLevel(levelId)) {
+      skills.add(lesson.skill);
+    }
+    return skills.toList(growable: false)..sort(_compareSkillIds);
+  }
+
+  List<Lesson> lessonsForSkill({
+    required String levelId,
+    required String skill,
+  }) {
+    final List<Lesson> lessons = <Lesson>[
+      for (final Lesson lesson in lessonsForLevel(levelId))
+        if (lesson.skill == skill) lesson,
+    ]..sort((Lesson a, Lesson b) => a.order.compareTo(b.order));
+    return lessons;
   }
 }
 
 @immutable
 class Lesson {
   final String id;
-  final int number;
   final String title;
-  final String objective;
-  final String skillFocus;
+  final String level;
+  final String skill;
+  final int order;
   final int estimatedMinutes;
-  final List<LessonPattern> patterns;
+  final String overview;
+  final String objective;
   final List<LessonExercise> exercises;
-  final List<String> coachingNotes;
-  final List<String> mastery;
 
   const Lesson({
     required this.id,
-    required this.number,
     required this.title,
-    required this.objective,
-    required this.skillFocus,
+    required this.level,
+    required this.skill,
+    required this.order,
     required this.estimatedMinutes,
-    required this.patterns,
+    required this.overview,
+    required this.objective,
     required this.exercises,
-    required this.coachingNotes,
-    required this.mastery,
   });
 
-  factory Lesson.fromYaml(Map<dynamic, dynamic> yaml, String path) {
-    final List<LessonPattern> patterns =
-        _requiredMapList(yaml, 'patterns', path).indexed
-            .map((entry) {
-              return LessonPattern.fromYaml(
-                entry.$2,
-                '$path.patterns[${entry.$1}]',
-              );
-            })
-            .toList(growable: false);
+  factory Lesson.fromYaml(Object? yaml) {
+    final Map<dynamic, dynamic> root = _requiredMapValue(yaml, 'root');
+    final Map<dynamic, dynamic> lesson = _requiredMap(root, 'lesson', 'root');
+    const String path = 'lesson';
+
+    final int order = _requiredInt(lesson, 'order', path);
+    if (order <= 0) {
+      throw const LessonPlanLoadException('lesson.order must be positive.');
+    }
+
+    final int estimatedMinutes = _requiredInt(
+      lesson,
+      'estimated_minutes',
+      path,
+    );
+    if (estimatedMinutes <= 0) {
+      throw const LessonPlanLoadException(
+        'lesson.estimated_minutes must be positive.',
+      );
+    }
 
     final List<LessonExercise> exercises =
-        _requiredMapList(yaml, 'exercises', path).indexed
+        _requiredMapList(lesson, 'exercises', path).indexed
             .map((entry) {
               return LessonExercise.fromYaml(
                 entry.$2,
@@ -98,95 +150,124 @@ class Lesson {
               );
             })
             .toList(growable: false);
+    _validateUnique(
+      values: exercises.map((LessonExercise exercise) => exercise.id),
+      label: '$path.exercises.id',
+    );
 
     return Lesson(
-      id: _requiredString(yaml, 'id', path),
-      number: _requiredInt(yaml, 'number', path),
-      title: _requiredString(yaml, 'title', path),
-      objective: _requiredString(yaml, 'objective', path),
-      skillFocus: _requiredString(yaml, 'skill_focus', path),
-      estimatedMinutes: _requiredInt(yaml, 'estimated_minutes', path),
-      patterns: patterns,
+      id: _requiredString(lesson, 'id', path),
+      title: _requiredString(lesson, 'title', path),
+      level: _requiredString(lesson, 'level', path),
+      skill: _requiredString(lesson, 'skill', path),
+      order: order,
+      estimatedMinutes: estimatedMinutes,
+      overview: _requiredString(lesson, 'overview', path),
+      objective: _requiredString(lesson, 'objective', path),
       exercises: exercises,
-      coachingNotes: _requiredStringList(yaml, 'coaching_notes', path),
-      mastery: _requiredStringList(yaml, 'mastery', path),
-    );
-  }
-
-  LessonPattern? get primaryPattern {
-    if (patterns.isEmpty) return null;
-    return patterns.first;
-  }
-}
-
-@immutable
-class LessonPattern {
-  final String id;
-  final String title;
-  final String role;
-  final String notation;
-  final String? subdivision;
-  final String timeSignature;
-  final int? repeatCount;
-
-  const LessonPattern({
-    required this.id,
-    required this.title,
-    required this.role,
-    required this.notation,
-    this.subdivision,
-    this.timeSignature = '4/4',
-    this.repeatCount,
-  });
-
-  factory LessonPattern.fromYaml(Map<dynamic, dynamic> yaml, String path) {
-    return LessonPattern(
-      id: _requiredString(yaml, 'id', path),
-      title: _requiredString(yaml, 'title', path),
-      role: _requiredString(yaml, 'role', path),
-      notation: _requiredString(yaml, 'notation', path),
-      subdivision: _optionalScalarString(yaml, 'subdivision', path),
-      timeSignature:
-          _optionalScalarString(yaml, 'time_signature', path) ?? '4/4',
-      repeatCount: _optionalPositiveInt(yaml, 'repeat_count', path),
     );
   }
 }
 
 @immutable
 class LessonExercise {
+  final String id;
   final String title;
-  final String instructions;
-  final String? subdivision;
-  final List<String> subdivisionSequence;
+  final String why;
+  final String what;
+  final String how;
   final TempoTarget? tempo;
-  final List<FlowStep> flow;
+  final ExerciseNotation notation;
 
   const LessonExercise({
+    required this.id,
     required this.title,
-    required this.instructions,
-    this.subdivision,
-    this.subdivisionSequence = const <String>[],
+    required this.why,
+    required this.what,
+    required this.how,
     this.tempo,
-    this.flow = const <FlowStep>[],
+    required this.notation,
   });
 
   factory LessonExercise.fromYaml(Map<dynamic, dynamic> yaml, String path) {
     return LessonExercise(
+      id:
+          _optionalString(yaml, 'id', path) ??
+          _slugFromTitle(_requiredString(yaml, 'title', path)),
       title: _requiredString(yaml, 'title', path),
-      instructions: _requiredString(yaml, 'instructions', path),
-      subdivision: _optionalScalarString(yaml, 'subdivision', path),
-      subdivisionSequence: _optionalScalarStringList(
-        yaml,
-        'subdivision_sequence',
-        path,
-      ),
+      why: _requiredString(yaml, 'why', path),
+      what: _requiredString(yaml, 'what', path),
+      how: _requiredString(yaml, 'how', path),
       tempo: _optionalTempo(yaml, 'tempo', path),
-      flow: _optionalMapList(yaml, 'flow', path).indexed
+      notation: ExerciseNotation.fromYaml(
+        _requiredMap(yaml, 'notation', path),
+        '$path.notation',
+      ),
+    );
+  }
+}
+
+@immutable
+class ExerciseNotation {
+  final List<ExerciseNotationSection> sections;
+
+  const ExerciseNotation({required this.sections});
+
+  factory ExerciseNotation.fromYaml(Map<dynamic, dynamic> yaml, String path) {
+    final List<ExerciseNotationSection> sections;
+    if (yaml.containsKey('sections')) {
+      sections = _requiredMapList(yaml, 'sections', path).indexed
           .map((entry) {
-            return FlowStep.fromYaml(entry.$2, '$path.flow[${entry.$1}]');
+            return ExerciseNotationSection.fromYaml(
+              entry.$2,
+              '$path.sections[${entry.$1}]',
+            );
           })
-          .toList(growable: false),
+          .toList(growable: false);
+    } else {
+      sections = <ExerciseNotationSection>[
+        ExerciseNotationSection.fromYaml(yaml, path),
+      ];
+    }
+    if (sections.isEmpty) {
+      throw LessonPlanLoadException('$path.sections must not be empty.');
+    }
+    return ExerciseNotation(sections: sections);
+  }
+
+  ExerciseNotationSection get primarySection => sections.first;
+}
+
+@immutable
+class ExerciseNotationSection {
+  final String? title;
+  final String pattern;
+  final String? subdivision;
+  final String timeSignature;
+  final int? repeatCount;
+  final String? sticking;
+
+  const ExerciseNotationSection({
+    this.title,
+    required this.pattern,
+    this.subdivision,
+    this.timeSignature = '4/4',
+    this.repeatCount,
+    this.sticking,
+  });
+
+  factory ExerciseNotationSection.fromYaml(
+    Map<dynamic, dynamic> yaml,
+    String path,
+  ) {
+    return ExerciseNotationSection(
+      title: _optionalString(yaml, 'title', path),
+      pattern: _requiredString(yaml, 'pattern', path),
+      subdivision: _optionalScalarString(yaml, 'subdivision', path),
+      timeSignature:
+          _optionalScalarString(yaml, 'time_signature', path) ?? '4/4',
+      repeatCount: _optionalPositiveInt(yaml, 'repeat_count', path),
+      sticking: _optionalScalarString(yaml, 'sticking', path),
     );
   }
 }
@@ -199,25 +280,15 @@ class TempoTarget {
   const TempoTarget({required this.start, required this.target});
 
   factory TempoTarget.fromYaml(Map<dynamic, dynamic> yaml, String path) {
-    return TempoTarget(
-      start: _requiredInt(yaml, 'start', path),
-      target: _requiredInt(yaml, 'target', path),
-    );
-  }
-}
-
-@immutable
-class FlowStep {
-  final String pattern;
-  final int repeat;
-
-  const FlowStep({required this.pattern, required this.repeat});
-
-  factory FlowStep.fromYaml(Map<dynamic, dynamic> yaml, String path) {
-    return FlowStep(
-      pattern: _requiredString(yaml, 'pattern', path),
-      repeat: _requiredInt(yaml, 'repeat', path),
-    );
+    final int start = _requiredInt(yaml, 'start', path);
+    final int target = _requiredInt(yaml, 'target', path);
+    if (start <= 0 || target <= 0) {
+      throw LessonPlanLoadException('$path start and target must be positive.');
+    }
+    if (target < start) {
+      throw LessonPlanLoadException('$path.target must be >= $path.start.');
+    }
+    return TempoTarget(start: start, target: target);
   }
 }
 
@@ -228,6 +299,47 @@ class LessonPlanLoadException implements Exception {
 
   @override
   String toString() => 'LessonPlanLoadException: $message';
+}
+
+void _validateUnique({
+  required Iterable<String> values,
+  required String label,
+}) {
+  final Set<String> seen = <String>{};
+  for (final String value in values) {
+    if (!seen.add(value)) {
+      throw LessonPlanLoadException('$label must be unique: $value.');
+    }
+  }
+}
+
+int _compareSkillIds(String a, String b) {
+  return _skillSortIndex(a).compareTo(_skillSortIndex(b));
+}
+
+int _skillSortIndex(String skill) {
+  const List<String> order = <String>[
+    'timing',
+    'reading',
+    'rudiments',
+    'grooves',
+    'fills',
+    'chops',
+    'dynamics',
+    'independence',
+    'vocabulary',
+  ];
+  final int index = order.indexOf(skill);
+  return index < 0 ? order.length : index;
+}
+
+String _slugFromTitle(String title) {
+  final String slug = title
+      .trim()
+      .toLowerCase()
+      .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+      .replaceAll(RegExp(r'^-+|-+$'), '');
+  return slug.isEmpty ? 'exercise' : slug;
 }
 
 Map<dynamic, dynamic> _requiredMap(
@@ -250,29 +362,13 @@ List<Map<dynamic, dynamic>> _requiredMapList(
   String key,
   String path,
 ) {
-  return _mapListValue(map[key], '$path.$key', required: true);
-}
-
-List<Map<dynamic, dynamic>> _optionalMapList(
-  Map<dynamic, dynamic> map,
-  String key,
-  String path,
-) {
-  return _mapListValue(map[key], '$path.$key', required: false);
-}
-
-List<Map<dynamic, dynamic>> _mapListValue(
-  Object? value,
-  String path, {
-  required bool required,
-}) {
-  if (value == null && !required) return const <Map<dynamic, dynamic>>[];
+  final Object? value = map[key];
   if (value is! Iterable<Object?>) {
-    throw LessonPlanLoadException('$path must be a list.');
+    throw LessonPlanLoadException('$path.$key must be a list.');
   }
   return value.indexed
       .map((entry) {
-        return _requiredMapValue(entry.$2, '$path[${entry.$1}]');
+        return _requiredMapValue(entry.$2, '$path.$key[${entry.$1}]');
       })
       .toList(growable: false);
 }
@@ -280,7 +376,16 @@ List<Map<dynamic, dynamic>> _mapListValue(
 String _requiredString(Map<dynamic, dynamic> map, String key, String path) {
   final Object? value = map[key];
   if (value is String && value.trim().isNotEmpty) {
-    return value;
+    return value.trim();
+  }
+  throw LessonPlanLoadException('$path.$key must be a non-empty string.');
+}
+
+String? _optionalString(Map<dynamic, dynamic> map, String key, String path) {
+  final Object? value = map[key];
+  if (value == null) return null;
+  if (value is String && value.trim().isNotEmpty) {
+    return value.trim();
   }
   throw LessonPlanLoadException('$path.$key must be a non-empty string.');
 }
@@ -296,32 +401,6 @@ int? _optionalPositiveInt(Map<dynamic, dynamic> map, String key, String path) {
   if (value == null) return null;
   if (value is int && value > 0) return value;
   throw LessonPlanLoadException('$path.$key must be a positive integer.');
-}
-
-List<String> _requiredStringList(
-  Map<dynamic, dynamic> map,
-  String key,
-  String path,
-) {
-  final Object? value = map[key];
-  if (value is! Iterable<Object?>) {
-    throw LessonPlanLoadException('$path.$key must be a list.');
-  }
-  final List<String> strings = value.indexed
-      .map((entry) {
-        final Object? item = entry.$2;
-        if (item is String && item.trim().isNotEmpty) {
-          return item;
-        }
-        throw LessonPlanLoadException(
-          '$path.$key[${entry.$1}] must be a non-empty string.',
-        );
-      })
-      .toList(growable: false);
-  if (strings.isEmpty) {
-    throw LessonPlanLoadException('$path.$key must contain at least one item.');
-  }
-  return strings;
 }
 
 List<String> _optionalScalarStringList(

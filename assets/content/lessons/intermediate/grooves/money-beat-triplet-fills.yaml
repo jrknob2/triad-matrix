@@ -1,0 +1,61 @@
+lesson:
+  id: money-beat-triplet-fills
+  title: Money Beat + Triplet Fills
+  level: intermediate
+  skill: grooves
+  order: 1
+  estimated_minutes: 25
+  overview: Apply triplet vocabulary inside a simple money beat phrase.
+  objective: Play three bars of groove followed by one bar of triplet fill without losing time.
+
+  exercises:
+    - id: groove-only
+      title: Groove First
+      why: The fill will only work if the groove is already steady.
+      what: Play the money beat as a relaxed loop.
+      how: Keep the hi-hat line even and let the kick and snare sit underneath it.
+      tempo:
+        start: 70
+        target: 100
+      notation:
+        subdivision: 8
+        time_signature: "4/4"
+        repeat_count: 4
+        pattern: "[HH K:R][HH:R] [HH S:R][HH:R] [HH K:R][HH:R] [HH S:R][HH:R]"
+
+    - id: triplet-fill-alone
+      title: Triplet Fill Alone
+      why: Learn the fill shape before placing it after the groove.
+      what: Play the triplet fill evenly and resolve with crash plus kick.
+      how: Count the triplet grid all the way to the crash landing.
+      tempo:
+        start: 60
+        target: 90
+      notation:
+        subdivision: triplet
+        time_signature: "4/4"
+        repeat_count: 4
+        sticking: "R L K R K L R L L XK"
+        pattern: "RLK RKL R(L)(L) [XK]"
+
+    - id: groove-three-fill-one
+      title: Three Bars Groove, One Bar Fill
+      why: "This is the musical move: groove, fill, and return without changing the pulse."
+      what: Play Money Beat three times, then one triplet fill.
+      how: Keep counting through the transition so the fill borrows the groove's time.
+      tempo:
+        start: 60
+        target: 90
+      notation:
+        sections:
+          - title: Money Beat
+            subdivision: 8
+            time_signature: "4/4"
+            repeat_count: 3
+            pattern: "[HH K:R][HH:R] [HH S:R][HH:R] [HH K:R][HH:R] [HH S:R][HH:R]"
+          - title: Triplet Fill
+            subdivision: triplet
+            time_signature: "4/4"
+            repeat_count: 1
+            sticking: "R L K R K L R L L XK"
+            pattern: "RLK RKL R(L)(L) [XK]"

@@ -10,74 +10,61 @@ import 'lesson_sheet_notation_svg_renderer.dart';
 class LessonPrintExportService {
   const LessonPrintExportService._();
 
-  static Future<void> printLesson({
-    required LessonPlan lessonPlan,
-    required Lesson lesson,
-  }) async {
+  static Future<void> printLesson({required Lesson lesson}) async {
     final LessonSheetNotationSvgRenderer notationRenderer =
         LessonSheetNotationSvgRenderer();
     await Printing.layoutPdf(
-      name: _fileNameFor(lessonPlan: lessonPlan, lesson: lesson),
+      name: _fileNameFor(lesson: lesson),
       onLayout: (PdfPageFormat format) async {
-        final Map<String, String> notationSvgsByPatternId =
-            await notationRenderer.renderLesson(
-              lesson: lesson,
-              pageFormat: format,
-            );
-        return buildLessonPdf(
-          lessonPlan: lessonPlan,
+        final Map<String, List<RenderedExerciseNotationSection>>
+        notationSvgsByExerciseId = await notationRenderer.renderLesson(
           lesson: lesson,
           pageFormat: format,
-          notationSvgsByPatternId: notationSvgsByPatternId,
+        );
+        return buildLessonPdf(
+          lesson: lesson,
+          pageFormat: format,
+          notationSvgsByExerciseId: notationSvgsByExerciseId,
         );
       },
     );
   }
 
-  static Future<void> shareLessonPdf({
-    required LessonPlan lessonPlan,
-    required Lesson lesson,
-  }) async {
-    final Map<String, String> notationSvgsByPatternId =
-        await LessonSheetNotationSvgRenderer().renderLesson(
-          lesson: lesson,
-          pageFormat: PdfPageFormat.a4,
-        );
+  static Future<void> shareLessonPdf({required Lesson lesson}) async {
+    final Map<String, List<RenderedExerciseNotationSection>>
+    notationSvgsByExerciseId = await LessonSheetNotationSvgRenderer()
+        .renderLesson(lesson: lesson, pageFormat: PdfPageFormat.a4);
     final Uint8List bytes = await buildLessonPdf(
-      lessonPlan: lessonPlan,
       lesson: lesson,
-      notationSvgsByPatternId: notationSvgsByPatternId,
+      notationSvgsByExerciseId: notationSvgsByExerciseId,
     );
     await Printing.sharePdf(
       bytes: bytes,
-      filename: _fileNameFor(lessonPlan: lessonPlan, lesson: lesson),
+      filename: _fileNameFor(lesson: lesson),
     );
   }
 
   static Future<Uint8List> buildLessonPdf({
-    required LessonPlan lessonPlan,
     required Lesson lesson,
-    required Map<String, String> notationSvgsByPatternId,
+    required Map<String, List<RenderedExerciseNotationSection>>
+    notationSvgsByExerciseId,
     PdfPageFormat pageFormat = PdfPageFormat.a4,
   }) async {
-    final List<String> missingPatternIds = <String>[
-      for (final LessonPattern pattern in lesson.patterns)
-        if (!notationSvgsByPatternId.containsKey(pattern.id)) pattern.id,
+    final List<String> missingExerciseIds = <String>[
+      for (final LessonExercise exercise in lesson.exercises)
+        if (!notationSvgsByExerciseId.containsKey(exercise.id)) exercise.id,
     ];
-    if (missingPatternIds.isNotEmpty) {
+    if (missingExerciseIds.isNotEmpty) {
       throw StateError(
-        'Missing rendered sheet notation for patterns: ${missingPatternIds.join(', ')}',
+        'Missing rendered sheet notation for exercises: ${missingExerciseIds.join(', ')}',
       );
     }
 
     final pw.Document document = pw.Document(
-      title: '${lessonPlan.title} - ${lesson.title}',
+      title: lesson.title,
       author: 'Drumcabulary',
       creator: 'Drumcabulary',
     );
-    final Map<String, LessonPattern> patternsById = <String, LessonPattern>{
-      for (final LessonPattern pattern in lesson.patterns) pattern.id: pattern,
-    };
 
     document.addPage(
       pw.MultiPage(
@@ -95,7 +82,7 @@ class LessonPrintExportService {
         build: (pw.Context context) {
           return <pw.Widget>[
             pw.Text(
-              lessonPlan.title,
+              '${_labelFor(lesson.level)} / ${_labelFor(lesson.skill)}',
               style: pw.TextStyle(
                 fontSize: 11,
                 color: PdfColors.grey700,
@@ -113,29 +100,28 @@ class LessonPrintExportService {
             ),
             pw.SizedBox(height: 8),
             pw.Text(
+              lesson.overview,
+              style: const pw.TextStyle(fontSize: 12, lineSpacing: 3),
+            ),
+            pw.SizedBox(height: 6),
+            pw.Text(
               lesson.objective,
               style: const pw.TextStyle(fontSize: 12, lineSpacing: 3),
             ),
             pw.SizedBox(height: 14),
             _metadataRow(<String>[
-              'Lesson ${lesson.number}',
-              _labelFor(lesson.skillFocus),
+              'Lesson ${lesson.order}',
               '${lesson.estimatedMinutes} min',
             ]),
             pw.SizedBox(height: 22),
-            _section('Patterns', <pw.Widget>[
-              for (final LessonPattern pattern in lesson.patterns)
-                _patternBlock(pattern, notationSvgsByPatternId[pattern.id]!),
-            ]),
-            _section('Exercises', <pw.Widget>[
-              for (final LessonExercise exercise in lesson.exercises)
-                _exerciseBlock(exercise, patternsById),
-            ]),
-            _section('Coaching Notes', <pw.Widget>[
-              _bulletList(lesson.coachingNotes),
-            ]),
-            _section('Mastery Target', <pw.Widget>[
-              _bulletList(lesson.mastery),
+            _section('Progressive Exercises', <pw.Widget>[
+              for (int index = 0; index < lesson.exercises.length; index += 1)
+                _exerciseBlock(
+                  number: index + 1,
+                  exercise: lesson.exercises[index],
+                  renderedSections:
+                      notationSvgsByExerciseId[lesson.exercises[index].id]!,
+                ),
             ]),
           ];
         },
@@ -162,9 +148,13 @@ class LessonPrintExportService {
     );
   }
 
-  static pw.Widget _patternBlock(LessonPattern pattern, String notationSvg) {
+  static pw.Widget _exerciseBlock({
+    required int number,
+    required LessonExercise exercise,
+    required List<RenderedExerciseNotationSection> renderedSections,
+  }) {
     return pw.Container(
-      margin: const pw.EdgeInsets.only(bottom: 10),
+      margin: const pw.EdgeInsets.only(bottom: 16),
       padding: const pw.EdgeInsets.only(left: 8),
       decoration: const pw.BoxDecoration(
         border: pw.Border(left: pw.BorderSide(color: PdfColors.grey400)),
@@ -173,63 +163,37 @@ class LessonPrintExportService {
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: <pw.Widget>[
           pw.Text(
-            '${pattern.title} (${_labelFor(pattern.role)})',
-            style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+            '$number. ${exercise.title}',
+            style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold),
           ),
-          pw.SizedBox(height: 3),
-          pw.Container(
-            constraints: const pw.BoxConstraints(maxHeight: 98),
-            child: pw.SvgImage(svg: notationSvg, fit: pw.BoxFit.contain),
-          ),
-        ],
-      ),
-    );
-  }
-
-  static pw.Widget _exerciseBlock(
-    LessonExercise exercise,
-    Map<String, LessonPattern> patternsById,
-  ) {
-    final List<String> metadata = <String>[
-      if (exercise.subdivision != null) 'Subdivision ${exercise.subdivision}',
-      if (exercise.subdivisionSequence.isNotEmpty)
-        'Sequence ${exercise.subdivisionSequence.join(' to ')}',
-      if (exercise.tempo != null)
-        '${exercise.tempo!.start}-${exercise.tempo!.target} BPM',
-    ];
-
-    return pw.Container(
-      margin: const pw.EdgeInsets.only(bottom: 12),
-      child: pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: <pw.Widget>[
-          pw.Text(
-            exercise.title,
-            style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
-          ),
-          pw.SizedBox(height: 3),
-          pw.Text(
-            exercise.instructions,
-            style: const pw.TextStyle(fontSize: 11, lineSpacing: 2),
-          ),
-          if (metadata.isNotEmpty) ...<pw.Widget>[
-            pw.SizedBox(height: 5),
+          pw.SizedBox(height: 5),
+          _labeledText('Why', exercise.why),
+          _labeledText('What', exercise.what),
+          _labeledText('How', exercise.how),
+          if (exercise.tempo != null) ...<pw.Widget>[
+            pw.SizedBox(height: 4),
             pw.Text(
-              metadata.join(' | '),
+              '${exercise.tempo!.start}-${exercise.tempo!.target} BPM',
               style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
             ),
           ],
-          if (exercise.flow.isNotEmpty) ...<pw.Widget>[
-            pw.SizedBox(height: 5),
-            pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: <pw.Widget>[
-                for (final FlowStep step in exercise.flow)
-                  pw.Text(
-                    '- ${patternsById[step.pattern]?.title ?? step.pattern} x${step.repeat}',
-                    style: const pw.TextStyle(fontSize: 10, lineSpacing: 2),
-                  ),
-              ],
+          pw.SizedBox(height: 6),
+          for (final RenderedExerciseNotationSection section
+              in renderedSections) ...<pw.Widget>[
+            if (renderedSections.length > 1 && section.title != null) ...[
+              pw.SizedBox(height: 4),
+              pw.Text(
+                section.title!,
+                style: const pw.TextStyle(
+                  fontSize: 10,
+                  color: PdfColors.grey700,
+                ),
+              ),
+            ],
+            pw.SizedBox(height: 3),
+            pw.Container(
+              constraints: const pw.BoxConstraints(maxHeight: 98),
+              child: pw.SvgImage(svg: section.svg, fit: pw.BoxFit.contain),
             ),
           ],
         ],
@@ -237,19 +201,23 @@ class LessonPrintExportService {
     );
   }
 
-  static pw.Widget _bulletList(List<String> items) {
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: <pw.Widget>[
-        for (final String item in items)
-          pw.Padding(
-            padding: const pw.EdgeInsets.only(bottom: 4),
-            child: pw.Text(
-              '- $item',
+  static pw.Widget _labeledText(String label, String text) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.only(bottom: 3),
+      child: pw.RichText(
+        text: pw.TextSpan(
+          children: <pw.TextSpan>[
+            pw.TextSpan(
+              text: '$label: ',
+              style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold),
+            ),
+            pw.TextSpan(
+              text: text,
               style: const pw.TextStyle(fontSize: 11, lineSpacing: 2),
             ),
-          ),
-      ],
+          ],
+        ),
+      ),
     );
   }
 
@@ -285,11 +253,8 @@ class LessonPrintExportService {
         .join(' ');
   }
 
-  static String _fileNameFor({
-    required LessonPlan lessonPlan,
-    required Lesson lesson,
-  }) {
-    return '${_slug(lessonPlan.title)}-${lesson.number}-${_slug(lesson.title)}.pdf';
+  static String _fileNameFor({required Lesson lesson}) {
+    return '${_slug(lesson.level)}-${_slug(lesson.skill)}-${lesson.order}-${_slug(lesson.title)}.pdf';
   }
 
   static String _slug(String value) {

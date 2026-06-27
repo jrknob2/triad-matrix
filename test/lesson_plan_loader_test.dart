@@ -1,93 +1,114 @@
+import 'package:drumcabulary/features/coach/lesson_notation_document.dart';
 import 'package:drumcabulary/features/coach/lesson_plan.dart';
 import 'package:drumcabulary/features/coach/lesson_plan_loader.dart';
 import 'package:drumcabulary/features/practice/pattern_audio_service.dart';
 import 'package:drumcabulary/features/practice/widgets/sheet_notation_display.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('loads the Flow Foundations lesson plan from assets', () async {
-    final LessonPlan plan = await LessonPlanLoader.loadFlowFoundations();
-    Lesson lessonById(String id) {
-      return plan.lessons.singleWhere((Lesson lesson) => lesson.id == id);
-    }
+  test('loads index levels and lessons from multiple files', () async {
+    final LessonContentLibrary library = await LessonPlanLoader.loadContent();
 
-    expect(plan.id, 'flow-foundations');
-    expect(plan.title, 'Flow Foundations');
-    expect(plan.lessons, hasLength(9));
+    expect(library.index.version, 1);
+    expect(library.index.levels.map((ContentLevel level) => level.id), <String>[
+      'beginner',
+      'intermediate',
+      'advanced',
+    ]);
     expect(
-      plan.lessons.map((Lesson lesson) => lesson.number),
-      List<int>.generate(plan.lessons.length, (int index) => index + 1),
-    );
-    expect(plan.lessons.first.title, 'Groove Foundation');
-    expect(
-      plan.lessons.map((Lesson lesson) => lesson.id),
-      isNot(contains('notation-basics')),
-    );
-    expect(
-      plan.lessons.map((Lesson lesson) => lesson.id),
-      contains('the-money-beat'),
+      library.lessonsById.keys,
+      containsAll(<String>[
+        'money-beat',
+        'triplet-vocabulary-1',
+        'money-beat-triplet-fills',
+      ]),
     );
     expect(
-      lessonById('groove-foundation').patterns.first.title,
-      'Basic Rock Groove',
+      library.lessonsForLevel('beginner').map((Lesson lesson) => lesson.id),
+      <String>['money-beat'],
     );
     expect(
-      lessonById('groove-to-fill-flow').exercises.single.flow,
-      hasLength(2),
+      library.lessonsForLevel('intermediate').map((Lesson lesson) => lesson.id),
+      <String>['triplet-vocabulary-1', 'money-beat-triplet-fills'],
+    );
+  });
+
+  test('derives skills by level and orders lessons by skill order', () async {
+    final LessonContentLibrary library = await LessonPlanLoader.loadContent();
+
+    expect(library.skillsForLevel('beginner'), <String>['grooves']);
+    expect(library.skillsForLevel('intermediate'), <String>[
+      'grooves',
+      'vocabulary',
+    ]);
+    expect(
+      library
+          .lessonsForSkill(levelId: 'intermediate', skill: 'grooves')
+          .map((Lesson lesson) => lesson.id),
+      <String>['money-beat-triplet-fills'],
+    );
+  });
+
+  test('loads Money Beat as progressive exercises', () async {
+    final LessonContentLibrary library = await LessonPlanLoader.loadContent();
+    final Lesson lesson = library.lessonsById['money-beat']!;
+
+    expect(lesson.title, 'The Money Beat');
+    expect(lesson.level, 'beginner');
+    expect(lesson.skill, 'grooves');
+    expect(lesson.order, 1);
+    expect(
+      lesson.exercises.map((LessonExercise exercise) => exercise.id),
+      <String>[
+        'hh-only',
+        'hh-snare',
+        'hh-snare-kick',
+        'full-loop',
+        'crash-resolution',
+      ],
+    );
+    expect(
+      lesson.exercises.first.notation.primarySection.pattern,
+      '[HH:R][HH:R] [HH:R][HH:R] [HH:R][HH:R] [HH:R][HH:R]',
+    );
+    expect(lesson.exercises.first.why, contains('timekeeper'));
+    expect(lesson.exercises.first.what, contains('closed hi-hat'));
+    expect(lesson.exercises.first.how, contains('Count 1 and 2'));
+  });
+
+  test('parses exercise notation and preserves audio voices', () async {
+    final LessonContentLibrary library = await LessonPlanLoader.loadContent();
+    final Lesson lesson = library.lessonsById['money-beat']!;
+    final LessonExercise crashExercise = lesson.exercises.singleWhere(
+      (LessonExercise exercise) => exercise.id == 'crash-resolution',
     );
 
-    final Lesson moneyBeat = lessonById('the-money-beat');
-    expect(moneyBeat.number, 2);
-    expect(moneyBeat.title, 'The Money Beat');
-    expect(moneyBeat.patterns, hasLength(3));
-    expect(moneyBeat.exercises, hasLength(3));
-
-    final Map<String, LessonPattern> moneyPatternsById =
-        <String, LessonPattern>{
-          for (final LessonPattern pattern in moneyBeat.patterns)
-            pattern.id: pattern,
-        };
-    expect(
-      moneyPatternsById['money-beat-one-bar']!.notation,
-      '[HH K:R][HH:R] [HH S:R][HH:R] [HH K:R][HH:R] [HH S:R][HH:R]',
+    final DrumSheetNotationDocument document = documentForNotationSection(
+      crashExercise.notation.primarySection,
     );
-    expect(moneyPatternsById['money-beat-one-bar']!.subdivision, '8');
-    expect(moneyPatternsById['money-beat-one-bar']!.timeSignature, '4/4');
-    expect(moneyPatternsById['money-beat-one-bar']!.repeatCount, 4);
-    final DrumSheetNotationDocument moneyBeatDocument =
-        DrumSheetNotationDocument.fromPattern(
-          moneyPatternsById['money-beat-four-bars']!.notation,
-          subdivision: DrumSheetNoteValue.eighth,
-        );
-    final List<DrumSheetNotationNote> moneyBeatNotes =
-        moneyBeatDocument.flattenedNotes;
-    expect(moneyBeatDocument.measures, hasLength(4));
-    expect(moneyBeatNotes, hasLength(32));
-    expect(moneyBeatNotes[0].voices, <DrumSheetVoice>[
+    final List<DrumSheetNotationNote> notes = document.flattenedNotes;
+    expect(document.measures, hasLength(4));
+    expect(notes, hasLength(32));
+    expect(notes[0].voices, <DrumSheetVoice>[
       DrumSheetVoice.hihat,
       DrumSheetVoice.kick,
     ]);
-    expect(moneyBeatNotes[2].voices, <DrumSheetVoice>[
+    expect(notes[2].voices, <DrumSheetVoice>[
       DrumSheetVoice.hihat,
       DrumSheetVoice.snare,
     ]);
-    expect(moneyBeatNotes[24].sticking, 'XK');
-    expect(moneyBeatNotes[24].voices, <DrumSheetVoice>[
+    expect(notes[24].sticking, 'XK');
+    expect(notes[24].voices, <DrumSheetVoice>[
       DrumSheetVoice.crash,
       DrumSheetVoice.kick,
     ]);
-    expect(moneyBeatNotes[28].voices, <DrumSheetVoice>[
-      DrumSheetVoice.hihat,
-      DrumSheetVoice.kick,
-    ]);
-    final PatternAudioPlanV1 moneyBeatAudioPlan =
-        buildSheetNotationAudioPreviewPlanForTesting(
-          moneyBeatDocument,
-          bpm: 60,
-        );
-    final Set<PatternAudioSampleV1> crashKickSamples = moneyBeatAudioPlan.cues
+
+    final PatternAudioPlanV1 audioPlan =
+        buildSheetNotationAudioPreviewPlanForTesting(document, bpm: 60);
+    final Set<PatternAudioSampleV1> crashKickSamples = audioPlan.cues
         .where((PatternAudioCueV1 cue) => cue.tokenIndex == 24)
         .map((PatternAudioCueV1 cue) => cue.sample)
         .toSet();
@@ -95,99 +116,257 @@ void main() {
       PatternAudioSampleV1.accentCrash,
       PatternAudioSampleV1.kick,
     });
-    expect(
-      moneyBeatAudioPlan.cues
-          .singleWhere(
-            (PatternAudioCueV1 cue) =>
-                cue.tokenIndex == 24 &&
-                cue.sample == PatternAudioSampleV1.accentCrash,
-          )
-          .volume,
-      0.6,
-    );
-
-    final Lesson tripletVocabulary = lessonById('triplet-vocabulary-1');
-    expect(tripletVocabulary.id, 'triplet-vocabulary-1');
-    expect(tripletVocabulary.title, 'Triplet Vocabulary 1');
-    expect(tripletVocabulary.patterns, hasLength(14));
-    expect(tripletVocabulary.exercises, hasLength(19));
-
-    final Map<String, LessonPattern> patternsById = <String, LessonPattern>{
-      for (final LessonPattern pattern in tripletVocabulary.patterns)
-        pattern.id: pattern,
-    };
-    expect(patternsById['triplet-vocab-a']!.notation, 'R(L)(L)');
-    expect(patternsById['triplet-vocab-a']!.subdivision, 'triplet');
-    expect(patternsById['triplet-vocab-b']!.notation, 'RLK');
-    expect(patternsById['triplet-vocab-c']!.notation, 'RKL');
-    expect(patternsById['triplet-vocab-d']!.notation, 'KRL');
-    expect(patternsById['triplet-vocab-f']!.notation, '(R)(R)L');
-    expect(patternsById['six-ab']!.notation, 'R(L)(L) RLK');
-    expect(patternsById['six-ad']!.notation, 'R(L)(L) KRL');
-    expect(patternsById['six-fc']!.notation, '(R)(R)L RKL');
-    expect(
-      tripletVocabulary.patterns.every(
-        (LessonPattern pattern) => pattern.subdivision == 'triplet',
-      ),
-      isTrue,
-    );
-    expect(
-      tripletVocabulary.exercises.map(
-        (LessonExercise exercise) => exercise.title,
-      ),
-      containsAll(<String>[
-        'Move A Between Voices',
-        'Move F Between Voices',
-        'Voice A + D Around The Kit',
-      ]),
-    );
-
-    for (final Lesson lesson in plan.lessons) {
-      final Set<String> lessonPatternIds = lesson.patterns
-          .map((LessonPattern pattern) => pattern.id)
-          .toSet();
-      for (final LessonExercise exercise in lesson.exercises) {
-        for (final FlowStep step in exercise.flow) {
-          expect(
-            lessonPatternIds,
-            contains(step.pattern),
-            reason:
-                '${lesson.id}/${exercise.title} references ${step.pattern}.',
-          );
-        }
-      }
-    }
-
-    for (final Lesson lesson in plan.lessons) {
-      for (final LessonPattern pattern in lesson.patterns) {
-        expect(
-          () => DrumSheetNotationDocument.fromPattern(
-            pattern.notation,
-            lenient: true,
-          ),
-          returnsNormally,
-          reason: '${lesson.id}/${pattern.id} must be renderable notation.',
-        );
-      }
-    }
   });
 
-  test('rejects missing required fields', () {
+  test('preserves sectioned exercise notation and optional sticking', () async {
+    final LessonContentLibrary library = await LessonPlanLoader.loadContent();
+    final Lesson lesson = library.lessonsById['money-beat-triplet-fills']!;
+    final LessonExercise exercise = lesson.exercises.singleWhere(
+      (LessonExercise exercise) => exercise.id == 'groove-three-fill-one',
+    );
+
+    expect(exercise.notation.sections, hasLength(2));
+
+    final ExerciseNotationSection grooveSection = exercise.notation.sections[0];
+    expect(grooveSection.title, 'Money Beat');
+    expect(grooveSection.subdivision, '8');
+    expect(grooveSection.timeSignature, '4/4');
+    expect(grooveSection.repeatCount, 3);
+    expect(shouldShowStickingForNotationSection(grooveSection), isFalse);
+
+    final ExerciseNotationSection fillSection = exercise.notation.sections[1];
+    expect(fillSection.title, 'Triplet Fill');
+    expect(fillSection.subdivision, 'triplet');
+    expect(fillSection.timeSignature, '4/4');
+    expect(fillSection.repeatCount, 1);
+    expect(fillSection.sticking, 'R L K R K L R L L XK');
+    expect(shouldShowStickingForNotationSection(fillSection), isTrue);
+
+    final DrumSheetNotationDocument fillDocument = documentForNotationSection(
+      fillSection,
+    );
+    expect(fillDocument.feel, DrumSheetFeel.triplet);
+    expect(fillDocument.subdivision, DrumSheetNoteValue.eighth);
     expect(
-      () => LessonPlanLoader.parse('''
-lesson_plan:
-  id: broken-plan
-  title: Broken Plan
-  subtitle: Missing lessons should fail.
+      fillDocument.flattenedNotes.where((note) => !note.rest),
+      hasLength(10),
+    );
+    expect(fillDocument.flattenedNotes.last.sticking, 'XK');
+  });
+
+  test('parses standalone index and lesson YAML', () {
+    final ContentIndex index = LessonPlanLoader.parseIndex(_validIndex);
+    expect(index.levels.single.id, 'beginner');
+
+    final Lesson lesson = LessonPlanLoader.parseLesson(_validLesson);
+    expect(lesson.id, 'test-lesson');
+    expect(lesson.exercises.single.notation.sections, hasLength(1));
+    expect(lesson.exercises.single.notation.primarySection.pattern, 'R L');
+  });
+
+  test('rejects duplicate lesson IDs in loaded content', () async {
+    await expectLater(
+      LessonPlanLoader.loadContent(
+        bundle: _MapAssetBundle(<String, String>{
+          ..._validAssetMap,
+          'assets/content/index.yaml': '''
+content_index:
   version: 1
+  levels:
+    - id: beginner
+      title: Beginner
+      lesson_files:
+        - lessons/test.yaml
+        - lessons/duplicate.yaml
+''',
+          'assets/content/lessons/duplicate.yaml': _validLesson,
+        }),
+      ),
+      throwsA(
+        isA<LessonPlanLoadException>().having(
+          (LessonPlanLoadException error) => error.message,
+          'message',
+          contains('lesson.id must be unique'),
+        ),
+      ),
+    );
+  });
+
+  test('rejects lesson level mismatch from index parent level', () async {
+    await expectLater(
+      LessonPlanLoader.loadContent(
+        bundle: _MapAssetBundle(<String, String>{
+          ..._validAssetMap,
+          'assets/content/index.yaml': '''
+content_index:
+  version: 1
+  levels:
+    - id: intermediate
+      title: Intermediate
+      lesson_files:
+        - lessons/test.yaml
+''',
+        }),
+      ),
+      throwsA(
+        isA<LessonPlanLoadException>().having(
+          (LessonPlanLoadException error) => error.message,
+          'message',
+          contains('declares level beginner but is listed under intermediate'),
+        ),
+      ),
+    );
+  });
+
+  test('rejects duplicate exercise IDs within a lesson', () {
+    expect(
+      () => LessonPlanLoader.parseLesson('''
+lesson:
+  id: duplicate-exercises
+  title: Duplicate Exercises
+  level: beginner
+  skill: grooves
+  order: 1
+  estimated_minutes: 10
+  overview: Test duplicate exercise validation.
+  objective: Test duplicate exercise validation.
+  exercises:
+    - id: duplicate
+      title: First
+      why: Test.
+      what: Test.
+      how: Test.
+      notation:
+        pattern: "R L"
+    - id: duplicate
+      title: Second
+      why: Test.
+      what: Test.
+      how: Test.
+      notation:
+        pattern: "R L"
 '''),
       throwsA(
         isA<LessonPlanLoadException>().having(
           (LessonPlanLoadException error) => error.message,
           'message',
-          contains('lesson_plan.lessons'),
+          contains('lesson.exercises.id must be unique'),
         ),
       ),
     );
   });
+
+  test('rejects invalid tempo and repeat count values', () {
+    expect(
+      () => LessonPlanLoader.parseLesson('''
+lesson:
+  id: bad-tempo
+  title: Bad Tempo
+  level: beginner
+  skill: grooves
+  order: 1
+  estimated_minutes: 10
+  overview: Test.
+  objective: Test.
+  exercises:
+    - id: bad
+      title: Bad
+      why: Test.
+      what: Test.
+      how: Test.
+      tempo:
+        start: 100
+        target: 60
+      notation:
+        pattern: "R L"
+'''),
+      throwsA(isA<LessonPlanLoadException>()),
+    );
+
+    expect(
+      () => LessonPlanLoader.parseLesson('''
+lesson:
+  id: bad-repeat
+  title: Bad Repeat
+  level: beginner
+  skill: grooves
+  order: 1
+  estimated_minutes: 10
+  overview: Test.
+  objective: Test.
+  exercises:
+    - id: bad
+      title: Bad
+      why: Test.
+      what: Test.
+      how: Test.
+      notation:
+        repeat_count: 0
+        pattern: "R L"
+'''),
+      throwsA(isA<LessonPlanLoadException>()),
+    );
+  });
 }
+
+class _MapAssetBundle extends CachingAssetBundle {
+  final Map<String, String> assets;
+
+  _MapAssetBundle(this.assets);
+
+  @override
+  Future<ByteData> load(String key) {
+    throw UnimplementedError(
+      'Binary asset loading is not used by these tests.',
+    );
+  }
+
+  @override
+  Future<String> loadString(String key, {bool cache = true}) async {
+    final String? asset = assets[key];
+    if (asset == null) {
+      throw StateError('Missing test asset: $key');
+    }
+    return asset;
+  }
+}
+
+const Map<String, String> _validAssetMap = <String, String>{
+  'assets/content/index.yaml': _validIndex,
+  'assets/content/lessons/test.yaml': _validLesson,
+};
+
+const String _validIndex = '''
+content_index:
+  version: 1
+  levels:
+    - id: beginner
+      title: Beginner
+      lesson_files:
+        - lessons/test.yaml
+''';
+
+const String _validLesson = '''
+lesson:
+  id: test-lesson
+  title: Test Lesson
+  level: beginner
+  skill: grooves
+  order: 1
+  estimated_minutes: 10
+  overview: Test one valid lesson.
+  objective: Test one valid lesson.
+  exercises:
+    - id: test-exercise
+      title: Test Exercise
+      why: Learn the test idea.
+      what: Play the test pattern.
+      how: Keep the notes even.
+      tempo:
+        start: 60
+        target: 80
+      notation:
+        subdivision: 8
+        time_signature: "4/4"
+        pattern: "R L"
+''';

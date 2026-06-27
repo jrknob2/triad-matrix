@@ -1,19 +1,82 @@
 import 'package:drumcabulary/features/coach/lesson_plan.dart';
 import 'package:drumcabulary/features/coach/lesson_plan_loader.dart';
 import 'package:drumcabulary/features/coach/lesson_print_export_service.dart';
+import 'package:drumcabulary/features/coach/lesson_sheet_notation_svg_renderer.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   test('builds a printable lesson PDF', () async {
-    final LessonPlan plan = await LessonPlanLoader.loadFlowFoundations();
-    final Lesson lesson = plan.lessons.singleWhere(
-      (Lesson lesson) => lesson.id == 'the-money-beat',
+    final LessonContentLibrary library = await LessonPlanLoader.loadContent();
+    final Lesson lesson = library.lessonsById['money-beat']!;
+    final Map<String, List<RenderedExerciseNotationSection>>
+    notationSvgsByExerciseId = <String, List<RenderedExerciseNotationSection>>{
+      for (final LessonExercise exercise in lesson.exercises)
+        exercise.id: <RenderedExerciseNotationSection>[
+          for (final ExerciseNotationSection section
+              in exercise.notation.sections)
+            RenderedExerciseNotationSection(
+              title: section.title,
+              svg: _fakeSvg,
+            ),
+        ],
+    };
+
+    final List<int> bytes = await LessonPrintExportService.buildLessonPdf(
+      lesson: lesson,
+      notationSvgsByExerciseId: notationSvgsByExerciseId,
     );
-    final Map<String, String> notationSvgsByPatternId = <String, String>{
-      for (final LessonPattern pattern in lesson.patterns)
-        pattern.id: '''
+
+    expect(bytes.length, greaterThan(1000));
+    expect(String.fromCharCodes(bytes.take(4)), '%PDF');
+  });
+
+  test(
+    'builds a printable lesson PDF with sectioned exercise notation',
+    () async {
+      final LessonContentLibrary library = await LessonPlanLoader.loadContent();
+      final Lesson lesson = library.lessonsById['money-beat-triplet-fills']!;
+      final Map<String, List<RenderedExerciseNotationSection>>
+      notationSvgsByExerciseId =
+          <String, List<RenderedExerciseNotationSection>>{
+            for (final LessonExercise exercise in lesson.exercises)
+              exercise.id: <RenderedExerciseNotationSection>[
+                for (final ExerciseNotationSection section
+                    in exercise.notation.sections)
+                  RenderedExerciseNotationSection(
+                    title: section.title,
+                    svg: _fakeSvg,
+                  ),
+              ],
+          };
+
+      final List<int> bytes = await LessonPrintExportService.buildLessonPdf(
+        lesson: lesson,
+        notationSvgsByExerciseId: notationSvgsByExerciseId,
+      );
+
+      expect(bytes.length, greaterThan(1000));
+      expect(String.fromCharCodes(bytes.take(4)), '%PDF');
+    },
+  );
+
+  test('refuses to export when rendered notation is missing', () async {
+    final LessonContentLibrary library = await LessonPlanLoader.loadContent();
+    final Lesson lesson = library.lessonsById['money-beat']!;
+
+    expect(
+      () => LessonPrintExportService.buildLessonPdf(
+        lesson: lesson,
+        notationSvgsByExerciseId:
+            const <String, List<RenderedExerciseNotationSection>>{},
+      ),
+      throwsStateError,
+    );
+  });
+}
+
+const String _fakeSvg = '''
 <svg xmlns="http://www.w3.org/2000/svg" width="240" height="60" viewBox="0 0 240 60">
   <line x1="12" y1="20" x2="228" y2="20" stroke="#17130f" stroke-width="1"/>
   <line x1="12" y1="30" x2="228" y2="30" stroke="#17130f" stroke-width="1"/>
@@ -22,32 +85,4 @@ void main() {
   <circle cx="96" cy="30" r="6" fill="#17130f"/>
   <circle cx="132" cy="30" r="6" fill="#17130f"/>
 </svg>
-''',
-    };
-
-    final List<int> bytes = await LessonPrintExportService.buildLessonPdf(
-      lessonPlan: plan,
-      lesson: lesson,
-      notationSvgsByPatternId: notationSvgsByPatternId,
-    );
-
-    expect(bytes.length, greaterThan(1000));
-    expect(String.fromCharCodes(bytes.take(4)), '%PDF');
-  });
-
-  test('refuses to export when rendered notation is missing', () async {
-    final LessonPlan plan = await LessonPlanLoader.loadFlowFoundations();
-    final Lesson lesson = plan.lessons.singleWhere(
-      (Lesson lesson) => lesson.id == 'the-money-beat',
-    );
-
-    expect(
-      () => LessonPrintExportService.buildLessonPdf(
-        lessonPlan: plan,
-        lesson: lesson,
-        notationSvgsByPatternId: const <String, String>{},
-      ),
-      throwsStateError,
-    );
-  });
-}
+''';

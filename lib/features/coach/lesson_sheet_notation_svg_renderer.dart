@@ -5,7 +5,18 @@ import 'package:pdf/pdf.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../practice/widgets/sheet_notation_display.dart';
+import 'lesson_notation_document.dart';
 import 'lesson_plan.dart';
+
+class RenderedExerciseNotationSection {
+  final String? title;
+  final String svg;
+
+  const RenderedExerciseNotationSection({
+    required this.title,
+    required this.svg,
+  });
+}
 
 class LessonSheetNotationSvgRenderer {
   static const String _hostAsset = 'web/sheet_notation/app_host.html';
@@ -47,45 +58,61 @@ class LessonSheetNotationSvgRenderer {
       ..loadFlutterAsset(_hostAsset);
   }
 
-  Future<Map<String, String>> renderLesson({
+  Future<Map<String, List<RenderedExerciseNotationSection>>> renderLesson({
     required Lesson lesson,
     required PdfPageFormat pageFormat,
   }) async {
-    final Map<String, String> svgsByPatternId = <String, String>{};
+    final Map<String, List<RenderedExerciseNotationSection>> svgsByExerciseId =
+        <String, List<RenderedExerciseNotationSection>>{};
     final double availableWidth = pageFormat.availableWidth.isFinite
         ? pageFormat.availableWidth
         : 520;
 
-    for (final LessonPattern pattern in lesson.patterns) {
-      svgsByPatternId[pattern.id] = await renderPattern(
-        pattern: pattern,
+    for (final LessonExercise exercise in lesson.exercises) {
+      svgsByExerciseId[exercise.id] = await renderExercise(
+        exercise: exercise,
         availableWidth: availableWidth,
       );
     }
 
-    return svgsByPatternId;
+    return svgsByExerciseId;
   }
 
-  Future<String> renderPattern({
-    required LessonPattern pattern,
+  Future<List<RenderedExerciseNotationSection>> renderExercise({
+    required LessonExercise exercise,
     required double availableWidth,
   }) async {
     await _ready;
 
-    final DrumSheetNotationDocument document =
-        DrumSheetNotationDocument.fromPattern(
-          pattern.notation,
-          subdivision: _subdivisionForPattern(pattern),
-          feel: _feelForPattern(pattern),
-          timeSignature: pattern.timeSignature,
-          repeatCount: pattern.repeatCount,
-          lenient: true,
-        );
-    final String documentJson = jsonEncode(_documentJson(document));
+    return <RenderedExerciseNotationSection>[
+      for (final ExerciseNotationSection section in exercise.notation.sections)
+        RenderedExerciseNotationSection(
+          title: section.title,
+          svg: await _renderSection(
+            section: section,
+            availableWidth: availableWidth,
+          ),
+        ),
+    ];
+  }
+
+  Future<String> _renderSection({
+    required ExerciseNotationSection section,
+    required double availableWidth,
+  }) async {
+    final DrumSheetNotationDocument document = documentForNotationSection(
+      section,
+    );
+    final String documentJson = jsonEncode(
+      _documentJson(
+        document,
+        showSticking: shouldShowStickingForNotationSection(section),
+      ),
+    );
     final String optionsJson = jsonEncode(<String, Object?>{
       'availableWidth': availableWidth.floor(),
       'finalRepeat': true,
-      'grouping': _groupingTextFromPattern(pattern.notation),
+      'grouping': groupingTextFromPattern(section.pattern),
       'minNoteWidth': 32,
       'staffY': 34,
       'staffHeight': 124,
@@ -118,7 +145,10 @@ class LessonSheetNotationSvgRenderer {
   }
 }
 
-Map<String, Object?> _documentJson(DrumSheetNotationDocument document) {
+Map<String, Object?> _documentJson(
+  DrumSheetNotationDocument document, {
+  required bool showSticking,
+}) {
   return <String, Object?>{
     'subdivision': document.subdivision.noteValueLabel,
     'feel': document.feel.name,
@@ -129,14 +159,17 @@ Map<String, Object?> _documentJson(DrumSheetNotationDocument document) {
         <String, Object?>{
           'notes': <Object?>[
             for (final DrumSheetNotationNote note in measure.notes)
-              _noteJson(note),
+              _noteJson(note, showSticking: showSticking),
           ],
         },
     ],
   };
 }
 
-Map<String, Object?> _noteJson(DrumSheetNotationNote note) {
+Map<String, Object?> _noteJson(
+  DrumSheetNotationNote note, {
+  required bool showSticking,
+}) {
   final String sticking = _displayStickingForNote(note);
   return <String, Object?>{
     if (note.value != null) 'value': note.value!.noteValueLabel,
@@ -145,7 +178,7 @@ Map<String, Object?> _noteJson(DrumSheetNotationNote note) {
         for (final DrumSheetVoice voice in note.voices) voice.id,
       ],
     if (note.rest) 'rest': true,
-    if (sticking.isNotEmpty) 'sticking': sticking,
+    if (showSticking && sticking.isNotEmpty) 'sticking': sticking,
     if (note.accent) 'accent': true,
     if (note.flam) 'flam': true,
     if (note.ghost) 'ghost': true,
@@ -164,62 +197,6 @@ String _displayStickingForNote(DrumSheetNotationNote note) {
   if (sticking.contains('K')) return 'K';
   if (sticking.contains('F')) return 'F';
   return '';
-}
-
-DrumSheetNoteValue _subdivisionForPattern(LessonPattern pattern) {
-  return _subdivisionValue(pattern.subdivision) ?? DrumSheetNoteValue.eighth;
-}
-
-DrumSheetFeel _feelForPattern(LessonPattern pattern) {
-  return pattern.subdivision == 'triplet'
-      ? DrumSheetFeel.triplet
-      : DrumSheetFeel.straight;
-}
-
-DrumSheetNoteValue? _subdivisionValue(String? value) {
-  return switch (value) {
-    '4' => DrumSheetNoteValue.quarter,
-    '8' => DrumSheetNoteValue.eighth,
-    'triplet' => DrumSheetNoteValue.eighth,
-    '16' => DrumSheetNoteValue.sixteenth,
-    '32' => DrumSheetNoteValue.thirtySecond,
-    _ => null,
-  };
-}
-
-String _groupingTextFromPattern(String pattern) {
-  final List<String> groups = _topLevelPatternGroups(pattern);
-  if (groups.length <= 1) return '';
-  final List<String> counts = <String>[];
-  for (final String group in groups) {
-    final int count = DrumSheetPatternParser.parse(group, lenient: true).length;
-    if (count > 0) counts.add('$count');
-  }
-  return counts.length > 1 ? counts.join(' ') : '';
-}
-
-List<String> _topLevelPatternGroups(String pattern) {
-  final List<String> groups = <String>[];
-  final StringBuffer current = StringBuffer();
-  int bracketDepth = 0;
-  int parenDepth = 0;
-  for (int index = 0; index < pattern.length; index += 1) {
-    final String char = pattern[index];
-    if (char == '[') bracketDepth += 1;
-    if (char == ']' && bracketDepth > 0) bracketDepth -= 1;
-    if (char == '(') parenDepth += 1;
-    if (char == ')' && parenDepth > 0) parenDepth -= 1;
-    if (char.trim().isEmpty && bracketDepth == 0 && parenDepth == 0) {
-      if (current.isNotEmpty) {
-        groups.add(current.toString());
-        current.clear();
-      }
-      continue;
-    }
-    current.write(char);
-  }
-  if (current.isNotEmpty) groups.add(current.toString());
-  return groups;
 }
 
 String _jsString(Object value) {

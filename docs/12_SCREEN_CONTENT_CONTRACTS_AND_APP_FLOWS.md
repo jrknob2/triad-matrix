@@ -2,42 +2,52 @@
 
 ## Purpose
 
-This document defines the active screen/content/flow contract for the lesson-plan MVP.
+This document defines the active screen/content/flow contract for the MVP
+teaching flow.
 
-If a control or block cannot be justified by a defined MVP flow in this document, it should not be reachable in the app.
+If a control or block cannot be justified by a defined MVP flow in this
+document, it should not be reachable in the active teaching UI.
 
 Communication rules for student-facing text are defined in:
 
 - [13_COMMUNICATION_STYLE_CONTRACT.md](/Users/terryknoblock/Development/flutter-projects/drumcabulary/docs/13_COMMUNICATION_STYLE_CONTRACT.md)
 
----
+The lesson YAML/data contract is defined in:
+
+- [20_LESSON_YAML_DATA_ARCHITECTURE.md](/Users/terryknoblock/Development/flutter-projects/drumcabulary/docs/20_LESSON_YAML_DATA_ARCHITECTURE.md)
 
 ## Current MVP Rule
 
-The current product is a content-first, print-first lesson plan.
+The current product is a simple drum teaching MVP.
+
+Active teaching flow:
+
+```text
+Choose Level -> Choose Skill -> Lesson Detail -> Progressive Exercises
+```
 
 Active app-owned screens:
 
-1. `Lessons`
-2. `Lesson Detail`
+1. Level list
+2. Skill list for selected level
+3. Lesson list when a skill has multiple lessons
+4. Lesson Detail
 
 Deferred screens and systems:
 
 - Matrix
-- Practice
+- full Practice system
 - Library
-- Progress
-- Practice Item
+- detailed Progress
+- Practice Item editor
 - Session Summary
 - Settings
 - Startup Splash
 - live practice sessions
 - assessment
-- progress tracking
+- detailed progress analytics
 - recommendations
 - user notation authoring
-
----
 
 ## Core Rule
 
@@ -55,107 +65,167 @@ No active screen should contain:
 - controls that belong to deferred practice/product systems
 - duplicate lesson metadata with no new value
 - raw notation strings where rendered sheet notation is expected
-
----
+- patterns as the primary student-facing concept
 
 ## Notation Rules
 
-- lesson YAML stores authored Drumcabulary notation strings
+- lesson YAML stores authored Drumcabulary notation strings inside exercise notation
 - users do not author or edit notation strings in MVP
-- lesson content may use existing explicit voice override notation when an example depends on specific kit voices
-- pattern-level timing metadata may include `subdivision`, `time_signature`, and `repeat_count`
-- omitted pattern time signatures default to `4/4`
-- `subdivision: triplet` is a timing/display feel and should render standard triplet grouping marks without creating new Drumcabulary text tokens
-- repeated written patterns should render with an end-repeat bar when `repeat_count` is authored; do not add a start-repeat bar or separate repeat-count text label in MVP
+- lesson content may use explicit voice override notation when an example depends on specific kit voices
+- notation metadata may include `subdivision`, `time_signature`, and `repeat_count`
+- omitted time signatures default to `4/4`
+- `subdivision: triplet` is timing/display metadata and should render standard triplet grouping marks without creating new Drumcabulary text tokens
+- repeated written notation should render with an end-repeat bar when `repeat_count` is authored; do not add a separate repeat-count text label in MVP
 - the shared sheet-notation renderer is the display path for lesson notation examples
-- limb assignment labels should render above the staff and noteheads, centered on the final rendered note positions after time-signature and spacing adjustments
+- sticking/limb labels render only when authored
 - rendered notation may expose an ear-icon preview that plays the displayed notes through the existing sample engine
-- while notation preview is playing, the notation surface should show an animated vertical playhead aligned to the rendered note positions and continue through each line/bar end before wrapping or looping
-- notation preview uses a fixed preview BPM for now; authored exercise tempo is lesson guidance, not an active preview speed control
+- while notation preview is playing, the notation surface should show an animated vertical playhead aligned to rendered note positions
+- notation preview uses a fixed preview BPM for now; authored exercise tempo is guidance, not an active preview speed control
 - notation preview timing should preserve written bar speed across eighth, sixteenth, and triplet-eighth subdivisions
-- notation preview playback and playhead movement should honor pattern `repeat_count`
-- notation preview audio should use an explicit mixer config for relative sample levels; default preview levels are kick `1.0`, normal non-cymbal hits `0.8`, and ghosts `0.1`, with kick hits ignoring ghost marking
+- notation preview playback and playhead movement should honor `repeat_count`
+- notation preview audio should use the explicit mixer config for relative sample levels
 - notation preview audio must stop on app inactive, hidden, paused, or detached lifecycle states instead of catching up missed notes on return
 - renderer failures must be visible
 - raw notation strings must not silently replace failed sheet rendering in app or PDF output
-- PDF/export output should use the same notation rendering contract as the on-screen lesson detail
+- PDF/export output should use the same notation rendering contract as on-screen lesson detail
 
----
-
-## Flow A: Open Lesson Plan
+## Flow A: Choose Level
 
 1. User opens the app.
-2. App opens directly to `Lessons`.
-3. `Lessons` loads the bundled YAML asset.
-4. If the asset validates, the ordered lesson list appears.
-5. If the asset fails, a visible load/validation error appears.
+2. App opens directly to the level list.
+3. The screen loads `assets/content/index.yaml` and all listed lesson files.
+4. If the content validates, the level rows appear.
+5. If content fails to load or validate, a visible error appears.
 
-Owning screens:
+Owning screen:
 
-- Lessons
+- Level list
 
 Required content:
 
-- lesson plan title
-- lesson plan subtitle
-- lesson number
-- lesson title
-- short objective
-- estimated minutes
+- Beginner
+- Intermediate
+- Advanced
+- practiced time per level
+- completion indicator when most/all lessons in the level are complete
+
+Allowed actions:
+
+- tap a level
 
 Forbidden content:
 
 - bottom tabs
+- authored path rows
 - Matrix handoff
-- Practice handoff
-- progress state
-- completion state
+- full Practice handoff
+- assessment state
 - personalized recommendations
 
----
+## Flow B: Choose Skill
 
-## Flow B: Read Lesson
+1. User taps a level.
+2. Skill list opens for that level.
+3. Skills are derived from lessons listed under that level.
+4. Only skills with at least one lesson are shown.
+5. User taps a skill.
 
-1. User taps a lesson row.
-2. `Lesson Detail` opens.
-3. The full lesson content renders.
-4. User can go back to the lesson list.
+Owning screen:
 
-Owning screens:
+- Skill list
 
-- Lessons
+Required content:
+
+- selected level title
+- skill title
+- simple lesson/progress summary if available
+
+Allowed actions:
+
+- back to level list
+- tap a skill
+
+Forbidden content:
+
+- empty skills
+- complex filters
+- recommendations
+- skill taxonomy editor
+
+## Flow C: Choose Lesson
+
+1. User taps a skill.
+2. If the skill has one lesson, the app may open the lesson directly.
+3. If the skill has multiple lessons, show ordered lesson rows.
+4. Lesson order comes from `lesson.order`.
+
+Owning screen:
+
+- Lesson list for selected skill
+
+Required content:
+
+- lesson title
+- overview or objective
+- estimated minutes
+- local status if available
+
+Allowed actions:
+
+- back to skill list
+- tap a lesson
+
+Forbidden content:
+
+- hard-coded lesson order
+- authored paths
+- pattern rows
+- assessment or score state
+
+## Flow D: Read And Practice Lesson
+
+1. User opens a lesson.
+2. Opening a not-started lesson marks it `in_progress` locally.
+3. Lesson overview/objective renders.
+4. Progressive exercise cards render in authored order.
+5. Each exercise explains Why, What, and How.
+6. User can hear notation, start Practice It, complete an exercise, print, or go back.
+
+Owning screen:
+
 - Lesson Detail
 
 Required content:
 
 - lesson title
+- level and skill
+- overview
 - objective
-- skill focus
-- estimated time
-- patterns
-- rendered notation examples
-- notation audio preview action
-- animated notation playhead while preview audio runs
-- exercises
-- coaching notes
-- mastery target
+- estimated minutes
+- progressive exercise cards
+- each exercise's Why, What, and How
+- rendered notation
+- Hear It action
+- Practice It action/timer entry point
+- Complete Exercise action
+- Print action
 
 Forbidden content:
 
-- live practice playback controls
+- top-level pattern list as the main student concept
 - live BPM controls
 - assessment prompts
-- completion toggles
+- scoring
 - editable notation fields
+- detailed progress analytics
+- recommendation copy
 
----
+## Flow E: Print Lesson
 
-## Flow C: Print Lesson
-
-1. User opens `Lesson Detail`.
-2. User taps `Print`.
-3. App uses existing print/share export infrastructure.
-4. Exported content includes rendered notation where possible.
+1. User opens Lesson Detail.
+2. User taps Print.
+3. App uses the existing print/share export infrastructure.
+4. Exported content includes rendered notation for the lesson exercises.
 5. If notation rendering fails, the failure is visible during development.
 
 Owning screens:
@@ -166,76 +236,88 @@ Owning screens:
 Required content:
 
 - lesson identity
-- objective
-- patterns
+- overview/objective
+- progressive exercises
+- Why, What, and How
 - rendered notation examples
-- exercises
-- coaching notes
-- mastery target
+- tempo guidance when authored
 
 Forbidden content:
 
 - raw notation fallback in place of failed rendering
 - practice-session data
-- progress data
+- scoring data
 - recommendation copy
 
----
+## Level List Contract
 
-## Lessons Contract
+Level list answers:
 
-Lessons answers:
+- what level should I start from?
+- how much have I practiced in each level?
+- is this level mostly/all complete?
 
-- what is the current lesson plan?
-- what lessons are in it?
-- what should I open to read or print?
+Level list must show:
 
-Lessons must show:
-
-- plan title
-- plan subtitle
-- one ordered list of lessons
-- compact lesson rows
+- level title
+- practiced time
+- completion summary
 - clear load errors
 
-Lessons must not show:
+Level list must not show:
 
-- five-tab navigation
+- path rows
+- advanced content filtering
 - settings controls
-- practice controls
-- progress controls
-- Matrix entry
-- notation authoring
+- detailed analytics
 
----
+## Skill List Contract
+
+Skill list answers:
+
+- what skill areas are available in this level?
+- where should I go next inside the selected level?
+
+Skill list must show:
+
+- selected level title
+- skills that have lessons
+- lesson counts or simple progress when available
+
+Skill list must not show:
+
+- empty skills
+- global skill taxonomy editing
+- recommendations
+- notation examples
 
 ## Lesson Detail Contract
 
 Lesson Detail answers:
 
 - what does this lesson teach?
-- what patterns and exercises are part of it?
-- what should be printed?
+- how do the exercises build gradually?
+- what should I listen to, practice, complete, or print?
 
 Lesson Detail must show:
 
 - title
+- overview
 - objective
-- skill focus
 - estimated time
-- patterns with rendered notation
+- exercise cards in order
+- Why, What, and How for each exercise
+- rendered notation for each exercise
 - ear-icon preview controls for rendered notation
 - animated vertical playhead over rendered notation during preview
-- exercises with authored metadata
-- coaching notes
-- mastery targets
+- Practice It / Complete Exercise controls
 - print action
 
 Lesson Detail must not show:
 
+- a separate pattern browser
 - player transport
-- timer
-- session logging
-- progress or completion state
+- full practice session controls
+- detailed progress analytics
 - assessment language
 - fallback raw notation when sheet rendering fails

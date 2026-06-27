@@ -1,0 +1,85 @@
+lesson:
+  id: triplet-vocabulary-1
+  title: Triplet Vocabulary 1
+  level: intermediate
+  skill: vocabulary
+  order: 1
+  estimated_minutes: 35
+  overview: Build a small triplet vocabulary one cell at a time before combining phrases.
+  objective: Learn triplet cells, combine them into six-note ideas, and keep the spacing even.
+
+  exercises:
+    - id: cell-a
+      title: A - Right Ghost Ghost
+      why: This cell creates a strong note followed by two controlled ghost notes.
+      what: Play R(L)(L) as evenly spaced triplets.
+      how: Keep the first note clear and the ghost notes quiet but present.
+      tempo:
+        start: 60
+        target: 100
+      notation:
+        subdivision: triplet
+        time_signature: "4/4"
+        repeat_count: 8
+        sticking: "R L L"
+        pattern: "R(L)(L)"
+
+    - id: cell-b
+      title: B - Right Left Kick
+      why: Adding kick to the triplet cell starts moving vocabulary around the kit.
+      what: Play RLK as one smooth triplet.
+      how: Keep the kick evenly spaced with the hands.
+      tempo:
+        start: 60
+        target: 100
+      notation:
+        subdivision: triplet
+        time_signature: "4/4"
+        repeat_count: 8
+        sticking: "R L K"
+        pattern: "RLK"
+
+    - id: cell-c
+      title: C - Right Kick Left
+      why: Moving the kick into the middle changes the balance of the phrase.
+      what: Play RKL as one smooth triplet.
+      how: Keep the kick from rushing into the left hand.
+      tempo:
+        start: 60
+        target: 100
+      notation:
+        subdivision: triplet
+        time_signature: "4/4"
+        repeat_count: 8
+        sticking: "R K L"
+        pattern: "RKL"
+
+    - id: combine-a-b
+      title: Combine A + B
+      why: Two cells make a six-note phrase you can use as fill vocabulary.
+      what: Play R(L)(L) followed by RLK without a gap.
+      how: Hear the full six-note shape instead of two disconnected triplets.
+      tempo:
+        start: 60
+        target: 90
+      notation:
+        subdivision: triplet
+        time_signature: "4/4"
+        repeat_count: 6
+        sticking: "R L L R L K"
+        pattern: "R(L)(L) RLK"
+
+    - id: combine-a-c
+      title: Combine A + C
+      why: This combination keeps the ghost-note setup but moves the kick placement.
+      what: Play R(L)(L) followed by RKL.
+      how: Stay relaxed when the kick lands in the middle of the second cell.
+      tempo:
+        start: 60
+        target: 90
+      notation:
+        subdivision: triplet
+        time_signature: "4/4"
+        repeat_count: 6
+        sticking: "R L L R K L"
+        pattern: "R(L)(L) RKL"

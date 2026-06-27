@@ -684,7 +684,8 @@ Language-facing implementation files:
 
 Lesson authoring source:
 
-- `assets/lessons/flow_foundations.yaml`
+- `assets/content/index.yaml`
+- `assets/content/lessons/<level>/<skill>/<lesson>.yaml`
 
 Tests that must be updated when this contract changes:
 

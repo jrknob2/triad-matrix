@@ -4,9 +4,13 @@
 
 Use this document to brief a new chat or contributor on the current Drumcabulary MVP reset.
 
-The reset is intentionally narrow: Coach is now a content-first, print-first lesson-plan surface. The app should help a user read, hear, and print authored lessons. It should not restore the broader practice/session/product systems during MVP refinement.
+The reset is intentionally narrow: Coach is now a simple drum teaching surface.
+The app should help a user choose a level, choose a skill, open a lesson, work
+through progressive exercises, hear the notation, and print the lesson. It
+should not restore the broader practice/session/product systems during MVP
+refinement.
 
-Current date of this handoff: 2026-06-23.
+Current date of this handoff: 2026-06-26.
 
 ---
 
@@ -14,7 +18,7 @@ Current date of this handoff: 2026-06-23.
 
 Current working branch:
 
-- `feature/lesson-mvp-trim`
+- `feature/level-skill-lesson-architecture`
 
 At the time this document was created, the branch was clean before adding this handoff file.
 
@@ -35,16 +39,17 @@ Known recurring test output:
 
 ## Product Direction
 
-The active product is a lesson-plan MVP.
+The active product is a Level -> Skill -> Lesson teaching MVP.
 
 Primary goal:
 
-- Make Coach useful as a structured, printable drum lesson path.
+- Make Coach useful as a structured, printable drum lesson flow.
 
 The app currently prioritizes:
 
 - YAML-authored lesson content
-- ordered lesson list
+- level and skill selection
+- progressive exercise cards
 - readable lesson detail
 - rendered sheet notation
 - lightweight notation audio preview
@@ -53,7 +58,7 @@ The app currently prioritizes:
 The app should avoid:
 
 - live practice sessions
-- progress tracking
+- detailed progress analytics
 - assessment
 - recommendation engines
 - user notation authoring
@@ -88,7 +93,7 @@ Current behavior:
 - Body is `TodayScreen`, which currently owns the lesson plan list.
 - Bottom navigation and broader app chrome are not active in the MVP.
 
-### Lessons
+### Levels And Skills
 
 File:
 
@@ -96,17 +101,18 @@ File:
 
 Current behavior:
 
-- Loads `Flow Foundations` from the bundled YAML asset.
-- Shows plan title and subtitle.
-- Shows one compact ordered list of lessons.
-- Each row shows lesson number, title, objective, estimated minutes, and primary pattern title/role.
-- Tapping a row opens `Lesson Detail`.
+- Loads `assets/content/index.yaml` and all listed lesson YAML files.
+- Shows Beginner, Intermediate, and Advanced level rows.
+- Shows practiced time and a simple level completion indicator when available.
+- Tapping a level shows skills derived from lessons in that level.
+- Tapping a skill opens the only lesson directly or shows ordered lesson rows.
 - Load or validation errors are visible.
 
 Important contract:
 
-- Do not show raw notation strings in lesson list rows.
-- Do not add practice/progress/session actions here.
+- Do not show raw notation strings in list rows.
+- Do not add authored paths, recommendations, assessment, or full practice
+  session actions here.
 
 ### Lesson Detail
 
@@ -116,9 +122,13 @@ File:
 
 Current behavior:
 
-- Shows lesson title, objective, skill focus, estimated time, patterns, exercises, coaching notes, mastery target, and Print.
-- Pattern rows render sheet notation through the shared `DrumSheetNotationDisplay`.
-- Pattern rows have an ear-icon preview action.
+- Shows lesson title, level, skill, overview, objective, estimated time,
+  progressive exercise cards, and Print.
+- Exercise cards show Why, What, How, notation, Hear It, Practice It, and
+  Complete Exercise.
+- Exercise notation renders sheet notation through the shared
+  `DrumSheetNotationDisplay`.
+- Rendered notation has an ear-icon preview action.
 - Raw notation strings are intentionally not shown to users.
 - Print uses existing `LessonPrintExportService`.
 
@@ -126,27 +136,22 @@ Important contract:
 
 - Sheet rendering failures should be visible.
 - Raw Drumcabulary strings must not silently replace failed sheet rendering.
-- Do not add live transport, BPM controls, completion state, or assessment copy.
+- Do not add live transport, BPM controls, scoring, recommendation, or
+  assessment copy.
 
 ---
 
 ## Lesson Content
 
-Bundled lesson plan asset:
+Bundled content index:
 
-- `assets/lessons/flow_foundations.yaml`
+- `assets/content/index.yaml`
 
-Current plan:
+Current starter lessons:
 
-1. `Groove Foundation`
-2. `The Money Beat`
-3. `Accents and Ghosts`
-4. `Simultaneous Hits`
-5. `Five-Note Groupings`
-6. `Groove to Fill Flow`
-7. `Triplet Feel`
-8. `Subdivision Transitions`
-9. `Triplet Vocabulary 1`
+- `assets/content/lessons/beginner/grooves/money-beat.yaml`
+- `assets/content/lessons/intermediate/vocabulary/triplet-vocabulary-1.yaml`
+- `assets/content/lessons/intermediate/grooves/money-beat-triplet-fills.yaml`
 
 Lesson schema code:
 
@@ -155,23 +160,28 @@ Lesson schema code:
 
 Current schema concepts:
 
-- `LessonPlan`
+- `ContentIndex`
+- `ContentLevel`
+- `LessonContentLibrary`
 - `Lesson`
-- `LessonPattern`
 - `LessonExercise`
+- `ExerciseNotation`
+- `ExerciseNotationSection`
 - `TempoTarget`
-- `FlowStep`
+- local `UserProgress`, `LessonProgress`, and `ExerciseProgress`
 
 Schema expectations:
 
 - Required fields are validated.
-- Lessons are ordered by `number`.
-- Patterns can include `subdivision`, `time_signature`, and `repeat_count`.
-- Pattern `subdivision: triplet` is timing/display feel, not a new notation token.
-- Pattern `time_signature` defaults to `4/4` when omitted.
-- Pattern `repeat_count` drives notation repeat bars and local preview repetition.
-- Exercises can include subdivision, subdivision sequence, tempo, and flow.
-- Flow steps reference lesson-local pattern ids.
+- Lessons are ordered by `lesson.order` inside level/skill.
+- Each exercise owns one notation block.
+- Notation can be single-section or sectioned.
+- Sections can include `subdivision`, `time_signature`, `repeat_count`, and
+  optional `sticking`.
+- `subdivision: triplet` is timing/display feel, not a new notation token.
+- `time_signature` defaults to `4/4` when omitted.
+- `repeat_count` drives notation repeat bars and local preview repetition.
+- Sticking renders only when authored.
 - Notation grammar, token meaning, voice labels, duration labels, grouping
   behavior, triplet behavior, and render-document rules are owned by
   `docs/18_NOTATION_LANGUAGE_CONTRACT.md`.
@@ -302,28 +312,33 @@ Highest-value next refinement areas:
 Use this prompt to continue in another chat:
 
 ```text
-We are working in /Users/terryknoblock/Development/flutter-projects/drumcabulary on branch feature/lesson-mvp-trim.
+We are working in /Users/terryknoblock/Development/flutter-projects/drumcabulary on branch feature/level-skill-lesson-architecture.
 
-Please read docs/17_MVP_RESET_HANDOFF.md first, then the active contracts docs/07_SCREEN_SPEC.md and docs/12_SCREEN_CONTENT_CONTRACTS_AND_APP_FLOWS.md.
+Please read docs/17_MVP_RESET_HANDOFF.md first, then the active contracts docs/12_SCREEN_CONTENT_CONTRACTS_AND_APP_FLOWS.md, docs/19_NOTATION_RENDERING_PIPELINE_DESIGN.md, and docs/20_LESSON_YAML_DATA_ARCHITECTURE.md.
 
-Current direction: Drumcabulary is being reset to a narrow Coach lesson-plan MVP. It is content-first and print-first. Active screens are Lessons and Lesson Detail. The app loads assets/lessons/flow_foundations.yaml, shows ordered lessons, renders lesson detail, renders sheet notation through the shared renderer, supports a lightweight ear-icon audio preview with playhead, and prints/export lessons with rendered notation.
+Current direction: Drumcabulary is being reset to a narrow Level -> Skill -> Lesson teaching MVP. The app loads assets/content/index.yaml, then the lesson files listed under each level. Active screens are level list, skill list, optional lesson list, and lesson detail. Lesson detail shows progressive exercise cards with Why, What, How, rendered notation, Hear It, Practice It, Complete Exercise, and Print.
 
-Do not restore live practice sessions, progress tracking, assessment, recommendations, Matrix, Library, Settings, editable notation, or broad app navigation unless explicitly asked. Keep changes contract-driven: update the active docs first if behavior or scope changes, then implement, then verify.
+Do not restore authored paths, live practice sessions, assessments, scoring, recommendations, Matrix, Library, Settings, editable notation, or broad app navigation unless explicitly asked. Keep changes contract-driven: update the active docs first if behavior or scope changes, then implement, then verify.
 
 Key files:
-- assets/lessons/flow_foundations.yaml
-- lib/features/app/app_shell.dart
+- assets/content/index.yaml
+- assets/content/lessons/beginner/grooves/money-beat.yaml
+- assets/content/lessons/intermediate/vocabulary/triplet-vocabulary-1.yaml
+- assets/content/lessons/intermediate/grooves/money-beat-triplet-fills.yaml
 - lib/features/today/today_screen.dart
 - lib/features/coach/lesson_detail_screen.dart
 - lib/features/coach/lesson_plan.dart
+- lib/features/coach/lesson_plan_loader.dart
+- lib/features/coach/lesson_progress.dart
+- lib/features/coach/lesson_notation_document.dart
 - lib/features/coach/lesson_print_export_service.dart
 - lib/features/practice/widgets/sheet_notation_display.dart
 - lib/features/practice/pattern_audio_service.dart
 - web/sheet_notation/app_host.html
 
-Current lesson plan has 9 lessons: Groove Foundation, The Money Beat, Accents and Ghosts, Simultaneous Hits, Five-Note Groupings, Groove to Fill Flow, Triplet Feel, Subdivision Transitions, Triplet Vocabulary 1.
+Current starter content has Beginner / Grooves / The Money Beat, Intermediate / Vocabulary / Triplet Vocabulary 1, and Intermediate / Grooves / Money Beat + Triplet Fills.
 
-Before changing UI or flow, classify the work against the active MVP contract. Prefer YAML content changes for lesson content. Do not show raw notation strings to users where rendered notation is expected. Renderer failures should be visible. Audio preview is local to notation examples only; no practice transport or session state.
+Before changing UI or flow, classify the work against the active MVP contract. Prefer YAML content changes for lesson content. Do not show patterns as the main student-facing concept. Do not show raw notation strings to users where rendered notation is expected. Renderer failures should be visible. Audio preview is local to notation examples only; no full practice transport or scoring.
 
 When done, run the relevant focused tests and usually flutter analyze. For notation work also run npm run test:sheet-notation.
 ```

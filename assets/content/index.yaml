@@ -1,0 +1,17 @@
+content_index:
+  version: 1
+  levels:
+    - id: beginner
+      title: Beginner
+      lesson_files:
+        - lessons/beginner/grooves/money-beat.yaml
+
+    - id: intermediate
+      title: Intermediate
+      lesson_files:
+        - lessons/intermediate/vocabulary/triplet-vocabulary-1.yaml
+        - lessons/intermediate/grooves/money-beat-triplet-fills.yaml
+
+    - id: advanced
+      title: Advanced
+      lesson_files: []

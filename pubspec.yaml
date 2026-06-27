@@ -77,7 +77,13 @@ flutter:
     - assets/audio/
     - assets/icons/app_icon_1024.png
     - assets/icons/app_icon_splash.png
-    - assets/lessons/
+    - assets/content/
+    - assets/content/lessons/
+    - assets/content/lessons/beginner/
+    - assets/content/lessons/beginner/grooves/
+    - assets/content/lessons/intermediate/
+    - assets/content/lessons/intermediate/grooves/
+    - assets/content/lessons/intermediate/vocabulary/
     - web/sheet_notation/
     - web/sheet_notation/vendor/
 
