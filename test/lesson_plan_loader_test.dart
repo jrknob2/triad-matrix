@@ -22,13 +22,14 @@ void main() {
       library.lessonsById.keys,
       containsAll(<String>[
         'money-beat',
+        'six-stroke-roll',
         'triplet-vocabulary-1',
         'money-beat-triplet-fills',
       ]),
     );
     expect(
       library.lessonsForLevel('beginner').map((Lesson lesson) => lesson.id),
-      <String>['money-beat'],
+      <String>['money-beat', 'six-stroke-roll'],
     );
     expect(
       library.lessonsForLevel('intermediate').map((Lesson lesson) => lesson.id),
@@ -39,7 +40,10 @@ void main() {
   test('derives skills by level and orders lessons by skill order', () async {
     final LessonContentLibrary library = await LessonPlanLoader.loadContent();
 
-    expect(library.skillsForLevel('beginner'), <String>['grooves']);
+    expect(library.skillsForLevel('beginner'), <String>[
+      'rudiments',
+      'grooves',
+    ]);
     expect(library.skillsForLevel('intermediate'), <String>[
       'grooves',
       'vocabulary',
@@ -49,6 +53,12 @@ void main() {
           .lessonsForSkill(levelId: 'intermediate', skill: 'grooves')
           .map((Lesson lesson) => lesson.id),
       <String>['money-beat-triplet-fills'],
+    );
+    expect(
+      library
+          .lessonsForSkill(levelId: 'beginner', skill: 'rudiments')
+          .map((Lesson lesson) => lesson.id),
+      <String>['six-stroke-roll'],
     );
   });
 
@@ -116,6 +126,63 @@ void main() {
       PatternAudioSampleV1.accentCrash,
       PatternAudioSampleV1.kick,
     });
+  });
+
+  test('loads Six Stroke Roll as a beginner rudiment lesson', () async {
+    final LessonContentLibrary library = await LessonPlanLoader.loadContent();
+    final Lesson lesson = library.lessonsById['six-stroke-roll']!;
+
+    expect(lesson.title, 'Six Stroke Roll');
+    expect(lesson.level, 'beginner');
+    expect(lesson.skill, 'rudiments');
+    expect(lesson.order, 5);
+    expect(lesson.estimatedMinutes, 40);
+    expect(
+      lesson.exercises.map((LessonExercise exercise) => exercise.id),
+      <String>[
+        'learn-the-sticking',
+        'add-accents',
+        'add-ghost-notes',
+        'move-around-the-kit',
+        'one-beat-fill',
+        'groove-application',
+        'creative-application',
+      ],
+    );
+
+    final ExerciseNotationSection stickingSection =
+        lesson.exercises.first.notation.primarySection;
+    expect(stickingSection.subdivision, '32');
+    expect(stickingSection.timeSignature, '1/4');
+    expect(stickingSection.sticking, 'R L L R R L');
+
+    final DrumSheetNotationDocument stickingDocument =
+        documentForNotationSection(stickingSection);
+    expect(stickingDocument.subdivision, DrumSheetNoteValue.thirtySecond);
+    expect(stickingDocument.timeSignature, '1/4');
+    expect(stickingDocument.flattenedNotes, hasLength(8));
+    expect(
+      stickingDocument.flattenedNotes.where(
+        (DrumSheetNotationNote note) => !note.rest,
+      ),
+      hasLength(6),
+    );
+    expect(
+      stickingDocument.flattenedNotes
+          .where((DrumSheetNotationNote note) => !note.rest)
+          .map((DrumSheetNotationNote note) => note.sticking),
+      <String>['R', 'L', 'L', 'R', 'R', 'L'],
+    );
+
+    final LessonExercise grooveApplication = lesson.exercises.singleWhere(
+      (LessonExercise exercise) => exercise.id == 'groove-application',
+    );
+    expect(grooveApplication.notation.sections, hasLength(3));
+    expect(grooveApplication.notation.sections[0].title, 'Money Beat');
+    expect(grooveApplication.notation.sections[0].repeatCount, 3);
+    expect(grooveApplication.notation.sections[1].title, 'Six Stroke Fill');
+    expect(grooveApplication.notation.sections[1].sticking, 'R L L R R L');
+    expect(grooveApplication.notation.sections[2].title, 'Beat One Resolution');
   });
 
   test('preserves sectioned exercise notation and optional sticking', () async {

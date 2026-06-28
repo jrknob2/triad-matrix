@@ -1,0 +1,180 @@
+lesson:
+  id: six-stroke-roll
+  title: Six Stroke Roll
+  level: beginner
+  skill: rudiments
+  order: 5
+  instructional_pattern: rudiment_pattern
+  estimated_minutes: 40
+  overview: The Six Stroke Roll is one of the most useful rudiments because it easily translates into musical fills. This lesson teaches the rudiment progressively, beginning with memorizing the sticking and ending with using it naturally inside a groove.
+  objective: Perform a Six Stroke Roll correctly and use it as a simple musical fill.
+  prerequisites:
+    - Single Stroke Roll
+    - Double Stroke Roll
+  learning_outcomes:
+    - Play the sticking from memory.
+    - Maintain even timing.
+    - Play accents correctly.
+    - Play ghost notes correctly.
+    - Move the rudiment around the kit.
+    - Use it as a one-beat fill.
+    - Return cleanly to the groove.
+
+  exercises:
+    - id: learn-the-sticking
+      title: Learn The Sticking
+      why: Everything else depends on knowing the sticking without thinking about it.
+      what: Learn and repeat R L L R R L slowly until it can be played from memory.
+      how: Use only the snare drum. Count slowly and focus entirely on the sticking. Do not introduce accents, ghost notes, or movement yet.
+      success: Play the sticking correctly four consecutive times without hesitation.
+      tempo:
+        start: 45
+        target: 65
+      notation:
+        subdivision: 32
+        time_signature: "1/4"
+        repeat_count: 8
+        sticking: "R L L R R L"
+        pattern: "RLLRRL __"
+
+    - id: add-accents
+      title: Add Accents
+      why: The accents define the musical shape of the rudiment.
+      what: Play the same sticking while accenting the first and last strokes.
+      how: Do not change the sticking. Only introduce accents. Let the unaccented notes stay even and relaxed.
+      success: The accents remain consistent while the sticking stays accurate.
+      tempo:
+        start: 45
+        target: 65
+      notation:
+        subdivision: 32
+        time_signature: "1/4"
+        repeat_count: 8
+        sticking: "R L L R R L"
+        pattern: "^RLLRR^L __"
+
+    - id: add-ghost-notes
+      title: Add Ghost Notes
+      why: Dynamics transform the rudiment from sticking into music.
+      what: Keep the first and last strokes accented while making the middle doubles soft.
+      how: Keep accented notes strong, ghost notes soft, and both hands relaxed. Do not let the ghost notes drag.
+      success: The accented notes and ghost notes are clearly distinguishable.
+      tempo:
+        start: 40
+        target: 60
+      notation:
+        subdivision: 32
+        time_signature: "1/4"
+        repeat_count: 8
+        sticking: "R L L R R L"
+        pattern: "^R(L)(L)(R)(R)^L __"
+
+    - id: move-around-the-kit
+      title: Move Around The Kit
+      why: The rudiment should not only exist on the snare drum.
+      what: Move the Six Stroke Roll between snare and toms while preserving the sticking.
+      how: Keep R L L R R L identical. Only change orchestration. Timing should remain unchanged.
+      success: Movement around the kit does not disturb timing or sticking.
+      tempo:
+        start: 40
+        target: 60
+      notation:
+        subdivision: 32
+        time_signature: "1/4"
+        repeat_count: 8
+        sticking: "R L L R R L"
+        pattern: "[S:^R][S:(L)][T1:(L)][T2:(R)][T2:(R)][FT:^L] __"
+
+    - id: one-beat-fill
+      title: One Beat Fill
+      why: The Six Stroke Roll is commonly used as a one-beat fill.
+      what: Play the rudiment as a fill on beat four, then resolve naturally to beat one.
+      how: Begin the fill on beat four. Keep the six strokes relaxed and let the crash plus kick feel like the landing point.
+      success: The fill resolves cleanly back to beat one.
+      tempo:
+        start: 45
+        target: 70
+      notation:
+        sections:
+          - title: Beat Four Fill
+            subdivision: 32
+            time_signature: "1/4"
+            repeat_count: 6
+            sticking: "R L L R R L"
+            pattern: "^R(L)(L)(R)(R)^L __"
+          - title: Beat One Resolution
+            subdivision: 8
+            time_signature: "1/4"
+            repeat_count: 1
+            pattern: "[XK] _"
+
+    - id: groove-application
+      title: Groove Application
+      why: The goal is making music rather than repeating rudiments.
+      what: Play three measures of a simple rock groove, then use the Six Stroke Roll as the fill before returning to beat one.
+      how: Keep the groove steady. The rudiment should feel like part of the music rather than a separate exercise.
+      success: The groove remains steady before and after the fill.
+      tempo:
+        start: 50
+        target: 75
+      notation:
+        sections:
+          - title: Money Beat
+            subdivision: 8
+            time_signature: "4/4"
+            repeat_count: 3
+            pattern: "[HH K:R][HH:R] [HH S:R][HH:R] [HH K:R][HH:R] [HH S:R][HH:R]"
+          - title: Six Stroke Fill
+            subdivision: 32
+            time_signature: "1/4"
+            repeat_count: 1
+            sticking: "R L L R R L"
+            pattern: "^R(L)(L)(R)(R)^L __"
+          - title: Beat One Resolution
+            subdivision: 8
+            time_signature: "1/4"
+            repeat_count: 1
+            pattern: "[XK] _"
+
+    - id: creative-application
+      title: Creative Application
+      why: A rudiment becomes useful only when the drummer can adapt it.
+      what: Experiment with different orchestrations while preserving R L L R R L.
+      how: Move the rudiment around the kit and try several orchestrations. Do not change the sticking itself.
+      success: Create at least three different orchestrations that still preserve the Six Stroke Roll.
+      tempo:
+        start: 45
+        target: 70
+      notation:
+        sections:
+          - title: Snare To Floor Tom
+            subdivision: 32
+            time_signature: "1/4"
+            repeat_count: 4
+            sticking: "R L L R R L"
+            pattern: "[S:^R][S:(L)][S:(L)][T1:(R)][T2:(R)][FT:^L] __"
+          - title: Toms To Snare
+            subdivision: 32
+            time_signature: "1/4"
+            repeat_count: 4
+            sticking: "R L L R R L"
+            pattern: "[T1:^R][T1:(L)][T2:(L)][FT:(R)][S:(R)][S:^L] __"
+          - title: Wide Orchestration
+            subdivision: 32
+            time_signature: "1/4"
+            repeat_count: 4
+            sticking: "R L L R R L"
+            pattern: "[T1:^R][S:(L)][S:(L)][FT:(R)][T2:(R)][C:^L] __"
+
+  coaching_notes:
+    - Accuracy comes before speed.
+    - The sticking never changes. Only the dynamics and orchestration change.
+    - The first and last strokes should speak clearly.
+    - Ghost notes should stay soft without disappearing.
+    - The fill should resolve to beat one without rushing.
+
+  mastery:
+    - Play the sticking from memory four times in a row without hesitation.
+    - Play the accented and ghosted version with clear dynamic contrast.
+    - Move the rudiment around the kit without changing the sticking.
+    - Use the Six Stroke Roll as a fill and return cleanly to the groove.

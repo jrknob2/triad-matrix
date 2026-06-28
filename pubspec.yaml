@@ -81,6 +81,7 @@ flutter:
     - assets/content/lessons/
     - assets/content/lessons/beginner/
     - assets/content/lessons/beginner/grooves/
+    - assets/content/lessons/beginner/rudiments/
     - assets/content/lessons/intermediate/
     - assets/content/lessons/intermediate/grooves/
     - assets/content/lessons/intermediate/vocabulary/

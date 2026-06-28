@@ -30,7 +30,9 @@ class _TodayScreenState extends State<TodayScreen> {
   }
 
   void _refresh() {
-    setState(() => _dataFuture = _loadData());
+    setState(() {
+      _dataFuture = _loadData();
+    });
   }
 
   @override

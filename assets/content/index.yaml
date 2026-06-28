@@ -5,6 +5,7 @@ content_index:
       title: Beginner
       lesson_files:
         - lessons/beginner/grooves/money-beat.yaml
+        - lessons/beginner/rudiments/six-stroke-roll.yaml
 
     - id: intermediate
       title: Intermediate
