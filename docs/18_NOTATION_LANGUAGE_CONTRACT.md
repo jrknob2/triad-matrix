@@ -85,11 +85,13 @@ Supported YAML values:
 - `8`
 - `16`
 - `triplet`
+- `16_triplet`
 
 Current defaults:
 
 - omitted pattern `subdivision` resolves to eighth notes
 - `triplet` resolves to eighth-note triplet feel
+- `16_triplet` resolves to sixteenth-note triplet feel for sextuplet rudiment grids
 
 Subdivision is not a normal pattern token. Do not write words like `triplet` or
 `16th` inside notation strings.
@@ -355,6 +357,9 @@ Use YAML metadata:
 subdivision: triplet
 notation: "R(L)(L) RLK"
 ```
+
+Use `subdivision: 16_triplet` for six strokes inside one quarter-note pulse,
+such as beginner Six Stroke Roll/sextuplet rudiment practice.
 
 Do not create special triplet tokens inside notation strings.
 

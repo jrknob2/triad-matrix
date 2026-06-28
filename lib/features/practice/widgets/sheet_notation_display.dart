@@ -1728,7 +1728,7 @@ extension DrumSheetVoiceSyntax on DrumSheetVoice {
 class _SheetLayout {
   static const double staffLeft = 22;
   static const double staffRight = 12;
-  static const double topPadding = 18;
+  static const double topPadding = 76;
   static const double staffHeight = 40;
   static const double lineGap = 8;
   static const double stemHeight = 58;
@@ -2342,7 +2342,7 @@ class _DrumSheetNotationPainter extends CustomPainter {
     _drawText(
       canvas,
       sticking,
-      Offset(_noteX(system, localIndex), system.y + 52),
+      Offset(_noteX(system, localIndex), system.y - 66),
       stickingStyle,
     );
   }

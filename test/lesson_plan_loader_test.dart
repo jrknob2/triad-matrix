@@ -152,27 +152,66 @@ void main() {
 
     final ExerciseNotationSection stickingSection =
         lesson.exercises.first.notation.primarySection;
-    expect(stickingSection.subdivision, '32');
-    expect(stickingSection.timeSignature, '1/4');
-    expect(stickingSection.sticking, 'R L L R R L');
+    final List<String> sixStrokeSticking = <String>[
+      for (int index = 0; index < 4; index += 1) ...<String>[
+        'R',
+        'L',
+        'L',
+        'R',
+        'R',
+        'L',
+      ],
+    ];
+    expect(stickingSection.subdivision, '16_triplet');
+    expect(stickingSection.timeSignature, '4/4');
+    expect(stickingSection.sticking, sixStrokeSticking.join(' '));
 
     final DrumSheetNotationDocument stickingDocument =
         documentForNotationSection(stickingSection);
-    expect(stickingDocument.subdivision, DrumSheetNoteValue.thirtySecond);
-    expect(stickingDocument.timeSignature, '1/4');
-    expect(stickingDocument.flattenedNotes, hasLength(8));
+    expect(stickingDocument.subdivision, DrumSheetNoteValue.sixteenth);
+    expect(stickingDocument.feel, DrumSheetFeel.triplet);
+    expect(stickingDocument.timeSignature, '4/4');
+    expect(stickingDocument.measures, hasLength(1));
+    expect(stickingDocument.flattenedNotes, hasLength(24));
     expect(
-      stickingDocument.flattenedNotes.where(
-        (DrumSheetNotationNote note) => !note.rest,
+      stickingDocument.flattenedNotes.any(
+        (DrumSheetNotationNote note) => note.rest,
       ),
-      hasLength(6),
+      isFalse,
     );
     expect(
-      stickingDocument.flattenedNotes
-          .where((DrumSheetNotationNote note) => !note.rest)
-          .map((DrumSheetNotationNote note) => note.sticking),
-      <String>['R', 'L', 'L', 'R', 'R', 'L'],
+      stickingDocument.flattenedNotes.map(
+        (DrumSheetNotationNote note) => note.sticking,
+      ),
+      sixStrokeSticking,
     );
+
+    final PatternAudioPlanV1 audioPlan =
+        buildSheetNotationAudioPreviewPlanForTesting(stickingDocument, bpm: 60);
+    expect(audioPlan.cues, hasLength(192));
+    expect(audioPlan.cues[0].offset, Duration.zero);
+    expect(audioPlan.cues[1].offset, const Duration(microseconds: 166667));
+    expect(audioPlan.cues[6].offset, const Duration(seconds: 1));
+    expect(audioPlan.cycleDuration, const Duration(seconds: 32));
+
+    for (final LessonExercise exercise in lesson.exercises) {
+      for (final ExerciseNotationSection section
+          in exercise.notation.sections) {
+        expect(section.timeSignature, isNot('1/4'));
+        if (section.subdivision == '16_triplet') {
+          final DrumSheetNotationDocument document = documentForNotationSection(
+            section,
+          );
+          expect(
+            document.flattenedNotes.any(
+              (DrumSheetNotationNote note) => note.rest,
+            ),
+            isFalse,
+            reason: '${exercise.id}.${section.title ?? 'notation'}',
+          );
+        }
+      }
+    }
 
     final LessonExercise grooveApplication = lesson.exercises.singleWhere(
       (LessonExercise exercise) => exercise.id == 'groove-application',
@@ -181,7 +220,10 @@ void main() {
     expect(grooveApplication.notation.sections[0].title, 'Money Beat');
     expect(grooveApplication.notation.sections[0].repeatCount, 3);
     expect(grooveApplication.notation.sections[1].title, 'Six Stroke Fill');
-    expect(grooveApplication.notation.sections[1].sticking, 'R L L R R L');
+    expect(
+      grooveApplication.notation.sections[1].sticking,
+      sixStrokeSticking.join(' '),
+    );
     expect(grooveApplication.notation.sections[2].title, 'Beat One Resolution');
   });
 

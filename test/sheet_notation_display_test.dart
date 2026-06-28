@@ -252,7 +252,7 @@ void main() {
     expect(find.byType(DrumSheetNotationDisplay), findsOneWidget);
     expect(tester.takeException(), isNull);
 
-    await tester.tapAt(const Offset(80, 40));
+    await tester.tapAt(const Offset(80, 98));
     await tester.pump();
 
     expect(selected, isNotEmpty);

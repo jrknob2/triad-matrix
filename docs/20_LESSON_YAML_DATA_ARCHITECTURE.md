@@ -315,7 +315,7 @@ Section fields:
 | --- | --- | --- | --- | --- |
 | `title` | `ExerciseNotationSection.title` | no | string | Optional section label. |
 | `pattern` | `ExerciseNotationSection.pattern` | yes | string | Drumcabulary pattern text. |
-| `subdivision` | `ExerciseNotationSection.subdivision` | no | scalar | `8`, `16`, `triplet`, etc. |
+| `subdivision` | `ExerciseNotationSection.subdivision` | no | scalar | `8`, `16`, `triplet`, `16_triplet`, etc. |
 | `time_signature` | `ExerciseNotationSection.timeSignature` | no | scalar | Defaults to `4/4`. |
 | `repeat_count` | `ExerciseNotationSection.repeatCount` | no | positive integer | Written repeat metadata. |
 | `sticking` | `ExerciseNotationSection.sticking` | no | scalar | Optional authored sticking labels. |
@@ -327,7 +327,7 @@ Rules:
 - If `sticking` exists, render it.
 - If `sticking` does not exist, do not invent or render sticking.
 - Do not add `show_sticking` or `hide_sticking`.
-- Triplets remain metadata via `subdivision: triplet`.
+- Triplets remain metadata via `subdivision: triplet` or `subdivision: 16_triplet`.
 - Do not infer triplets from grouping spaces.
 - Grouping spaces are phrasing aids only.
 

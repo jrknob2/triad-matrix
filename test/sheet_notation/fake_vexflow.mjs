@@ -6,6 +6,7 @@ export function createFakeVexFlow() {
     beams: [],
     events: [],
     parentheses: [],
+    tuplets: [],
     voices: [],
     staves: [],
   };
@@ -236,6 +237,7 @@ export function createFakeVexFlow() {
     constructor(notes, options) {
       this.notes = notes;
       this.options = options;
+      calls.tuplets.push(this);
       calls.events.push('tuplet:create');
     }
 

@@ -234,6 +234,7 @@ Examples:
 - `4/4` + eighth notes -> 8 note slots per measure
 - `4/4` + sixteenth notes -> 16 note slots per measure
 - `4/4` + eighth-note triplet feel -> 12 note slots per measure
+- `4/4` + sixteenth-note triplet feel -> 24 note slots per measure
 
 This is automatic. The pattern text does not currently contain explicit measure
 markers.
@@ -286,6 +287,13 @@ This maps to:
 - eighth-note subdivision value for note sizing
 - `DrumSheetFeel.triplet` for timing/rendering
 - visible triplet grouping marks where the renderer can group notes
+
+Rudiment content may use `subdivision: 16_triplet` when a quarter-note pulse
+contains six evenly spaced strokes. This maps to:
+
+- sixteenth-note subdivision value for note sizing
+- `DrumSheetFeel.triplet` for timing/rendering
+- visible sextuplet grouping marks where the renderer can group six notes
 
 The notation parser does not infer triplets from spaces, titles, or grouping
 counts.

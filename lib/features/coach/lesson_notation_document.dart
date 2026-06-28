@@ -30,7 +30,7 @@ DrumSheetNoteValue subdivisionForNotationSection(
 }
 
 DrumSheetFeel feelForNotationSection(ExerciseNotationSection section) {
-  return section.subdivision == 'triplet'
+  return _isTripletSubdivision(section.subdivision)
       ? DrumSheetFeel.triplet
       : DrumSheetFeel.straight;
 }
@@ -135,12 +135,30 @@ DrumSheetNotationDocument _documentWithExplicitSticking(
 }
 
 DrumSheetNoteValue? _subdivisionValue(String? value) {
-  return switch (value) {
+  final String? normalized = _normalizedSubdivision(value);
+  return switch (normalized) {
     '4' => DrumSheetNoteValue.quarter,
     '8' => DrumSheetNoteValue.eighth,
-    'triplet' => DrumSheetNoteValue.eighth,
+    'triplet' || '8_triplet' || 'eighth_triplet' => DrumSheetNoteValue.eighth,
     '16' => DrumSheetNoteValue.sixteenth,
+    '16_triplet' ||
+    'sixteenth_triplet' ||
+    'sextuplet' => DrumSheetNoteValue.sixteenth,
     '32' => DrumSheetNoteValue.thirtySecond,
     _ => null,
   };
+}
+
+bool _isTripletSubdivision(String? value) {
+  final String? normalized = _normalizedSubdivision(value);
+  return normalized == 'triplet' ||
+      normalized == '8_triplet' ||
+      normalized == 'eighth_triplet' ||
+      normalized == '16_triplet' ||
+      normalized == 'sixteenth_triplet' ||
+      normalized == 'sextuplet';
+}
+
+String? _normalizedSubdivision(String? value) {
+  return value?.trim().toLowerCase().replaceAll('-', '_');
 }

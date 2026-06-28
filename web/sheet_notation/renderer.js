@@ -33,6 +33,7 @@ const DEFAULT_RENDER_OPTIONS = Object.freeze({
 const STICKING_FONT_FAMILY = 'Arial';
 const STICKING_FONT_SIZE = 12;
 const STICKING_FONT_WEIGHT = '';
+const STICKING_TOP_TEXT_OFFSET = 18;
 
 export function renderDrumNotationSvg(documentJson, options = {}) {
   return renderDrumNotationSvgWithMetadata(documentJson, options).svg;
@@ -362,16 +363,41 @@ function drawBeams(context, beams) {
 function createTuplets(VF, vexNotes, system, document) {
   if (document.feel !== 'triplet' || typeof VF.Tuplet !== 'function') return [];
   const tuplets = [];
-  for (let index = 0; index + 2 < vexNotes.length; index += 3) {
-    const entries = system.entries.slice(index, index + 3);
-    if (entries.length < 3) continue;
-    if (!entries.every((entry) => entry.value === '8n')) continue;
-    tuplets.push(new VF.Tuplet(vexNotes.slice(index, index + 3), {
-      num_notes: 3,
-      notes_occupied: 2,
-    }));
+  for (let index = 0; index < vexNotes.length;) {
+    const value = system.entries[index]?.value;
+    const config = tupletConfigForValue(value);
+    if (config == null) {
+      index += 1;
+      continue;
+    }
+
+    const entries = system.entries.slice(index, index + config.groupSize);
+    if (entries.length < config.groupSize) break;
+    if (!entries.every((entry) => entry.value === value)) {
+      index += 1;
+      continue;
+    }
+
+    tuplets.push(new VF.Tuplet(
+      vexNotes.slice(index, index + config.groupSize),
+      {
+        num_notes: config.numNotes,
+        notes_occupied: config.notesOccupied,
+      },
+    ));
+    index += config.groupSize;
   }
   return tuplets;
+}
+
+function tupletConfigForValue(value) {
+  if (value === '8n') {
+    return { groupSize: 3, numNotes: 3, notesOccupied: 2 };
+  }
+  if (value === '16n') {
+    return { groupSize: 6, numNotes: 6, notesOccupied: 4 };
+  }
+  return null;
 }
 
 function drawTuplets(context, tuplets) {
@@ -454,8 +480,8 @@ function stickingLabelY(vexNotes, layout) {
       }
     })
     .filter((value) => Number.isFinite(value));
-  if (noteYs.length > 0) return Math.min(...noteYs);
-  return layout.y - 10;
+  if (noteYs.length > 0) return Math.min(...noteYs) - STICKING_TOP_TEXT_OFFSET;
+  return layout.y - 10 - STICKING_TOP_TEXT_OFFSET;
 }
 
 function appendSvgTextElements(host, labels) {

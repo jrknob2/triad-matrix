@@ -825,6 +825,65 @@ describe('svg rendering', () => {
     assert.equal(VF.calls.voices[0].options.beat_value, 4);
   });
 
+  test('triplet feel renders sextuplets over sixteenth-note groups', () => {
+    const VF = createFakeVexFlow();
+    renderDrumNotationSvg(
+      {
+        subdivision: '16n',
+        feel: 'triplet',
+        timeSignature: '4/4',
+        measures: [
+          {
+            notes: Array.from({ length: 12 }, (_, index) => ({
+              voices: ['snare'],
+              sticking: index % 6 === 0 || index % 6 === 3 ? 'R' : 'L',
+            })),
+          },
+        ],
+      },
+      { vexFlow: VF },
+    );
+
+    assert.equal(VF.calls.tuplets.length, 2);
+    assert.deepEqual(
+      VF.calls.tuplets.map((tuplet) => tuplet.notes.length),
+      [6, 6],
+    );
+    assert.deepEqual(
+      VF.calls.tuplets.map((tuplet) => tuplet.options),
+      [
+        { num_notes: 6, notes_occupied: 4 },
+        { num_notes: 6, notes_occupied: 4 },
+      ],
+    );
+    assert.equal(VF.calls.voices[0].options.num_beats, 4);
+    assert.equal(VF.calls.voices[0].options.beat_value, 4);
+  });
+
+  test('sticking labels render above the accent annotation row', () => {
+    const VF = createFakeVexFlow();
+    const svg = renderDrumNotationSvg(
+      {
+        subdivision: '16n',
+        measures: [
+          {
+            notes: [
+              { voices: ['snare'], sticking: 'R', accent: true },
+              { voices: ['snare'], sticking: 'L', accent: true },
+            ],
+          },
+        ],
+      },
+      { vexFlow: VF },
+    );
+
+    const labelYs = [...svg.matchAll(/<text x="[^"]+" y="([^"]+)"/g)].map(
+      (match) => Number(match[1]),
+    );
+    assert.deepEqual(labelYs, [-30, -30]);
+    assert.equal(VF.calls.annotations[0].verticalJustification, 'top');
+  });
+
   test('straight notation voice timing follows the displayed time signature', () => {
     const VF = createFakeVexFlow();
     renderDrumNotationSvg(
