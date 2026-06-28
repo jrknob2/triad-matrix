@@ -136,8 +136,8 @@ Important contract:
 
 - Sheet rendering failures should be visible.
 - Raw Drumcabulary strings must not silently replace failed sheet rendering.
-- Do not add live transport, BPM controls, scoring, recommendation, or
-  assessment copy.
+- Do not add full practice transport, scoring, recommendation, or assessment
+  copy.
 
 ---
 

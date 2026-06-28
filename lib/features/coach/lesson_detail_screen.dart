@@ -25,10 +25,23 @@ class LessonDetailScreen extends StatefulWidget {
 }
 
 class _LessonDetailScreenState extends State<LessonDetailScreen> {
+  static const int _minPreviewBpm = 40;
+  static const int _maxPreviewBpm = 220;
+  static const int _previewBpmStep = 5;
+
   Timer? _practiceTimer;
   String? _activeExerciseId;
   DateTime? _practiceStartedAt;
   Duration _activeElapsed = Duration.zero;
+  late int _previewBpm = _initialPreviewBpmFor(widget.lesson);
+
+  @override
+  void didUpdateWidget(covariant LessonDetailScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.lesson.id != widget.lesson.id) {
+      _previewBpm = _initialPreviewBpmFor(widget.lesson);
+    }
+  }
 
   @override
   void dispose() {
@@ -41,9 +54,19 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
     final Lesson lesson = widget.lesson;
     return Scaffold(
       appBar: AppBar(title: Text(lesson.title)),
+      bottomNavigationBar: _LessonTempoFooter(
+        bpm: _previewBpm,
+        defaultBpm: _initialPreviewBpmFor(lesson),
+        minBpm: _minPreviewBpm,
+        maxBpm: _maxPreviewBpm,
+        onBack: () => Navigator.of(context).maybePop(),
+        onDecrease: () => _changePreviewBpm(-_previewBpmStep),
+        onIncrease: () => _changePreviewBpm(_previewBpmStep),
+        onReset: _resetPreviewBpm,
+      ),
       body: DrumScreen(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 104),
           children: <Widget>[
             _LessonHeader(
               lesson: lesson,
@@ -71,6 +94,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
                           lessonId: lesson.id,
                           exerciseId: lesson.exercises[index].id,
                         ),
+                        previewBpm: _previewBpm,
                         active: _activeExerciseId == lesson.exercises[index].id,
                         activeElapsed: _activeElapsed,
                         onStartPractice: widget.progressService == null
@@ -101,6 +125,18 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
         const SnackBar(content: Text('Lesson print failed.')),
       );
     }
+  }
+
+  void _changePreviewBpm(int delta) {
+    setState(() {
+      _previewBpm = (_previewBpm + delta).clamp(_minPreviewBpm, _maxPreviewBpm);
+    });
+  }
+
+  void _resetPreviewBpm() {
+    setState(() {
+      _previewBpm = _initialPreviewBpmFor(widget.lesson);
+    });
   }
 
   Future<void> _startPractice(LessonExercise exercise) async {
@@ -138,6 +174,185 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('Exercise completed.')));
+  }
+}
+
+class _LessonTempoFooter extends StatelessWidget {
+  final int bpm;
+  final int defaultBpm;
+  final int minBpm;
+  final int maxBpm;
+  final VoidCallback onBack;
+  final VoidCallback onDecrease;
+  final VoidCallback onIncrease;
+  final VoidCallback onReset;
+
+  const _LessonTempoFooter({
+    required this.bpm,
+    required this.defaultBpm,
+    required this.minBpm,
+    required this.maxBpm,
+    required this.onBack,
+    required this.onDecrease,
+    required this.onIncrease,
+    required this.onReset,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final TextTheme textTheme = Theme.of(context).textTheme;
+    final bool canDecrease = bpm > minBpm;
+    final bool canIncrease = bpm < maxBpm;
+    final bool canReset = bpm != defaultBpm;
+    return Material(
+      color: DrumcabularyTheme.paper,
+      elevation: 12,
+      shadowColor: DrumcabularyTheme.ink.withValues(alpha: 0.18),
+      child: SafeArea(
+        top: false,
+        child: DecoratedBox(
+          decoration: const BoxDecoration(
+            border: Border(top: BorderSide(color: DrumcabularyTheme.line)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+            child: Row(
+              children: <Widget>[
+                _FooterIconButton(
+                  tooltip: 'Back',
+                  icon: Icons.arrow_back_rounded,
+                  onPressed: onBack,
+                ),
+                const Spacer(),
+                _TempoControl(
+                  bpm: bpm,
+                  canDecrease: canDecrease,
+                  canIncrease: canIncrease,
+                  onDecrease: onDecrease,
+                  onIncrease: onIncrease,
+                ),
+                const Spacer(),
+                _FooterIconButton(
+                  tooltip: 'Reset tempo',
+                  icon: Icons.refresh_rounded,
+                  onPressed: canReset ? onReset : null,
+                ),
+                const SizedBox(width: 8),
+                SizedBox(
+                  width: 42,
+                  child: Text(
+                    'BPM',
+                    textAlign: TextAlign.center,
+                    style: textTheme.labelSmall?.copyWith(
+                      color: DrumcabularyTheme.mutedInk,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TempoControl extends StatelessWidget {
+  final int bpm;
+  final bool canDecrease;
+  final bool canIncrease;
+  final VoidCallback onDecrease;
+  final VoidCallback onIncrease;
+
+  const _TempoControl({
+    required this.bpm,
+    required this.canDecrease,
+    required this.canIncrease,
+    required this.onDecrease,
+    required this.onIncrease,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final TextTheme textTheme = Theme.of(context).textTheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: DrumcabularyTheme.surface,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: DrumcabularyTheme.line),
+        boxShadow: const <BoxShadow>[
+          BoxShadow(
+            color: Color(0x14000000),
+            blurRadius: 12,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      child: SizedBox(
+        height: 58,
+        width: 172,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            IconButton(
+              tooltip: 'Slower',
+              onPressed: canDecrease ? onDecrease : null,
+              icon: const Icon(Icons.remove_rounded),
+            ),
+            SizedBox(
+              width: 62,
+              child: Text(
+                '$bpm',
+                textAlign: TextAlign.center,
+                style: textTheme.headlineSmall?.copyWith(
+                  color: DrumcabularyTheme.blue,
+                  fontWeight: FontWeight.w900,
+                  height: 1,
+                ),
+              ),
+            ),
+            IconButton(
+              tooltip: 'Faster',
+              onPressed: canIncrease ? onIncrease : null,
+              icon: const Icon(Icons.add_rounded),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FooterIconButton extends StatelessWidget {
+  final String tooltip;
+  final IconData icon;
+  final VoidCallback? onPressed;
+
+  const _FooterIconButton({
+    required this.tooltip,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox.square(
+      dimension: 54,
+      child: IconButton(
+        tooltip: tooltip,
+        onPressed: onPressed,
+        icon: Icon(icon),
+        style: IconButton.styleFrom(
+          backgroundColor: DrumcabularyTheme.surface,
+          foregroundColor: DrumcabularyTheme.ink,
+          disabledForegroundColor: DrumcabularyTheme.mutedInk.withValues(
+            alpha: 0.45,
+          ),
+          side: const BorderSide(color: DrumcabularyTheme.line),
+        ),
+      ),
+    );
   }
 }
 
@@ -231,6 +446,7 @@ class _ExerciseCard extends StatelessWidget {
   final Lesson lesson;
   final LessonExercise exercise;
   final ExerciseProgress? progress;
+  final int previewBpm;
   final bool active;
   final Duration activeElapsed;
   final VoidCallback? onStartPractice;
@@ -241,6 +457,7 @@ class _ExerciseCard extends StatelessWidget {
     required this.lesson,
     required this.exercise,
     required this.progress,
+    required this.previewBpm,
     required this.active,
     required this.activeElapsed,
     required this.onStartPractice,
@@ -318,7 +535,10 @@ class _ExerciseCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
               ],
-              _NotationPreview(section: exercise.notation.sections[index]),
+              _NotationPreview(
+                section: exercise.notation.sections[index],
+                previewBpm: previewBpm,
+              ),
             ],
             const SizedBox(height: 12),
             Wrap(
@@ -384,8 +604,9 @@ class _TeachingText extends StatelessWidget {
 
 class _NotationPreview extends StatelessWidget {
   final ExerciseNotationSection section;
+  final int previewBpm;
 
-  const _NotationPreview({required this.section});
+  const _NotationPreview({required this.section, required this.previewBpm});
 
   @override
   Widget build(BuildContext context) {
@@ -397,6 +618,7 @@ class _NotationPreview extends StatelessWidget {
       minNoteWidth: 32,
       showSticking: shouldShowStickingForNotationSection(section),
       audioPreviewEnabled: true,
+      audioPreviewBpm: previewBpm,
     );
   }
 }
@@ -441,6 +663,19 @@ String _durationLabel(Duration duration) {
   final int seconds = duration.inSeconds.remainder(60);
   if (minutes == 0) return '${seconds}s';
   return '${minutes}m ${seconds}s';
+}
+
+int _initialPreviewBpmFor(Lesson lesson) {
+  for (final LessonExercise exercise in lesson.exercises) {
+    final TempoTarget? tempo = exercise.tempo;
+    if (tempo != null) {
+      return tempo.start.clamp(
+        _LessonDetailScreenState._minPreviewBpm,
+        _LessonDetailScreenState._maxPreviewBpm,
+      );
+    }
+  }
+  return 60;
 }
 
 String _labelFor(String value) {

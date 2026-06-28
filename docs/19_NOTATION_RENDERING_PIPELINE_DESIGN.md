@@ -32,6 +32,7 @@ Supported rendering goals:
 - render YAML-authored exercise notation on Lesson Detail
 - render the same exercise notation into printable/exportable PDF content
 - provide a lightweight "Hear It" preview from rendered examples
+- allow Lesson Detail to control Hear It preview BPM from a persistent footer
 - preserve authored grouping spaces as visual phrasing aids
 - preserve computed measures for display and print
 - render one or more YAML-authored sections inside a single exercise
@@ -42,8 +43,7 @@ Not currently supported:
 - explicit measure separators in notation text
 - sections encoded inside one notation string
 - user notation editing in Coach
-- live practice transport controls
-- BPM adjustment controls
+- full practice transport controls
 - assessment or recommendation rendering
 
 ## Authority Map
@@ -162,6 +162,7 @@ Each section creates a `DrumSheetNotationDisplay` with:
 - section `subdivision: triplet` mapped to `DrumSheetFeel.triplet`
 - section time signature
 - section repeat count
+- lesson preview BPM
 - grouping inferred from top-level spaces in the section pattern string
 - `showSticking` only when the section authors `sticking`
 - `compactLayout: true`
@@ -350,6 +351,10 @@ Audio preview builds a playback plan from `DrumSheetNotationDocument`.
 
 Important behavior:
 
+- Lesson Detail owns a footer BPM control and passes that value to each
+  `DrumSheetNotationDisplay`.
+- Changing BPM while a notation preview is running stops the active preview so
+  the next Hear It action starts at the selected tempo.
 - notes in a simultaneous bracket share the same scheduled offset
 - rests do not produce audible cues
 - explicit voice overrides choose kit voices
@@ -404,7 +409,7 @@ harder to evaluate.
 
 - No explicit measure marker syntax in the notation language.
 - No multi-exercise combined render surface.
-- No BPM adjustment UI.
+- No persisted or exercise-specific BPM settings.
 - No live practice session transport.
 - No user notation editing in Coach.
 - No PDF-specific notation renderer separate from the WebView/VexFlow path.

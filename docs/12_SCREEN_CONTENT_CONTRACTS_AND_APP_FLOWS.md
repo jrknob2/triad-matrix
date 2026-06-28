@@ -80,7 +80,7 @@ No active screen should contain:
 - sticking/limb labels render only when authored
 - rendered notation may expose an ear-icon preview that plays the displayed notes through the existing sample engine
 - while notation preview is playing, the notation surface should show an animated vertical playhead aligned to rendered note positions
-- notation preview uses a fixed preview BPM for now; authored exercise tempo is guidance, not an active preview speed control
+- lesson detail exposes a persistent footer BPM control for notation preview speed; authored exercise tempo remains guidance
 - notation preview timing should preserve written bar speed across eighth, sixteenth, and triplet-eighth subdivisions
 - notation preview playback and playhead movement should honor `repeat_count`
 - notation preview audio should use the explicit mixer config for relative sample levels
@@ -189,7 +189,8 @@ Forbidden content:
 3. Lesson overview/objective renders.
 4. Progressive exercise cards render in authored order.
 5. Each exercise explains Why, What, and How.
-6. User can hear notation, start Practice It, complete an exercise, print, or go back.
+6. User can adjust lesson preview BPM from the footer.
+7. User can hear notation, start Practice It, complete an exercise, print, or go back.
 
 Owning screen:
 
@@ -206,6 +207,7 @@ Required content:
 - each exercise's Why, What, and How
 - rendered notation
 - Hear It action
+- footer BPM control for Hear It preview speed
 - Practice It action/timer entry point
 - Complete Exercise action
 - Print action
@@ -213,7 +215,7 @@ Required content:
 Forbidden content:
 
 - top-level pattern list as the main student concept
-- live BPM controls
+- full practice transport controls
 - assessment prompts
 - scoring
 - editable notation fields
@@ -309,6 +311,7 @@ Lesson Detail must show:
 - Why, What, and How for each exercise
 - rendered notation for each exercise
 - ear-icon preview controls for rendered notation
+- persistent footer BPM control for rendered notation preview speed
 - animated vertical playhead over rendered notation during preview
 - Practice It / Complete Exercise controls
 - print action
