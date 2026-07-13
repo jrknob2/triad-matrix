@@ -15,11 +15,17 @@ class DrumScreen extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
           colors: warm
-              ? const <Color>[Color(0xFFF7E8C7), Color(0xFFF8F6F1)]
-              : const <Color>[Color(0xFFF5EEE1), Color(0xFFF8F6F1)],
+              ? const <Color>[
+                  Color(0xFF121214),
+                  DrumcabularyTheme.edgeBackground,
+                ]
+              : const <Color>[
+                  DrumcabularyTheme.edgeBackground,
+                  Color(0xFF101114),
+                ],
         ),
       ),
       child: child,
@@ -44,13 +50,13 @@ class DrumPanel extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: _background,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: _borderColor),
-        boxShadow: const <BoxShadow>[
+        boxShadow: <BoxShadow>[
           BoxShadow(
-            color: Color(0x12000000),
+            color: DrumcabularyTheme.edgeShadow.withValues(alpha: 0.16),
             blurRadius: 18,
-            offset: Offset(0, 10),
+            offset: const Offset(0, 10),
           ),
         ],
       ),
@@ -60,18 +66,18 @@ class DrumPanel extends StatelessWidget {
 
   Color get _background {
     return switch (tone) {
-      DrumPanelTone.surface => DrumcabularyTheme.surface,
-      DrumPanelTone.warm => DrumcabularyTheme.paper,
-      DrumPanelTone.dark => DrumcabularyTheme.ink,
-      DrumPanelTone.blue => const Color(0xFFE5EFF6),
-      DrumPanelTone.green => const Color(0xFFE5F0E4),
+      DrumPanelTone.surface => DrumcabularyTheme.edgeSurface,
+      DrumPanelTone.warm => DrumcabularyTheme.edgeSurfaceSecondary,
+      DrumPanelTone.dark => DrumcabularyTheme.edgeBackground,
+      DrumPanelTone.blue => const Color(0xFF162232),
+      DrumPanelTone.green => const Color(0xFF17261E),
     };
   }
 
   Color get _borderColor {
     return switch (tone) {
-      DrumPanelTone.dark => const Color(0xFF3A3329),
-      _ => DrumcabularyTheme.line,
+      DrumPanelTone.dark => DrumcabularyTheme.edgeBorder,
+      _ => DrumcabularyTheme.edgeBorder,
     };
   }
 }
@@ -179,8 +185,8 @@ class _DrumHorizontalControlStripState
                     height: 6,
                     decoration: BoxDecoration(
                       color: active
-                          ? DrumcabularyTheme.ink
-                          : DrumcabularyTheme.line,
+                          ? DrumcabularyTheme.edgeOrange
+                          : DrumcabularyTheme.edgeBorder,
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),
@@ -206,7 +212,7 @@ class DrumSectionTitle extends StatelessWidget {
       style: Theme.of(context).textTheme.titleLarge?.copyWith(
         color: color,
         fontWeight: FontWeight.w900,
-        letterSpacing: -0.3,
+        letterSpacing: 0,
       ),
     );
   }
@@ -223,7 +229,7 @@ class DrumEyebrow extends StatelessWidget {
     return Text(
       text,
       style: Theme.of(context).textTheme.labelLarge?.copyWith(
-        color: color ?? DrumcabularyTheme.mutedInk,
+        color: color ?? DrumcabularyTheme.edgeOrange,
         fontWeight: FontWeight.w900,
         letterSpacing: 1.1,
       ),
@@ -243,15 +249,16 @@ class DrumStatusPill extends StatelessWidget {
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0x22000000)),
+        border: Border.all(color: DrumcabularyTheme.edgeBorder),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         child: Text(
           label,
-          style: Theme.of(
-            context,
-          ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w900),
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+            color: DrumcabularyTheme.edgeTextPrimary,
+            fontWeight: FontWeight.w900,
+          ),
         ),
       ),
     );
@@ -275,7 +282,9 @@ class DrumSelectablePill extends StatelessWidget {
     return ChoiceChip(
       label: DefaultTextStyle.merge(
         style: TextStyle(
-          color: selected ? Colors.white : DrumcabularyTheme.ink,
+          color: selected
+              ? DrumcabularyTheme.edgeTextPrimary
+              : DrumcabularyTheme.edgeTextSecondary,
           fontWeight: FontWeight.w900,
         ),
         child: label,
@@ -285,11 +294,13 @@ class DrumSelectablePill extends StatelessWidget {
       visualDensity: VisualDensity.compact,
       showCheckmark: false,
       side: BorderSide(
-        color: selected ? DrumcabularyTheme.ink : DrumcabularyTheme.line,
+        color: selected
+            ? DrumcabularyTheme.edgeOrange
+            : DrumcabularyTheme.edgeBorder,
       ),
-      selectedColor: DrumcabularyTheme.ink,
-      backgroundColor: DrumcabularyTheme.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      selectedColor: DrumcabularyTheme.edgeOrange,
+      backgroundColor: DrumcabularyTheme.edgeSurface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
       labelPadding: const EdgeInsets.symmetric(horizontal: 4),
     );
   }
@@ -313,19 +324,23 @@ class DrumActionPill extends StatelessWidget {
       label: DefaultTextStyle.merge(
         style: TextStyle(
           fontWeight: FontWeight.w900,
-          color: prominent ? DrumcabularyTheme.surface : DrumcabularyTheme.ink,
+          color: prominent
+              ? DrumcabularyTheme.edgeTextPrimary
+              : DrumcabularyTheme.edgeTextSecondary,
         ),
         child: label,
       ),
       onPressed: onPressed,
       visualDensity: VisualDensity.compact,
       side: BorderSide(
-        color: prominent ? DrumcabularyTheme.ink : DrumcabularyTheme.line,
+        color: prominent
+            ? DrumcabularyTheme.edgeOrange
+            : DrumcabularyTheme.edgeBorder,
       ),
       backgroundColor: prominent
-          ? DrumcabularyTheme.ink
-          : DrumcabularyTheme.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          ? DrumcabularyTheme.edgeOrange
+          : DrumcabularyTheme.edgeSurface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
       labelPadding: const EdgeInsets.symmetric(horizontal: 4),
     );
   }
@@ -378,7 +393,7 @@ class DrumTag extends StatelessWidget {
   const DrumTag({
     super.key,
     required this.child,
-    this.backgroundColor = DrumcabularyTheme.surface,
+    this.backgroundColor = DrumcabularyTheme.edgeSurfaceSecondary,
     this.borderColor,
   });
 
@@ -388,7 +403,7 @@ class DrumTag extends StatelessWidget {
       decoration: BoxDecoration(
         color: backgroundColor,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: borderColor ?? DrumcabularyTheme.line),
+        border: Border.all(color: borderColor ?? DrumcabularyTheme.edgeBorder),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

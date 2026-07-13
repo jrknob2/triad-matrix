@@ -149,6 +149,10 @@ void main() {
         'creative-application',
       ],
     );
+    expect(
+      lesson.exercises.first.success,
+      'Play the sticking correctly four consecutive times without hesitation.',
+    );
 
     final ExerciseNotationSection stickingSection =
         lesson.exercises.first.notation.primarySection;

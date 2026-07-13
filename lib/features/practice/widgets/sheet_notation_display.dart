@@ -22,6 +22,30 @@ enum DrumSheetFeel { straight, triplet }
 
 enum DrumSheetVoice { hihat, ride, crash, snare, tom1, tom2, floorTom, kick }
 
+class DrumSheetNotationController {
+  _DrumSheetNotationDisplayState? _state;
+
+  Future<void> toggleAudioPreview() async {
+    await _state?._toggleAudioPreview();
+  }
+
+  Future<void> startAudioPreview() async {
+    await _state?._startAudioPreview();
+  }
+
+  Future<void> stopAudioPreview() async {
+    await _state?._stopAudioPreview();
+  }
+
+  void _attach(_DrumSheetNotationDisplayState state) {
+    _state = state;
+  }
+
+  void _detach(_DrumSheetNotationDisplayState state) {
+    if (_state == state) _state = null;
+  }
+}
+
 @immutable
 class DrumSheetNotationDocument {
   final DrumSheetNoteValue subdivision;
@@ -336,6 +360,7 @@ class DrumSheetNotationDisplay extends StatefulWidget {
   final bool audioPreviewEnabled;
   final int audioPreviewBpm;
   final AccentVoiceV1 audioPreviewAccentVoice;
+  final DrumSheetNotationController? controller;
 
   const DrumSheetNotationDisplay({
     super.key,
@@ -358,6 +383,7 @@ class DrumSheetNotationDisplay extends StatefulWidget {
     this.audioPreviewEnabled = false,
     this.audioPreviewBpm = 92,
     this.audioPreviewAccentVoice = AccentVoiceV1.snare,
+    this.controller,
   });
 
   @override
@@ -391,6 +417,7 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    widget.controller?._attach(this);
     if (!widget.debugUseNativeFallback) {
       _ensureWebViewController();
     }
@@ -443,6 +470,10 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
   @override
   void didUpdateWidget(covariant DrumSheetNotationDisplay oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller?._detach(this);
+      widget.controller?._attach(this);
+    }
     if (!widget.debugUseNativeFallback) {
       _ensureWebViewController();
     }
@@ -460,6 +491,7 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
     if (_activeAudioPreviewOwner == this) {
       _activeAudioPreviewOwner = null;
     }
+    widget.controller?._detach(this);
     WidgetsBinding.instance.removeObserver(this);
     _playheadTicker?.cancel();
     _playheadStopwatch.stop();

@@ -176,6 +176,7 @@ class LessonExercise {
   final String why;
   final String what;
   final String how;
+  final String? success;
   final TempoTarget? tempo;
   final ExerciseNotation notation;
 
@@ -185,6 +186,7 @@ class LessonExercise {
     required this.why,
     required this.what,
     required this.how,
+    this.success,
     this.tempo,
     required this.notation,
   });
@@ -198,6 +200,7 @@ class LessonExercise {
       why: _requiredString(yaml, 'why', path),
       what: _requiredString(yaml, 'what', path),
       how: _requiredString(yaml, 'how', path),
+      success: _optionalString(yaml, 'success', path),
       tempo: _optionalTempo(yaml, 'tempo', path),
       notation: ExerciseNotation.fromYaml(
         _requiredMap(yaml, 'notation', path),

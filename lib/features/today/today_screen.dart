@@ -80,6 +80,7 @@ class _LevelListView extends StatelessWidget {
         Text(
           'Choose Level',
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+            color: DrumcabularyTheme.edgeTextPrimary,
             fontWeight: FontWeight.w900,
             height: 1.05,
           ),
@@ -88,7 +89,7 @@ class _LevelListView extends StatelessWidget {
         Text(
           'Start where the lessons match your playing today.',
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-            color: DrumcabularyTheme.mutedInk,
+            color: DrumcabularyTheme.edgeTextSecondary,
             height: 1.35,
           ),
         ),
@@ -151,6 +152,7 @@ class _LevelRow extends StatelessWidget {
                       child: Text(
                         level.title,
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: DrumcabularyTheme.edgeTextPrimary,
                           fontWeight: FontWeight.w900,
                           height: 1.1,
                         ),
@@ -158,7 +160,11 @@ class _LevelRow extends StatelessWidget {
                     ),
                     if (summary.showsCompletionIndicator) ...<Widget>[
                       const SizedBox(width: 8),
-                      const Icon(Icons.check_circle, size: 20),
+                      const Icon(
+                        Icons.check_circle,
+                        color: DrumcabularyTheme.edgeOrange,
+                        size: 20,
+                      ),
                     ],
                   ],
                 ),
@@ -178,7 +184,10 @@ class _LevelRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          const Icon(Icons.chevron_right_rounded),
+          const Icon(
+            Icons.chevron_right_rounded,
+            color: DrumcabularyTheme.edgeOrange,
+          ),
         ],
       ),
     );
@@ -208,6 +217,7 @@ class _SkillListScreen extends StatelessWidget {
             Text(
               'Choose Skill',
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                color: DrumcabularyTheme.edgeTextPrimary,
                 fontWeight: FontWeight.w900,
                 height: 1.05,
               ),
@@ -216,7 +226,7 @@ class _SkillListScreen extends StatelessWidget {
             Text(
               'Pick the area you want to work on.',
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: DrumcabularyTheme.mutedInk,
+                color: DrumcabularyTheme.edgeTextSecondary,
                 height: 1.35,
               ),
             ),
@@ -313,6 +323,7 @@ class _SkillRow extends StatelessWidget {
                 Text(
                   _labelFor(skill),
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: DrumcabularyTheme.edgeTextPrimary,
                     fontWeight: FontWeight.w900,
                     height: 1.1,
                   ),
@@ -333,7 +344,10 @@ class _SkillRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          const Icon(Icons.chevron_right_rounded),
+          const Icon(
+            Icons.chevron_right_rounded,
+            color: DrumcabularyTheme.edgeOrange,
+          ),
         ],
       ),
     );
@@ -366,6 +380,7 @@ class _SkillLessonsScreen extends StatelessWidget {
             Text(
               'Choose Lesson',
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                color: DrumcabularyTheme.edgeTextPrimary,
                 fontWeight: FontWeight.w900,
                 height: 1.05,
               ),
@@ -374,7 +389,7 @@ class _SkillLessonsScreen extends StatelessWidget {
             Text(
               level.title,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: DrumcabularyTheme.mutedInk,
+                color: DrumcabularyTheme.edgeTextSecondary,
                 height: 1.35,
               ),
             ),
@@ -434,6 +449,7 @@ class _LessonRow extends StatelessWidget {
                 Text(
                   lesson.title,
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: DrumcabularyTheme.edgeTextPrimary,
                     fontWeight: FontWeight.w900,
                     height: 1.1,
                   ),
@@ -442,7 +458,7 @@ class _LessonRow extends StatelessWidget {
                 Text(
                   lesson.overview,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: DrumcabularyTheme.mutedInk,
+                    color: DrumcabularyTheme.edgeTextSecondary,
                     height: 1.3,
                   ),
                 ),
@@ -460,7 +476,10 @@ class _LessonRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          const Icon(Icons.chevron_right_rounded),
+          const Icon(
+            Icons.chevron_right_rounded,
+            color: DrumcabularyTheme.edgeOrange,
+          ),
         ],
       ),
     );
@@ -498,17 +517,18 @@ class _Pill extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: DrumcabularyTheme.surfaceStrong,
+        color: DrumcabularyTheme.edgeSurfaceSecondary,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: DrumcabularyTheme.line),
+        border: Border.all(color: DrumcabularyTheme.edgeBorder),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         child: Text(
           label,
-          style: Theme.of(
-            context,
-          ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w900),
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+            color: DrumcabularyTheme.edgeTextPrimary,
+            fontWeight: FontWeight.w900,
+          ),
         ),
       ),
     );
@@ -535,7 +555,7 @@ class _LessonLoadError extends StatelessWidget {
               Text(
                 '$error',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: const Color(0xFF9D2B24),
+                  color: Theme.of(context).colorScheme.error,
                 ),
               ),
             ],

@@ -269,6 +269,7 @@ Fields:
 | `why` | `LessonExercise.why` | yes | string | Why the exercise matters. |
 | `what` | `LessonExercise.what` | yes | string | What the student plays. |
 | `how` | `LessonExercise.how` | yes | string | How to approach it. |
+| `success` | `LessonExercise.success` | no | string | Optional success target displayed when authored. |
 | `tempo.start` | `TempoTarget.start` | no | positive integer | Practice guidance. |
 | `tempo.target` | `TempoTarget.target` | no | positive integer | Must be `>= start`. |
 | `notation` | `ExerciseNotation` | yes | map | Single notation block or sectioned notation. |

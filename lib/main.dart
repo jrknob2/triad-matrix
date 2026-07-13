@@ -15,7 +15,7 @@ class DrumcabularyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Drumcabulary',
-      theme: DrumcabularyTheme.light,
+      theme: DrumcabularyTheme.drummerEdge,
       home: const AppShell(),
     );
   }
