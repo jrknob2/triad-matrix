@@ -289,4 +289,39 @@ void main() {
       debugDefaultTargetPlatformOverride = null;
     }
   });
+
+  test('long native patterns wrap without extending past staff bounds', () {
+    final String pattern = List<String>.filled(18, '^R(R)[XK]').join(' ');
+    final DrumSheetNotationDocument document =
+        DrumSheetNotationDocument.fromPattern(pattern);
+
+    final List<DrumSheetSystemVisualBounds> systems =
+        debugSheetSystemVisualBoundsForTesting(
+          document: document,
+          width: 240,
+          minNoteWidth: 34,
+        );
+
+    expect(systems.length, greaterThan(1));
+    for (final DrumSheetSystemVisualBounds system in systems) {
+      expect(system.eventBounds, isNotEmpty);
+      for (final Rect eventBounds in system.eventBounds) {
+        expect(
+          eventBounds.left,
+          greaterThanOrEqualTo(system.staffLeft),
+          reason: 'event starts before the staff system',
+        );
+        expect(
+          eventBounds.right,
+          lessThanOrEqualTo(system.staffRight),
+          reason: 'event extends past the staff system',
+        );
+      }
+      expect(
+        system.eventBounds.last.right,
+        lessThanOrEqualTo(system.staffRight),
+        reason: 'final event extends past the staff system',
+      );
+    }
+  });
 }

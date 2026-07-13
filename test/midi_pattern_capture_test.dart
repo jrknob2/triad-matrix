@@ -1,6 +1,8 @@
+import 'package:drumcabulary/features/midi/midi_diagnostic_screen.dart';
 import 'package:drumcabulary/features/midi/midi_input_models.dart';
 import 'package:drumcabulary/features/midi/midi_pattern_capture.dart';
 import 'package:drumcabulary/features/practice/widgets/sheet_notation_display.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -88,35 +90,123 @@ void main() {
 
       expect(controller.stop(), 'K');
     });
+
+    test(
+      'live MIDI capture updates the generated string before Stop',
+      () async {
+        final DateTime startedAt = DateTime(2026);
+        final MidiPatternCaptureController controller =
+            MidiPatternCaptureController(clock: () => startedAt);
+
+        controller.record();
+        controller.capture(
+          _diagnosticEvent(
+            voice: DrumVoice.snare,
+            velocity: 72,
+            timestamp: startedAt,
+          ),
+        );
+
+        expect(controller.generatedPattern, isEmpty);
+        await Future<void>.delayed(const Duration(milliseconds: 130));
+
+        expect(controller.isRecording, true);
+        expect(controller.generatedPattern, 'R');
+      },
+    );
+
+    test('Stop performs a final authoritative conversion and render', () async {
+      final DateTime startedAt = DateTime(2026);
+      final MidiPatternCaptureController controller =
+          MidiPatternCaptureController(clock: () => startedAt);
+
+      controller.record();
+      controller.capture(
+        _diagnosticEvent(
+          voice: DrumVoice.snare,
+          velocity: 72,
+          timestamp: startedAt,
+        ),
+      );
+
+      expect(controller.generatedPattern, isEmpty);
+      expect(controller.stop(), 'R');
+      expect(controller.isRecording, false);
+
+      await Future<void>.delayed(const Duration(milliseconds: 130));
+      expect(controller.generatedPattern, 'R');
+    });
+
+    test(
+      'rapid MIDI events are not lost while rendering is debounced',
+      () async {
+        final DateTime startedAt = DateTime(2026);
+        final MidiPatternCaptureController controller =
+            MidiPatternCaptureController(clock: () => startedAt);
+
+        controller.record();
+        for (int index = 0; index < 24; index += 1) {
+          controller.capture(
+            _diagnosticEvent(
+              voice: DrumVoice.snare,
+              velocity: 72,
+              timestamp: startedAt.add(Duration(milliseconds: index * 40)),
+            ),
+          );
+        }
+
+        await Future<void>.delayed(const Duration(milliseconds: 130));
+
+        expect(
+          DrumSheetPatternParser.parse(controller.generatedPattern),
+          hasLength(24),
+        );
+      },
+    );
   });
 
   group('MidiPatternBuilder', () {
     const MidiPatternBuilder builder = MidiPatternBuilder();
 
-    test('normal hit classification', () {
+    test('velocity 1-10 maps to ghost', () {
       expect(
         builder.buildPattern(<CapturedMidiHit>[
-          _hit(DrumVoice.snare, velocity: 72),
+          _hit(DrumVoice.snare, velocity: 1),
+          _hit(
+            DrumVoice.snare,
+            velocity: 10,
+            offset: const Duration(milliseconds: 40),
+          ),
         ]),
-        'R',
+        '(R) (R)',
       );
     });
 
-    test('ghost-note classification', () {
+    test('velocity 11-119 maps to normal', () {
       expect(
         builder.buildPattern(<CapturedMidiHit>[
-          _hit(DrumVoice.snare, velocity: 24),
+          _hit(DrumVoice.snare, velocity: 11),
+          _hit(
+            DrumVoice.snare,
+            velocity: 119,
+            offset: const Duration(milliseconds: 40),
+          ),
         ]),
-        '(R)',
+        'R R',
       );
     });
 
-    test('accent classification', () {
+    test('velocity 120-127 maps to accent', () {
       expect(
         builder.buildPattern(<CapturedMidiHit>[
-          _hit(DrumVoice.snare, velocity: 112),
+          _hit(DrumVoice.snare, velocity: 120),
+          _hit(
+            DrumVoice.snare,
+            velocity: 127,
+            offset: const Duration(milliseconds: 40),
+          ),
         ]),
-        '^R',
+        '^R ^R',
       );
     });
 
@@ -131,6 +221,30 @@ void main() {
           ),
         ]),
         '[RK]',
+      );
+    });
+
+    test('generated musical events are separated by spaces', () {
+      expect(
+        builder.buildPattern(<CapturedMidiHit>[
+          _hit(DrumVoice.snare, velocity: 72),
+          _hit(
+            DrumVoice.kick,
+            velocity: 72,
+            offset: const Duration(milliseconds: 8),
+          ),
+          _hit(
+            DrumVoice.snare,
+            velocity: 72,
+            offset: const Duration(milliseconds: 80),
+          ),
+          _hit(
+            DrumVoice.kick,
+            velocity: 72,
+            offset: const Duration(milliseconds: 88),
+          ),
+        ]),
+        '[RK] [RK]',
       );
     });
 
@@ -153,6 +267,23 @@ void main() {
       expect(() => DrumSheetPatternParser.parse(pattern), returnsNormally);
     });
 
+    test(
+      'simultaneous voices retain independent expression classification',
+      () {
+        final String pattern = builder.buildPattern(<CapturedMidiHit>[
+          _hit(DrumVoice.snare, velocity: 10),
+          _hit(
+            DrumVoice.kick,
+            velocity: 120,
+            offset: const Duration(milliseconds: 8),
+          ),
+        ]);
+
+        expect(pattern, '[(R)^K]');
+        expect(() => DrumSheetPatternParser.parse(pattern), returnsNormally);
+      },
+    );
+
     test('Stop generates a pattern string accepted by the existing parser', () {
       final DateTime startedAt = DateTime(2026);
       final MidiPatternCaptureController controller =
@@ -170,7 +301,7 @@ void main() {
         ..capture(
           _diagnosticEvent(
             voice: DrumVoice.snare,
-            velocity: 112,
+            velocity: 120,
             timestamp: startedAt.add(const Duration(milliseconds: 120)),
           ),
         )
@@ -204,6 +335,119 @@ void main() {
       expect(document.subdivision, DrumSheetNoteValue.eighth);
       expect(document.feel, DrumSheetFeel.straight);
       expect(document.timeSignature, '4/4');
+    });
+  });
+
+  group('MidiPatternCaptureCard', () {
+    testWidgets('pattern string is editable when not recording', (
+      WidgetTester tester,
+    ) async {
+      final MidiPatternCaptureController controller =
+          MidiPatternCaptureController();
+
+      await _pumpCaptureCard(tester, controller);
+
+      expect(tester.widget<TextField>(find.byType(TextField)).readOnly, false);
+    });
+
+    testWidgets('pattern string is not editable while recording', (
+      WidgetTester tester,
+    ) async {
+      final MidiPatternCaptureController controller =
+          MidiPatternCaptureController()..record();
+
+      await _pumpCaptureCard(tester, controller);
+
+      expect(tester.widget<TextField>(find.byType(TextField)).readOnly, true);
+    });
+
+    testWidgets('a valid manual edit updates the rendered preview', (
+      WidgetTester tester,
+    ) async {
+      final MidiPatternCaptureController controller =
+          _controllerWithStoppedPattern('R');
+
+      await _pumpCaptureCard(tester, controller);
+      await tester.enterText(find.byType(TextField), 'K');
+      await tester.pump(const Duration(milliseconds: 250));
+
+      final DrumSheetNotationDisplay display = tester.widget(
+        find.byType(DrumSheetNotationDisplay),
+      );
+      expect(display.document.flattenedNotes.single.voices, <DrumSheetVoice>[
+        DrumSheetVoice.kick,
+      ]);
+    });
+
+    testWidgets(
+      'an invalid manual edit preserves text and last valid preview',
+      (WidgetTester tester) async {
+        final MidiPatternCaptureController controller =
+            _controllerWithStoppedPattern('R');
+
+        await _pumpCaptureCard(tester, controller);
+        await tester.enterText(find.byType(TextField), '[');
+        await tester.pump(const Duration(milliseconds: 250));
+
+        expect(
+          tester.widget<TextField>(find.byType(TextField)).controller!.text,
+          '[',
+        );
+        expect(find.text('Unclosed bracket group.'), findsOneWidget);
+
+        final DrumSheetNotationDisplay display = tester.widget(
+          find.byType(DrumSheetNotationDisplay),
+        );
+        expect(display.document.flattenedNotes.single.sticking, 'R');
+      },
+    );
+
+    testWidgets(
+      'Starting Record clears prior text, preview, and validation error',
+      (WidgetTester tester) async {
+        final MidiPatternCaptureController controller =
+            _controllerWithStoppedPattern('R');
+
+        await _pumpCaptureCard(tester, controller);
+        await tester.enterText(find.byType(TextField), '[');
+        await tester.pump(const Duration(milliseconds: 250));
+        expect(find.text('Unclosed bracket group.'), findsOneWidget);
+
+        await tester.tap(find.widgetWithText(FilledButton, 'Record'));
+        await tester.pump();
+
+        expect(
+          tester.widget<TextField>(find.byType(TextField)).controller!.text,
+          '',
+        );
+        expect(find.text('Unclosed bracket group.'), findsNothing);
+        expect(find.byType(DrumSheetNotationDisplay), findsNothing);
+      },
+    );
+
+    testWidgets('live MIDI capture updates preview before Stop', (
+      WidgetTester tester,
+    ) async {
+      final DateTime startedAt = DateTime(2026);
+      final MidiPatternCaptureController controller =
+          MidiPatternCaptureController(clock: () => startedAt)..record();
+
+      await _pumpCaptureCard(tester, controller);
+      controller.capture(
+        _diagnosticEvent(
+          voice: DrumVoice.snare,
+          velocity: 72,
+          timestamp: startedAt,
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump();
+
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        'R',
+      );
+      expect(find.byType(DrumSheetNotationDisplay), findsOneWidget);
     });
   });
 }
@@ -240,4 +484,46 @@ MidiDiagnosticEvent _diagnosticEvent({
       timestamp: timestamp,
     ),
   );
+}
+
+MidiPatternCaptureController _controllerWithStoppedPattern(String pattern) {
+  final DateTime startedAt = DateTime(2026);
+  final MidiPatternCaptureController controller = MidiPatternCaptureController(
+    clock: () => startedAt,
+  );
+  controller.record();
+  for (int index = 0; index < pattern.length; index += 1) {
+    final String token = pattern[index].toUpperCase();
+    final DrumVoice voice = token == 'K' ? DrumVoice.kick : DrumVoice.snare;
+    controller.capture(
+      _diagnosticEvent(
+        voice: voice,
+        velocity: 72,
+        timestamp: startedAt.add(Duration(milliseconds: index * 40)),
+      ),
+    );
+  }
+  controller.stop();
+  return controller;
+}
+
+Future<void> _pumpCaptureCard(
+  WidgetTester tester,
+  MidiPatternCaptureController controller,
+) async {
+  await tester.pumpWidget(
+    MaterialApp(
+      home: Scaffold(
+        body: ListView(
+          children: <Widget>[
+            MidiPatternCaptureCard(
+              controller: controller,
+              debugUseNativeFallback: true,
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+  await tester.pump();
 }

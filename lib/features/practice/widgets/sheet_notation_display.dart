@@ -1768,6 +1768,9 @@ extension DrumSheetVoiceSyntax on DrumSheetVoice {
 class _SheetLayout {
   static const double staffLeft = 22;
   static const double staffRight = 12;
+  static const double noteStartReserve = 46;
+  static const double maxEventRightReserve = 34;
+  static const double maxEventLeftReserve = 22;
   static const double topPadding = 76;
   static const double staffHeight = 40;
   static const double lineGap = 8;
@@ -1796,9 +1799,14 @@ class _SheetLayout {
     required TextStyle stickingStyle,
   }) {
     final double usableWidth = math.max(120, width - staffLeft - staffRight);
+    final double noteSpan = math.max(
+      0,
+      usableWidth - noteStartReserve - maxEventRightReserve,
+    );
+    final double safeMinNoteWidth = math.max(24, minNoteWidth);
     final int notesPerSystem = math.max(
-      3,
-      usableWidth ~/ math.max(24, minNoteWidth),
+      1,
+      (noteSpan / safeMinNoteWidth).floor() + 1,
     );
     final List<int> groups = _parseGrouping(grouping);
     final List<_NoteEntry> entries = <_NoteEntry>[];
@@ -1838,9 +1846,9 @@ class _SheetLayout {
     ) {
       final List<_NoteEntry> system = systemEntries[systemIndex];
       final double y = topPadding + systemIndex * systemGap;
-      final double spacing = system.isEmpty
+      final double spacing = system.length <= 1
           ? minNoteWidth
-          : math.min(minNoteWidth, usableWidth / math.max(system.length, 1));
+          : math.min(minNoteWidth, noteSpan / math.max(system.length - 1, 1));
       systems.add(
         _SheetSystem(
           entries: system,
@@ -1989,7 +1997,9 @@ _PlayheadLine? _playheadCycleEndLineForIndex(
 }
 
 double _nativeNoteX(_SheetSystem system, int localIndex) {
-  return system.x + 46 + localIndex * system.noteSpacing;
+  return system.x +
+      _SheetLayout.noteStartReserve +
+      localIndex * system.noteSpacing;
 }
 
 bool _sameNativeSystem(_PlayheadLine left, _PlayheadLine right) {
@@ -2025,11 +2035,27 @@ List<List<_NoteEntry>> _systemsForEntries(
   final List<List<_NoteEntry>> systems = <List<_NoteEntry>>[];
   List<_NoteEntry> current = <_NoteEntry>[];
   for (final List<_NoteEntry> group in grouped) {
-    if (current.isNotEmpty && current.length + group.length > notesPerSystem) {
+    int groupIndex = 0;
+    while (groupIndex < group.length) {
+      if (current.length >= notesPerSystem) {
+        systems.add(current);
+        current = <_NoteEntry>[];
+      }
+      final int remainingCapacity = math.max(
+        1,
+        notesPerSystem - current.length,
+      );
+      final int take = math.min(remainingCapacity, group.length - groupIndex);
+      current = <_NoteEntry>[
+        ...current,
+        ...group.sublist(groupIndex, groupIndex + take),
+      ];
+      groupIndex += take;
+    }
+    if (current.length >= notesPerSystem) {
       systems.add(current);
       current = <_NoteEntry>[];
     }
-    current = <_NoteEntry>[...current, ...group];
   }
   if (current.isNotEmpty) systems.add(current);
   return systems;
@@ -2063,6 +2089,62 @@ List<int> _parseGrouping(String? grouping) {
       .map((RegExpMatch match) => int.parse(match.group(0)!))
       .where((int value) => value > 0)
       .toList(growable: false);
+}
+
+@visibleForTesting
+@immutable
+class DrumSheetSystemVisualBounds {
+  final double staffLeft;
+  final double staffRight;
+  final List<Rect> eventBounds;
+
+  const DrumSheetSystemVisualBounds({
+    required this.staffLeft,
+    required this.staffRight,
+    required this.eventBounds,
+  });
+}
+
+@visibleForTesting
+List<DrumSheetSystemVisualBounds> debugSheetSystemVisualBoundsForTesting({
+  required DrumSheetNotationDocument document,
+  required double width,
+  String? grouping,
+  double minNoteWidth = DrumSheetNotationDisplay.defaultMinNoteWidth,
+  TextStyle stickingStyle = const TextStyle(),
+}) {
+  final _SheetLayout layout = _SheetLayout.compute(
+    document: document,
+    width: width,
+    grouping: grouping,
+    minNoteWidth: minNoteWidth,
+    stickingStyle: stickingStyle,
+  );
+  return <DrumSheetSystemVisualBounds>[
+    for (final _SheetSystem system in layout.systems)
+      DrumSheetSystemVisualBounds(
+        staffLeft: system.x,
+        staffRight: system.x + system.width,
+        eventBounds: <Rect>[
+          for (
+            int localIndex = 0;
+            localIndex < system.entries.length;
+            localIndex += 1
+          )
+            _eventVisualBoundsForTesting(system, localIndex),
+        ],
+      ),
+  ];
+}
+
+Rect _eventVisualBoundsForTesting(_SheetSystem system, int localIndex) {
+  final double x = _nativeNoteX(system, localIndex);
+  return Rect.fromLTRB(
+    x - _SheetLayout.maxEventLeftReserve,
+    system.y - 70,
+    x + _SheetLayout.maxEventRightReserve,
+    system.y + 78,
+  );
 }
 
 class _DrumSheetNotationPainter extends CustomPainter {
@@ -2222,12 +2304,24 @@ class _DrumSheetNotationPainter extends CustomPainter {
       return;
     }
     if (note.accent) _drawAccent(canvas, system, localIndex, paint);
-    if (note.ghost) _drawGhostParens(canvas, center, paint);
-    if (note.flam) _drawFlam(canvas, center, paint);
+    final double stemX = _stemX(system, localIndex);
+    final double previousStrokeWidth = paint.strokeWidth;
+    final StrokeCap previousStrokeCap = paint.strokeCap;
+    paint
+      ..strokeWidth = 1.8
+      ..strokeCap = StrokeCap.square;
+    canvas.drawLine(
+      Offset(stemX, center.dy),
+      Offset(stemX, system.y - _SheetLayout.stemHeight + 40),
+      paint,
+    );
+    paint
+      ..strokeWidth = previousStrokeWidth
+      ..strokeCap = previousStrokeCap;
     for (final DrumSheetVoice voice in note.voices) {
       final Offset voiceCenter = Offset(center.dx, _voiceY(system, voice));
       if (_isXNotehead(voice)) {
-        _drawXNotehead(canvas, voiceCenter, paint);
+        _drawXNotehead(canvas, voiceCenter, stemX: stemX, paint: paint);
       } else {
         canvas.save();
         canvas.translate(voiceCenter.dx, voiceCenter.dy);
@@ -2239,13 +2333,8 @@ class _DrumSheetNotationPainter extends CustomPainter {
         canvas.restore();
       }
     }
-    final double stemX = center.dx + 6;
-    canvas.drawLine(
-      Offset(stemX, center.dy),
-      Offset(stemX, system.y - _SheetLayout.stemHeight + 40),
-      paint..strokeWidth = 1.8,
-    );
-    paint.strokeWidth = 1.8;
+    if (note.ghost) _drawGhostParens(canvas, center, paint);
+    if (note.flam) _drawFlam(canvas, center, paint);
     if (showSticking) _drawSticking(canvas, system, localIndex, note);
   }
 
@@ -2278,8 +2367,8 @@ class _DrumSheetNotationPainter extends CustomPainter {
     Paint paint,
   ) {
     final double y = system.y - 18;
-    final double x1 = _noteX(system, start) + 6;
-    final double x2 = _noteX(system, end) + 6;
+    final double x1 = _stemX(system, start);
+    final double x2 = _stemX(system, end);
     canvas.drawRect(Rect.fromLTRB(x1, y, x2, y + 5), paint);
     final bool hasSixteenth = system.entries
         .sublist(start, end + 1)
@@ -2358,17 +2447,32 @@ class _DrumSheetNotationPainter extends CustomPainter {
     );
   }
 
-  void _drawXNotehead(Canvas canvas, Offset center, Paint paint) {
+  void _drawXNotehead(
+    Canvas canvas,
+    Offset center, {
+    required double stemX,
+    required Paint paint,
+  }) {
+    final double previousStrokeWidth = paint.strokeWidth;
+    final StrokeCap previousStrokeCap = paint.strokeCap;
+    paint
+      ..strokeWidth = 1.8
+      ..strokeCap = StrokeCap.square;
+    final double left = center.dx - 7;
+    final double right = math.max(center.dx + 7, stemX + 1);
     canvas.drawLine(
-      Offset(center.dx - 6, center.dy - 6),
-      Offset(center.dx + 6, center.dy + 6),
+      Offset(left, center.dy - 6),
+      Offset(right, center.dy + 6),
       paint,
     );
     canvas.drawLine(
-      Offset(center.dx - 6, center.dy + 6),
-      Offset(center.dx + 6, center.dy - 6),
+      Offset(left, center.dy + 6),
+      Offset(right, center.dy - 6),
       paint,
     );
+    paint
+      ..strokeWidth = previousStrokeWidth
+      ..strokeCap = previousStrokeCap;
   }
 
   void _drawSticking(
@@ -2407,7 +2511,13 @@ class _DrumSheetNotationPainter extends CustomPainter {
   }
 
   double _noteX(_SheetSystem system, int localIndex) {
-    return system.x + 46 + localIndex * system.noteSpacing;
+    return system.x +
+        _SheetLayout.noteStartReserve +
+        localIndex * system.noteSpacing;
+  }
+
+  double _stemX(_SheetSystem system, int localIndex) {
+    return _noteX(system, localIndex) + 6;
   }
 
   double _primaryNoteY(_SheetSystem system, DrumSheetNotationNote note) {

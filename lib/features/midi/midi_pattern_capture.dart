@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../practice/widgets/sheet_notation_display.dart';
@@ -8,11 +10,13 @@ class MidiPatternCaptureConfig {
   final int ghostVelocityMax;
   final int accentVelocityMin;
   final Duration simultaneousWindow;
+  final Duration liveUpdateInterval;
 
   const MidiPatternCaptureConfig({
-    this.ghostVelocityMax = 35,
-    this.accentVelocityMin = 100,
+    this.ghostVelocityMax = 10,
+    this.accentVelocityMin = 120,
     this.simultaneousWindow = const Duration(milliseconds: 30),
+    this.liveUpdateInterval = const Duration(milliseconds: 100),
   }) : assert(ghostVelocityMax >= 0),
        assert(accentVelocityMin <= 127),
        assert(ghostVelocityMax < accentVelocityMin);
@@ -39,6 +43,7 @@ class MidiPatternCaptureController extends ChangeNotifier {
   bool _isRecording = false;
   String _generatedPattern = '';
   DateTime? _startedAt;
+  Timer? _liveUpdateTimer;
 
   MidiPatternCaptureController({
     this.builder = const MidiPatternBuilder(),
@@ -50,6 +55,8 @@ class MidiPatternCaptureController extends ChangeNotifier {
   List<CapturedMidiHit> get capturedHits => List.unmodifiable(_hits);
 
   void record() {
+    _liveUpdateTimer?.cancel();
+    _liveUpdateTimer = null;
     _hits.clear();
     _generatedPattern = '';
     _startedAt = _clock();
@@ -59,9 +66,10 @@ class MidiPatternCaptureController extends ChangeNotifier {
 
   String stop() {
     if (!_isRecording) return _generatedPattern;
+    _liveUpdateTimer?.cancel();
+    _liveUpdateTimer = null;
     _isRecording = false;
-    _generatedPattern = builder.buildPattern(_hits);
-    notifyListeners();
+    _regeneratePattern(forceNotify: true);
     return _generatedPattern;
   }
 
@@ -79,6 +87,28 @@ class MidiPatternCaptureController extends ChangeNotifier {
         offset: offset.isNegative ? Duration.zero : offset,
       ),
     );
+    _scheduleLiveUpdate();
+  }
+
+  void _scheduleLiveUpdate() {
+    if (_liveUpdateTimer != null) return;
+    _liveUpdateTimer = Timer(builder.config.liveUpdateInterval, () {
+      _liveUpdateTimer = null;
+      _regeneratePattern();
+    });
+  }
+
+  void _regeneratePattern({bool forceNotify = false}) {
+    final String nextPattern = builder.buildPattern(_hits);
+    if (nextPattern == _generatedPattern && !forceNotify) return;
+    _generatedPattern = nextPattern;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _liveUpdateTimer?.cancel();
+    super.dispose();
   }
 }
 
@@ -101,7 +131,7 @@ class MidiPatternBuilder {
     final List<List<CapturedMidiHit>> groups = _simultaneousGroups(
       supportedHits,
     );
-    final String pattern = groups.map(_patternForGroup).join();
+    final String pattern = groups.map(_patternForGroup).join(' ');
 
     // Keep the capture path honest: generated output must remain accepted by
     // the same parser used by the rest of the authoring UI during development.
