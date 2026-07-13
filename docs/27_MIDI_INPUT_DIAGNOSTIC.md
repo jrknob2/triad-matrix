@@ -89,6 +89,26 @@ Use the screen to:
   mapped voice.
 - Clear the bounded event log.
 
+If the only visible device is `Session 1`, the app is seeing CoreMIDI's network
+session rather than the LEKATO USB kit. Pad strikes from a kit connected to the
+Mac will not arrive through that endpoint. Run the macOS app, confirm the kit
+still appears as `edrum` in macOS Audio MIDI Setup or GarageBand, then use
+`Rescan` until `edrum` appears in the diagnostic device selector.
+
+If the diagnostic is running in the iOS simulator, the simulator may show
+CoreMIDI network sessions while still not exposing the Mac's USB MIDI kit. Use
+the macOS target for this USB MIDI proof.
+
+A local USB hardware check can still see the LEKATO as `EDRUM` while the app
+does not show it as a CoreMIDI input endpoint. In that case the USB layer is
+working, but the app runtime is not connected to the USB CoreMIDI source.
+
+The Latest Event panel shows both raw packet count and parsed event count:
+
+- Raw packets `0`: no MIDI data is reaching the app from the selected endpoint.
+- Raw packets greater than `0` with parsed events `0`: bytes are arriving, but
+  they are not currently being parsed as supported note/control events.
+
 Example log line:
 
 `18:42:11.327 | edrum | Ch 10 | Note On | Note 38 | Velocity 104 | snare`
@@ -104,10 +124,12 @@ macOS deployment target.
 No microphone permissions are required. This feature consumes MIDI data, not
 audio.
 
-No extra macOS entitlement was added for this scaffold. USB MIDI is handled
-through CoreMIDI by the Flutter package. If a signed release build later cannot
-see USB MIDI devices under sandboxing, re-check macOS sandbox requirements for
-CoreMIDI and USB access before adding entitlements.
+The macOS app includes the USB device sandbox entitlement:
+
+`com.apple.security.device.usb`
+
+This is needed for the sandboxed app to access USB MIDI hardware exposed through
+CoreMIDI. No microphone permission is added.
 
 ## LEKATO Mapping Worksheet
 

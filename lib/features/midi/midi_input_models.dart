@@ -28,15 +28,21 @@ class MidiInputDevice {
   final String name;
   final String type;
   final bool connected;
+  final int inputPortCount;
+  final int outputPortCount;
 
   const MidiInputDevice({
     required this.id,
     required this.name,
     required this.type,
     required this.connected,
+    required this.inputPortCount,
+    required this.outputPortCount,
   });
 
   bool get isLikelyLekato => name.toLowerCase().contains('edrum');
+  bool get hasInputPorts => inputPortCount > 0;
+  bool get isNetworkSession => type.toLowerCase() == 'network';
 }
 
 class RawMidiEvent {

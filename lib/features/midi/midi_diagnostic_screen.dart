@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../app/drumcabulary_theme.dart';
@@ -77,6 +78,14 @@ class _MidiDiagnosticScreenState extends State<MidiDiagnosticScreen> {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
             children: <Widget>[
               const DrumEyebrow(text: 'DEVELOPER TOOL'),
+              const SizedBox(height: 6),
+              Text(
+                'Runtime: ${defaultTargetPlatform.name}',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: DrumcabularyTheme.edgeTextSecondary,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
               const SizedBox(height: 8),
               Text(
                 'USB MIDI input path',
@@ -87,7 +96,7 @@ class _MidiDiagnosticScreenState extends State<MidiDiagnosticScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Use this screen to verify that a drum module reaches Drumcabulary through macOS CoreMIDI.',
+                'Use this screen to verify that a drum module reaches Drumcabulary through CoreMIDI. The LEKATO should appear as edrum.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: DrumcabularyTheme.edgeTextSecondary,
                   height: 1.35,
@@ -105,7 +114,9 @@ class _MidiDiagnosticScreenState extends State<MidiDiagnosticScreen> {
                 onDisconnect: () => unawaited(_service.disconnect()),
               ),
               const SizedBox(height: 14),
-              _LatestEventPanel(event: _latestEvent),
+              _DiscoveryPanel(service: _service),
+              const SizedBox(height: 14),
+              _LatestEventPanel(service: _service, event: _latestEvent),
               const SizedBox(height: 14),
               _EventLogPanel(
                 events: _eventLog.events,
@@ -146,6 +157,81 @@ class _MidiDiagnosticScreenState extends State<MidiDiagnosticScreen> {
   }
 }
 
+class _DiscoveryPanel extends StatelessWidget {
+  final MidiInputService service;
+
+  const _DiscoveryPanel({required this.service});
+
+  @override
+  Widget build(BuildContext context) {
+    return DrumPanel(
+      tone: DrumPanelTone.dark,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            'Discovery',
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Plugin devices ${service.discoveredDevices.length} | Input-capable ${service.devices.length}',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: DrumcabularyTheme.edgeTextSecondary,
+              fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
+            ),
+          ),
+          if (service.discoveredDevices.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 8),
+            ...service.discoveredDevices.map((MidiInputDevice device) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text(
+                  '${device.name} | ${device.type} | in ${device.inputPortCount} | out ${device.outputPortCount} | ${device.id}',
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 2,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: DrumcabularyTheme.edgeTextSecondary,
+                    fontFeatures: const <FontFeature>[
+                      FontFeature.tabularFigures(),
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ],
+          if (service.pluginLog.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 8),
+            Text(
+              'Plugin log',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: DrumcabularyTheme.edgeOrange,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 4),
+            ...service.pluginLog.take(3).map((String entry) {
+              return Text(
+                entry,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 3,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: DrumcabularyTheme.edgeTextSecondary,
+                  fontFeatures: const <FontFeature>[
+                    FontFeature.tabularFigures(),
+                  ],
+                ),
+              );
+            }),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 class _ConnectionPanel extends StatelessWidget {
   final MidiInputService service;
   final String? selectedDeviceId;
@@ -169,6 +255,7 @@ class _ConnectionPanel extends StatelessWidget {
     final bool connected = service.status == MidiInputStatus.connected;
     final bool connecting = service.status == MidiInputStatus.connecting;
     final String? dropdownValue = _dropdownValue();
+    final MidiInputDevice? selectedDevice = _deviceForId(dropdownValue);
 
     return DrumPanel(
       child: Column(
@@ -194,7 +281,7 @@ class _ConnectionPanel extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Text(
-                'No MIDI input devices found.',
+                'No MIDI input devices found. If the LEKATO is connected, it should appear as edrum.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: DrumcabularyTheme.edgeTextSecondary,
                 ),
@@ -204,21 +291,76 @@ class _ConnectionPanel extends StatelessWidget {
             DropdownButtonFormField<String>(
               key: ValueKey<String?>(dropdownValue),
               initialValue: dropdownValue,
+              isExpanded: true,
               dropdownColor: DrumcabularyTheme.edgeSurfaceSecondary,
               decoration: const InputDecoration(
                 labelText: 'MIDI input device',
                 border: OutlineInputBorder(),
               ),
+              selectedItemBuilder: (BuildContext context) {
+                return service.devices
+                    .map(
+                      (MidiInputDevice device) => Text(
+                        _selectedDeviceLabel(device),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
+                    )
+                    .toList(growable: false);
+              },
               items: service.devices
                   .map(
                     (MidiInputDevice device) => DropdownMenuItem<String>(
                       value: device.id,
-                      child: Text(_deviceLabel(device)),
+                      child: Text(
+                        _deviceLabel(device),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
                     ),
                   )
                   .toList(growable: false),
               onChanged: connected || connecting ? null : onDeviceSelected,
             ),
+          if (selectedDevice != null) ...<Widget>[
+            const SizedBox(height: 10),
+            _EndpointDetails(device: selectedDevice),
+          ],
+          if (hasDevices &&
+              !service.devices.any(
+                (MidiInputDevice device) => device.isLikelyLekato,
+              )) ...<Widget>[
+            const SizedBox(height: 10),
+            Text(
+              'edrum is not visible. Session 1 is usually a CoreMIDI network session, not the USB drum kit.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: DrumcabularyTheme.edgeTextSecondary,
+                height: 1.3,
+              ),
+            ),
+          ],
+          if (defaultTargetPlatform == TargetPlatform.iOS) ...<Widget>[
+            const SizedBox(height: 10),
+            Text(
+              'If this is the iOS simulator, use the macOS app for the USB MIDI test. The simulator may show network MIDI sessions without exposing the Mac USB kit.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.error,
+                fontWeight: FontWeight.w800,
+                height: 1.3,
+              ),
+            ),
+          ],
+          if (selectedDevice?.isNetworkSession == true) ...<Widget>[
+            const SizedBox(height: 10),
+            Text(
+              'This selected endpoint is a CoreMIDI network session, not a USB drum module.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.error,
+                fontWeight: FontWeight.w800,
+                height: 1.3,
+              ),
+            ),
+          ],
           if (service.lastError != null) ...<Widget>[
             const SizedBox(height: 10),
             Text(
@@ -277,10 +419,73 @@ class _ConnectionPanel extends StatelessWidget {
     return null;
   }
 
+  MidiInputDevice? _deviceForId(String? id) {
+    if (id == null) return null;
+    for (final MidiInputDevice device in service.devices) {
+      if (device.id == id) return device;
+    }
+    return null;
+  }
+
   String _deviceLabel(MidiInputDevice device) {
     final String connection = device.connected ? 'connected' : 'available';
     final String lekato = device.isLikelyLekato ? ' - LEKATO edrum' : '';
-    return '${device.name} ($connection, ${device.type})$lekato';
+    return '${device.name} ($connection, ${device.type}, '
+        'in ${device.inputPortCount}, out ${device.outputPortCount})$lekato';
+  }
+
+  String _selectedDeviceLabel(MidiInputDevice device) {
+    final String lekato = device.isLikelyLekato ? ' - LEKATO edrum' : '';
+    return '${device.name} - in ${device.inputPortCount}, '
+        'out ${device.outputPortCount}$lekato';
+  }
+}
+
+class _EndpointDetails extends StatelessWidget {
+  final MidiInputDevice device;
+
+  const _EndpointDetails({required this.device});
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: DrumcabularyTheme.edgeSurfaceSecondary,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: DrumcabularyTheme.edgeBorder),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              'Selected endpoint',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: DrumcabularyTheme.edgeOrange,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '${device.name} | type ${device.type} | in ${device.inputPortCount} | out ${device.outputPortCount}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: DrumcabularyTheme.edgeTextPrimary,
+                fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'id ${device.id}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: DrumcabularyTheme.edgeTextSecondary,
+                fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -305,9 +510,10 @@ class _StatusPill extends StatelessWidget {
 }
 
 class _LatestEventPanel extends StatelessWidget {
+  final MidiInputService service;
   final MidiDiagnosticEvent? event;
 
-  const _LatestEventPanel({required this.event});
+  const _LatestEventPanel({required this.service, required this.event});
 
   @override
   Widget build(BuildContext context) {
@@ -322,6 +528,57 @@ class _LatestEventPanel extends StatelessWidget {
               context,
             ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
           ),
+          const SizedBox(height: 10),
+          Text(
+            'Raw packets ${service.rawPacketCount} | Parsed events ${service.parsedEventCount}',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: DrumcabularyTheme.edgeTextSecondary,
+              fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
+            ),
+          ),
+          if (service.lastRawPacketHex != null) ...<Widget>[
+            const SizedBox(height: 6),
+            Text(
+              'Last raw packet: ${service.lastRawPacketDeviceName ?? 'unknown'} | ${service.lastRawPacketHex}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: DrumcabularyTheme.edgeTextSecondary,
+                fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
+              ),
+            ),
+          ],
+          if (service.status == MidiInputStatus.connected &&
+              service.rawPacketCount == 0) ...<Widget>[
+            const SizedBox(height: 6),
+            Text(
+              'Connected, but this endpoint has not delivered raw MIDI packets yet.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: DrumcabularyTheme.edgeTextSecondary,
+                height: 1.3,
+              ),
+            ),
+          ],
+          if (service.setupChangeLog.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 10),
+            Text(
+              'Setup changes',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: DrumcabularyTheme.edgeOrange,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 4),
+            ...service.setupChangeLog.take(4).map((String entry) {
+              return Text(
+                entry,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: DrumcabularyTheme.edgeTextSecondary,
+                  fontFeatures: const <FontFeature>[
+                    FontFeature.tabularFigures(),
+                  ],
+                ),
+              );
+            }),
+          ],
           const SizedBox(height: 10),
           Text(
             event == null

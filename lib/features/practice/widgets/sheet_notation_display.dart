@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
@@ -429,8 +430,11 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
 
     _hostLoaded = false;
     final WebViewController controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(Colors.transparent)
+      ..setJavaScriptMode(JavaScriptMode.unrestricted);
+    if (defaultTargetPlatform != TargetPlatform.macOS) {
+      controller.setBackgroundColor(Colors.transparent);
+    }
+    controller
       ..addJavaScriptChannel(
         'SheetSelection',
         onMessageReceived: (JavaScriptMessage message) {
