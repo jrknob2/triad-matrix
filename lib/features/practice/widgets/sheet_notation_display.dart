@@ -414,12 +414,16 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
   String? _lastSelectionJson;
   String? _lastPlayheadJson;
 
+  bool get _usesNativeRenderer =>
+      widget.debugUseNativeFallback ||
+      defaultTargetPlatform == TargetPlatform.macOS;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     widget.controller?._attach(this);
-    if (!widget.debugUseNativeFallback) {
+    if (!_usesNativeRenderer) {
       _ensureWebViewController();
     }
   }
@@ -478,7 +482,7 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
       oldWidget.controller?._detach(this);
       widget.controller?._attach(this);
     }
-    if (!widget.debugUseNativeFallback) {
+    if (!_usesNativeRenderer) {
       _ensureWebViewController();
     }
     if (_audioPreviewRunning &&
@@ -531,7 +535,7 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
 
   @override
   Widget build(BuildContext context) {
-    final Widget notation = widget.debugUseNativeFallback
+    final Widget notation = _usesNativeRenderer
         ? _buildNativeFallback(context)
         : _buildWebViewNotation();
     return _buildAudioPreviewShell(context, notation);
@@ -713,7 +717,7 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
     );
     _playheadFrame = frame;
     _sendPlayheadToWebView(frame);
-    if (widget.debugUseNativeFallback && mounted) {
+    if (_usesNativeRenderer && mounted) {
       setState(() {});
     }
   }
@@ -867,7 +871,7 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
   }
 
   void _sendPlayheadToWebView(_NotationPlayheadFrame? frame) {
-    if (widget.debugUseNativeFallback || !_hostLoaded) return;
+    if (_usesNativeRenderer || !_hostLoaded) return;
     final String playheadJson = jsonEncode(
       frame?.toJson() ?? const <String, Object?>{'visible': false},
     );

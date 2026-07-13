@@ -1,4 +1,5 @@
 import 'package:drumcabulary/features/practice/widgets/sheet_notation_display.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -256,5 +257,36 @@ void main() {
     await tester.pump();
 
     expect(selected, isNotEmpty);
+  });
+
+  testWidgets('uses native sheet renderer on macOS', (
+    WidgetTester tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+    try {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 360,
+              child: DrumSheetNotationDisplay(
+                document: DrumSheetNotationDocument.fromPattern(
+                  'R L L R R L R L L R R L',
+                  subdivision: DrumSheetNoteValue.sixteenth,
+                  feel: DrumSheetFeel.triplet,
+                  timeSignature: '4/4',
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump();
+      expect(find.byType(DrumSheetNotationDisplay), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
   });
 }
