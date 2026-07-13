@@ -5,10 +5,12 @@ import 'package:flutter/material.dart';
 
 import '../app/drumcabulary_theme.dart';
 import '../app/drumcabulary_ui.dart';
+import '../practice/widgets/sheet_notation_display.dart';
 import 'bounded_midi_event_log.dart';
 import 'drum_kit_mapper.dart';
 import 'midi_input_models.dart';
 import 'midi_input_service.dart';
+import 'midi_pattern_capture.dart';
 
 class MidiDiagnosticScreen extends StatefulWidget {
   const MidiDiagnosticScreen({super.key});
@@ -21,6 +23,7 @@ class _MidiDiagnosticScreenState extends State<MidiDiagnosticScreen> {
   late final MidiInputService _service;
   late final DrumKitMapper _mapper;
   late final BoundedMidiEventLog _eventLog;
+  late final MidiPatternCaptureController _captureController;
   StreamSubscription<RawMidiEvent>? _eventSubscription;
   MidiDiagnosticEvent? _latestEvent;
   String? _selectedDeviceId;
@@ -31,6 +34,8 @@ class _MidiDiagnosticScreenState extends State<MidiDiagnosticScreen> {
     _service = MidiInputService()..addListener(_handleServiceChanged);
     _mapper = const DrumKitMapper();
     _eventLog = BoundedMidiEventLog(maxEntries: 100);
+    _captureController = MidiPatternCaptureController()
+      ..addListener(_handleCaptureChanged);
     _eventSubscription = _service.events.listen(_handleRawMidiEvent);
     unawaited(_service.start());
   }
@@ -38,6 +43,9 @@ class _MidiDiagnosticScreenState extends State<MidiDiagnosticScreen> {
   @override
   void dispose() {
     _service.removeListener(_handleServiceChanged);
+    _captureController
+      ..removeListener(_handleCaptureChanged)
+      ..dispose();
     unawaited(_eventSubscription?.cancel());
     _service.dispose();
     super.dispose();
@@ -55,11 +63,17 @@ class _MidiDiagnosticScreenState extends State<MidiDiagnosticScreen> {
     });
   }
 
+  void _handleCaptureChanged() {
+    if (!mounted) return;
+    setState(() {});
+  }
+
   void _handleRawMidiEvent(RawMidiEvent event) {
     final MidiDiagnosticEvent diagnosticEvent = MidiDiagnosticEvent(
       raw: event,
       drum: _mapper.map(event),
     );
+    _captureController.capture(diagnosticEvent);
     if (!mounted) return;
     setState(() {
       _latestEvent = diagnosticEvent;
@@ -117,6 +131,8 @@ class _MidiDiagnosticScreenState extends State<MidiDiagnosticScreen> {
               _DiscoveryPanel(service: _service),
               const SizedBox(height: 14),
               _LatestEventPanel(service: _service, event: _latestEvent),
+              const SizedBox(height: 14),
+              _MidiPatternCapturePanel(controller: _captureController),
               const SizedBox(height: 14),
               _EventLogPanel(
                 events: _eventLog.events,
@@ -595,6 +611,135 @@ class _LatestEventPanel extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _MidiPatternCapturePanel extends StatelessWidget {
+  final MidiPatternCaptureController controller;
+
+  const _MidiPatternCapturePanel({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    final String generatedPattern = controller.generatedPattern;
+
+    return DrumPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Text(
+            'MIDI Pattern Capture',
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 14),
+          DrumActionRow(
+            children: <Widget>[
+              FilledButton.icon(
+                onPressed: controller.record,
+                icon: const Icon(Icons.fiber_manual_record_rounded),
+                label: const Text('Record'),
+              ),
+              OutlinedButton.icon(
+                onPressed: controller.isRecording ? controller.stop : null,
+                icon: const Icon(Icons.stop_rounded),
+                label: const Text('Stop'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            'Generated pattern string',
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: DrumcabularyTheme.edgeOrange,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 6),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: DrumcabularyTheme.edgeSurfaceSecondary,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: DrumcabularyTheme.edgeBorder),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: SelectableText(
+                generatedPattern,
+                minLines: 1,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: DrumcabularyTheme.edgeTextPrimary,
+                  fontFeatures: const <FontFeature>[
+                    FontFeature.tabularFigures(),
+                  ],
+                  height: 1.35,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            'Rendered notation preview',
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: DrumcabularyTheme.edgeOrange,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 6),
+          _CapturedPatternPreview(pattern: generatedPattern),
+        ],
+      ),
+    );
+  }
+}
+
+class _CapturedPatternPreview extends StatelessWidget {
+  final String pattern;
+
+  const _CapturedPatternPreview({required this.pattern});
+
+  @override
+  Widget build(BuildContext context) {
+    final String trimmed = pattern.trim();
+    if (trimmed.isEmpty) {
+      return const SizedBox(height: 96);
+    }
+
+    try {
+      final DrumSheetNotationDocument document =
+          DrumSheetNotationDocument.fromPattern(trimmed);
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          color: DrumcabularyTheme.edgeNotationPanel,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFFD9D2C6)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+          child: DrumSheetNotationDisplay(
+            document: document,
+            selectable: false,
+            compactLayout: true,
+            minNoteWidth: 34,
+            showSticking: false,
+            backgroundColor: DrumcabularyTheme.edgeNotationPanel,
+            noteColor: DrumcabularyTheme.edgeNotationInk,
+            staffColor: DrumcabularyTheme.edgeNotationInk.withValues(
+              alpha: 0.62,
+            ),
+            selectedColor: DrumcabularyTheme.edgeOrange,
+          ),
+        ),
+      );
+    } on Object catch (error) {
+      return Text(
+        '$error',
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: Theme.of(context).colorScheme.error,
+        ),
+      );
+    }
   }
 }
 
