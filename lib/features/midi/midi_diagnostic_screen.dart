@@ -608,13 +608,8 @@ class _LatestEventPanel extends StatelessWidget {
 
 class MidiPatternCaptureCard extends StatefulWidget {
   final MidiPatternCaptureController controller;
-  final bool debugUseNativeFallback;
 
-  const MidiPatternCaptureCard({
-    super.key,
-    required this.controller,
-    this.debugUseNativeFallback = false,
-  });
+  const MidiPatternCaptureCard({super.key, required this.controller});
 
   @override
   State<MidiPatternCaptureCard> createState() => _MidiPatternCaptureCardState();
@@ -789,10 +784,7 @@ class _MidiPatternCaptureCardState extends State<MidiPatternCaptureCard> {
             ),
           ),
           const SizedBox(height: 6),
-          _CapturedPatternPreview(
-            document: _renderedDocument,
-            debugUseNativeFallback: widget.debugUseNativeFallback,
-          ),
+          _CapturedPatternPreview(document: _renderedDocument),
         ],
       ),
     );
@@ -801,12 +793,8 @@ class _MidiPatternCaptureCardState extends State<MidiPatternCaptureCard> {
 
 class _CapturedPatternPreview extends StatelessWidget {
   final DrumSheetNotationDocument? document;
-  final bool debugUseNativeFallback;
 
-  const _CapturedPatternPreview({
-    required this.document,
-    required this.debugUseNativeFallback,
-  });
+  const _CapturedPatternPreview({required this.document});
 
   @override
   Widget build(BuildContext context) {
@@ -829,7 +817,6 @@ class _CapturedPatternPreview extends StatelessWidget {
           compactLayout: true,
           minNoteWidth: 34,
           showSticking: false,
-          debugUseNativeFallback: debugUseNativeFallback,
           backgroundColor: DrumcabularyTheme.edgeNotationPanel,
           noteColor: DrumcabularyTheme.edgeNotationInk,
           staffColor: DrumcabularyTheme.edgeNotationInk.withValues(alpha: 0.62),

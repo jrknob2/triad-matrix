@@ -344,6 +344,16 @@ describe('svg rendering', () => {
     assert.equal(VF.calls.notes.length, 4);
   });
 
+  test('can suppress sticking labels through render options', () => {
+    const VF = createFakeVexFlow();
+    const svg = renderDrumNotationSvg(VALID_DOCUMENT, {
+      vexFlow: VF,
+      showSticking: false,
+    });
+
+    assert.doesNotMatch(svg, /drum-sticking-labels/);
+  });
+
   test('demo document matches the requested phrase and voices', () => {
     const document = demoDocument();
     const notes = document.measures[0].notes;

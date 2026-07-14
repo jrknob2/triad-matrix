@@ -3,7 +3,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/fake_webview_platform.dart';
+
 void main() {
+  setUp(installFakeWebViewPlatform);
+
   test('parses duration and voice overrides separately from sticking', () {
     final DrumSheetNotationDocument document =
         DrumSheetNotationDocument.fromPattern('^R[T1:L][16:R][16:L]R^L');
@@ -220,31 +224,23 @@ void main() {
     );
   });
 
-  testWidgets('renders sheet notation widget and supports note selection', (
+  testWidgets('renders sheet notation widget with WebView renderer', (
     WidgetTester tester,
   ) async {
-    Set<int> selected = <int>{};
     await tester.pumpWidget(
       MaterialApp(
-        home: StatefulBuilder(
-          builder: (BuildContext context, StateSetter setState) {
-            return Scaffold(
-              body: SizedBox(
-                width: 360,
-                child: DrumSheetNotationDisplay(
-                  document: DrumSheetNotationDocument.fromPattern(
-                    '^R[T1:L][16:R][16:L]R^L',
-                  ),
-                  grouping: '3535',
-                  selectedIndexes: selected,
-                  onSelectionChanged: (Set<int> next) {
-                    setState(() => selected = next);
-                  },
-                  debugUseNativeFallback: true,
-                ),
+        home: Scaffold(
+          body: SizedBox(
+            width: 360,
+            child: DrumSheetNotationDisplay(
+              document: DrumSheetNotationDocument.fromPattern(
+                '^R[T1:L][16:R][16:L]R^L',
               ),
-            );
-          },
+              grouping: '3535',
+              selectedIndexes: const <int>{1},
+              onSelectionChanged: (_) {},
+            ),
+          ),
         ),
       ),
     );
@@ -252,16 +248,9 @@ void main() {
     await tester.pump();
     expect(find.byType(DrumSheetNotationDisplay), findsOneWidget);
     expect(tester.takeException(), isNull);
-
-    await tester.tapAt(const Offset(80, 98));
-    await tester.pump();
-
-    expect(selected, isNotEmpty);
   });
 
-  testWidgets('uses native sheet renderer on macOS', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('uses WebView renderer on macOS', (WidgetTester tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
     try {
       await tester.pumpWidget(
@@ -287,41 +276,6 @@ void main() {
       expect(tester.takeException(), isNull);
     } finally {
       debugDefaultTargetPlatformOverride = null;
-    }
-  });
-
-  test('long native patterns wrap without extending past staff bounds', () {
-    final String pattern = List<String>.filled(18, '^R(R)[XK]').join(' ');
-    final DrumSheetNotationDocument document =
-        DrumSheetNotationDocument.fromPattern(pattern);
-
-    final List<DrumSheetSystemVisualBounds> systems =
-        debugSheetSystemVisualBoundsForTesting(
-          document: document,
-          width: 240,
-          minNoteWidth: 34,
-        );
-
-    expect(systems.length, greaterThan(1));
-    for (final DrumSheetSystemVisualBounds system in systems) {
-      expect(system.eventBounds, isNotEmpty);
-      for (final Rect eventBounds in system.eventBounds) {
-        expect(
-          eventBounds.left,
-          greaterThanOrEqualTo(system.staffLeft),
-          reason: 'event starts before the staff system',
-        );
-        expect(
-          eventBounds.right,
-          lessThanOrEqualTo(system.staffRight),
-          reason: 'event extends past the staff system',
-        );
-      }
-      expect(
-        system.eventBounds.last.right,
-        lessThanOrEqualTo(system.staffRight),
-        reason: 'final event extends past the staff system',
-      );
     }
   });
 }

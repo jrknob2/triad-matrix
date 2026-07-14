@@ -316,10 +316,10 @@ The widget owns:
 - height channel handling
 - audio preview button and lifecycle
 - playhead frame calculation and WebView updates
-- native debug fallback painter
 
-The normal lesson display path uses the WebView/VexFlow renderer. Native debug
-fallback is not a substitute for production lesson rendering.
+The lesson display path uses the WebView/VexFlow renderer. Rendering failures
+must surface as renderer failures; Drumcabulary does not substitute a native
+fallback painter or raw notation string in production lesson views.
 
 ## Web Render Host
 

@@ -5,7 +5,11 @@ import 'package:drumcabulary/features/practice/widgets/sheet_notation_display.da
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/fake_webview_platform.dart';
+
 void main() {
+  setUp(installFakeWebViewPlatform);
+
   group('MidiPatternCaptureController', () {
     test('Record clears the previous capture and generated pattern', () {
       final DateTime startedAt = DateTime(2026);
@@ -515,12 +519,7 @@ Future<void> _pumpCaptureCard(
     MaterialApp(
       home: Scaffold(
         body: ListView(
-          children: <Widget>[
-            MidiPatternCaptureCard(
-              controller: controller,
-              debugUseNativeFallback: true,
-            ),
-          ],
+          children: <Widget>[MidiPatternCaptureCard(controller: controller)],
         ),
       ),
     ),

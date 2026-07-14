@@ -108,6 +108,26 @@
   </head>
   <body>
     <div id="notation"></div>
+    <script>
+      function postSheetLog(level, message) {
+        try {
+          globalThis.SheetLog?.postMessage(JSON.stringify({ level, message }));
+        } catch (_) {
+          // Logging must never break notation rendering.
+        }
+      }
+
+      globalThis.addEventListener('error', (event) => {
+        postSheetLog('error', event.error?.stack ?? event.message ?? 'Unknown sheet notation error');
+      });
+
+      globalThis.addEventListener('unhandledrejection', (event) => {
+        postSheetLog(
+          'error',
+          event.reason?.stack ?? event.reason?.message ?? String(event.reason),
+        );
+      });
+    </script>
     <script src="./vendor/vexflow.js"></script>
     <script>
       globalThis.VexFlow = globalThis.VexFlow || globalThis.Vex?.Flow || globalThis.Vex;
@@ -161,6 +181,7 @@
             postHeight();
           } catch (error) {
             console.error(error);
+            postSheetLog('error', error.stack ?? error.message ?? String(error));
             notation.innerHTML = `<pre class="error">${error.stack ?? error.message}</pre>`;
             postHeight();
           }

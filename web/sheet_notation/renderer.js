@@ -25,6 +25,7 @@ const DEFAULT_RENDER_OPTIONS = Object.freeze({
   grouping: null,
   repeatClefEverySystem: false,
   standardAccents: true,
+  showSticking: true,
   stemMode: 'single',
   flatBeams: true,
   avoidSingleNoteFlags: true,
@@ -109,7 +110,9 @@ export function renderDrumNotationSvgWithMetadata(documentJson, options = {}) {
     voice.draw(context, stave);
     drawBeams(context, beams);
     drawTuplets(context, tuplets);
-    appendStickingLabels(host, VF, notes, system, layout);
+    if (renderOptions.showSticking !== false) {
+      appendStickingLabels(host, VF, notes, system, layout);
+    }
   }
 
   return {

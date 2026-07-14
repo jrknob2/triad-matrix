@@ -4,6 +4,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../../core/practice/practice_domain_v1.dart';
@@ -357,7 +358,6 @@ class DrumSheetNotationDisplay extends StatefulWidget {
   final bool compactLayout;
   final bool darkTheme;
   final Color? backgroundColor;
-  final bool debugUseNativeFallback;
   final bool audioPreviewEnabled;
   final int audioPreviewBpm;
   final AccentVoiceV1 audioPreviewAccentVoice;
@@ -380,7 +380,6 @@ class DrumSheetNotationDisplay extends StatefulWidget {
     this.compactLayout = false,
     this.darkTheme = false,
     this.backgroundColor,
-    this.debugUseNativeFallback = false,
     this.audioPreviewEnabled = false,
     this.audioPreviewBpm = 92,
     this.audioPreviewAccentVoice = AccentVoiceV1.snare,
@@ -395,9 +394,10 @@ class DrumSheetNotationDisplay extends StatefulWidget {
 class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
     with WidgetsBindingObserver {
   static const String _hostAsset = 'web/sheet_notation/app_host.html';
+  static const String _vexFlowAsset = 'web/sheet_notation/vendor/vexflow.js';
+  static const String _rendererAsset = 'web/sheet_notation/app_renderer.js';
   static _DrumSheetNotationDisplayState? _activeAudioPreviewOwner;
 
-  List<Rect> _hitRects = <Rect>[];
   WebViewController? _controller;
   PatternAudioService? _audioPreview;
   Timer? _playheadTicker;
@@ -414,18 +414,12 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
   String? _lastSelectionJson;
   String? _lastPlayheadJson;
 
-  bool get _usesNativeRenderer =>
-      widget.debugUseNativeFallback ||
-      defaultTargetPlatform == TargetPlatform.macOS;
-
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     widget.controller?._attach(this);
-    if (!_usesNativeRenderer) {
-      _ensureWebViewController();
-    }
+    _ensureWebViewController();
   }
 
   WebViewController _ensureWebViewController() {
@@ -458,8 +452,20 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
           setState(() => _webViewHeight = nextHeight);
         },
       )
+      ..addJavaScriptChannel(
+        'SheetLog',
+        onMessageReceived: (JavaScriptMessage message) {
+          debugPrint('Drum sheet notation WebView: ${message.message}');
+        },
+      )
       ..setNavigationDelegate(
         NavigationDelegate(
+          onWebResourceError: (WebResourceError error) {
+            debugPrint(
+              'Drum sheet notation WebView resource error: '
+              '${error.errorCode} ${error.description}',
+            );
+          },
           onPageFinished: (_) {
             _hostLoaded = true;
             _lastPayloadJson = null;
@@ -469,10 +475,35 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
             _renderToWebView(width: _lastLayoutWidth);
           },
         ),
-      )
-      ..loadFlutterAsset(_hostAsset);
+      );
+    if (defaultTargetPlatform == TargetPlatform.macOS) {
+      unawaited(_loadInlineHost(controller));
+    } else {
+      unawaited(controller.loadFlutterAsset(_hostAsset));
+    }
     _controller = controller;
     return controller;
+  }
+
+  Future<void> _loadInlineHost(WebViewController controller) async {
+    try {
+      final String html = await rootBundle.loadString(_hostAsset);
+      final String vexFlow = await rootBundle.loadString(_vexFlowAsset);
+      final String renderer = await rootBundle.loadString(_rendererAsset);
+      final String inlined = _inlineSheetNotationScripts(
+        html: html,
+        vexFlow: vexFlow,
+        renderer: renderer,
+      );
+      if (!mounted || _controller != controller) return;
+      await controller.loadHtmlString(inlined);
+    } on Object catch (error, stackTrace) {
+      debugPrint(
+        'Drum sheet notation inline host load failed: $error\n$stackTrace',
+      );
+      if (!mounted || _controller != controller) return;
+      await controller.loadHtmlString(_sheetNotationHostLoadErrorHtml(error));
+    }
   }
 
   @override
@@ -482,9 +513,7 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
       oldWidget.controller?._detach(this);
       widget.controller?._attach(this);
     }
-    if (!_usesNativeRenderer) {
-      _ensureWebViewController();
-    }
+    _ensureWebViewController();
     if (_audioPreviewRunning &&
         (oldWidget.document != widget.document ||
             oldWidget.audioPreviewBpm != widget.audioPreviewBpm ||
@@ -535,9 +564,7 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
 
   @override
   Widget build(BuildContext context) {
-    final Widget notation = _usesNativeRenderer
-        ? _buildNativeFallback(context)
-        : _buildWebViewNotation();
+    final Widget notation = _buildWebViewNotation();
     return _buildAudioPreviewShell(context, notation);
   }
 
@@ -717,105 +744,6 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
     );
     _playheadFrame = frame;
     _sendPlayheadToWebView(frame);
-    if (_usesNativeRenderer && mounted) {
-      setState(() {});
-    }
-  }
-
-  Widget _buildNativeFallback(BuildContext context) {
-    final ColorScheme colorScheme = Theme.of(context).colorScheme;
-    final Color noteColor = widget.noteColor ?? colorScheme.onSurface;
-    final TextStyle stickingStyle =
-        widget.stickingStyle ??
-        Theme.of(context).textTheme.labelLarge?.copyWith(
-          color: noteColor,
-          fontWeight: FontWeight.w700,
-        ) ??
-        TextStyle(color: noteColor, fontWeight: FontWeight.w700);
-
-    return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-        final double width = constraints.maxWidth.isFinite
-            ? constraints.maxWidth
-            : 640;
-        final _SheetLayout layout = _SheetLayout.compute(
-          document: widget.document,
-          width: width,
-          grouping: widget.grouping,
-          minNoteWidth: widget.minNoteWidth,
-          stickingStyle: stickingStyle,
-        );
-        final CustomPaint paint = CustomPaint(
-          size: Size(width, layout.height),
-          painter: _DrumSheetNotationPainter(
-            layout: layout,
-            document: widget.document,
-            selectedIndexes: widget.selectedIndexes,
-            finalRepeat: widget.finalRepeat,
-            showSticking: widget.showSticking,
-            stickingStyle: stickingStyle,
-            staffColor: widget.staffColor ?? noteColor.withValues(alpha: 0.55),
-            noteColor: noteColor,
-            selectedColor:
-                widget.selectedColor ?? Theme.of(context).colorScheme.primary,
-            onHitRectsChanged: (List<Rect> rects) {
-              _hitRects = rects;
-            },
-          ),
-        );
-        final Widget notation = SizedBox(
-          width: width,
-          height: layout.height,
-          child: Stack(
-            children: <Widget>[
-              paint,
-              if (_playheadFrame != null)
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: CustomPaint(
-                      painter: _DrumSheetPlayheadPainter(
-                        layout: layout,
-                        frame: _playheadFrame!,
-                        color: widget.darkTheme
-                            ? const Color(0xFF93C5FD)
-                            : const Color(0xFF1D4ED8),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        );
-        if (!widget.selectable && widget.onSelectionChanged == null) {
-          return notation;
-        }
-        return GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTapDown: (TapDownDetails details) {
-            final int? index = _noteIndexAt(details.localPosition);
-            if (index == null) {
-              widget.onSelectionChanged?.call(<int>{});
-              return;
-            }
-            final Set<int> next = Set<int>.of(widget.selectedIndexes);
-            if (next.contains(index)) {
-              next.remove(index);
-            } else {
-              next.add(index);
-            }
-            widget.onSelectionChanged?.call(next);
-          },
-          child: notation,
-        );
-      },
-    );
-  }
-
-  int? _noteIndexAt(Offset position) {
-    for (int index = 0; index < _hitRects.length; index += 1) {
-      if (_hitRects[index].contains(position)) return index;
-    }
-    return null;
   }
 
   void _renderToWebView({double? width}) {
@@ -871,7 +799,7 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
   }
 
   void _sendPlayheadToWebView(_NotationPlayheadFrame? frame) {
-    if (_usesNativeRenderer || !_hostLoaded) return;
+    if (!_hostLoaded) return;
     final String playheadJson = jsonEncode(
       frame?.toJson() ?? const <String, Object?>{'visible': false},
     );
@@ -903,6 +831,7 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
         'grouping': widget.grouping,
         'minNoteWidth': widget.minNoteWidth,
         'preserveMeasures': true,
+        'showSticking': widget.showSticking,
         'theme': widget.darkTheme ? 'dark' : 'light',
         if (widget.backgroundColor != null)
           'backgroundColor': _cssColor(widget.backgroundColor!),
@@ -944,6 +873,46 @@ String _cssColor(Color color) {
     return '#${rgb.toRadixString(16).padLeft(6, '0')}';
   }
   return 'rgba($red, $green, $blue, ${(alpha / 255).toStringAsFixed(3)})';
+}
+
+String _inlineSheetNotationScripts({
+  required String html,
+  required String vexFlow,
+  required String renderer,
+}) {
+  return html
+      .replaceFirst(
+        '<script src="./vendor/vexflow.js"></script>',
+        '<script>${_inlineScript(vexFlow)}</script>',
+      )
+      .replaceFirst(
+        '<script src="./app_renderer.js"></script>',
+        '<script>${_inlineScript(renderer)}</script>',
+      );
+}
+
+String _inlineScript(String script) {
+  return script.replaceAll('</script>', '<\\/script>');
+}
+
+String _sheetNotationHostLoadErrorHtml(Object error) {
+  return '''
+<!doctype html>
+<html>
+  <body style="margin:0;background:transparent;">
+    <pre style="color:#7c1d1d;font:12px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;white-space:pre-wrap;">${_htmlEscape('Sheet notation host failed to load: $error')}</pre>
+  </body>
+</html>
+''';
+}
+
+String _htmlEscape(String value) {
+  return value
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
 }
 
 Map<String, Object?> _documentJson(DrumSheetNotationDocument document) {
@@ -1190,9 +1159,9 @@ _NotationPlayheadFrame? _playheadFrameForElapsed({
     }
   }
 
-  final _SheetNotationPlayheadEvent fallback = plan.playheadEvents.last;
+  final _SheetNotationPlayheadEvent lastEvent = plan.playheadEvents.last;
   return _NotationPlayheadFrame(
-    tokenIndex: fallback.tokenIndex,
+    tokenIndex: lastEvent.tokenIndex,
     nextTokenIndex: plan.playheadEvents.first.tokenIndex,
     progress: 1,
     extendsToCycleEnd: true,
@@ -1761,804 +1730,5 @@ extension DrumSheetVoiceSyntax on DrumSheetVoice {
       DrumSheetVoice.floorTom => 'floorTom',
       DrumSheetVoice.kick => 'kick',
     };
-  }
-}
-
-@immutable
-class _SheetLayout {
-  static const double staffLeft = 22;
-  static const double staffRight = 12;
-  static const double noteStartReserve = 46;
-  static const double maxEventRightReserve = 34;
-  static const double maxEventLeftReserve = 22;
-  static const double topPadding = 76;
-  static const double staffHeight = 40;
-  static const double lineGap = 8;
-  static const double stemHeight = 58;
-  static const double stickingGap = 28;
-  static const double systemGap = 104;
-  static const double bottomPadding = 20;
-
-  final double width;
-  final double height;
-  final List<_SheetSystem> systems;
-  final TextStyle stickingStyle;
-
-  const _SheetLayout({
-    required this.width,
-    required this.height,
-    required this.systems,
-    required this.stickingStyle,
-  });
-
-  static _SheetLayout compute({
-    required DrumSheetNotationDocument document,
-    required double width,
-    required String? grouping,
-    required double minNoteWidth,
-    required TextStyle stickingStyle,
-  }) {
-    final double usableWidth = math.max(120, width - staffLeft - staffRight);
-    final double noteSpan = math.max(
-      0,
-      usableWidth - noteStartReserve - maxEventRightReserve,
-    );
-    final double safeMinNoteWidth = math.max(24, minNoteWidth);
-    final int notesPerSystem = math.max(
-      1,
-      (noteSpan / safeMinNoteWidth).floor() + 1,
-    );
-    final List<int> groups = _parseGrouping(grouping);
-    final List<_NoteEntry> entries = <_NoteEntry>[];
-    int absoluteIndex = 0;
-    for (
-      int measureIndex = 0;
-      measureIndex < document.measures.length;
-      measureIndex += 1
-    ) {
-      final DrumSheetNotationMeasure measure = document.measures[measureIndex];
-      for (
-        int noteIndex = 0;
-        noteIndex < measure.notes.length;
-        noteIndex += 1
-      ) {
-        entries.add(
-          _NoteEntry(
-            index: absoluteIndex,
-            measureIndex: measureIndex,
-            measureNoteIndex: noteIndex,
-            note: measure.notes[noteIndex],
-          ),
-        );
-        absoluteIndex += 1;
-      }
-    }
-    final List<List<_NoteEntry>> systemEntries = _systemsForEntries(
-      entries,
-      notesPerSystem,
-      groups,
-    );
-    final List<_SheetSystem> systems = <_SheetSystem>[];
-    for (
-      int systemIndex = 0;
-      systemIndex < systemEntries.length;
-      systemIndex += 1
-    ) {
-      final List<_NoteEntry> system = systemEntries[systemIndex];
-      final double y = topPadding + systemIndex * systemGap;
-      final double spacing = system.length <= 1
-          ? minNoteWidth
-          : math.min(minNoteWidth, noteSpan / math.max(system.length - 1, 1));
-      systems.add(
-        _SheetSystem(
-          entries: system,
-          x: staffLeft,
-          y: y,
-          width: usableWidth,
-          noteSpacing: spacing,
-          beamBreaks: _beamBreaksForEntries(system, groups),
-        ),
-      );
-    }
-    final double height =
-        topPadding +
-        staffHeight +
-        stickingGap +
-        math.max(0, systems.length - 1) * systemGap +
-        bottomPadding;
-    return _SheetLayout(
-      width: width,
-      height: height,
-      systems: systems,
-      stickingStyle: stickingStyle,
-    );
-  }
-}
-
-@immutable
-class _NoteEntry {
-  final int index;
-  final int measureIndex;
-  final int measureNoteIndex;
-  final DrumSheetNotationNote note;
-
-  const _NoteEntry({
-    required this.index,
-    required this.measureIndex,
-    required this.measureNoteIndex,
-    required this.note,
-  });
-}
-
-@immutable
-class _SheetSystem {
-  final List<_NoteEntry> entries;
-  final double x;
-  final double y;
-  final double width;
-  final double noteSpacing;
-  final Set<int> beamBreaks;
-
-  const _SheetSystem({
-    required this.entries,
-    required this.x,
-    required this.y,
-    required this.width,
-    required this.noteSpacing,
-    required this.beamBreaks,
-  });
-}
-
-@immutable
-class _PlayheadLine {
-  final double x;
-  final double y1;
-  final double y2;
-
-  const _PlayheadLine({required this.x, required this.y1, required this.y2});
-}
-
-class _DrumSheetPlayheadPainter extends CustomPainter {
-  final _SheetLayout layout;
-  final _NotationPlayheadFrame frame;
-  final Color color;
-
-  const _DrumSheetPlayheadPainter({
-    required this.layout,
-    required this.frame,
-    required this.color,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final _PlayheadLine? current = _playheadLineForIndex(
-      layout,
-      frame.tokenIndex,
-    );
-    if (current == null) return;
-
-    double x = current.x;
-    final _PlayheadLine? requestedNext = frame.extendsToCycleEnd
-        ? _playheadCycleEndLineForIndex(layout, frame.tokenIndex)
-        : _playheadLineForIndex(layout, frame.nextTokenIndex);
-    final _PlayheadLine? next =
-        requestedNext != null &&
-            _sameNativeSystem(current, requestedNext) &&
-            requestedNext.x >= x
-        ? requestedNext
-        : _playheadCycleEndLineForIndex(layout, frame.tokenIndex);
-    if (next != null && _sameNativeSystem(current, next) && next.x >= x) {
-      x = current.x + (next.x - current.x) * frame.progress;
-    }
-
-    final Paint paint = Paint()
-      ..color = color
-      ..strokeCap = StrokeCap.round
-      ..strokeWidth = 2.5;
-    canvas.drawLine(Offset(x, current.y1), Offset(x, current.y2), paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _DrumSheetPlayheadPainter oldDelegate) {
-    return oldDelegate.layout != layout ||
-        oldDelegate.frame != frame ||
-        oldDelegate.color != color;
-  }
-}
-
-_PlayheadLine? _playheadLineForIndex(_SheetLayout layout, int tokenIndex) {
-  for (final _SheetSystem system in layout.systems) {
-    for (int localIndex = 0; localIndex < system.entries.length; localIndex++) {
-      if (system.entries[localIndex].index != tokenIndex) continue;
-      final double x = _nativeNoteX(system, localIndex);
-      return _PlayheadLine(x: x, y1: system.y - 34, y2: system.y + 72);
-    }
-  }
-  return null;
-}
-
-_PlayheadLine? _playheadCycleEndLineForIndex(
-  _SheetLayout layout,
-  int tokenIndex,
-) {
-  for (final _SheetSystem system in layout.systems) {
-    for (int localIndex = 0; localIndex < system.entries.length; localIndex++) {
-      if (system.entries[localIndex].index != tokenIndex) continue;
-      final double currentX = _nativeNoteX(system, localIndex);
-      final double endX = system.x + system.width - 4;
-      return _PlayheadLine(
-        x: math.max(currentX, endX),
-        y1: system.y - 34,
-        y2: system.y + 72,
-      );
-    }
-  }
-  return null;
-}
-
-double _nativeNoteX(_SheetSystem system, int localIndex) {
-  return system.x +
-      _SheetLayout.noteStartReserve +
-      localIndex * system.noteSpacing;
-}
-
-bool _sameNativeSystem(_PlayheadLine left, _PlayheadLine right) {
-  return (left.y1 - right.y1).abs() < 4 && (left.y2 - right.y2).abs() < 4;
-}
-
-List<List<_NoteEntry>> _systemsForEntries(
-  List<_NoteEntry> entries,
-  int notesPerSystem,
-  List<int> grouping,
-) {
-  if (entries.isEmpty) return const <List<_NoteEntry>>[];
-  if (grouping.isEmpty) {
-    return <List<_NoteEntry>>[
-      for (int index = 0; index < entries.length; index += notesPerSystem)
-        entries.sublist(
-          index,
-          math.min(index + notesPerSystem, entries.length),
-        ),
-    ];
-  }
-
-  final List<List<_NoteEntry>> grouped = <List<_NoteEntry>>[];
-  int index = 0;
-  int groupingIndex = 0;
-  while (index < entries.length) {
-    final int size = grouping[groupingIndex % grouping.length];
-    grouped.add(entries.sublist(index, math.min(index + size, entries.length)));
-    index += size;
-    groupingIndex += 1;
-  }
-
-  final List<List<_NoteEntry>> systems = <List<_NoteEntry>>[];
-  List<_NoteEntry> current = <_NoteEntry>[];
-  for (final List<_NoteEntry> group in grouped) {
-    int groupIndex = 0;
-    while (groupIndex < group.length) {
-      if (current.length >= notesPerSystem) {
-        systems.add(current);
-        current = <_NoteEntry>[];
-      }
-      final int remainingCapacity = math.max(
-        1,
-        notesPerSystem - current.length,
-      );
-      final int take = math.min(remainingCapacity, group.length - groupIndex);
-      current = <_NoteEntry>[
-        ...current,
-        ...group.sublist(groupIndex, groupIndex + take),
-      ];
-      groupIndex += take;
-    }
-    if (current.length >= notesPerSystem) {
-      systems.add(current);
-      current = <_NoteEntry>[];
-    }
-  }
-  if (current.isNotEmpty) systems.add(current);
-  return systems;
-}
-
-Set<int> _beamBreaksForEntries(List<_NoteEntry> entries, List<int> grouping) {
-  final Set<int> breaks = <int>{};
-  if (grouping.isEmpty) return breaks;
-  int consumed = 0;
-  int groupingIndex = 0;
-  while (consumed < entries.length) {
-    if (consumed > 0) breaks.add(consumed);
-    consumed += grouping[groupingIndex % grouping.length];
-    groupingIndex += 1;
-  }
-  return breaks;
-}
-
-List<int> _parseGrouping(String? grouping) {
-  if (grouping == null || grouping.trim().isEmpty) return const <int>[];
-  final String trimmed = grouping.trim();
-  if (RegExp(r'^\d+$').hasMatch(trimmed)) {
-    return trimmed
-        .split('')
-        .map(int.parse)
-        .where((int value) => value > 0)
-        .toList(growable: false);
-  }
-  return RegExp(r'\d+')
-      .allMatches(trimmed)
-      .map((RegExpMatch match) => int.parse(match.group(0)!))
-      .where((int value) => value > 0)
-      .toList(growable: false);
-}
-
-@visibleForTesting
-@immutable
-class DrumSheetSystemVisualBounds {
-  final double staffLeft;
-  final double staffRight;
-  final List<Rect> eventBounds;
-
-  const DrumSheetSystemVisualBounds({
-    required this.staffLeft,
-    required this.staffRight,
-    required this.eventBounds,
-  });
-}
-
-@visibleForTesting
-List<DrumSheetSystemVisualBounds> debugSheetSystemVisualBoundsForTesting({
-  required DrumSheetNotationDocument document,
-  required double width,
-  String? grouping,
-  double minNoteWidth = DrumSheetNotationDisplay.defaultMinNoteWidth,
-  TextStyle stickingStyle = const TextStyle(),
-}) {
-  final _SheetLayout layout = _SheetLayout.compute(
-    document: document,
-    width: width,
-    grouping: grouping,
-    minNoteWidth: minNoteWidth,
-    stickingStyle: stickingStyle,
-  );
-  return <DrumSheetSystemVisualBounds>[
-    for (final _SheetSystem system in layout.systems)
-      DrumSheetSystemVisualBounds(
-        staffLeft: system.x,
-        staffRight: system.x + system.width,
-        eventBounds: <Rect>[
-          for (
-            int localIndex = 0;
-            localIndex < system.entries.length;
-            localIndex += 1
-          )
-            _eventVisualBoundsForTesting(system, localIndex),
-        ],
-      ),
-  ];
-}
-
-Rect _eventVisualBoundsForTesting(_SheetSystem system, int localIndex) {
-  final double x = _nativeNoteX(system, localIndex);
-  return Rect.fromLTRB(
-    x - _SheetLayout.maxEventLeftReserve,
-    system.y - 70,
-    x + _SheetLayout.maxEventRightReserve,
-    system.y + 78,
-  );
-}
-
-class _DrumSheetNotationPainter extends CustomPainter {
-  final _SheetLayout layout;
-  final DrumSheetNotationDocument document;
-  final Set<int> selectedIndexes;
-  final bool finalRepeat;
-  final bool showSticking;
-  final TextStyle stickingStyle;
-  final Color staffColor;
-  final Color noteColor;
-  final Color selectedColor;
-  final ValueChanged<List<Rect>> onHitRectsChanged;
-
-  const _DrumSheetNotationPainter({
-    required this.layout,
-    required this.document,
-    required this.selectedIndexes,
-    required this.finalRepeat,
-    required this.showSticking,
-    required this.stickingStyle,
-    required this.staffColor,
-    required this.noteColor,
-    required this.selectedColor,
-    required this.onHitRectsChanged,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final Paint staffPaint = Paint()
-      ..color = staffColor
-      ..strokeWidth = 1;
-    final Paint notePaint = Paint()
-      ..color = noteColor
-      ..style = PaintingStyle.fill
-      ..strokeWidth = 1.8;
-    final List<Rect> hitRects = List<Rect>.filled(
-      document.flattenedNotes.length,
-      Rect.zero,
-      growable: false,
-    );
-
-    for (
-      int systemIndex = 0;
-      systemIndex < layout.systems.length;
-      systemIndex += 1
-    ) {
-      final _SheetSystem system = layout.systems[systemIndex];
-      _drawStaff(canvas, system, staffPaint);
-      _drawPercussionClef(canvas, system, notePaint);
-      if (finalRepeat && systemIndex == layout.systems.length - 1) {
-        _drawEndRepeat(canvas, system, notePaint);
-      }
-      for (
-        int localIndex = 0;
-        localIndex < system.entries.length;
-        localIndex += 1
-      ) {
-        final _NoteEntry entry = system.entries[localIndex];
-        final Offset center = _noteCenter(system, localIndex, entry.note);
-        final Rect hitRect = Rect.fromCenter(
-          center: Offset(center.dx, system.y + 28),
-          width: math.max(30, system.noteSpacing),
-          height: 92,
-        );
-        hitRects[entry.index] = hitRect;
-        if (selectedIndexes.contains(entry.index)) {
-          _drawSelection(canvas, hitRect, selectedColor);
-        }
-        _drawNote(canvas, system, localIndex, entry, center, notePaint);
-      }
-      _drawBeams(canvas, system, notePaint);
-    }
-    onHitRectsChanged(hitRects);
-  }
-
-  void _drawStaff(Canvas canvas, _SheetSystem system, Paint paint) {
-    for (int line = 0; line < 5; line += 1) {
-      final double y = system.y + line * _SheetLayout.lineGap;
-      canvas.drawLine(
-        Offset(system.x, y),
-        Offset(system.x + system.width, y),
-        paint,
-      );
-    }
-    canvas.drawLine(
-      Offset(system.x, system.y),
-      Offset(
-        system.x,
-        system.y + _SheetLayout.staffHeight - _SheetLayout.lineGap,
-      ),
-      paint,
-    );
-    canvas.drawLine(
-      Offset(system.x + system.width, system.y),
-      Offset(
-        system.x + system.width,
-        system.y + _SheetLayout.staffHeight - _SheetLayout.lineGap,
-      ),
-      paint,
-    );
-  }
-
-  void _drawPercussionClef(Canvas canvas, _SheetSystem system, Paint paint) {
-    final double top = system.y + 8;
-    canvas.drawRect(Rect.fromLTWH(system.x + 7, top, 4, 18), paint);
-    canvas.drawRect(Rect.fromLTWH(system.x + 15, top, 4, 18), paint);
-  }
-
-  void _drawEndRepeat(Canvas canvas, _SheetSystem system, Paint paint) {
-    final double x = system.x + system.width - 8;
-    final double top = system.y;
-    final double bottom = system.y + 32;
-    canvas.drawLine(
-      Offset(x, top),
-      Offset(x, bottom),
-      paint..strokeWidth = 2.4,
-    );
-    canvas.drawLine(
-      Offset(x + 5, top),
-      Offset(x + 5, bottom),
-      paint..strokeWidth = 4,
-    );
-    canvas.drawCircle(Offset(x - 8, system.y + 12), 1.7, paint);
-    canvas.drawCircle(Offset(x - 8, system.y + 21), 1.7, paint);
-    paint.strokeWidth = 1.8;
-  }
-
-  void _drawSelection(Canvas canvas, Rect rect, Color color) {
-    final Paint fill = Paint()
-      ..color = color.withValues(alpha: 0.14)
-      ..style = PaintingStyle.fill;
-    final Paint stroke = Paint()
-      ..color = color.withValues(alpha: 0.7)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2;
-    final RRect rrect = RRect.fromRectAndRadius(
-      rect.deflate(2),
-      const Radius.circular(5),
-    );
-    canvas.drawRRect(rrect, fill);
-    canvas.drawRRect(rrect, stroke);
-  }
-
-  void _drawNote(
-    Canvas canvas,
-    _SheetSystem system,
-    int localIndex,
-    _NoteEntry entry,
-    Offset center,
-    Paint paint,
-  ) {
-    final DrumSheetNotationNote note = entry.note;
-    if (note.rest) {
-      canvas.drawCircle(center, 3.5, paint);
-      if (showSticking) _drawSticking(canvas, system, localIndex, note);
-      return;
-    }
-    if (note.accent) _drawAccent(canvas, system, localIndex, paint);
-    final double stemX = _stemX(system, localIndex);
-    final double previousStrokeWidth = paint.strokeWidth;
-    final StrokeCap previousStrokeCap = paint.strokeCap;
-    paint
-      ..strokeWidth = 1.8
-      ..strokeCap = StrokeCap.square;
-    canvas.drawLine(
-      Offset(stemX, center.dy),
-      Offset(stemX, system.y - _SheetLayout.stemHeight + 40),
-      paint,
-    );
-    paint
-      ..strokeWidth = previousStrokeWidth
-      ..strokeCap = previousStrokeCap;
-    for (final DrumSheetVoice voice in note.voices) {
-      final Offset voiceCenter = Offset(center.dx, _voiceY(system, voice));
-      if (_isXNotehead(voice)) {
-        _drawXNotehead(canvas, voiceCenter, stemX: stemX, paint: paint);
-      } else {
-        canvas.save();
-        canvas.translate(voiceCenter.dx, voiceCenter.dy);
-        canvas.rotate(-0.25);
-        canvas.drawOval(
-          Rect.fromCenter(center: Offset.zero, width: 12, height: 8),
-          paint,
-        );
-        canvas.restore();
-      }
-    }
-    if (note.ghost) _drawGhostParens(canvas, center, paint);
-    if (note.flam) _drawFlam(canvas, center, paint);
-    if (showSticking) _drawSticking(canvas, system, localIndex, note);
-  }
-
-  void _drawBeams(Canvas canvas, _SheetSystem system, Paint paint) {
-    int start = -1;
-    for (int index = 0; index <= system.entries.length; index += 1) {
-      final bool closes =
-          index == system.entries.length ||
-          system.beamBreaks.contains(index) ||
-          system.entries[index].note.rest ||
-          !system.entries[index].note
-              .resolvedValue(document.subdivision)
-              .beamable;
-      if (closes) {
-        if (start >= 0 && index - start > 1) {
-          _drawBeamGroup(canvas, system, start, index - 1, paint);
-        }
-        start = -1;
-        continue;
-      }
-      start = start < 0 ? index : start;
-    }
-  }
-
-  void _drawBeamGroup(
-    Canvas canvas,
-    _SheetSystem system,
-    int start,
-    int end,
-    Paint paint,
-  ) {
-    final double y = system.y - 18;
-    final double x1 = _stemX(system, start);
-    final double x2 = _stemX(system, end);
-    canvas.drawRect(Rect.fromLTRB(x1, y, x2, y + 5), paint);
-    final bool hasSixteenth = system.entries
-        .sublist(start, end + 1)
-        .any(
-          (entry) =>
-              entry.note.resolvedValue(document.subdivision) ==
-              DrumSheetNoteValue.sixteenth,
-        );
-    final bool hasThirtySecond = system.entries
-        .sublist(start, end + 1)
-        .any(
-          (entry) =>
-              entry.note.resolvedValue(document.subdivision) ==
-              DrumSheetNoteValue.thirtySecond,
-        );
-    if (hasSixteenth || hasThirtySecond) {
-      canvas.drawRect(Rect.fromLTRB(x1, y + 8, x2, y + 12), paint);
-    }
-    if (hasThirtySecond) {
-      canvas.drawRect(Rect.fromLTRB(x1, y + 15, x2, y + 18), paint);
-    }
-  }
-
-  void _drawAccent(
-    Canvas canvas,
-    _SheetSystem system,
-    int localIndex,
-    Paint paint,
-  ) {
-    final TextPainter textPainter = TextPainter(
-      text: TextSpan(
-        text: '>',
-        style: stickingStyle.copyWith(
-          color: noteColor,
-          fontSize: 16,
-          fontWeight: FontWeight.w800,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    textPainter.paint(
-      canvas,
-      Offset(_noteX(system, localIndex) - textPainter.width / 2, system.y - 44),
-    );
-  }
-
-  void _drawGhostParens(Canvas canvas, Offset center, Paint paint) {
-    final TextStyle style = stickingStyle.copyWith(
-      color: noteColor.withValues(alpha: 0.72),
-      fontSize: 20,
-      fontWeight: FontWeight.w700,
-    );
-    _drawText(canvas, '(', Offset(center.dx - 16, center.dy - 15), style);
-    _drawText(canvas, ')', Offset(center.dx + 9, center.dy - 15), style);
-  }
-
-  void _drawFlam(Canvas canvas, Offset center, Paint paint) {
-    final Offset grace = Offset(center.dx - 12, center.dy - 8);
-    canvas.save();
-    canvas.translate(grace.dx, grace.dy);
-    canvas.rotate(-0.25);
-    canvas.drawOval(
-      Rect.fromCenter(center: Offset.zero, width: 7, height: 5),
-      paint,
-    );
-    canvas.restore();
-    canvas.drawLine(
-      Offset(grace.dx + 4, grace.dy),
-      Offset(grace.dx + 4, grace.dy - 20),
-      paint,
-    );
-    canvas.drawLine(
-      Offset(grace.dx - 3, grace.dy + 5),
-      Offset(grace.dx + 10, grace.dy - 10),
-      paint,
-    );
-  }
-
-  void _drawXNotehead(
-    Canvas canvas,
-    Offset center, {
-    required double stemX,
-    required Paint paint,
-  }) {
-    final double previousStrokeWidth = paint.strokeWidth;
-    final StrokeCap previousStrokeCap = paint.strokeCap;
-    paint
-      ..strokeWidth = 1.8
-      ..strokeCap = StrokeCap.square;
-    final double left = center.dx - 7;
-    final double right = math.max(center.dx + 7, stemX + 1);
-    canvas.drawLine(
-      Offset(left, center.dy - 6),
-      Offset(right, center.dy + 6),
-      paint,
-    );
-    canvas.drawLine(
-      Offset(left, center.dy + 6),
-      Offset(right, center.dy - 6),
-      paint,
-    );
-    paint
-      ..strokeWidth = previousStrokeWidth
-      ..strokeCap = previousStrokeCap;
-  }
-
-  void _drawSticking(
-    Canvas canvas,
-    _SheetSystem system,
-    int localIndex,
-    DrumSheetNotationNote note,
-  ) {
-    final String sticking = _displayStickingForNote(note);
-    if (sticking.isEmpty) return;
-    _drawText(
-      canvas,
-      sticking,
-      Offset(_noteX(system, localIndex), system.y - 66),
-      stickingStyle,
-    );
-  }
-
-  void _drawText(Canvas canvas, String text, Offset offset, TextStyle style) {
-    final TextPainter textPainter = TextPainter(
-      text: TextSpan(text: text, style: style),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    textPainter.paint(
-      canvas,
-      Offset(offset.dx - textPainter.width / 2, offset.dy),
-    );
-  }
-
-  Offset _noteCenter(
-    _SheetSystem system,
-    int localIndex,
-    DrumSheetNotationNote note,
-  ) {
-    return Offset(_noteX(system, localIndex), _primaryNoteY(system, note));
-  }
-
-  double _noteX(_SheetSystem system, int localIndex) {
-    return system.x +
-        _SheetLayout.noteStartReserve +
-        localIndex * system.noteSpacing;
-  }
-
-  double _stemX(_SheetSystem system, int localIndex) {
-    return _noteX(system, localIndex) + 6;
-  }
-
-  double _primaryNoteY(_SheetSystem system, DrumSheetNotationNote note) {
-    if (note.rest) return system.y + 16;
-    if (note.voices.isEmpty) return system.y + 16;
-    return _voiceY(system, note.voices.last);
-  }
-
-  double _voiceY(_SheetSystem system, DrumSheetVoice voice) {
-    return system.y +
-        switch (voice) {
-          DrumSheetVoice.crash => -4,
-          DrumSheetVoice.ride => 0,
-          DrumSheetVoice.hihat => 8,
-          DrumSheetVoice.tom1 => 10,
-          DrumSheetVoice.snare => 16,
-          DrumSheetVoice.tom2 => 24,
-          DrumSheetVoice.floorTom => 32,
-          DrumSheetVoice.kick => 38,
-        };
-  }
-
-  bool _isXNotehead(DrumSheetVoice voice) {
-    return switch (voice) {
-      DrumSheetVoice.hihat ||
-      DrumSheetVoice.ride ||
-      DrumSheetVoice.crash => true,
-      _ => false,
-    };
-  }
-
-  @override
-  bool shouldRepaint(covariant _DrumSheetNotationPainter oldDelegate) {
-    return oldDelegate.layout != layout ||
-        oldDelegate.document != document ||
-        oldDelegate.selectedIndexes != selectedIndexes ||
-        oldDelegate.finalRepeat != finalRepeat ||
-        oldDelegate.showSticking != showSticking ||
-        oldDelegate.stickingStyle != stickingStyle ||
-        oldDelegate.staffColor != staffColor ||
-        oldDelegate.noteColor != noteColor ||
-        oldDelegate.selectedColor != selectedColor;
   }
 }
