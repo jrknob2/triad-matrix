@@ -425,7 +425,10 @@ void main() {
           '',
         );
         expect(find.text('Unclosed bracket group.'), findsNothing);
-        expect(find.byType(DrumSheetNotationDisplay), findsNothing);
+        final DrumSheetNotationDisplay display = tester.widget(
+          find.byType(DrumSheetNotationDisplay),
+        );
+        expect(display.document.flattenedNotes, isEmpty);
       },
     );
 

@@ -792,17 +792,20 @@ class _MidiPatternCaptureCardState extends State<MidiPatternCaptureCard> {
 }
 
 class _CapturedPatternPreview extends StatelessWidget {
+  static const DrumSheetNotationDocument _emptyDocument =
+      DrumSheetNotationDocument(
+        measures: <DrumSheetNotationMeasure>[
+          DrumSheetNotationMeasure(notes: <DrumSheetNotationNote>[]),
+        ],
+      );
+
   final DrumSheetNotationDocument? document;
 
   const _CapturedPatternPreview({required this.document});
 
   @override
   Widget build(BuildContext context) {
-    final DrumSheetNotationDocument? document = this.document;
-    if (document == null) {
-      return const SizedBox(height: 96);
-    }
-
+    final DrumSheetNotationDocument document = this.document ?? _emptyDocument;
     return DecoratedBox(
       decoration: BoxDecoration(
         color: DrumcabularyTheme.edgeNotationPanel,

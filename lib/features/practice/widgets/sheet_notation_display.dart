@@ -4,7 +4,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../../core/practice/practice_domain_v1.dart';
@@ -394,8 +393,6 @@ class DrumSheetNotationDisplay extends StatefulWidget {
 class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
     with WidgetsBindingObserver {
   static const String _hostAsset = 'web/sheet_notation/app_host.html';
-  static const String _vexFlowAsset = 'web/sheet_notation/vendor/vexflow.js';
-  static const String _rendererAsset = 'web/sheet_notation/app_renderer.js';
   static _DrumSheetNotationDisplayState? _activeAudioPreviewOwner;
 
   WebViewController? _controller;
@@ -463,7 +460,7 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
           onWebResourceError: (WebResourceError error) {
             debugPrint(
               'Drum sheet notation WebView resource error: '
-              '${error.errorCode} ${error.description}',
+              '${_webResourceErrorDebugDescription(error)}',
             );
           },
           onPageFinished: (_) {
@@ -476,33 +473,19 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
           },
         ),
       );
-    if (defaultTargetPlatform == TargetPlatform.macOS) {
-      unawaited(_loadInlineHost(controller));
-    } else {
-      unawaited(controller.loadFlutterAsset(_hostAsset));
-    }
     _controller = controller;
+    unawaited(_loadHostAsset(controller));
     return controller;
   }
 
-  Future<void> _loadInlineHost(WebViewController controller) async {
+  Future<void> _loadHostAsset(WebViewController controller) async {
     try {
-      final String html = await rootBundle.loadString(_hostAsset);
-      final String vexFlow = await rootBundle.loadString(_vexFlowAsset);
-      final String renderer = await rootBundle.loadString(_rendererAsset);
-      final String inlined = _inlineSheetNotationScripts(
-        html: html,
-        vexFlow: vexFlow,
-        renderer: renderer,
-      );
       if (!mounted || _controller != controller) return;
-      await controller.loadHtmlString(inlined);
+      await controller.loadFlutterAsset(_hostAsset);
     } on Object catch (error, stackTrace) {
       debugPrint(
-        'Drum sheet notation inline host load failed: $error\n$stackTrace',
+        'Drum sheet notation host asset load failed: $error\n$stackTrace',
       );
-      if (!mounted || _controller != controller) return;
-      await controller.loadHtmlString(_sheetNotationHostLoadErrorHtml(error));
     }
   }
 
@@ -875,44 +858,19 @@ String _cssColor(Color color) {
   return 'rgba($red, $green, $blue, ${(alpha / 255).toStringAsFixed(3)})';
 }
 
-String _inlineSheetNotationScripts({
-  required String html,
-  required String vexFlow,
-  required String renderer,
-}) {
-  return html
-      .replaceFirst(
-        '<script src="./vendor/vexflow.js"></script>',
-        '<script>${_inlineScript(vexFlow)}</script>',
-      )
-      .replaceFirst(
-        '<script src="./app_renderer.js"></script>',
-        '<script>${_inlineScript(renderer)}</script>',
-      );
-}
-
-String _inlineScript(String script) {
-  return script.replaceAll('</script>', '<\\/script>');
-}
-
-String _sheetNotationHostLoadErrorHtml(Object error) {
-  return '''
-<!doctype html>
-<html>
-  <body style="margin:0;background:transparent;">
-    <pre style="color:#7c1d1d;font:12px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;white-space:pre-wrap;">${_htmlEscape('Sheet notation host failed to load: $error')}</pre>
-  </body>
-</html>
-''';
-}
-
-String _htmlEscape(String value) {
-  return value
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;')
-      .replaceAll('"', '&quot;')
-      .replaceAll("'", '&#39;');
+String _webResourceErrorDebugDescription(WebResourceError error) {
+  Object? domain;
+  try {
+    domain = (error as dynamic).domain;
+  } on Object {
+    domain = null;
+  }
+  return 'code=${error.errorCode} '
+      'type=${error.errorType?.name ?? 'unknown'} '
+      'mainFrame=${error.isForMainFrame ?? 'unknown'} '
+      'url=${error.url ?? 'unknown'} '
+      'domain=${domain ?? 'unknown'} '
+      'description=${error.description}';
 }
 
 Map<String, Object?> _documentJson(DrumSheetNotationDocument document) {
