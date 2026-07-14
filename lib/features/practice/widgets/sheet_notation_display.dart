@@ -47,6 +47,8 @@ class DrumSheetNotationController {
   }
 }
 
+enum _SheetNotationHostLoadKind { realHost, debugProbe }
+
 @immutable
 class DrumSheetNotationDocument {
   final DrumSheetNoteValue subdivision;
@@ -393,6 +395,12 @@ class DrumSheetNotationDisplay extends StatefulWidget {
 class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
     with WidgetsBindingObserver {
   static const String _hostAsset = 'web/sheet_notation/app_host.html';
+  static const String _probeMinimalAsset =
+      'web/sheet_notation/probe_minimal.html';
+  static const String _probeVexFlowAsset =
+      'web/sheet_notation/probe_vexflow.html';
+  static const String _probeRendererAsset =
+      'web/sheet_notation/probe_renderer.html';
   static int _nextDebugInstanceId = 1;
   static _DrumSheetNotationDisplayState? _activeAudioPreviewOwner;
 
@@ -414,6 +422,9 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
   String? _lastPlayheadJson;
   String? _lastWaitingForHostLogSignature;
   String? _lastRenderProbeSignature;
+  bool _hostFailureProbeStarted = false;
+  _SheetNotationHostLoadKind _hostLoadKind =
+      _SheetNotationHostLoadKind.realHost;
 
   @override
   void initState() {
@@ -479,9 +490,7 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
             }
           },
           onWebResourceError: (WebResourceError error) {
-            _debugLog(
-              'resource error: ${_webResourceErrorDebugDescription(error)}',
-            );
+            _handleWebResourceError(error);
           },
           onHttpError: (HttpResponseError error) {
             _debugLog(
@@ -495,6 +504,12 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
           },
           onPageFinished: (String url) {
             _debugLog('page finished: $url');
+            if (_hostLoadKind != _SheetNotationHostLoadKind.realHost) {
+              _debugLog(
+                'debug probe page finished; real host remains unloaded',
+              );
+              return;
+            }
             _hostLoaded = true;
             _lastPayloadJson = null;
             _lastRenderPayloadJson = null;
@@ -514,11 +529,62 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
   Future<void> _loadHostAsset(WebViewController controller) async {
     try {
       if (!mounted || _controller != controller) return;
+      _hostLoadKind = _SheetNotationHostLoadKind.realHost;
       _debugLog('load host asset: $_hostAsset');
       await controller.loadFlutterAsset(_hostAsset);
       _debugLog('load host asset call completed');
     } on Object catch (error, stackTrace) {
       _debugLog('host asset load failed: $error\n$stackTrace');
+    }
+  }
+
+  void _handleWebResourceError(WebResourceError error) {
+    _debugLog('resource error: ${_webResourceErrorDebugDescription(error)}');
+    if (!_shouldRunHostFailureProbe(error)) return;
+    final WebViewController? controller = _controller;
+    if (controller == null) return;
+    unawaited(_runHostFailureProbes(controller));
+  }
+
+  bool _shouldRunHostFailureProbe(WebResourceError error) {
+    return kDebugMode &&
+        defaultTargetPlatform == TargetPlatform.macOS &&
+        !_hostLoaded &&
+        !_hostFailureProbeStarted &&
+        _hostLoadKind == _SheetNotationHostLoadKind.realHost &&
+        error.isForMainFrame == true &&
+        error.errorType == WebResourceErrorType.webContentProcessTerminated;
+  }
+
+  Future<void> _runHostFailureProbes(WebViewController controller) async {
+    _hostFailureProbeStarted = true;
+    _debugLog(
+      'main-frame WebView content process terminated before host loaded; '
+      'starting debug probe sequence',
+    );
+    await _loadDebugProbeAsset(controller, _probeMinimalAsset);
+    await Future<void>.delayed(const Duration(milliseconds: 800));
+    await _loadDebugProbeAsset(controller, _probeVexFlowAsset);
+    await Future<void>.delayed(const Duration(milliseconds: 1200));
+    await _loadDebugProbeAsset(controller, _probeRendererAsset);
+    await Future<void>.delayed(const Duration(milliseconds: 1200));
+    _debugLog(
+      'debug probe sequence complete; no fallback render was attempted',
+    );
+  }
+
+  Future<void> _loadDebugProbeAsset(
+    WebViewController controller,
+    String asset,
+  ) async {
+    if (!mounted || _controller != controller) return;
+    _hostLoadKind = _SheetNotationHostLoadKind.debugProbe;
+    try {
+      _debugLog('load debug probe asset: $asset');
+      await controller.loadFlutterAsset(asset);
+      _debugLog('load debug probe asset call completed: $asset');
+    } on Object catch (error, stackTrace) {
+      _debugLog('debug probe asset load failed: $asset $error\n$stackTrace');
     }
   }
 
