@@ -617,7 +617,9 @@ class MidiPatternCaptureCard extends StatefulWidget {
 
 class _MidiPatternCaptureCardState extends State<MidiPatternCaptureCard> {
   static const Duration _manualEditDebounce = Duration(milliseconds: 250);
+  static int _nextDebugInstanceId = 1;
 
+  final int _debugInstanceId = _nextDebugInstanceId++;
   late final TextEditingController _patternController;
   Timer? _manualEditTimer;
   DrumSheetNotationDocument? _renderedDocument;
@@ -629,6 +631,9 @@ class _MidiPatternCaptureCardState extends State<MidiPatternCaptureCard> {
     super.initState();
     _patternController = TextEditingController(
       text: widget.controller.generatedPattern,
+    );
+    _debugLog(
+      'init: controllerPattern="${_debugPattern(widget.controller.generatedPattern)}"',
     );
     widget.controller.addListener(_handleCaptureChanged);
     _syncFromCaptureController();
@@ -652,14 +657,26 @@ class _MidiPatternCaptureCardState extends State<MidiPatternCaptureCard> {
   }
 
   void _handleCaptureChanged() {
+    _debugLog(
+      'controller changed: recording=${widget.controller.isRecording} '
+      'pattern="${_debugPattern(widget.controller.generatedPattern)}"',
+    );
     _syncFromCaptureController();
   }
 
   void _syncFromCaptureController() {
     _manualEditTimer?.cancel();
     final String pattern = widget.controller.generatedPattern;
+    _debugLog(
+      'sync from controller: recording=${widget.controller.isRecording} '
+      'pattern="${_debugPattern(pattern)}"',
+    );
     _syncingText = true;
     if (_patternController.text != pattern) {
+      _debugLog(
+        'sync text field: old="${_debugPattern(_patternController.text)}" '
+        'new="${_debugPattern(pattern)}"',
+      );
       _patternController.value = TextEditingValue(
         text: pattern,
         selection: TextSelection.collapsed(offset: pattern.length),
@@ -670,10 +687,19 @@ class _MidiPatternCaptureCardState extends State<MidiPatternCaptureCard> {
   }
 
   void _handleManualEdit(String value) {
-    if (_syncingText || widget.controller.isRecording) return;
+    if (_syncingText || widget.controller.isRecording) {
+      _debugLog(
+        'manual edit ignored: syncing=$_syncingText '
+        'recording=${widget.controller.isRecording} '
+        'value="${_debugPattern(value)}"',
+      );
+      return;
+    }
+    _debugLog('manual edit scheduled: value="${_debugPattern(value)}"');
     _manualEditTimer?.cancel();
     _manualEditTimer = Timer(_manualEditDebounce, () {
       if (!mounted) return;
+      _debugLog('manual edit debounce fired: value="${_debugPattern(value)}"');
       _validateAndRender(value, clearPreviewWhenEmpty: true);
     });
   }
@@ -681,6 +707,7 @@ class _MidiPatternCaptureCardState extends State<MidiPatternCaptureCard> {
   void _validateAndRender(String value, {required bool clearPreviewWhenEmpty}) {
     final String trimmed = value.trim();
     if (trimmed.isEmpty) {
+      _debugLog('validate empty: clearPreviewWhenEmpty=$clearPreviewWhenEmpty');
       if (!mounted) return;
       setState(() {
         if (clearPreviewWhenEmpty) _renderedDocument = null;
@@ -692,6 +719,11 @@ class _MidiPatternCaptureCardState extends State<MidiPatternCaptureCard> {
     try {
       final DrumSheetNotationDocument document =
           DrumSheetNotationDocument.fromPattern(trimmed);
+      _debugLog(
+        'validate success: pattern="${_debugPattern(trimmed)}" '
+        'measures=${document.measures.length} '
+        'notes=${document.flattenedNotes.length}',
+      );
       if (!mounted) return;
       setState(() {
         _renderedDocument = document;
@@ -707,8 +739,14 @@ class _MidiPatternCaptureCardState extends State<MidiPatternCaptureCard> {
   }
 
   void _setValidationError(String message) {
+    _debugLog('validate error: $message');
     if (!mounted) return;
     setState(() => _validationError = message);
+  }
+
+  void _debugLog(String message) {
+    if (!kDebugMode) return;
+    debugPrint('MIDI pattern capture card #$_debugInstanceId: $message');
   }
 
   @override
@@ -806,6 +844,13 @@ class _CapturedPatternPreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final DrumSheetNotationDocument document = this.document ?? _emptyDocument;
+    if (kDebugMode) {
+      debugPrint(
+        'MIDI pattern capture preview: build '
+        'measures=${document.measures.length} '
+        'notes=${document.flattenedNotes.length}',
+      );
+    }
     return DecoratedBox(
       decoration: BoxDecoration(
         color: DrumcabularyTheme.edgeNotationPanel,
@@ -958,6 +1003,12 @@ String _formatEvent(MidiDiagnosticEvent event) {
       'Ch $channel | ${_messageTypeLabel(raw.messageType)} | '
       'Note ${raw.note} | Velocity ${raw.velocity} | '
       '${_voiceLabel(event.drum.voice)}';
+}
+
+String _debugPattern(String pattern) {
+  const int maxLength = 160;
+  if (pattern.length <= maxLength) return pattern;
+  return '${pattern.substring(0, maxLength)}...';
 }
 
 String _formatTimestamp(DateTime timestamp) {
