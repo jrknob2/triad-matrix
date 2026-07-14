@@ -393,8 +393,10 @@ class DrumSheetNotationDisplay extends StatefulWidget {
 class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
     with WidgetsBindingObserver {
   static const String _hostAsset = 'web/sheet_notation/app_host.html';
+  static int _nextDebugInstanceId = 1;
   static _DrumSheetNotationDisplayState? _activeAudioPreviewOwner;
 
+  final int _debugInstanceId = _nextDebugInstanceId++;
   WebViewController? _controller;
   PatternAudioService? _audioPreview;
   Timer? _playheadTicker;
@@ -410,6 +412,8 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
   String? _lastRenderPayloadJson;
   String? _lastSelectionJson;
   String? _lastPlayheadJson;
+  String? _lastWaitingForHostLogSignature;
+  String? _lastRenderProbeSignature;
 
   @override
   void initState() {
@@ -423,6 +427,7 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
     final WebViewController? existing = _controller;
     if (existing != null) return existing;
 
+    _debugLog('creating WebView controller');
     _hostLoaded = false;
     final WebViewController controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted);
@@ -445,6 +450,7 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
         onMessageReceived: (JavaScriptMessage message) {
           final double? nextHeight = double.tryParse(message.message);
           if (nextHeight == null || nextHeight <= 0 || !mounted) return;
+          _debugLog('height callback: $nextHeight');
           if ((_webViewHeight - nextHeight).abs() < 1) return;
           setState(() => _webViewHeight = nextHeight);
         },
@@ -452,23 +458,50 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
       ..addJavaScriptChannel(
         'SheetLog',
         onMessageReceived: (JavaScriptMessage message) {
-          debugPrint('Drum sheet notation WebView: ${message.message}');
+          _debugLog('js: ${message.message}');
         },
       )
       ..setNavigationDelegate(
         NavigationDelegate(
+          onNavigationRequest: (NavigationRequest request) {
+            _debugLog(
+              'navigation request: ${request.url} '
+              'mainFrame=${request.isMainFrame}',
+            );
+            return NavigationDecision.navigate;
+          },
+          onPageStarted: (String url) {
+            _debugLog('page started: $url');
+          },
+          onProgress: (int progress) {
+            if (progress == 0 || progress == 100) {
+              _debugLog('page progress: $progress');
+            }
+          },
           onWebResourceError: (WebResourceError error) {
-            debugPrint(
-              'Drum sheet notation WebView resource error: '
-              '${_webResourceErrorDebugDescription(error)}',
+            _debugLog(
+              'resource error: ${_webResourceErrorDebugDescription(error)}',
             );
           },
-          onPageFinished: (_) {
+          onHttpError: (HttpResponseError error) {
+            _debugLog(
+              'http error: status=${error.response?.statusCode ?? 'unknown'} '
+              'request=${error.request?.uri ?? 'unknown'} '
+              'response=${error.response?.uri ?? 'unknown'}',
+            );
+          },
+          onUrlChange: (UrlChange change) {
+            _debugLog('url change: ${change.url ?? 'unknown'}');
+          },
+          onPageFinished: (String url) {
+            _debugLog('page finished: $url');
             _hostLoaded = true;
             _lastPayloadJson = null;
             _lastRenderPayloadJson = null;
             _lastSelectionJson = null;
             _lastPlayheadJson = null;
+            _lastWaitingForHostLogSignature = null;
+            _lastRenderProbeSignature = null;
             _renderToWebView(width: _lastLayoutWidth);
           },
         ),
@@ -481,11 +514,11 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
   Future<void> _loadHostAsset(WebViewController controller) async {
     try {
       if (!mounted || _controller != controller) return;
+      _debugLog('load host asset: $_hostAsset');
       await controller.loadFlutterAsset(_hostAsset);
+      _debugLog('load host asset call completed');
     } on Object catch (error, stackTrace) {
-      debugPrint(
-        'Drum sheet notation host asset load failed: $error\n$stackTrace',
-      );
+      _debugLog('host asset load failed: $error\n$stackTrace');
     }
   }
 
@@ -730,7 +763,10 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
   }
 
   void _renderToWebView({double? width}) {
-    if (!_hostLoaded) return;
+    if (!_hostLoaded) {
+      _debugRenderWaitingForHost(width);
+      return;
+    }
     final double resolvedWidth = width ?? _lastLayoutWidth ?? 640;
     final Map<String, Object?> payload = _webViewPayloadForWidth(resolvedWidth);
     final String renderPayloadJson = jsonEncode(<String, Object?>{
@@ -744,6 +780,12 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
     _lastPayloadJson = jsonEncode(payload);
     _lastRenderPayloadJson = renderPayloadJson;
     _lastSelectionJson = selectionJson;
+    _debugRenderProbe(
+      width: resolvedWidth,
+      renderPayloadJson: renderPayloadJson,
+      shouldRender: shouldRender,
+      shouldUpdateSelection: shouldUpdateSelection,
+    );
     final String encodedPayload = jsonEncode(_lastPayloadJson);
     final String encodedSelection = jsonEncode(selectionJson);
     if (!shouldRender) {
@@ -757,8 +799,11 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
   window.DrumcabularySheetNotation.setSelection(selected);
 })();
 ''')
+          .then((_) {
+            _debugLog('selection JavaScript command completed');
+          })
           .catchError((Object error) {
-            debugPrint('Drum sheet notation selection update failed: $error');
+            _debugLog('selection JavaScript command failed: $error');
           });
       _sendPlayheadToWebView(_playheadFrame);
       return;
@@ -774,8 +819,11 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
   window.DrumcabularySheetNotation.render(payload);
 })();
 ''')
+        .then((_) {
+          _debugLog('render JavaScript command completed');
+        })
         .catchError((Object error) {
-          debugPrint('Drum sheet notation JavaScript render failed: $error');
+          _debugLog('render JavaScript command failed: $error');
         });
     _lastPlayheadJson = null;
     _sendPlayheadToWebView(_playheadFrame);
@@ -799,9 +847,57 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
   window.DrumcabularySheetNotation.setPlayhead(playhead);
 })();
 ''')
+        .then((_) {
+          _debugLog('playhead JavaScript command completed');
+        })
         .catchError((Object error) {
-          debugPrint('Drum sheet notation playhead update failed: $error');
+          _debugLog('playhead JavaScript command failed: $error');
         });
+  }
+
+  void _debugRenderWaitingForHost(double? width) {
+    if (!kDebugMode) return;
+    final String signature =
+        '${width?.floor() ?? 'unknown'}|${_debugDocumentSummary()}';
+    if (_lastWaitingForHostLogSignature == signature) return;
+    _lastWaitingForHostLogSignature = signature;
+    _debugLog('render waiting for host: $signature');
+  }
+
+  void _debugRenderProbe({
+    required double width,
+    required String renderPayloadJson,
+    required bool shouldRender,
+    required bool shouldUpdateSelection,
+  }) {
+    if (!kDebugMode) return;
+    final String signature =
+        '${width.floor()}|${renderPayloadJson.length}|'
+        '$shouldRender|$shouldUpdateSelection|${_debugDocumentSummary()}';
+    if (_lastRenderProbeSignature == signature) return;
+    _lastRenderProbeSignature = signature;
+    _debugLog(
+      'render probe: width=${width.floor()} '
+      'payloadBytes=${renderPayloadJson.length} '
+      'shouldRender=$shouldRender '
+      'shouldUpdateSelection=$shouldUpdateSelection '
+      '${_debugDocumentSummary()}',
+    );
+  }
+
+  String _debugDocumentSummary() {
+    if (!kDebugMode) return '';
+    return 'measures=${widget.document.measures.length} '
+        'notes=${widget.document.flattenedNotes.length} '
+        'subdivision=${widget.document.subdivision.name} '
+        'feel=${widget.document.feel.name} '
+        'time=${widget.document.timeSignature} '
+        'compact=${widget.compactLayout}';
+  }
+
+  void _debugLog(String message) {
+    if (!kDebugMode) return;
+    debugPrint('Drum sheet notation #$_debugInstanceId: $message');
   }
 
   Map<String, Object?> _webViewPayloadForWidth(double width) {
