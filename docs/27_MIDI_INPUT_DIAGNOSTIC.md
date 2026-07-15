@@ -5,8 +5,8 @@ The goal is only to prove this path:
 
 LEKATO drum kit -> USB MIDI -> macOS CoreMIDI -> Drumcabulary
 
-This scaffold does not score performances, record takes, sync lessons, control
-LEDs, or provide coaching.
+This scaffold does not score performances, record takes, sync lessons, provide
+coaching, or run lesson-driven lighting.
 
 ## Package
 
@@ -49,6 +49,9 @@ reach into the plugin or UI directly.
 - `lib/features/midi/bounded_midi_event_log.dart`
 - `lib/features/midi/midi_input_service.dart`
 - `lib/features/midi/midi_diagnostic_screen.dart`
+- `lib/features/midi/drum_voice_led_command_mapper.dart`
+- `lib/features/midi/midi_led_forwarder.dart`
+- `lib/features/midi/serial_led_controller.dart`
 
 ## Device Mapping
 
@@ -135,6 +138,103 @@ Current MVP rules:
 - The estimate is shown for quick authoring feedback only. It is not assessment,
   scoring, or a full tempo-grid inference engine.
 
+## USB Serial LED Bridge
+
+The MIDI diagnostic screen includes a minimal LED Controller section for the
+ESP32-S3 proof of concept:
+
+LEKATO drum kit -> USB MIDI -> Drumcabulary -> USB serial -> ESP32 -> LEDs
+
+This is diagnostic-only. It does not add lesson playback, pattern-driven
+lighting, color editing, persistence, Bluetooth, networking, or production LED
+configuration.
+
+### Serial Package
+
+Drumcabulary uses `flutter_libserialport` `^0.6.0`.
+
+Selection reasons:
+
+- It is backed by `libserialport`.
+- It supports macOS USB serial devices.
+- It provides serial port discovery.
+- It exposes human-readable port metadata where available.
+- It supports direct byte writes to a selected port.
+- It keeps this proof of concept out of custom native plugin work.
+
+The package wraps the `libserialport` Dart API. The current lockfile resolves
+`flutter_libserialport` to `0.6.0` and `libserialport` to `0.3.0+1`.
+
+### Serial Data Flow
+
+1. `SerialLedController` discovers `/dev/cu.*` serial ports.
+2. The user selects the ESP32 port, expected to look like `/dev/cu.usbmodem...`.
+3. `SerialLedController` opens the selected port at `115200 8N1` with no flow
+   control.
+4. `MidiDiagnosticScreen` receives mapped `MidiDiagnosticEvent` values from the
+   existing MIDI path.
+5. `MidiLedForwarder` ignores Note Off and velocity-zero events.
+6. `DrumVoiceLedCommandMapper` maps the `DrumVoice` to a newline-terminated
+   firmware command.
+7. `SerialLedController` writes the command bytes to the ESP32.
+
+MIDI and serial lifecycles are independent. Disconnecting the LEKATO does not
+disconnect serial. Disconnecting or unplugging the ESP32 does not stop MIDI
+input or MIDI Pattern Capture.
+
+### Serial Settings
+
+- Baud rate: `115200`
+- Data bits: `8`
+- Parity: none
+- Stop bits: `1`
+- Flow control: none
+- Encoding: UTF-8/ASCII text
+- Terminator: newline
+
+### LED Command Mapping
+
+| DrumVoice | Serial command |
+| --- | --- |
+| snare | `SNARE\n` |
+| kick | `KICK\n` |
+| hiHatClosed | `HIHAT\n` |
+| hiHatOpen | `HIHAT\n` |
+| hiHatPedal | `HIHAT\n` |
+| tom1 | `TOM1\n` |
+| tom2 | `TOM2\n` |
+| floorTom | `FLOORTOM\n` |
+| crash | `CRASH\n` |
+| ride | `RIDE\n` |
+| unknown | no command |
+
+Unknown voices remain visible in the MIDI event log but are not forwarded to
+the ESP32.
+
+### Opening And Using The LED Controller
+
+Run the app on macOS and click the USB icon in the top app bar to open:
+
+`MIDI Input Diagnostic`
+
+In the LED Controller section:
+
+1. Connect the ESP32-S3 by USB.
+2. Click `Refresh`.
+3. Select the `/dev/cu.usbmodem...` serial port.
+4. Click `Connect`.
+5. Click `Test Flash` to send `SNARE\n`.
+6. Connect the LEKATO MIDI device in the MIDI device section.
+7. Enable `Forward MIDI Hits`.
+8. Strike pads on the LEKATO.
+
+Each mapped Note On hit sends one immediate serial command. Simultaneous MIDI
+voices send separate commands in event order.
+
+If Arduino Serial Monitor or another app has the port open, the connect action
+should surface a port-in-use/open failure. Close the other app, refresh, then
+connect again.
+
 ## macOS Setup
 
 The project already targets macOS `10.15`, which matches the Darwin plugin
@@ -143,12 +243,20 @@ macOS deployment target.
 No microphone permissions are required. This feature consumes MIDI data, not
 audio.
 
-The macOS app includes the USB device sandbox entitlement:
+The macOS app includes the serial and USB device sandbox entitlements:
+
+`com.apple.security.device.serial`
 
 `com.apple.security.device.usb`
 
-This is needed for the sandboxed app to access USB MIDI hardware exposed through
-CoreMIDI. No microphone permission is added.
+The serial entitlement is required for App Sandbox serial-device access. The
+USB entitlement remains in place for USB hardware access, including USB MIDI
+hardware exposed through CoreMIDI.
+
+If a development build still cannot open `/dev/cu.usbmodem...`, verify that no
+other process has the port open and test whether App Sandbox is blocking direct
+serial access in that local signing configuration. No microphone permission is
+added.
 
 ## LEKATO Mapping Worksheet
 
@@ -178,3 +286,8 @@ Use the diagnostic event log to fill this out.
 - Unknown MIDI notes remain visible and map to `unknown`.
 - Device reconnection is handled by rescan/setup-change behavior; if automatic
   reconnection does not restore input immediately, use `Rescan` and `Connect`.
+- The LED bridge does not read ESP32 responses or acknowledgments.
+- Serial reconnect is explicit: refresh the port list, select the ESP32 port,
+  and connect again.
+- LED forwarding is diagnostic-only and requires both an active serial
+  connection and the `Forward MIDI Hits` toggle.

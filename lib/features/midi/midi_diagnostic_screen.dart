@@ -8,10 +8,13 @@ import '../app/drumcabulary_theme.dart';
 import '../app/drumcabulary_ui.dart';
 import '../practice/widgets/sheet_notation_display.dart';
 import 'bounded_midi_event_log.dart';
+import 'drum_voice_led_command_mapper.dart';
 import 'drum_kit_mapper.dart';
+import 'midi_led_forwarder.dart';
 import 'midi_input_models.dart';
 import 'midi_input_service.dart';
 import 'midi_pattern_capture.dart';
+import 'serial_led_controller.dart';
 
 class MidiDiagnosticScreen extends StatefulWidget {
   const MidiDiagnosticScreen({super.key});
@@ -25,9 +28,12 @@ class _MidiDiagnosticScreenState extends State<MidiDiagnosticScreen> {
   late final DrumKitMapper _mapper;
   late final BoundedMidiEventLog _eventLog;
   late final MidiPatternCaptureController _captureController;
+  late final SerialLedController _ledController;
+  late final MidiLedForwarder _ledForwarder;
   StreamSubscription<RawMidiEvent>? _eventSubscription;
   MidiDiagnosticEvent? _latestEvent;
   String? _selectedDeviceId;
+  bool _forwardMidiHitsToLeds = false;
 
   @override
   void initState() {
@@ -36,14 +42,19 @@ class _MidiDiagnosticScreenState extends State<MidiDiagnosticScreen> {
     _mapper = const DrumKitMapper();
     _eventLog = BoundedMidiEventLog(maxEntries: 100);
     _captureController = MidiPatternCaptureController();
+    _ledController = SerialLedController()..addListener(_handleLedChanged);
+    _ledForwarder = MidiLedForwarder(controller: _ledController);
     _eventSubscription = _service.events.listen(_handleRawMidiEvent);
     unawaited(_service.start());
+    unawaited(_ledController.refreshPorts());
   }
 
   @override
   void dispose() {
     _service.removeListener(_handleServiceChanged);
+    _ledController.removeListener(_handleLedChanged);
     _captureController.dispose();
+    _ledController.dispose();
     unawaited(_eventSubscription?.cancel());
     _service.dispose();
     super.dispose();
@@ -61,12 +72,23 @@ class _MidiDiagnosticScreenState extends State<MidiDiagnosticScreen> {
     });
   }
 
+  void _handleLedChanged() {
+    if (!mounted) return;
+    setState(() {
+      if (!_ledController.isConnected && _forwardMidiHitsToLeds) {
+        _forwardMidiHitsToLeds = false;
+        _ledForwarder.enabled = false;
+      }
+    });
+  }
+
   void _handleRawMidiEvent(RawMidiEvent event) {
     final MidiDiagnosticEvent diagnosticEvent = MidiDiagnosticEvent(
       raw: event,
       drum: _mapper.map(event),
     );
     _captureController.capture(diagnosticEvent);
+    _ledForwarder.handle(diagnosticEvent);
     if (!mounted) return;
     setState(() {
       _latestEvent = diagnosticEvent;
@@ -124,6 +146,24 @@ class _MidiDiagnosticScreenState extends State<MidiDiagnosticScreen> {
               _DiscoveryPanel(service: _service),
               const SizedBox(height: 14),
               _LatestEventPanel(service: _service, event: _latestEvent),
+              const SizedBox(height: 14),
+              _LedControllerPanel(
+                controller: _ledController,
+                forwardMidiHits: _forwardMidiHitsToLeds,
+                onRefresh: () => unawaited(_ledController.refreshPorts()),
+                onPortSelected: _ledController.selectPort,
+                onConnect: () => unawaited(_ledController.connect()),
+                onDisconnect: () => unawaited(_ledController.disconnect()),
+                onTestFlash: () => _ledController.sendCommand(
+                  DrumVoiceLedCommandMapper.snareCommand,
+                ),
+                onForwardMidiHitsChanged: (bool value) {
+                  setState(() {
+                    _forwardMidiHitsToLeds = value;
+                    _ledForwarder.enabled = value;
+                  });
+                },
+              ),
               const SizedBox(height: 14),
               MidiPatternCaptureCard(controller: _captureController),
               const SizedBox(height: 14),
@@ -607,6 +647,249 @@ class _LatestEventPanel extends StatelessWidget {
   }
 }
 
+class _LedControllerPanel extends StatelessWidget {
+  final SerialLedController controller;
+  final bool forwardMidiHits;
+  final VoidCallback onRefresh;
+  final ValueChanged<String?> onPortSelected;
+  final VoidCallback onConnect;
+  final VoidCallback onDisconnect;
+  final VoidCallback onTestFlash;
+  final ValueChanged<bool> onForwardMidiHitsChanged;
+
+  const _LedControllerPanel({
+    required this.controller,
+    required this.forwardMidiHits,
+    required this.onRefresh,
+    required this.onPortSelected,
+    required this.onConnect,
+    required this.onDisconnect,
+    required this.onTestFlash,
+    required this.onForwardMidiHitsChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bool connected = controller.isConnected;
+    final bool connecting =
+        controller.status == SerialLedConnectionStatus.connecting;
+    final bool hasPorts = controller.ports.isNotEmpty;
+    final String? dropdownValue = _dropdownValue();
+
+    return DrumPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  'LED Controller',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+                ),
+              ),
+              _SerialLedStatusPill(status: controller.status),
+            ],
+          ),
+          const SizedBox(height: 14),
+          if (!hasPorts)
+            Text(
+              'No serial ports found. Connect the ESP32 and refresh.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: DrumcabularyTheme.edgeTextSecondary,
+              ),
+            )
+          else
+            DropdownButtonFormField<String>(
+              key: ValueKey<String?>(dropdownValue),
+              initialValue: dropdownValue,
+              isExpanded: true,
+              dropdownColor: DrumcabularyTheme.edgeSurfaceSecondary,
+              decoration: const InputDecoration(
+                labelText: 'ESP32 serial device',
+                border: OutlineInputBorder(),
+              ),
+              selectedItemBuilder: (BuildContext context) {
+                return controller.ports
+                    .map(
+                      (SerialLedPort port) => Text(
+                        _selectedPortLabel(port),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
+                    )
+                    .toList(growable: false);
+              },
+              items: controller.ports
+                  .map(
+                    (SerialLedPort port) => DropdownMenuItem<String>(
+                      value: port.path,
+                      child: Text(
+                        _portLabel(port),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 2,
+                      ),
+                    ),
+                  )
+                  .toList(growable: false),
+              onChanged: connected || connecting ? null : onPortSelected,
+            ),
+          if (controller.selectedPort != null) ...<Widget>[
+            const SizedBox(height: 10),
+            _SerialPortDetails(port: controller.selectedPort!),
+          ],
+          if (controller.lastError != null) ...<Widget>[
+            const SizedBox(height: 10),
+            Text(
+              controller.lastError!,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.error,
+                height: 1.3,
+              ),
+            ),
+          ],
+          const SizedBox(height: 14),
+          DrumActionRow(
+            children: <Widget>[
+              OutlinedButton.icon(
+                onPressed: connecting ? null : onRefresh,
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Refresh'),
+              ),
+              if (connected)
+                FilledButton.icon(
+                  onPressed: onDisconnect,
+                  icon: const Icon(Icons.link_off_rounded),
+                  label: const Text('Disconnect'),
+                )
+              else
+                FilledButton.icon(
+                  onPressed: hasPorts && !connecting && dropdownValue != null
+                      ? onConnect
+                      : null,
+                  icon: const Icon(Icons.usb_rounded),
+                  label: Text(connecting ? 'Connecting' : 'Connect'),
+                ),
+              OutlinedButton.icon(
+                onPressed: connected ? onTestFlash : null,
+                icon: const Icon(Icons.flash_on_rounded),
+                label: const Text('Test Flash'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SwitchListTile.adaptive(
+            value: connected && forwardMidiHits,
+            onChanged: connected ? onForwardMidiHitsChanged : null,
+            contentPadding: EdgeInsets.zero,
+            title: Text(
+              'Forward MIDI Hits',
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+            ),
+            subtitle: Text(
+              'Sends one voice command per mapped Note On hit.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: DrumcabularyTheme.edgeTextSecondary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String? _dropdownValue() {
+    final SerialLedPort? selectedPort = controller.selectedPort;
+    if (selectedPort == null) return null;
+    return controller.ports.any(
+          (SerialLedPort port) => port.path == selectedPort.path,
+        )
+        ? selectedPort.path
+        : null;
+  }
+
+  String _portLabel(SerialLedPort port) {
+    final List<String> parts = <String>[
+      if (_hasValue(port.description)) port.description!,
+      if (_hasValue(port.productName) && port.productName != port.description)
+        port.productName!,
+      port.path,
+    ];
+    return parts.join(' | ');
+  }
+
+  String _selectedPortLabel(SerialLedPort port) => port.path;
+
+  bool _hasValue(String? value) => value != null && value.isNotEmpty;
+}
+
+class _SerialPortDetails extends StatelessWidget {
+  final SerialLedPort port;
+
+  const _SerialPortDetails({required this.port});
+
+  @override
+  Widget build(BuildContext context) {
+    final List<String> details = <String>[
+      if (_hasValue(port.description)) 'description ${port.description}',
+      if (_hasValue(port.manufacturer)) 'manufacturer ${port.manufacturer}',
+      if (_hasValue(port.productName)) 'product ${port.productName}',
+      if (_hasValue(port.serialNumber)) 'serial ${port.serialNumber}',
+      if (port.vendorId != null) 'vid ${port.vendorId}',
+      if (port.productId != null) 'pid ${port.productId}',
+      'path ${port.path}',
+    ];
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: DrumcabularyTheme.edgeSurfaceSecondary,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: DrumcabularyTheme.edgeBorder),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Text(
+          details.join(' | '),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: DrumcabularyTheme.edgeTextSecondary,
+            fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
+            height: 1.25,
+          ),
+        ),
+      ),
+    );
+  }
+
+  bool _hasValue(String? value) => value != null && value.isNotEmpty;
+}
+
+class _SerialLedStatusPill extends StatelessWidget {
+  final SerialLedConnectionStatus status;
+
+  const _SerialLedStatusPill({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    final Color color = switch (status) {
+      SerialLedConnectionStatus.connected => DrumcabularyTheme.edgeOrange,
+      SerialLedConnectionStatus.connecting =>
+        DrumcabularyTheme.edgeOrangePressed,
+      SerialLedConnectionStatus.connectionError ||
+      SerialLedConnectionStatus.deviceRemoved => Theme.of(
+        context,
+      ).colorScheme.error,
+      SerialLedConnectionStatus.disconnected =>
+        DrumcabularyTheme.edgeSurfaceSecondary,
+    };
+
+    return DrumStatusPill(label: _serialLedStatusLabel(status), color: color);
+  }
+}
+
 class MidiPatternCaptureCard extends StatefulWidget {
   final MidiPatternCaptureController controller;
 
@@ -1020,6 +1303,16 @@ String _statusLabel(MidiInputStatus status) {
     MidiInputStatus.connecting => 'Connecting',
     MidiInputStatus.connected => 'Connected',
     MidiInputStatus.connectionError => 'Error',
+  };
+}
+
+String _serialLedStatusLabel(SerialLedConnectionStatus status) {
+  return switch (status) {
+    SerialLedConnectionStatus.disconnected => 'Disconnected',
+    SerialLedConnectionStatus.connecting => 'Connecting',
+    SerialLedConnectionStatus.connected => 'Connected',
+    SerialLedConnectionStatus.connectionError => 'Error',
+    SerialLedConnectionStatus.deviceRemoved => 'Removed',
   };
 }
 

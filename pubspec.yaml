@@ -35,6 +35,7 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   audio_session: ^0.2.3
+  flutter_libserialport: ^0.6.0
   flutter_midi_command: ^1.0.3
   isar: ^3.1.0+1
   isar_flutter_libs: ^3.1.0+1
