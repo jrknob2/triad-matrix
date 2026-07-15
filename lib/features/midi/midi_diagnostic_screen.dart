@@ -743,6 +743,15 @@ class _MidiPatternCaptureCardState extends State<MidiPatternCaptureCard> {
               ),
             ],
           ),
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Chip(
+              label: Text(
+                'Estimated BPM ${_tempoEstimateLabel(widget.controller.tempoEstimate)}',
+              ),
+            ),
+          ),
           const SizedBox(height: 14),
           Text(
             'Generated pattern string',
@@ -980,6 +989,11 @@ String _formatEvent(MidiDiagnosticEvent event) {
       'Ch $channel | ${_messageTypeLabel(raw.messageType)} | '
       'Note ${raw.note} | Velocity ${raw.velocity} | '
       '${_voiceLabel(event.drum.voice)}';
+}
+
+String _tempoEstimateLabel(MidiTempoEstimate? estimate) {
+  if (estimate == null) return '--';
+  return estimate.roundedBpm.toString();
 }
 
 String _formatTimestamp(DateTime timestamp) {

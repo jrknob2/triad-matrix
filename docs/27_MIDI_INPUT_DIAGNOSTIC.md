@@ -63,6 +63,7 @@ reach into the plugin or UI directly.
 | 44 | hi-hat pedal |
 | 46 | hi-hat open |
 | 43 | floor tom |
+| 45 | tom 2 |
 | 47 | tom 2 |
 | 48 | tom 1 |
 | 49 | crash |
@@ -87,6 +88,9 @@ Use the screen to:
 - Connect or disconnect the selected device.
 - Strike pads and read note, velocity, channel, message type, timestamp, and
   mapped voice.
+- Capture a short MIDI pattern and view its generated Drumcabulary pattern
+  string, notation preview, and estimated BPM.
+- Copy the bounded event log to the clipboard.
 - Clear the bounded event log.
 
 If the only visible device is `Session 1`, the app is seeing CoreMIDI's network
@@ -115,6 +119,21 @@ Example log line:
 
 Diagnostic timestamps are app receipt times. They are intended for live
 inspection, not durable performance analysis.
+
+## MIDI Pattern Capture BPM Estimate
+
+The MIDI Pattern Capture card estimates BPM from recent captured Note On
+onsets. It groups near-simultaneous hits first, so a kick and snare landing
+together count as one timing point.
+
+Current MVP rules:
+
+- Note Off events and Note On velocity `0` events are ignored.
+- The estimate uses a rolling average of recent onset intervals.
+- The estimate assumes the generated default capture pattern uses eighth-note
+  spacing, so two captured event gaps equal one quarter-note beat.
+- The estimate is shown for quick authoring feedback only. It is not assessment,
+  scoring, or a full tempo-grid inference engine.
 
 ## macOS Setup
 

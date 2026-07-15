@@ -11,15 +11,27 @@ class MidiPatternCaptureConfig {
   final int accentVelocityMin;
   final Duration simultaneousWindow;
   final Duration liveUpdateInterval;
+  final int tempoIntervalSampleCount;
+  final double tempoEventsPerQuarterNote;
+  final int minimumEstimatedBpm;
+  final int maximumEstimatedBpm;
 
   const MidiPatternCaptureConfig({
     this.ghostVelocityMax = 10,
     this.accentVelocityMin = 120,
     this.simultaneousWindow = const Duration(milliseconds: 30),
     this.liveUpdateInterval = const Duration(milliseconds: 100),
+    this.tempoIntervalSampleCount = 8,
+    this.tempoEventsPerQuarterNote = 2,
+    this.minimumEstimatedBpm = 30,
+    this.maximumEstimatedBpm = 260,
   }) : assert(ghostVelocityMax >= 0),
        assert(accentVelocityMin <= 127),
-       assert(ghostVelocityMax < accentVelocityMin);
+       assert(ghostVelocityMax < accentVelocityMin),
+       assert(tempoIntervalSampleCount > 0),
+       assert(tempoEventsPerQuarterNote > 0),
+       assert(minimumEstimatedBpm > 0),
+       assert(maximumEstimatedBpm >= minimumEstimatedBpm);
 }
 
 @immutable
@@ -35,6 +47,21 @@ class CapturedMidiHit {
   });
 }
 
+@immutable
+class MidiTempoEstimate {
+  final double bpm;
+  final int intervalCount;
+  final Duration averageOnsetInterval;
+
+  const MidiTempoEstimate({
+    required this.bpm,
+    required this.intervalCount,
+    required this.averageOnsetInterval,
+  });
+
+  int get roundedBpm => bpm.round();
+}
+
 class MidiPatternCaptureController extends ChangeNotifier {
   final MidiPatternBuilder builder;
   final DateTime Function() _clock;
@@ -42,6 +69,7 @@ class MidiPatternCaptureController extends ChangeNotifier {
   final List<CapturedMidiHit> _hits = <CapturedMidiHit>[];
   bool _isRecording = false;
   String _generatedPattern = '';
+  MidiTempoEstimate? _tempoEstimate;
   DateTime? _startedAt;
   Timer? _liveUpdateTimer;
 
@@ -52,6 +80,7 @@ class MidiPatternCaptureController extends ChangeNotifier {
 
   bool get isRecording => _isRecording;
   String get generatedPattern => _generatedPattern;
+  MidiTempoEstimate? get tempoEstimate => _tempoEstimate;
   List<CapturedMidiHit> get capturedHits => List.unmodifiable(_hits);
 
   void record() {
@@ -59,6 +88,7 @@ class MidiPatternCaptureController extends ChangeNotifier {
     _liveUpdateTimer = null;
     _hits.clear();
     _generatedPattern = '';
+    _tempoEstimate = null;
     _startedAt = _clock();
     _isRecording = true;
     notifyListeners();
@@ -108,8 +138,14 @@ class MidiPatternCaptureController extends ChangeNotifier {
 
   void _regeneratePattern({bool forceNotify = false}) {
     final String nextPattern = builder.buildPattern(_hits);
-    if (nextPattern == _generatedPattern && !forceNotify) return;
+    final MidiTempoEstimate? nextTempoEstimate = builder.estimateTempo(_hits);
+    if (nextPattern == _generatedPattern &&
+        _tempoEstimateEquals(nextTempoEstimate, _tempoEstimate) &&
+        !forceNotify) {
+      return;
+    }
     _generatedPattern = nextPattern;
+    _tempoEstimate = nextTempoEstimate;
     notifyListeners();
   }
 
@@ -152,6 +188,52 @@ class MidiPatternBuilder {
     return pattern;
   }
 
+  MidiTempoEstimate? estimateTempo(List<CapturedMidiHit> hits) {
+    final List<CapturedMidiHit> sortedHits = hits.toList(growable: false)
+      ..sort(
+        (CapturedMidiHit a, CapturedMidiHit b) => a.offset.compareTo(b.offset),
+      );
+    final List<List<CapturedMidiHit>> groups = _simultaneousGroups(sortedHits);
+    if (groups.length < 2) return null;
+
+    final List<Duration> onsets = groups
+        .map(_onsetForGroup)
+        .toList(growable: false);
+    final List<Duration> intervals = <Duration>[];
+    for (int index = 1; index < onsets.length; index += 1) {
+      final Duration interval = onsets[index] - onsets[index - 1];
+      if (interval > Duration.zero) intervals.add(interval);
+    }
+    if (intervals.isEmpty) return null;
+
+    final int sampleCount = intervals.length < config.tempoIntervalSampleCount
+        ? intervals.length
+        : config.tempoIntervalSampleCount;
+    final List<Duration> samples = intervals.sublist(
+      intervals.length - sampleCount,
+    );
+    final int averageMicros =
+        samples
+            .map((Duration interval) => interval.inMicroseconds)
+            .reduce((int total, int micros) => total + micros) ~/
+        samples.length;
+    if (averageMicros <= 0) return null;
+
+    final double secondsPerQuarter =
+        (averageMicros / Duration.microsecondsPerSecond) *
+        config.tempoEventsPerQuarterNote;
+    final double bpm = 60 / secondsPerQuarter;
+    if (bpm < config.minimumEstimatedBpm || bpm > config.maximumEstimatedBpm) {
+      return null;
+    }
+
+    return MidiTempoEstimate(
+      bpm: bpm,
+      intervalCount: samples.length,
+      averageOnsetInterval: Duration(microseconds: averageMicros),
+    );
+  }
+
   List<List<CapturedMidiHit>> _simultaneousGroups(List<CapturedMidiHit> hits) {
     final List<List<CapturedMidiHit>> groups = <List<CapturedMidiHit>>[];
     List<CapturedMidiHit> current = <CapturedMidiHit>[];
@@ -192,6 +274,15 @@ class MidiPatternBuilder {
 
   int _compareVoiceOrder(CapturedMidiHit a, CapturedMidiHit b) {
     return _voiceOrder(a.voice).compareTo(_voiceOrder(b.voice));
+  }
+
+  Duration _onsetForGroup(List<CapturedMidiHit> group) {
+    return group.map((CapturedMidiHit hit) => hit.offset).reduce((
+      Duration earliest,
+      Duration offset,
+    ) {
+      return offset < earliest ? offset : earliest;
+    });
   }
 
   String _patternForGroup(List<CapturedMidiHit> group) {
@@ -273,6 +364,14 @@ class MidiPatternBuilder {
     }
     return 'R';
   }
+}
+
+bool _tempoEstimateEquals(MidiTempoEstimate? left, MidiTempoEstimate? right) {
+  if (identical(left, right)) return true;
+  if (left == null || right == null) return false;
+  return left.roundedBpm == right.roundedBpm &&
+      left.intervalCount == right.intervalCount &&
+      left.averageOnsetInterval == right.averageOnsetInterval;
 }
 
 enum _MidiVelocityExpression { ghost, normal, accent }

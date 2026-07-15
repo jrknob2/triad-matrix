@@ -95,6 +95,56 @@ void main() {
       expect(controller.stop(), 'K');
     });
 
+    test('Record clears the previous tempo estimate', () {
+      final DateTime startedAt = DateTime(2026);
+      final MidiPatternCaptureController controller =
+          MidiPatternCaptureController(clock: () => startedAt);
+
+      controller.record();
+      controller
+        ..capture(
+          _diagnosticEvent(
+            voice: DrumVoice.snare,
+            velocity: 72,
+            timestamp: startedAt,
+          ),
+        )
+        ..capture(
+          _diagnosticEvent(
+            voice: DrumVoice.snare,
+            velocity: 72,
+            timestamp: startedAt.add(const Duration(milliseconds: 250)),
+          ),
+        );
+      controller.stop();
+      expect(controller.tempoEstimate?.roundedBpm, 120);
+
+      controller.record();
+
+      expect(controller.tempoEstimate, isNull);
+    });
+
+    test('Stop estimates BPM from a short captured pattern', () {
+      final DateTime startedAt = DateTime(2026);
+      final MidiPatternCaptureController controller =
+          MidiPatternCaptureController(clock: () => startedAt);
+
+      controller.record();
+      for (int index = 0; index < 4; index += 1) {
+        controller.capture(
+          _diagnosticEvent(
+            voice: DrumVoice.hiHatClosed,
+            velocity: 72,
+            timestamp: startedAt.add(Duration(milliseconds: index * 250)),
+          ),
+        );
+      }
+      controller.stop();
+
+      expect(controller.tempoEstimate?.roundedBpm, 120);
+      expect(controller.tempoEstimate?.intervalCount, 3);
+    });
+
     test(
       'live MIDI capture updates the generated string before Stop',
       () async {
@@ -340,6 +390,77 @@ void main() {
       expect(document.feel, DrumSheetFeel.straight);
       expect(document.timeSignature, '4/4');
     });
+
+    test('estimates BPM from recent eighth-note onset intervals', () {
+      final MidiTempoEstimate? estimate = builder
+          .estimateTempo(<CapturedMidiHit>[
+            _hit(DrumVoice.hiHatClosed, velocity: 72),
+            _hit(
+              DrumVoice.hiHatClosed,
+              velocity: 72,
+              offset: const Duration(milliseconds: 250),
+            ),
+            _hit(
+              DrumVoice.hiHatClosed,
+              velocity: 72,
+              offset: const Duration(milliseconds: 500),
+            ),
+          ]);
+
+      expect(estimate?.roundedBpm, 120);
+      expect(estimate?.intervalCount, 2);
+      expect(estimate?.averageOnsetInterval, const Duration(milliseconds: 250));
+    });
+
+    test('estimates BPM without counting simultaneous hits as intervals', () {
+      final MidiTempoEstimate? estimate = builder
+          .estimateTempo(<CapturedMidiHit>[
+            _hit(DrumVoice.snare, velocity: 72),
+            _hit(
+              DrumVoice.kick,
+              velocity: 72,
+              offset: const Duration(milliseconds: 10),
+            ),
+            _hit(
+              DrumVoice.snare,
+              velocity: 72,
+              offset: const Duration(milliseconds: 250),
+            ),
+          ]);
+
+      expect(estimate?.roundedBpm, 120);
+      expect(estimate?.intervalCount, 1);
+    });
+
+    test('tempo estimate uses the configured rolling interval count', () {
+      const MidiPatternBuilder rollingBuilder = MidiPatternBuilder(
+        config: MidiPatternCaptureConfig(tempoIntervalSampleCount: 2),
+      );
+
+      final MidiTempoEstimate? estimate = rollingBuilder
+          .estimateTempo(<CapturedMidiHit>[
+            _hit(DrumVoice.snare, velocity: 72),
+            _hit(
+              DrumVoice.snare,
+              velocity: 72,
+              offset: const Duration(milliseconds: 500),
+            ),
+            _hit(
+              DrumVoice.snare,
+              velocity: 72,
+              offset: const Duration(milliseconds: 750),
+            ),
+            _hit(
+              DrumVoice.snare,
+              velocity: 72,
+              offset: const Duration(milliseconds: 1000),
+            ),
+          ]);
+
+      expect(estimate?.roundedBpm, 120);
+      expect(estimate?.intervalCount, 2);
+      expect(estimate?.averageOnsetInterval, const Duration(milliseconds: 250));
+    });
   });
 
   group('MidiPatternCaptureCard', () {
@@ -352,6 +473,7 @@ void main() {
       await _pumpCaptureCard(tester, controller);
 
       expect(tester.widget<TextField>(find.byType(TextField)).readOnly, false);
+      expect(find.text('Estimated BPM --'), findsOneWidget);
     });
 
     testWidgets('pattern string is not editable while recording', (
@@ -455,6 +577,35 @@ void main() {
         'R',
       );
       expect(find.byType(DrumSheetNotationDisplay), findsOneWidget);
+    });
+
+    testWidgets('live MIDI capture updates estimated BPM before Stop', (
+      WidgetTester tester,
+    ) async {
+      final DateTime startedAt = DateTime(2026);
+      final MidiPatternCaptureController controller =
+          MidiPatternCaptureController(clock: () => startedAt)..record();
+
+      await _pumpCaptureCard(tester, controller);
+      controller
+        ..capture(
+          _diagnosticEvent(
+            voice: DrumVoice.hiHatClosed,
+            velocity: 72,
+            timestamp: startedAt,
+          ),
+        )
+        ..capture(
+          _diagnosticEvent(
+            voice: DrumVoice.hiHatClosed,
+            velocity: 72,
+            timestamp: startedAt.add(const Duration(milliseconds: 250)),
+          ),
+        );
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump();
+
+      expect(find.text('Estimated BPM 120'), findsOneWidget);
     });
   });
 }
