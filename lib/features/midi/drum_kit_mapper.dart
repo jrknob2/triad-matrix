@@ -22,6 +22,7 @@ class DrumKitNoteMap {
       44: DrumVoice.hiHatPedal,
       46: DrumVoice.hiHatOpen,
       43: DrumVoice.floorTom,
+      45: DrumVoice.tom2,
       47: DrumVoice.tom2,
       48: DrumVoice.tom1,
       49: DrumVoice.crash,

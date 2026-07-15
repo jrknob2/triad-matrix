@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../app/drumcabulary_theme.dart';
 import '../app/drumcabulary_ui.dart';
@@ -859,6 +860,13 @@ class _EventLogPanel extends StatelessWidget {
                 ),
               ),
               TextButton.icon(
+                onPressed: events.isEmpty
+                    ? null
+                    : () => _copyEventsToClipboard(context, displayEvents),
+                icon: const Icon(Icons.copy_rounded),
+                label: const Text('Copy'),
+              ),
+              TextButton.icon(
                 onPressed: events.isEmpty ? null : onClear,
                 icon: const Icon(Icons.clear_all_rounded),
                 label: const Text('Clear'),
@@ -901,6 +909,18 @@ class _EventLogPanel extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _copyEventsToClipboard(
+    BuildContext context,
+    List<MidiDiagnosticEvent> displayEvents,
+  ) async {
+    final String text = displayEvents.map(_formatEvent).join('\n');
+    await Clipboard.setData(ClipboardData(text: text));
+    if (!context.mounted) return;
+    ScaffoldMessenger.maybeOf(
+      context,
+    )?.showSnackBar(const SnackBar(content: Text('MIDI event log copied.')));
   }
 }
 

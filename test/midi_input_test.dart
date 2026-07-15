@@ -117,6 +117,18 @@ void main() {
       expect(drumEvent.velocity, 104);
     });
 
+    test('maps LEKATO tom 2 note 45 to tom2', () {
+      const DrumKitMapper mapper = DrumKitMapper();
+
+      final DrumInputEvent drumEvent = mapper.map(
+        _rawEvent(note: 45, velocity: 96),
+      );
+
+      expect(drumEvent.voice, DrumVoice.tom2);
+      expect(drumEvent.midiNote, 45);
+      expect(drumEvent.velocity, 96);
+    });
+
     test('maps unknown notes to DrumVoice.unknown', () {
       const DrumKitMapper mapper = DrumKitMapper();
 
