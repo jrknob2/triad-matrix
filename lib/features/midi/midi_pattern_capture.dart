@@ -61,46 +61,28 @@ class MidiPatternCaptureController extends ChangeNotifier {
     _generatedPattern = '';
     _startedAt = _clock();
     _isRecording = true;
-    _debugCaptureLog('record start: capture cleared');
     notifyListeners();
   }
 
   String stop() {
     if (!_isRecording) {
-      _debugCaptureLog(
-        'stop ignored: not recording pattern="${_debugPattern(_generatedPattern)}"',
-      );
       return _generatedPattern;
     }
     _liveUpdateTimer?.cancel();
     _liveUpdateTimer = null;
     _isRecording = false;
     _regeneratePattern(forceNotify: true);
-    _debugCaptureLog(
-      'stop complete: hits=${_hits.length} pattern="${_debugPattern(_generatedPattern)}"',
-    );
     return _generatedPattern;
   }
 
   void capture(MidiDiagnosticEvent event) {
     if (!_isRecording) {
-      _debugCaptureLog(
-        'capture ignored: not recording type=${event.raw.messageType.name} '
-        'voice=${event.drum.voice.name} velocity=${event.raw.velocity}',
-      );
       return;
     }
     if (event.raw.messageType != MidiMessageType.noteOn) {
-      _debugCaptureLog(
-        'capture ignored: type=${event.raw.messageType.name} '
-        'voice=${event.drum.voice.name} velocity=${event.raw.velocity}',
-      );
       return;
     }
     if (event.raw.velocity <= 0) {
-      _debugCaptureLog(
-        'capture ignored: zero velocity voice=${event.drum.voice.name}',
-      );
       return;
     }
 
@@ -113,42 +95,21 @@ class MidiPatternCaptureController extends ChangeNotifier {
         offset: offset.isNegative ? Duration.zero : offset,
       ),
     );
-    _debugCaptureLog(
-      'capture accepted: hit=${_hits.length} voice=${event.drum.voice.name} '
-      'note=${event.raw.note} velocity=${event.raw.velocity} '
-      'offsetMs=${(offset.isNegative ? Duration.zero : offset).inMilliseconds}',
-    );
     _scheduleLiveUpdate();
   }
 
   void _scheduleLiveUpdate() {
-    if (_liveUpdateTimer != null) {
-      _debugCaptureLog('live update already scheduled');
-      return;
-    }
-    _debugCaptureLog(
-      'schedule live update: intervalMs=${builder.config.liveUpdateInterval.inMilliseconds}',
-    );
+    if (_liveUpdateTimer != null) return;
     _liveUpdateTimer = Timer(builder.config.liveUpdateInterval, () {
       _liveUpdateTimer = null;
-      _debugCaptureLog('live update timer fired');
       _regeneratePattern();
     });
   }
 
   void _regeneratePattern({bool forceNotify = false}) {
     final String nextPattern = builder.buildPattern(_hits);
-    if (nextPattern == _generatedPattern && !forceNotify) {
-      _debugCaptureLog(
-        'regenerate unchanged: hits=${_hits.length} pattern="${_debugPattern(nextPattern)}"',
-      );
-      return;
-    }
+    if (nextPattern == _generatedPattern && !forceNotify) return;
     _generatedPattern = nextPattern;
-    _debugCaptureLog(
-      'regenerate changed: force=$forceNotify hits=${_hits.length} '
-      'pattern="${_debugPattern(_generatedPattern)}"',
-    );
     notifyListeners();
   }
 
@@ -174,9 +135,6 @@ class MidiPatternBuilder {
                 a.offset.compareTo(b.offset),
           );
     if (supportedHits.isEmpty) {
-      _debugCaptureLog(
-        'builder produced empty pattern: hits=${hits.length} supported=0',
-      );
       return '';
     }
 
@@ -184,11 +142,6 @@ class MidiPatternBuilder {
       supportedHits,
     );
     final String pattern = groups.map(_patternForGroup).join(' ');
-    _debugCaptureLog(
-      'builder produced pattern: hits=${hits.length} '
-      'supported=${supportedHits.length} groups=${groups.length} '
-      'pattern="${_debugPattern(pattern)}"',
-    );
 
     // Keep the capture path honest: generated output must remain accepted by
     // the same parser used by the rest of the authoring UI during development.
@@ -370,15 +323,4 @@ int _voiceOrder(DrumVoice voice) {
     DrumVoice.kick => 9,
     DrumVoice.unknown => 10,
   };
-}
-
-void _debugCaptureLog(String message) {
-  if (!kDebugMode) return;
-  debugPrint('MIDI pattern capture: $message');
-}
-
-String _debugPattern(String pattern) {
-  const int maxLength = 160;
-  if (pattern.length <= maxLength) return pattern;
-  return '${pattern.substring(0, maxLength)}...';
 }

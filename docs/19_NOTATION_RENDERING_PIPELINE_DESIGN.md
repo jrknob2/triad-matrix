@@ -338,6 +338,23 @@ The note-position metadata is also used for:
 - note selection overlays in editor-oriented contexts
 - playhead alignment during Hear It preview
 
+## System Width And Density
+
+The renderer treats available screen width as a wrapping constraint, not as a
+request to justify sparse notation across the full container.
+
+Current MVP rules:
+
+- note density is based on renderer spacing tokens such as `noteSpacing`,
+  `groupGap`, and `systemEndReserve`
+- a short measure keeps the same horizontal note spacing on narrow and wide
+  screens
+- available width limits the maximum formatter width and controls when systems
+  wrap
+- the time-signature reserve reduces the available formatter width for the
+  first system, but it does not stretch sparse content
+- phrase grouping spaces may add visual gaps, but they do not change timing
+
 ## Repeat Rendering
 
 `repeatCount` is metadata on the notation document/section.

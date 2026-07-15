@@ -117,29 +117,6 @@
         }
       }
 
-      function postSheetProbe(stage, details = {}) {
-        postSheetLog('probe', JSON.stringify({ stage, ...details }));
-      }
-
-      function sheetDocumentSummary(documentJson) {
-        const measures = Array.isArray(documentJson?.measures)
-          ? documentJson.measures
-          : [];
-        const noteCount = measures.reduce(
-          (count, measure) => count + (
-            Array.isArray(measure?.notes) ? measure.notes.length : 0
-          ),
-          0,
-        );
-        return {
-          measureCount: measures.length,
-          noteCount,
-          subdivision: documentJson?.subdivision ?? 'unknown',
-          feel: documentJson?.feel ?? 'unknown',
-          timeSignature: documentJson?.timeSignature ?? 'unknown',
-        };
-      }
-
       globalThis.addEventListener('error', (event) => {
         postSheetLog('error', event.error?.stack ?? event.message ?? 'Unknown sheet notation error');
       });
@@ -154,10 +131,6 @@
     <script src="./vendor/vexflow.js"></script>
     <script>
       globalThis.VexFlow = globalThis.VexFlow || globalThis.Vex?.Flow || globalThis.Vex;
-      postSheetProbe('vexflow-script-loaded', {
-        hasVexFlow: globalThis.VexFlow != null,
-        hasVexNamespace: globalThis.Vex != null,
-      });
     </script>
     <script src="./app_renderer.js"></script>
     <script>
@@ -171,13 +144,6 @@
         render(payload) {
           try {
             const documentJson = payload.document;
-            const summary = sheetDocumentSummary(documentJson);
-            postSheetProbe('render-start', {
-              ...summary,
-              availableWidth: payload.options?.availableWidth ?? 'unknown',
-              hasRenderer: typeof globalThis.renderDrumNotationSvgWithMetadata === 'function',
-              hasVexFlow: globalThis.VexFlow != null,
-            });
             const selected = Array.isArray(payload.selectedIndexes)
               ? payload.selectedIndexes
               : [];
@@ -195,7 +161,7 @@
               notation.innerHTML = '<div class="empty-notation"></div>';
               renderSelection();
               renderPlayhead();
-              postSheetProbe('render-empty', { ...summary, height: postHeight() });
+              postHeight();
               return;
             }
             if (typeof globalThis.renderDrumNotationSvgWithMetadata !== 'function') {
@@ -212,18 +178,9 @@
             attachNoteSelection();
             renderSelection();
             renderPlayhead();
-            postSheetProbe('render-complete', {
-              ...summary,
-              svgLength: typeof result.svg === 'string' ? result.svg.length : 0,
-              metadataNoteCount: Array.isArray(result.notes) ? result.notes.length : 0,
-              height: postHeight(),
-            });
+            postHeight();
           } catch (error) {
             console.error(error);
-            postSheetProbe('render-error', {
-              message: error?.message ?? String(error),
-              stack: error?.stack ?? '',
-            });
             postSheetLog('error', error.stack ?? error.message ?? String(error));
             notation.innerHTML = `<pre class="error">${error.stack ?? error.message}</pre>`;
             postHeight();
@@ -467,11 +424,6 @@
         return height;
       }
 
-      postSheetProbe('host-ready', {
-        hasNotationElement: notation != null,
-        hasVexFlow: globalThis.VexFlow != null,
-        hasRenderer: typeof globalThis.renderDrumNotationSvgWithMetadata === 'function',
-      });
     </script>
   </body>
 </html>

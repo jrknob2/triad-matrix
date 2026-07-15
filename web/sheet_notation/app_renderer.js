@@ -766,21 +766,23 @@ function escapeXmlAttribute(value) {
 function formatterWidthForSystem(system, options, context = {}) {
   const groupGap = groupGapForSystem(system, options);
   const startReserve = startReserveForSystem(options, context);
-  if (system.preserveMeasure === true) {
-    return Math.max(
-      24,
-      (options.formatterWidth ?? options.measureWidth) -
-        groupGap -
-        startReserve,
-    );
-  }
-  const widthForNotes =
-    system.entries.length * options.noteSpacing + options.systemEndReserve;
   const maxWidth = options.formatterWidth ?? options.measureWidth;
+  const availableFormatterWidth = Math.max(
+    24,
+    maxWidth - groupGap - startReserve,
+  );
+  const densityFormatterWidth = Math.max(
+    24,
+    intrinsicSystemWidth(system, options) - groupGap,
+  );
   return Math.max(
     24,
-    Math.min(maxWidth, widthForNotes) - groupGap - startReserve,
+    Math.min(availableFormatterWidth, densityFormatterWidth),
   );
+}
+
+function intrinsicSystemWidth(system, options) {
+  return system.entries.length * options.noteSpacing + options.systemEndReserve;
 }
 
 function startReserveForSystem(options, context) {

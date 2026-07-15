@@ -47,8 +47,6 @@ class DrumSheetNotationController {
   }
 }
 
-enum _SheetNotationHostLoadKind { realHost, debugProbe }
-
 @immutable
 class DrumSheetNotationDocument {
   final DrumSheetNoteValue subdivision;
@@ -395,16 +393,8 @@ class DrumSheetNotationDisplay extends StatefulWidget {
 class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
     with WidgetsBindingObserver {
   static const String _hostAsset = 'web/sheet_notation/app_host.html';
-  static const String _probeMinimalAsset =
-      'web/sheet_notation/probe_minimal.html';
-  static const String _probeVexFlowAsset =
-      'web/sheet_notation/probe_vexflow.html';
-  static const String _probeRendererAsset =
-      'web/sheet_notation/probe_renderer.html';
-  static int _nextDebugInstanceId = 1;
   static _DrumSheetNotationDisplayState? _activeAudioPreviewOwner;
 
-  final int _debugInstanceId = _nextDebugInstanceId++;
   WebViewController? _controller;
   PatternAudioService? _audioPreview;
   Timer? _playheadTicker;
@@ -420,11 +410,6 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
   String? _lastRenderPayloadJson;
   String? _lastSelectionJson;
   String? _lastPlayheadJson;
-  String? _lastWaitingForHostLogSignature;
-  String? _lastRenderProbeSignature;
-  bool _hostFailureProbeStarted = false;
-  _SheetNotationHostLoadKind _hostLoadKind =
-      _SheetNotationHostLoadKind.realHost;
 
   @override
   void initState() {
@@ -438,7 +423,6 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
     final WebViewController? existing = _controller;
     if (existing != null) return existing;
 
-    _debugLog('creating WebView controller');
     _hostLoaded = false;
     final WebViewController controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted);
@@ -461,7 +445,6 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
         onMessageReceived: (JavaScriptMessage message) {
           final double? nextHeight = double.tryParse(message.message);
           if (nextHeight == null || nextHeight <= 0 || !mounted) return;
-          _debugLog('height callback: $nextHeight');
           if ((_webViewHeight - nextHeight).abs() < 1) return;
           setState(() => _webViewHeight = nextHeight);
         },
@@ -469,54 +452,23 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
       ..addJavaScriptChannel(
         'SheetLog',
         onMessageReceived: (JavaScriptMessage message) {
-          _debugLog('js: ${message.message}');
+          debugPrint('Drum sheet notation WebView: ${message.message}');
         },
       )
       ..setNavigationDelegate(
         NavigationDelegate(
-          onNavigationRequest: (NavigationRequest request) {
-            _debugLog(
-              'navigation request: ${request.url} '
-              'mainFrame=${request.isMainFrame}',
-            );
-            return NavigationDecision.navigate;
-          },
-          onPageStarted: (String url) {
-            _debugLog('page started: $url');
-          },
-          onProgress: (int progress) {
-            if (progress == 0 || progress == 100) {
-              _debugLog('page progress: $progress');
-            }
-          },
           onWebResourceError: (WebResourceError error) {
-            _handleWebResourceError(error);
-          },
-          onHttpError: (HttpResponseError error) {
-            _debugLog(
-              'http error: status=${error.response?.statusCode ?? 'unknown'} '
-              'request=${error.request?.uri ?? 'unknown'} '
-              'response=${error.response?.uri ?? 'unknown'}',
+            debugPrint(
+              'Drum sheet notation WebView resource error: '
+              '${error.errorCode} ${error.description}',
             );
-          },
-          onUrlChange: (UrlChange change) {
-            _debugLog('url change: ${change.url ?? 'unknown'}');
           },
           onPageFinished: (String url) {
-            _debugLog('page finished: $url');
-            if (_hostLoadKind != _SheetNotationHostLoadKind.realHost) {
-              _debugLog(
-                'debug probe page finished; real host remains unloaded',
-              );
-              return;
-            }
             _hostLoaded = true;
             _lastPayloadJson = null;
             _lastRenderPayloadJson = null;
             _lastSelectionJson = null;
             _lastPlayheadJson = null;
-            _lastWaitingForHostLogSignature = null;
-            _lastRenderProbeSignature = null;
             _renderToWebView(width: _lastLayoutWidth);
           },
         ),
@@ -529,62 +481,11 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
   Future<void> _loadHostAsset(WebViewController controller) async {
     try {
       if (!mounted || _controller != controller) return;
-      _hostLoadKind = _SheetNotationHostLoadKind.realHost;
-      _debugLog('load host asset: $_hostAsset');
       await controller.loadFlutterAsset(_hostAsset);
-      _debugLog('load host asset call completed');
     } on Object catch (error, stackTrace) {
-      _debugLog('host asset load failed: $error\n$stackTrace');
-    }
-  }
-
-  void _handleWebResourceError(WebResourceError error) {
-    _debugLog('resource error: ${_webResourceErrorDebugDescription(error)}');
-    if (!_shouldRunHostFailureProbe(error)) return;
-    final WebViewController? controller = _controller;
-    if (controller == null) return;
-    unawaited(_runHostFailureProbes(controller));
-  }
-
-  bool _shouldRunHostFailureProbe(WebResourceError error) {
-    return kDebugMode &&
-        defaultTargetPlatform == TargetPlatform.macOS &&
-        !_hostLoaded &&
-        !_hostFailureProbeStarted &&
-        _hostLoadKind == _SheetNotationHostLoadKind.realHost &&
-        error.isForMainFrame == true &&
-        error.errorType == WebResourceErrorType.webContentProcessTerminated;
-  }
-
-  Future<void> _runHostFailureProbes(WebViewController controller) async {
-    _hostFailureProbeStarted = true;
-    _debugLog(
-      'main-frame WebView content process terminated before host loaded; '
-      'starting debug probe sequence',
-    );
-    await _loadDebugProbeAsset(controller, _probeMinimalAsset);
-    await Future<void>.delayed(const Duration(milliseconds: 800));
-    await _loadDebugProbeAsset(controller, _probeVexFlowAsset);
-    await Future<void>.delayed(const Duration(milliseconds: 1200));
-    await _loadDebugProbeAsset(controller, _probeRendererAsset);
-    await Future<void>.delayed(const Duration(milliseconds: 1200));
-    _debugLog(
-      'debug probe sequence complete; no fallback render was attempted',
-    );
-  }
-
-  Future<void> _loadDebugProbeAsset(
-    WebViewController controller,
-    String asset,
-  ) async {
-    if (!mounted || _controller != controller) return;
-    _hostLoadKind = _SheetNotationHostLoadKind.debugProbe;
-    try {
-      _debugLog('load debug probe asset: $asset');
-      await controller.loadFlutterAsset(asset);
-      _debugLog('load debug probe asset call completed: $asset');
-    } on Object catch (error, stackTrace) {
-      _debugLog('debug probe asset load failed: $asset $error\n$stackTrace');
+      debugPrint(
+        'Drum sheet notation host asset load failed: $error\n$stackTrace',
+      );
     }
   }
 
@@ -829,10 +730,7 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
   }
 
   void _renderToWebView({double? width}) {
-    if (!_hostLoaded) {
-      _debugRenderWaitingForHost(width);
-      return;
-    }
+    if (!_hostLoaded) return;
     final double resolvedWidth = width ?? _lastLayoutWidth ?? 640;
     final Map<String, Object?> payload = _webViewPayloadForWidth(resolvedWidth);
     final String renderPayloadJson = jsonEncode(<String, Object?>{
@@ -846,17 +744,10 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
     _lastPayloadJson = jsonEncode(payload);
     _lastRenderPayloadJson = renderPayloadJson;
     _lastSelectionJson = selectionJson;
-    _debugRenderProbe(
-      width: resolvedWidth,
-      renderPayloadJson: renderPayloadJson,
-      shouldRender: shouldRender,
-      shouldUpdateSelection: shouldUpdateSelection,
-    );
     final String encodedPayload = jsonEncode(_lastPayloadJson);
     final String encodedSelection = jsonEncode(selectionJson);
     if (!shouldRender) {
-      _controller
-          ?.runJavaScript('''
+      _runSheetJavaScript('''
 (() => {
   const selected = JSON.parse($encodedSelection);
   if (window.DrumcabularySheetNotation == null) {
@@ -864,18 +755,11 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
   }
   window.DrumcabularySheetNotation.setSelection(selected);
 })();
-''')
-          .then((_) {
-            _debugLog('selection JavaScript command completed');
-          })
-          .catchError((Object error) {
-            _debugLog('selection JavaScript command failed: $error');
-          });
+''', action: 'selection update');
       _sendPlayheadToWebView(_playheadFrame);
       return;
     }
-    _controller
-        ?.runJavaScript('''
+    _runSheetJavaScript('''
 (() => {
   const payload = JSON.parse($encodedPayload);
   if (window.DrumcabularySheetNotation == null) {
@@ -884,13 +768,7 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
   }
   window.DrumcabularySheetNotation.render(payload);
 })();
-''')
-        .then((_) {
-          _debugLog('render JavaScript command completed');
-        })
-        .catchError((Object error) {
-          _debugLog('render JavaScript command failed: $error');
-        });
+''', action: 'render');
     _lastPlayheadJson = null;
     _sendPlayheadToWebView(_playheadFrame);
   }
@@ -903,8 +781,7 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
     if (_lastPlayheadJson == playheadJson) return;
     _lastPlayheadJson = playheadJson;
     final String encodedPlayhead = jsonEncode(playheadJson);
-    _controller
-        ?.runJavaScript('''
+    _runSheetJavaScript('''
 (() => {
   const playhead = JSON.parse($encodedPlayhead);
   if (window.DrumcabularySheetNotation == null) {
@@ -912,58 +789,20 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
   }
   window.DrumcabularySheetNotation.setPlayhead(playhead);
 })();
-''')
-        .then((_) {
-          _debugLog('playhead JavaScript command completed');
-        })
-        .catchError((Object error) {
-          _debugLog('playhead JavaScript command failed: $error');
-        });
+''', action: 'playhead update');
   }
 
-  void _debugRenderWaitingForHost(double? width) {
-    if (!kDebugMode) return;
-    final String signature =
-        '${width?.floor() ?? 'unknown'}|${_debugDocumentSummary()}';
-    if (_lastWaitingForHostLogSignature == signature) return;
-    _lastWaitingForHostLogSignature = signature;
-    _debugLog('render waiting for host: $signature');
-  }
-
-  void _debugRenderProbe({
-    required double width,
-    required String renderPayloadJson,
-    required bool shouldRender,
-    required bool shouldUpdateSelection,
-  }) {
-    if (!kDebugMode) return;
-    final String signature =
-        '${width.floor()}|${renderPayloadJson.length}|'
-        '$shouldRender|$shouldUpdateSelection|${_debugDocumentSummary()}';
-    if (_lastRenderProbeSignature == signature) return;
-    _lastRenderProbeSignature = signature;
-    _debugLog(
-      'render probe: width=${width.floor()} '
-      'payloadBytes=${renderPayloadJson.length} '
-      'shouldRender=$shouldRender '
-      'shouldUpdateSelection=$shouldUpdateSelection '
-      '${_debugDocumentSummary()}',
+  void _runSheetJavaScript(String source, {required String action}) {
+    final WebViewController? controller = _controller;
+    if (controller == null) return;
+    unawaited(
+      controller.runJavaScript(source).catchError((
+        Object error,
+        StackTrace stackTrace,
+      ) {
+        debugPrint('Drum sheet notation $action failed: $error\n$stackTrace');
+      }),
     );
-  }
-
-  String _debugDocumentSummary() {
-    if (!kDebugMode) return '';
-    return 'measures=${widget.document.measures.length} '
-        'notes=${widget.document.flattenedNotes.length} '
-        'subdivision=${widget.document.subdivision.name} '
-        'feel=${widget.document.feel.name} '
-        'time=${widget.document.timeSignature} '
-        'compact=${widget.compactLayout}';
-  }
-
-  void _debugLog(String message) {
-    if (!kDebugMode) return;
-    debugPrint('Drum sheet notation #$_debugInstanceId: $message');
   }
 
   Map<String, Object?> _webViewPayloadForWidth(double width) {
@@ -1018,21 +857,6 @@ String _cssColor(Color color) {
     return '#${rgb.toRadixString(16).padLeft(6, '0')}';
   }
   return 'rgba($red, $green, $blue, ${(alpha / 255).toStringAsFixed(3)})';
-}
-
-String _webResourceErrorDebugDescription(WebResourceError error) {
-  Object? domain;
-  try {
-    domain = (error as dynamic).domain;
-  } on Object {
-    domain = null;
-  }
-  return 'code=${error.errorCode} '
-      'type=${error.errorType?.name ?? 'unknown'} '
-      'mainFrame=${error.isForMainFrame ?? 'unknown'} '
-      'url=${error.url ?? 'unknown'} '
-      'domain=${domain ?? 'unknown'} '
-      'description=${error.description}';
 }
 
 Map<String, Object?> _documentJson(DrumSheetNotationDocument document) {

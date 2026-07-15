@@ -671,8 +671,45 @@ describe('svg rendering', () => {
       VF.calls.beams.map((beam) => beam.notes.length),
       [7, 7, 7, 7, 7],
     );
-    assert.equal(VF.calls.voices[0].formatterWidth, 218);
+    assert.equal(VF.calls.voices[0].formatterWidth, 244);
     assert.equal(VF.calls.voices[5].formatterWidth, 62);
+  });
+
+  test('wide containers do not stretch sparse preserved measures', () => {
+    const document = {
+      subdivision: '8n',
+      timeSignature: '4/4',
+      measures: [
+        {
+          notes: [
+            { voices: ['hihat'], sticking: 'R' },
+            { voices: ['snare'], sticking: 'L' },
+            { voices: ['kick'], sticking: 'K' },
+          ],
+        },
+      ],
+    };
+    const narrowVF = createFakeVexFlow();
+    const wideVF = createFakeVexFlow();
+
+    renderDrumNotationSvg(document, {
+      vexFlow: narrowVF,
+      availableWidth: 360,
+      preserveMeasures: true,
+      noteSpacing: 30,
+      systemEndReserve: 16,
+    });
+    renderDrumNotationSvg(document, {
+      vexFlow: wideVF,
+      availableWidth: 1200,
+      preserveMeasures: true,
+      noteSpacing: 30,
+      systemEndReserve: 16,
+    });
+
+    assert.equal(narrowVF.calls.voices[0].formatterWidth, 106);
+    assert.equal(wideVF.calls.voices[0].formatterWidth, 106);
+    assert.equal(wideVF.calls.staves[0].width, 1180);
   });
 
   test('default demo uses one compact all-up rhythmic voice for now', () => {
