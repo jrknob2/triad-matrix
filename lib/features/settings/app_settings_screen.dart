@@ -4,6 +4,7 @@ import '../../core/practice/practice_domain_v1.dart';
 import '../../features/app/app_formatters.dart';
 import '../../features/app/app_runtime_flags.dart';
 import '../../features/app/drumcabulary_theme.dart';
+import '../../features/app/midi_diagnostic_action.dart';
 import '../../features/app/unsaved_changes_dialog.dart';
 import '../../state/app_controller.dart';
 
@@ -39,7 +40,10 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
         }
       },
       child: Scaffold(
-        appBar: AppBar(title: const Text('Settings')),
+        appBar: AppBar(
+          title: const Text('Settings'),
+          actions: const <Widget>[MidiDiagnosticAppBarAction()],
+        ),
         body: ListView(
           padding: const EdgeInsets.all(16),
           children: <Widget>[

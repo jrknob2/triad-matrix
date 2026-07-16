@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/practice/practice_domain_v1.dart';
 import '../../features/app/app_formatters.dart';
 import '../../features/app/drumcabulary_ui.dart';
+import '../../features/app/midi_diagnostic_action.dart';
 import '../../state/app_controller.dart';
 import 'widgets/pattern_readout.dart';
 import 'widgets/pattern_text_styles.dart';
@@ -95,7 +96,10 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
     );
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Session Summary')),
+      appBar: AppBar(
+        title: const Text('Session Summary'),
+        actions: const <Widget>[MidiDiagnosticAppBarAction()],
+      ),
       body: DrumScreen(
         warm: false,
         child: ListView(

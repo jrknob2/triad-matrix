@@ -67,6 +67,13 @@ No active screen should contain:
 - raw notation strings where rendered sheet notation is expected
 - patterns as the primary student-facing concept
 
+Developer and hardware diagnostic access:
+
+- MIDI Input Diagnostic is a developer-facing hardware tool, not a student
+  teaching flow.
+- Every navigable app screen must keep MIDI Input Diagnostic reachable through a
+  consistent toolbar/header action, except the diagnostic screen itself.
+
 ## Notation Rules
 
 - lesson YAML stores authored Drumcabulary notation strings inside exercise notation

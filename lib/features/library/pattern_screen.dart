@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../core/practice/practice_domain_v1.dart';
 import '../../features/app/drumcabulary_theme.dart';
 import '../../features/app/drumcabulary_ui.dart';
+import '../../features/app/midi_diagnostic_action.dart';
 import '../../features/app/unsaved_changes_dialog.dart';
 import '../../state/app_controller.dart';
 import '../practice/widgets/pattern_text_styles.dart';
@@ -137,6 +138,7 @@ class _PatternScreenState extends State<PatternScreen> {
                   icon: const Icon(Icons.help_outline),
                   tooltip: 'Notation Grammar',
                 ),
+                const MidiDiagnosticAppBarAction(),
               ],
             ),
             body: ListView(
