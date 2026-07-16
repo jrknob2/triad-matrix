@@ -11,6 +11,7 @@ import '../../midi/serial_led_controller.dart';
 import '../pattern_audio_service.dart';
 import '../pattern_led_playback_output.dart';
 import '../pattern_playback_scheduler.dart';
+import '../sticking_cue.dart';
 
 enum DrumSheetNoteValue {
   whole,
@@ -729,6 +730,8 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
         bpm: widget.audioPreviewBpm,
         accentVoice: widget.audioPreviewAccentVoice,
         additionalVoicesByIndex: plan.additionalVoicesByIndex,
+        stickingByIndex: plan.stickingByIndex,
+        additionalStickingByIndex: plan.additionalStickingByIndex,
       );
       if (!mounted) return;
       _activeAudioPreviewOwner = this;
@@ -1005,6 +1008,8 @@ class _SheetNotationAudioPlan {
   final List<DrumVoiceV1> voices;
   final PatternTimingV1 timing;
   final Map<int, List<DrumVoiceV1>> additionalVoicesByIndex;
+  final Map<int, StickingCue?> stickingByIndex;
+  final Map<int, Map<DrumVoiceV1, StickingCue?>> additionalStickingByIndex;
   final List<int> visibleTokenIndexes;
   final List<_SheetNotationPlayheadEvent> playheadEvents;
   final double totalBeatCount;
@@ -1015,6 +1020,8 @@ class _SheetNotationAudioPlan {
     required this.voices,
     required this.timing,
     required this.additionalVoicesByIndex,
+    required this.stickingByIndex,
+    required this.additionalStickingByIndex,
     required this.visibleTokenIndexes,
     required this.playheadEvents,
     required this.totalBeatCount,
@@ -1069,6 +1076,9 @@ _SheetNotationAudioPlan _audioPlanForDocument(
   final List<int> visibleTokenIndexes = <int>[];
   final Map<int, List<DrumVoiceV1>> additionalVoicesByIndex =
       <int, List<DrumVoiceV1>>{};
+  final Map<int, StickingCue?> stickingByIndex = <int, StickingCue?>{};
+  final Map<int, Map<DrumVoiceV1, StickingCue?>> additionalStickingByIndex =
+      <int, Map<DrumVoiceV1, StickingCue?>>{};
   final List<List<_IndexedSheetNotationNote>> visibleMeasures =
       <List<_IndexedSheetNotationNote>>[];
   int visibleIndex = 0;
@@ -1107,6 +1117,12 @@ _SheetNotationAudioPlan _audioPlanForDocument(
           for (final DrumVoiceV1 voice in noteVoices)
             if (voice != primaryVoice) voice,
         ];
+        final Map<DrumVoiceV1, StickingCue?> stickingByVoice =
+            _stickingCuesByAudioVoice(
+              note: note,
+              noteVoices: noteVoices,
+              primaryVoice: primaryVoice,
+            );
         double beatCount = _beatCountForSheetNote(
           note.resolvedValue(document.subdivision),
           document.feel,
@@ -1121,6 +1137,10 @@ _SheetNotationAudioPlan _audioPlanForDocument(
         tokens.add(token);
         markings.add(_audioMarkingForSheetNote(note));
         voices.add(primaryVoice);
+        final StickingCue? primarySticking = stickingByVoice[primaryVoice];
+        if (primarySticking != null) {
+          stickingByIndex[tokenIndex] = primarySticking;
+        }
         visibleTokenIndexes.add(indexed.index);
         spans.add(
           PatternTimingSpanV1(
@@ -1131,6 +1151,16 @@ _SheetNotationAudioPlan _audioPlanForDocument(
         );
         if (additionalVoices.isNotEmpty) {
           additionalVoicesByIndex[tokenIndex] = additionalVoices;
+          final Map<DrumVoiceV1, StickingCue?> additionalSticking =
+              <DrumVoiceV1, StickingCue?>{};
+          for (final DrumVoiceV1 voice in additionalVoices) {
+            final StickingCue? sticking = stickingByVoice[voice];
+            if (sticking != null) additionalSticking[voice] = sticking;
+          }
+          if (additionalSticking.isNotEmpty) {
+            additionalStickingByIndex[tokenIndex] =
+                Map<DrumVoiceV1, StickingCue?>.unmodifiable(additionalSticking);
+          }
         }
         measureBeatCursor += beatCount;
       }
@@ -1155,6 +1185,11 @@ _SheetNotationAudioPlan _audioPlanForDocument(
     additionalVoicesByIndex: Map<int, List<DrumVoiceV1>>.unmodifiable(
       additionalVoicesByIndex,
     ),
+    stickingByIndex: Map<int, StickingCue?>.unmodifiable(stickingByIndex),
+    additionalStickingByIndex:
+        Map<int, Map<DrumVoiceV1, StickingCue?>>.unmodifiable(
+          additionalStickingByIndex,
+        ),
     visibleTokenIndexes: List<int>.unmodifiable(visibleTokenIndexes),
     playheadEvents: List<_SheetNotationPlayheadEvent>.unmodifiable(
       playbackPlan.events.map(
@@ -1197,6 +1232,8 @@ DrumSheetAudioPreviewPlan buildSheetNotationAudioPreviewPlanDetails(
       bpm: bpm,
       accentVoice: accentVoice,
       additionalVoicesByIndex: plan.additionalVoicesByIndex,
+      stickingByIndex: plan.stickingByIndex,
+      additionalStickingByIndex: plan.additionalStickingByIndex,
     ),
     displayIndexesByTokenIndex: plan.visibleTokenIndexes,
   );
@@ -1335,6 +1372,52 @@ DrumVoiceV1 _audioVoiceForSheetVoice(DrumSheetVoice voice) {
     DrumSheetVoice.floorTom => DrumVoiceV1.floorTom,
     DrumSheetVoice.kick => DrumVoiceV1.kick,
   };
+}
+
+Map<DrumVoiceV1, StickingCue?> _stickingCuesByAudioVoice({
+  required DrumSheetNotationNote note,
+  required List<DrumVoiceV1> noteVoices,
+  required DrumVoiceV1 primaryVoice,
+}) {
+  if (note.rest || noteVoices.isEmpty) {
+    return const <DrumVoiceV1, StickingCue?>{};
+  }
+  final String sticking = note.sticking.trim().toUpperCase();
+  final StickingCue? eventCue = stickingCueFromText(sticking, flam: note.flam);
+  if (noteVoices.length == 1) {
+    return eventCue == null
+        ? const <DrumVoiceV1, StickingCue?>{}
+        : <DrumVoiceV1, StickingCue?>{primaryVoice: eventCue};
+  }
+
+  final List<StickingCue?> ordered = _orderedStickingCuesForVoices(
+    sticking,
+    noteVoices.length,
+  );
+  if (ordered.isNotEmpty) {
+    return <DrumVoiceV1, StickingCue?>{
+      for (int index = 0; index < noteVoices.length; index += 1)
+        if (ordered[index] != null) noteVoices[index]: ordered[index],
+    };
+  }
+  return eventCue == null
+      ? const <DrumVoiceV1, StickingCue?>{}
+      : <DrumVoiceV1, StickingCue?>{primaryVoice: eventCue};
+}
+
+List<StickingCue?> _orderedStickingCuesForVoices(
+  String sticking,
+  int voiceCount,
+) {
+  final String normalized = sticking.replaceAll(RegExp(r'\s+'), '');
+  if (normalized.length != voiceCount) return const <StickingCue?>[];
+  final List<StickingCue?> cues = <StickingCue?>[];
+  for (int index = 0; index < normalized.length; index += 1) {
+    final StickingCue? cue = stickingCueFromText(normalized[index]);
+    if (cue == null) return const <StickingCue?>[];
+    cues.add(cue);
+  }
+  return cues;
 }
 
 double _beatCountForSheetNote(DrumSheetNoteValue value, DrumSheetFeel feel) {

@@ -1,6 +1,6 @@
 import '../coach/lesson_notation_document.dart';
 import '../coach/lesson_plan.dart';
-import '../midi/midi_input_models.dart';
+import '../midi/led_frame_command_encoder.dart';
 import '../practice/pattern_audio_service.dart';
 import '../practice/playback_drum_voice_mapper.dart';
 import '../practice/widgets/sheet_notation_display.dart';
@@ -39,18 +39,19 @@ class GuidedPracticeSequenceBuilder {
     final List<GuidedPracticeExpectedEvent> events =
         <GuidedPracticeExpectedEvent>[];
     Duration? currentOffset;
-    final List<DrumVoice> currentVoices = <DrumVoice>[];
+    final List<LedCue> currentCues = <LedCue>[];
     final Set<int> currentSelectedIndexes = <int>{};
 
     void flush() {
-      if (currentVoices.isEmpty) return;
-      final GuidedPracticeExpectedEvent event = GuidedPracticeExpectedEvent(
-        currentVoices,
-        sectionIndex: sectionIndex,
-        selectedIndexes: currentSelectedIndexes,
-      );
+      if (currentCues.isEmpty) return;
+      final GuidedPracticeExpectedEvent event =
+          GuidedPracticeExpectedEvent.fromCues(
+            currentCues,
+            sectionIndex: sectionIndex,
+            selectedIndexes: currentSelectedIndexes,
+          );
       if (!event.isEmpty) events.add(event);
-      currentVoices.clear();
+      currentCues.clear();
       currentSelectedIndexes.clear();
     }
 
@@ -59,7 +60,12 @@ class GuidedPracticeSequenceBuilder {
         flush();
         currentOffset = cue.offset;
       }
-      currentVoices.add(midiDrumVoiceForPlaybackVoice(cue.voice));
+      currentCues.add(
+        LedCue(
+          midiDrumVoiceForPlaybackVoice(cue.voice),
+          sticking: cue.sticking,
+        ),
+      );
       final int? displayIndex = previewPlan.displayIndexForTokenIndex(
         cue.tokenIndex,
       );

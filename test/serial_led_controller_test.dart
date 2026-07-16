@@ -2,9 +2,11 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:drumcabulary/features/midi/drum_voice_led_command_mapper.dart';
+import 'package:drumcabulary/features/midi/led_frame_command_encoder.dart';
 import 'package:drumcabulary/features/midi/midi_input_models.dart';
 import 'package:drumcabulary/features/midi/midi_led_forwarder.dart';
 import 'package:drumcabulary/features/midi/serial_led_controller.dart';
+import 'package:drumcabulary/features/practice/sticking_cue.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -42,6 +44,84 @@ void main() {
   });
 
   group('SerialLedController', () {
+    test('sticking text conversion supports both hands and flams', () {
+      expect(stickingCueFromText('B'), StickingCue.both);
+      expect(stickingCueFromText('(R)L', flam: true), StickingCue.flamLeft);
+      expect(stickingCueFromText('(L)R', flam: true), StickingCue.flamRight);
+      expect(stickingCueFromText('FL'), StickingCue.flamLeft);
+      expect(stickingCueFromText('FR'), StickingCue.flamRight);
+    });
+
+    test('single voice frame serializes without sticking', () {
+      const LedFrameCommandEncoder encoder = LedFrameCommandEncoder();
+
+      expect(
+        encoder.encodeCueFrame(const <LedCue>[LedCue(DrumVoice.snare)]),
+        'FRAME_BEGIN\nCUE,SNARE\nFRAME_END\n',
+      );
+    });
+
+    test('sticking values serialize correctly', () {
+      const LedFrameCommandEncoder encoder = LedFrameCommandEncoder();
+
+      expect(
+        encoder.encodeCueFrame(const <LedCue>[
+          LedCue(DrumVoice.snare, sticking: StickingCue.left),
+          LedCue(DrumVoice.kick, sticking: StickingCue.right),
+          LedCue(DrumVoice.tom1, sticking: StickingCue.both),
+          LedCue(DrumVoice.tom2, sticking: StickingCue.flamLeft),
+          LedCue(DrumVoice.floorTom, sticking: StickingCue.flamRight),
+        ]),
+        'FRAME_BEGIN\n'
+        'CUE,SNARE,L\n'
+        'CUE,KICK,R\n'
+        'CUE,TOM1,B\n'
+        'CUE,TOM2,FL\n'
+        'CUE,FLOORTOM,FR\n'
+        'FRAME_END\n',
+      );
+    });
+
+    test('unsupported voices are skipped in frames', () {
+      const LedFrameCommandEncoder encoder = LedFrameCommandEncoder();
+
+      expect(
+        encoder.encodeCueFrame(const <LedCue>[
+          LedCue(DrumVoice.unknown),
+          LedCue(DrumVoice.ride),
+        ]),
+        'FRAME_BEGIN\nCUE,RIDE\nFRAME_END\n',
+      );
+    });
+
+    test('non-snare voices can carry hand sticking', () {
+      const LedFrameCommandEncoder encoder = LedFrameCommandEncoder();
+
+      expect(
+        encoder.encodeCueFrame(const <LedCue>[
+          LedCue(DrumVoice.tom1, sticking: StickingCue.left),
+          LedCue(DrumVoice.ride, sticking: StickingCue.right),
+        ]),
+        'FRAME_BEGIN\nCUE,TOM1,L\nCUE,RIDE,R\nFRAME_END\n',
+      );
+    });
+
+    test('feedback command includes optional sticking', () {
+      const LedFrameCommandEncoder encoder = LedFrameCommandEncoder();
+
+      expect(
+        encoder.feedbackCommand(
+          'MISSING',
+          const LedCue(DrumVoice.hiHatClosed, sticking: StickingCue.flamRight),
+        ),
+        'MISSING,HIHAT,FR\n',
+      );
+      expect(
+        encoder.feedbackCommand('ERROR', const LedCue(DrumVoice.snare)),
+        'ERROR,SNARE\n',
+      );
+    });
+
     test('Test Flash command sends SNARE newline', () async {
       final _FakeSerialPlatform platform = _FakeSerialPlatform();
       final SerialLedController controller = SerialLedController(
@@ -55,6 +135,26 @@ void main() {
       controller.sendCommand(DrumVoiceLedCommandMapper.snareCommand);
 
       expect(platform.lastConnection.writes, <String>['SNARE\n']);
+    });
+
+    test('cue frame writes the full frame as one payload', () async {
+      final _FakeSerialPlatform platform = _FakeSerialPlatform();
+      final SerialLedController controller = SerialLedController(
+        platform: platform,
+      );
+      addTearDown(controller.dispose);
+
+      await controller.refreshPorts();
+      controller.selectPort(_FakeSerialPlatform.esp32.path);
+      await controller.connect();
+      controller.sendCueFrame(const <LedCue>[
+        LedCue(DrumVoice.kick),
+        LedCue(DrumVoice.hiHatClosed, sticking: StickingCue.right),
+      ]);
+
+      expect(platform.lastConnection.writes, <String>[
+        'FRAME_BEGIN\nCUE,KICK\nCUE,HIHAT,R\nFRAME_END\n',
+      ]);
     });
 
     test('disposal closes the serial connection', () async {

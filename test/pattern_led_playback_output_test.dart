@@ -5,11 +5,12 @@ import 'package:drumcabulary/core/practice/practice_domain_v1.dart';
 import 'package:drumcabulary/features/midi/serial_led_controller.dart';
 import 'package:drumcabulary/features/practice/pattern_audio_service.dart';
 import 'package:drumcabulary/features/practice/pattern_led_playback_output.dart';
+import 'package:drumcabulary/features/practice/sticking_cue.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('PatternLedPlaybackOutput', () {
-    test('enabled playback sends commands from playback cues', () async {
+    test('enabled playback sends cue frames from playback cues', () async {
       final _PlaybackLedHarness harness = await _PlaybackLedHarness.connected();
 
       harness.output.triggerCue(_cue(DrumVoiceV1.snare));
@@ -17,9 +18,23 @@ void main() {
       harness.output.triggerCue(_cue(DrumVoiceV1.hihat));
 
       expect(harness.platform.lastConnection.writes, <String>[
-        'SNARE\n',
-        'KICK\n',
-        'HIHAT\n',
+        _frame('CUE,SNARE'),
+        _frame('CUE,KICK'),
+        _frame('CUE,HIHAT'),
+      ]);
+    });
+
+    test('simultaneous playback voices share one frame in order', () async {
+      final _PlaybackLedHarness harness = await _PlaybackLedHarness.connected();
+
+      harness.output.triggerCueGroup(<PatternAudioCueV1>[
+        _cue(DrumVoiceV1.kick),
+        _cue(DrumVoiceV1.hihat, sticking: StickingCue.right),
+        _cue(DrumVoiceV1.snare, sticking: StickingCue.left),
+      ]);
+
+      expect(harness.platform.lastConnection.writes, <String>[
+        _frame('CUE,KICK', 'CUE,HIHAT,R', 'CUE,SNARE,L'),
       ]);
     });
 
@@ -62,25 +77,73 @@ void main() {
           ..triggerCue(_cue(DrumVoiceV1.ride));
 
         expect(harness.platform.lastConnection.writes, <String>[
-          'TOM1\n',
-          'TOM2\n',
-          'FLOORTOM\n',
-          'CRASH\n',
-          'RIDE\n',
+          _frame('CUE,TOM1'),
+          _frame('CUE,TOM2'),
+          _frame('CUE,FLOORTOM'),
+          _frame('CUE,CRASH'),
+          _frame('CUE,RIDE'),
         ]);
       },
     );
+
+    test('playback stop sends CLEAR', () async {
+      final _PlaybackLedHarness harness = await _PlaybackLedHarness.connected();
+
+      harness.output.stop();
+
+      expect(harness.platform.lastConnection.writes, <String>['CLEAR\n']);
+    });
+  });
+
+  group('PatternAudioService cue grouping', () {
+    test('groups simultaneous offsets for playback outputs', () {
+      final List<List<PatternAudioCueV1>> groups =
+          PatternAudioService.cueGroupsForTesting(
+            PatternAudioPlanV1(
+              cues: <PatternAudioCueV1>[
+                _cue(DrumVoiceV1.kick),
+                _cue(DrumVoiceV1.hihat),
+                _cue(
+                  DrumVoiceV1.snare,
+                  offset: const Duration(milliseconds: 1),
+                ),
+              ],
+              cycleDuration: const Duration(milliseconds: 2),
+            ),
+          );
+
+      expect(groups.map((List<PatternAudioCueV1> group) => group.length), <int>[
+        2,
+        1,
+      ]);
+    });
   });
 }
 
-PatternAudioCueV1 _cue(DrumVoiceV1 voice) {
+PatternAudioCueV1 _cue(
+  DrumVoiceV1 voice, {
+  StickingCue? sticking,
+  Duration offset = Duration.zero,
+}) {
   return PatternAudioCueV1(
     tokenIndex: 0,
-    offset: Duration.zero,
+    offset: offset,
     sample: PatternAudioSampleV1.snare,
     voice: voice,
+    sticking: sticking,
     volume: 1,
   );
+}
+
+String _frame(String firstCue, [String? secondCue, String? thirdCue]) {
+  return <String>[
+    'FRAME_BEGIN',
+    firstCue,
+    if (secondCue != null) secondCue,
+    if (thirdCue != null) thirdCue,
+    'FRAME_END',
+    '',
+  ].join('\n');
 }
 
 class _PlaybackLedHarness {

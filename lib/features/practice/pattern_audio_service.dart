@@ -6,6 +6,7 @@ import 'package:just_audio/just_audio.dart';
 
 import '../../core/practice/practice_domain_v1.dart';
 import 'pattern_playback_scheduler.dart';
+import 'sticking_cue.dart';
 
 enum PatternAudioSampleV1 {
   snare,
@@ -29,6 +30,7 @@ class PatternAudioCueV1 {
   final Duration offset;
   final PatternAudioSampleV1 sample;
   final DrumVoiceV1 voice;
+  final StickingCue? sticking;
   final double volume;
 
   const PatternAudioCueV1({
@@ -36,6 +38,7 @@ class PatternAudioCueV1 {
     required this.offset,
     required this.sample,
     required this.voice,
+    this.sticking,
     required this.volume,
   });
 }
@@ -72,6 +75,14 @@ class PatternAudioMixerConfigV1 {
 
 abstract class PatternPlaybackCueOutputV1 {
   void triggerCue(PatternAudioCueV1 cue);
+
+  void triggerCueGroup(List<PatternAudioCueV1> cues) {
+    for (final PatternAudioCueV1 cue in cues) {
+      triggerCue(cue);
+    }
+  }
+
+  void stop() {}
 }
 
 class PatternAudioService {
@@ -192,6 +203,9 @@ class PatternAudioService {
     PatternAudioMixerConfigV1 mixerConfig = const PatternAudioMixerConfigV1(),
     Map<int, List<DrumVoiceV1>> additionalVoicesByIndex =
         const <int, List<DrumVoiceV1>>{},
+    Map<int, StickingCue?> stickingByIndex = const <int, StickingCue?>{},
+    Map<int, Map<DrumVoiceV1, StickingCue?>> additionalStickingByIndex =
+        const <int, Map<DrumVoiceV1, StickingCue?>>{},
     Duration startElapsed = Duration.zero,
   }) async {
     final PatternAudioPlanV1 plan = buildPlan(
@@ -204,6 +218,8 @@ class PatternAudioService {
       accentVoice: accentVoice,
       mixerConfig: mixerConfig,
       additionalVoicesByIndex: additionalVoicesByIndex,
+      stickingByIndex: stickingByIndex,
+      additionalStickingByIndex: additionalStickingByIndex,
     );
     if (plan.cues.isEmpty || plan.cycleDuration <= Duration.zero) return;
 
@@ -238,6 +254,7 @@ class PatternAudioService {
         }
       }
     }
+    _stopPlaybackOutputs();
   }
 
   Future<void> dispose() async {
@@ -260,6 +277,9 @@ class PatternAudioService {
     PatternAudioMixerConfigV1 mixerConfig = const PatternAudioMixerConfigV1(),
     Map<int, List<DrumVoiceV1>> additionalVoicesByIndex =
         const <int, List<DrumVoiceV1>>{},
+    Map<int, StickingCue?> stickingByIndex = const <int, StickingCue?>{},
+    Map<int, Map<DrumVoiceV1, StickingCue?>> additionalStickingByIndex =
+        const <int, Map<DrumVoiceV1, StickingCue?>>{},
   }) {
     if (tokens.isEmpty || bpm <= 0) {
       return const PatternAudioPlanV1(
@@ -309,6 +329,7 @@ class PatternAudioService {
           ),
           sample: sample,
           voice: voice,
+          sticking: stickingByIndex[event.tokenIndex],
           volume: _volumeFor(
             token: token,
             voice: voice,
@@ -338,6 +359,8 @@ class PatternAudioService {
             ),
             sample: additionalSample,
             voice: additionalVoice,
+            sticking:
+                additionalStickingByIndex[event.tokenIndex]?[additionalVoice],
             volume: _volumeFor(
               token: additionalToken,
               voice: additionalVoice,
@@ -378,16 +401,17 @@ class PatternAudioService {
     if (!_running) return;
     _cueTimers.removeWhere((Timer timer) => !timer.isActive);
     final Stopwatch cycleStopwatch = Stopwatch()..start();
-    for (final PatternAudioCueV1 cue in plan.cues) {
-      if (phase > Duration.zero && cue.offset < phase) {
+    for (final List<PatternAudioCueV1> cueGroup in _cueGroupsForPlan(plan)) {
+      final Duration offset = cueGroup.first.offset;
+      if (phase > Duration.zero && offset < phase) {
         continue;
       }
-      final Duration delay = cue.offset - phase;
+      final Duration delay = offset - phase;
       _cueTimers.add(
         Timer(delay, () {
           if (!_running) return;
           if (cycleStopwatch.elapsed - delay > _staleCueTolerance) return;
-          unawaited(_triggerCue(cue));
+          unawaited(_triggerCueGroup(cueGroup));
         }),
       );
     }
@@ -401,8 +425,14 @@ class PatternAudioService {
     });
   }
 
-  Future<void> _triggerCue(PatternAudioCueV1 cue) async {
-    _triggerPlaybackOutputs(cue);
+  Future<void> _triggerCueGroup(List<PatternAudioCueV1> cues) async {
+    _triggerPlaybackOutputs(cues);
+    await Future.wait(<Future<void>>[
+      for (final PatternAudioCueV1 cue in cues) _playCue(cue),
+    ]);
+  }
+
+  Future<void> _playCue(PatternAudioCueV1 cue) async {
     final List<AudioPlayer> players = _playersBySample[cue.sample]!;
     final int nextIndex = _nextPlayerIndexBySample[cue.sample]!;
     final AudioPlayer player = players[nextIndex];
@@ -416,14 +446,48 @@ class PatternAudioService {
     }
   }
 
-  void _triggerPlaybackOutputs(PatternAudioCueV1 cue) {
+  void _triggerPlaybackOutputs(List<PatternAudioCueV1> cues) {
     for (final PatternPlaybackCueOutputV1 output in _playbackOutputs) {
       try {
-        output.triggerCue(cue);
+        output.triggerCueGroup(cues);
       } catch (error, stackTrace) {
         debugPrint('Pattern playback output failed: $error\n$stackTrace');
       }
     }
+  }
+
+  void _stopPlaybackOutputs() {
+    for (final PatternPlaybackCueOutputV1 output in _playbackOutputs) {
+      try {
+        output.stop();
+      } catch (error, stackTrace) {
+        debugPrint('Pattern playback output stop failed: $error\n$stackTrace');
+      }
+    }
+  }
+
+  static List<List<PatternAudioCueV1>> _cueGroupsForPlan(
+    PatternAudioPlanV1 plan,
+  ) {
+    final List<List<PatternAudioCueV1>> groups = <List<PatternAudioCueV1>>[];
+    for (final PatternAudioCueV1 cue in plan.cues) {
+      if (groups.isEmpty || groups.last.first.offset != cue.offset) {
+        groups.add(<PatternAudioCueV1>[cue]);
+      } else {
+        groups.last.add(cue);
+      }
+    }
+    return <List<PatternAudioCueV1>>[
+      for (final List<PatternAudioCueV1> group in groups)
+        List<PatternAudioCueV1>.unmodifiable(group),
+    ];
+  }
+
+  @visibleForTesting
+  static List<List<PatternAudioCueV1>> cueGroupsForTesting(
+    PatternAudioPlanV1 plan,
+  ) {
+    return _cueGroupsForPlan(plan);
   }
 
   static Duration _normalizedPhase({

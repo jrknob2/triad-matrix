@@ -3,8 +3,10 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../midi/drum_voice_led_command_mapper.dart';
+import '../midi/led_frame_command_encoder.dart';
 import '../midi/midi_input_models.dart';
 import '../midi/serial_led_controller.dart';
+import '../practice/sticking_cue.dart';
 import '../practice/playback_drum_voice_mapper.dart';
 
 typedef GuidedPracticeTimerFactory =
@@ -22,7 +24,7 @@ enum GuidedPracticeStatus { idle, running, completed, stopped, error }
 
 @immutable
 class GuidedPracticeExpectedEvent {
-  final List<DrumVoice> voices;
+  final List<LedCue> cues;
   final int sectionIndex;
   final Set<int> selectedIndexes;
 
@@ -30,29 +32,81 @@ class GuidedPracticeExpectedEvent {
     Iterable<DrumVoice> voices, {
     int sectionIndex = 0,
     Iterable<int> selectedIndexes = const <int>[],
+    Map<DrumVoice, StickingCue?> stickingByVoice =
+        const <DrumVoice, StickingCue?>{},
   }) {
+    return GuidedPracticeExpectedEvent.fromCues(
+      <LedCue>[
+        for (final DrumVoice voice in voices)
+          LedCue(
+            voice,
+            sticking: stickingByVoice[canonicalGuidedPracticeVoice(voice)],
+          ),
+      ],
+      sectionIndex: sectionIndex,
+      selectedIndexes: selectedIndexes,
+    );
+  }
+
+  factory GuidedPracticeExpectedEvent.fromCues(
+    Iterable<LedCue> cues, {
+    int sectionIndex = 0,
+    Iterable<int> selectedIndexes = const <int>[],
+  }) {
+    final Map<DrumVoice, StickingCue?> cueByVoice = <DrumVoice, StickingCue?>{};
     final Set<DrumVoice> seen = <DrumVoice>{};
-    for (final DrumVoice voice in voices) {
-      final DrumVoice canonical = canonicalGuidedPracticeVoice(voice);
+    for (final LedCue cue in cues) {
+      final DrumVoice canonical = canonicalGuidedPracticeVoice(cue.voice);
       if (canonical == DrumVoice.unknown) continue;
       seen.add(canonical);
+      cueByVoice[canonical] = _mergeStickingCue(
+        cueByVoice[canonical],
+        cue.sticking,
+      );
     }
     return GuidedPracticeExpectedEvent._(
-      List<DrumVoice>.unmodifiable(seen),
+      List<LedCue>.unmodifiable(<LedCue>[
+        for (final DrumVoice voice in seen)
+          LedCue(voice, sticking: cueByVoice[voice]),
+      ]),
       sectionIndex: sectionIndex,
       selectedIndexes: Set<int>.unmodifiable(selectedIndexes),
     );
   }
 
   const GuidedPracticeExpectedEvent._(
-    this.voices, {
+    this.cues, {
     required this.sectionIndex,
     required this.selectedIndexes,
   });
 
+  List<DrumVoice> get voices => <DrumVoice>[
+    for (final LedCue cue in cues) cue.voice,
+  ];
+
   bool get isEmpty => voices.isEmpty;
   bool get isSimultaneous => voices.length > 1;
   Set<DrumVoice> get voiceSet => voices.toSet();
+
+  LedCue? cueForVoice(DrumVoice voice) {
+    final DrumVoice canonical = canonicalGuidedPracticeVoice(voice);
+    for (final LedCue cue in cues) {
+      if (cue.voice == canonical) return cue;
+    }
+    return null;
+  }
+}
+
+StickingCue? _mergeStickingCue(StickingCue? current, StickingCue? next) {
+  if (current == null) return next;
+  if (next == null || next == current) return current;
+  if ((current == StickingCue.left && next == StickingCue.right) ||
+      (current == StickingCue.right && next == StickingCue.left) ||
+      current == StickingCue.both ||
+      next == StickingCue.both) {
+    return StickingCue.both;
+  }
+  return current;
 }
 
 @immutable
@@ -92,23 +146,26 @@ class GuidedPracticeState {
 }
 
 class GuidedPracticeLedCommandBuilder {
-  final DrumVoiceLedCommandMapper mapper;
+  final LedFrameCommandEncoder encoder;
 
-  const GuidedPracticeLedCommandBuilder({
-    this.mapper = const DrumVoiceLedCommandMapper(),
+  GuidedPracticeLedCommandBuilder({
+    DrumVoiceLedCommandMapper mapper = const DrumVoiceLedCommandMapper(),
+  }) : encoder = LedFrameCommandEncoder(mapper: mapper);
+
+  const GuidedPracticeLedCommandBuilder.withEncoder({
+    this.encoder = const LedFrameCommandEncoder(),
   });
 
   static const String clearCommand = 'CLEAR\n';
 
-  String? cueCommandFor(DrumVoice voice) => _command('CUE', voice);
-  String? errorCommandFor(DrumVoice voice) => _command('ERROR', voice);
-  String? missingCommandFor(DrumVoice voice) => _command('MISSING', voice);
+  String? cueFrameFor(Iterable<LedCue> cues) => encoder.encodeCueFrame(cues);
 
-  String? _command(String action, DrumVoice voice) {
-    final String? name = mapper.voiceNameFor(
-      canonicalGuidedPracticeVoice(voice),
-    );
-    return name == null ? null : '$action,$name\n';
+  String? errorCommandFor(DrumVoice voice) {
+    return encoder.feedbackCommand('ERROR', LedCue(voice));
+  }
+
+  String? missingCommandFor(LedCue cue) {
+    return encoder.feedbackCommand('MISSING', cue);
   }
 }
 
@@ -133,7 +190,7 @@ class GuidedPracticeController extends ChangeNotifier {
     required Iterable<GuidedPracticeExpectedEvent> expectedEvents,
     required this.drumEvents,
     required this.ledController,
-    this.commandBuilder = const GuidedPracticeLedCommandBuilder(),
+    this.commandBuilder = const GuidedPracticeLedCommandBuilder.withEncoder(),
     GuidedPracticeTimerFactory? timerFactory,
   }) : expectedEvents = List<GuidedPracticeExpectedEvent>.unmodifiable(
          expectedEvents.where(
@@ -243,7 +300,9 @@ class GuidedPracticeController extends ChangeNotifier {
         if (!_receivedVoices.contains(voice)) voice,
     ];
     for (final DrumVoice voice in missing) {
-      if (!_sendFeedback(commandBuilder.missingCommandFor(voice))) return;
+      final LedCue? cue = expected.cueForVoice(voice);
+      if (cue == null) continue;
+      if (!_sendFeedback(commandBuilder.missingCommandFor(cue))) return;
     }
     _receivedVoices.clear();
     _publishRunningState(message: 'Try that group again.');
@@ -260,11 +319,10 @@ class GuidedPracticeController extends ChangeNotifier {
       totalEvents: expectedEvents.length,
       currentEvent: expectedEvents[index],
     );
-    if (!_sendLedCommand(GuidedPracticeLedCommandBuilder.clearCommand)) {
+    if (!_sendLedCommand(
+      commandBuilder.cueFrameFor(expectedEvents[index].cues),
+    )) {
       return false;
-    }
-    for (final DrumVoice voice in expectedEvents[index].voices) {
-      if (!_sendFeedback(commandBuilder.cueCommandFor(voice))) return false;
     }
     notifyListeners();
     return true;
@@ -284,7 +342,8 @@ class GuidedPracticeController extends ChangeNotifier {
     return _sendLedCommand(command);
   }
 
-  bool _sendLedCommand(String command) {
+  bool _sendLedCommand(String? command) {
+    if (command == null) return true;
     if (!ledController.isConnected) {
       _stopForLedFailure(
         ledController.lastError ?? 'LED controller disconnected.',

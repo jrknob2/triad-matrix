@@ -43,6 +43,15 @@ List<String> stickingLabels(String sticking) {
       .where((String item) => item.isNotEmpty)
       .toList(growable: false);
   if (spaced.length > 1) return spaced;
+  final Iterable<RegExpMatch> cueMatches = RegExp(
+    r'\([RLrl]\)[RLrl]|[Ff][LRlr]|[RrLlBbKkFfXx_]',
+  ).allMatches(trimmed);
+  final List<String> cueLabels = <String>[
+    for (final RegExpMatch match in cueMatches) match.group(0)!.toUpperCase(),
+  ];
+  if (cueLabels.isNotEmpty && cueLabels.join() == trimmed.toUpperCase()) {
+    return cueLabels;
+  }
   return trimmed
       .split('')
       .where((String item) => item.trim().isNotEmpty)

@@ -4,6 +4,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_libserialport/flutter_libserialport.dart';
 
+import 'led_frame_command_encoder.dart';
+
 enum SerialLedConnectionStatus {
   disconnected,
   connecting,
@@ -174,6 +176,7 @@ class SerialLedController extends ChangeNotifier {
   static const Duration _deviceMonitorInterval = Duration(seconds: 2);
 
   final SerialLedPlatform _platform;
+  final LedFrameCommandEncoder _frameEncoder;
   final SerialLedSettings settings;
 
   List<SerialLedPort> _ports = const <SerialLedPort>[];
@@ -186,8 +189,10 @@ class SerialLedController extends ChangeNotifier {
 
   SerialLedController({
     SerialLedPlatform platform = const LibserialportLedPlatform(),
+    LedFrameCommandEncoder frameEncoder = const LedFrameCommandEncoder(),
     this.settings = const SerialLedSettings(),
-  }) : _platform = platform;
+  }) : _platform = platform,
+       _frameEncoder = frameEncoder;
 
   List<SerialLedPort> get ports => List.unmodifiable(_ports);
   SerialLedPort? get selectedPort => _selectedPort;
@@ -269,10 +274,20 @@ class SerialLedController extends ChangeNotifier {
   }
 
   void sendCommand(String command) {
+    final String normalized = command.endsWith('\n') ? command : '$command\n';
+    _sendPayload(normalized);
+  }
+
+  void sendCueFrame(Iterable<LedCue> cues) {
+    final String? frame = _frameEncoder.encodeCueFrame(cues);
+    if (frame == null) return;
+    _sendPayload(frame);
+  }
+
+  void _sendPayload(String payload) {
     if (!isConnected) return;
     final SerialLedConnection connection = _connection!;
-    final String normalized = command.endsWith('\n') ? command : '$command\n';
-    final Uint8List bytes = Uint8List.fromList(utf8.encode(normalized));
+    final Uint8List bytes = Uint8List.fromList(utf8.encode(payload));
 
     try {
       final int written = connection.write(bytes);

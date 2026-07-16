@@ -5,20 +5,22 @@ import 'dart:typed_data';
 import 'package:drumcabulary/features/coach/lesson_plan.dart';
 import 'package:drumcabulary/features/guided_practice/guided_practice_controller.dart';
 import 'package:drumcabulary/features/guided_practice/guided_practice_sequence_builder.dart';
+import 'package:drumcabulary/features/midi/led_frame_command_encoder.dart';
 import 'package:drumcabulary/features/midi/midi_input_models.dart';
 import 'package:drumcabulary/features/midi/serial_led_controller.dart';
+import 'package:drumcabulary/features/practice/sticking_cue.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('GuidedPracticeController', () {
-    test('Starting Guided Practice clears LEDs', () async {
+    test('Starting Guided Practice sends one frame and no CLEAR', () async {
       final _GuidedHarness harness = await _GuidedHarness.connected(
         events: <GuidedPracticeExpectedEvent>[_event(DrumVoice.snare)],
       );
 
       expect(harness.controller.start(), true);
 
-      expect(harness.writes.first, 'CLEAR\n');
+      expect(harness.writes, <String>[_frame('CUE,SNARE')]);
     });
 
     test('Starting cues the first expected voice', () async {
@@ -28,7 +30,7 @@ void main() {
 
       harness.controller.start();
 
-      expect(harness.writes, <String>['CLEAR\n', 'CUE,SNARE\n']);
+      expect(harness.writes, <String>[_frame('CUE,SNARE')]);
     });
 
     test('Starting cues every voice in a simultaneous event', () async {
@@ -40,7 +42,22 @@ void main() {
 
       harness.controller.start();
 
-      expect(harness.writes, <String>['CLEAR\n', 'CUE,KICK\n', 'CUE,HIHAT\n']);
+      expect(harness.writes, <String>[_frame('CUE,KICK', 'CUE,HIHAT')]);
+    });
+
+    test('Starting includes optional sticking in the cue frame', () async {
+      final _GuidedHarness harness = await _GuidedHarness.connected(
+        events: <GuidedPracticeExpectedEvent>[
+          GuidedPracticeExpectedEvent.fromCues(const <LedCue>[
+            LedCue(DrumVoice.kick),
+            LedCue(DrumVoice.hiHatClosed, sticking: StickingCue.right),
+          ]),
+        ],
+      );
+
+      harness.controller.start();
+
+      expect(harness.writes, <String>[_frame('CUE,KICK', 'CUE,HIHAT,R')]);
     });
 
     test('Correct single voice advances immediately', () async {
@@ -55,12 +72,7 @@ void main() {
       harness.hit(DrumVoice.snare);
 
       expect(harness.controller.state.currentIndex, 1);
-      expect(harness.writes, <String>[
-        'CLEAR\n',
-        'CUE,SNARE\n',
-        'CLEAR\n',
-        'CUE,KICK\n',
-      ]);
+      expect(harness.writes, <String>[_frame('CUE,SNARE'), _frame('CUE,KICK')]);
     });
 
     test('Wrong single voice sends ERROR and does not advance', () async {
@@ -79,6 +91,7 @@ void main() {
       expect(harness.controller.state.currentIndex, 0);
       expect(harness.controller.state.currentEvent?.selectedIndexes, <int>{4});
       expect(harness.writes.last, 'ERROR,KICK\n');
+      expect(harness.writes.first, _frame('CUE,SNARE'));
     });
 
     test('Unknown voice does not advance', () async {
@@ -90,7 +103,7 @@ void main() {
       harness.hit(DrumVoice.unknown);
 
       expect(harness.controller.state.currentIndex, 0);
-      expect(harness.writes, <String>['CLEAR\n', 'CUE,SNARE\n']);
+      expect(harness.writes, <String>[_frame('CUE,SNARE')]);
     });
 
     test(
@@ -131,7 +144,7 @@ void main() {
 
       expect(harness.controller.state.currentIndex, 1);
       expect(timerFactory.timers.single.isActive, false);
-      expect(harness.writes.sublist(3), <String>['CLEAR\n', 'CUE,SNARE\n']);
+      expect(harness.writes.sublist(1), <String>[_frame('CUE,SNARE')]);
     });
 
     test('Simultaneous voices may arrive in any order', () async {
@@ -191,6 +204,26 @@ void main() {
       expect(harness.controller.state.currentEvent?.selectedIndexes, <int>{0});
     });
 
+    test('Missing feedback includes expected sticking', () async {
+      final _FakeTimerFactory timerFactory = _FakeTimerFactory();
+      final _GuidedHarness harness = await _GuidedHarness.connected(
+        events: <GuidedPracticeExpectedEvent>[
+          GuidedPracticeExpectedEvent.fromCues(const <LedCue>[
+            LedCue(DrumVoice.kick),
+            LedCue(DrumVoice.hiHatClosed, sticking: StickingCue.left),
+          ]),
+        ],
+        timerFactory: timerFactory.call,
+      );
+
+      harness.controller.start();
+      harness.hit(DrumVoice.kick);
+      timerFactory.fireLast();
+
+      expect(harness.writes.last, 'MISSING,HIHAT,L\n');
+      expect(harness.writes.first, _frame('CUE,KICK', 'CUE,HIHAT,L'));
+    });
+
     test(
       'A failed simultaneous attempt requires the complete group again',
       () async {
@@ -242,7 +275,7 @@ void main() {
       },
     );
 
-    test('Advancing sends CLEAR before cueing the next event', () async {
+    test('Advancing sends one replacement frame', () async {
       final _GuidedHarness harness = await _GuidedHarness.connected(
         events: <GuidedPracticeExpectedEvent>[
           _event(DrumVoice.snare),
@@ -253,7 +286,7 @@ void main() {
       harness.controller.start();
       harness.hit(DrumVoice.snare);
 
-      expect(harness.writes.sublist(2), <String>['CLEAR\n', 'CUE,KICK\n']);
+      expect(harness.writes.sublist(1), <String>[_frame('CUE,KICK')]);
     });
 
     test('Final event loops to the first event and keeps running', () async {
@@ -267,10 +300,8 @@ void main() {
       expect(harness.controller.state.status, GuidedPracticeStatus.running);
       expect(harness.controller.state.currentIndex, 0);
       expect(harness.writes, <String>[
-        'CLEAR\n',
-        'CUE,SNARE\n',
-        'CLEAR\n',
-        'CUE,SNARE\n',
+        _frame('CUE,SNARE'),
+        _frame('CUE,SNARE'),
       ]);
     });
 
@@ -394,6 +425,30 @@ void main() {
       expect(events.single.selectedIndexes, <int>{0});
     });
 
+    test('Authored sticking is carried into expected cues', () {
+      final List<GuidedPracticeExpectedEvent> events = builder.buildForExercise(
+        _exercise(pattern: '[HH K:R] [T1:R]', sticking: 'R L'),
+      );
+
+      expect(events[0].cues, hasLength(2));
+      expect(
+        events[0].cueForVoice(DrumVoice.hiHatClosed)?.sticking,
+        StickingCue.right,
+      );
+      expect(events[0].cueForVoice(DrumVoice.kick)?.sticking, isNull);
+      expect(events[1].cueForVoice(DrumVoice.tom1)?.sticking, StickingCue.left);
+    });
+
+    test('Both-hand and flam sticking labels convert to cue tokens', () {
+      final List<GuidedPracticeExpectedEvent> events = builder.buildForExercise(
+        _exercise(pattern: 'R F F', sticking: 'B FL FR'),
+      );
+
+      expect(events[0].cues.single.sticking, StickingCue.both);
+      expect(events[1].cues.single.sticking, StickingCue.flamLeft);
+      expect(events[2].cues.single.sticking, StickingCue.flamRight);
+    });
+
     test('Sectioned notation records the owning section for highlights', () {
       final List<GuidedPracticeExpectedEvent> events = builder.buildForExercise(
         LessonExercise(
@@ -419,6 +474,16 @@ void main() {
   });
 }
 
+String _frame(String firstCue, [String? secondCue]) {
+  return <String>[
+    'FRAME_BEGIN',
+    firstCue,
+    if (secondCue != null) secondCue,
+    'FRAME_END',
+    '',
+  ].join('\n');
+}
+
 GuidedPracticeExpectedEvent _event(DrumVoice first, [DrumVoice? second]) {
   return GuidedPracticeExpectedEvent(<DrumVoice>[
     first,
@@ -426,7 +491,7 @@ GuidedPracticeExpectedEvent _event(DrumVoice first, [DrumVoice? second]) {
   ]);
 }
 
-LessonExercise _exercise({required String pattern}) {
+LessonExercise _exercise({required String pattern, String? sticking}) {
   return LessonExercise(
     id: 'exercise',
     title: 'Exercise',
@@ -435,7 +500,7 @@ LessonExercise _exercise({required String pattern}) {
     how: 'How',
     notation: ExerciseNotation(
       sections: <ExerciseNotationSection>[
-        ExerciseNotationSection(pattern: pattern),
+        ExerciseNotationSection(pattern: pattern, sticking: sticking),
       ],
     ),
   );
