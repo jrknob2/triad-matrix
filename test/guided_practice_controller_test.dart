@@ -339,6 +339,15 @@ void main() {
           <DrumVoice>[DrumVoice.kick],
         ],
       );
+      expect(
+        events
+            .map((GuidedPracticeExpectedEvent event) => event.selectedIndexes)
+            .toList(),
+        <Set<int>>[
+          <int>{0},
+          <int>{2},
+        ],
+      );
     });
 
     test('Ghost and accent markings resolve to underlying DrumVoice', () {
@@ -366,6 +375,30 @@ void main() {
         DrumVoice.hiHatClosed,
         DrumVoice.kick,
       });
+      expect(events.single.selectedIndexes, <int>{0});
+    });
+
+    test('Sectioned notation records the owning section for highlights', () {
+      final List<GuidedPracticeExpectedEvent> events = builder.buildForExercise(
+        LessonExercise(
+          id: 'sectioned',
+          title: 'Sectioned',
+          why: 'Why',
+          what: 'What',
+          how: 'How',
+          notation: const ExerciseNotation(
+            sections: <ExerciseNotationSection>[
+              ExerciseNotationSection(pattern: 'R'),
+              ExerciseNotationSection(pattern: 'K'),
+            ],
+          ),
+        ),
+      );
+
+      expect(events[0].sectionIndex, 0);
+      expect(events[0].selectedIndexes, <int>{0});
+      expect(events[1].sectionIndex, 1);
+      expect(events[1].selectedIndexes, <int>{0});
     });
   });
 }

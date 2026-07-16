@@ -190,7 +190,10 @@ Forbidden content:
 4. Progressive exercise cards render in authored order.
 5. Each exercise explains Why, What, and How.
 6. User can adjust lesson preview BPM from the footer.
-7. User can hear notation, start Practice It, complete an exercise, print, or go back.
+7. User can hear notation, start Practice It, start Guided Practice when
+   hardware is connected, complete an exercise, print, or go back.
+8. During Guided Practice, the rendered notation highlights the current expected
+   note or simultaneous note group.
 
 Owning screen:
 
@@ -209,6 +212,8 @@ Required content:
 - Hear It action
 - footer BPM control for Hear It preview speed
 - Practice It action/timer entry point
+- Guided Practice action when MIDI input and LED output are connected
+- current expected notation highlight during Guided Practice
 - Complete Exercise action
 - Print action
 
@@ -313,7 +318,9 @@ Lesson Detail must show:
 - ear-icon preview controls for rendered notation
 - persistent footer BPM control for rendered notation preview speed
 - animated vertical playhead over rendered notation during preview
+- current expected note/group highlight over rendered notation during Guided Practice
 - Practice It / Complete Exercise controls
+- Guided Practice / Stop Guided Practice controls when supported
 - print action
 
 Lesson Detail must not show:

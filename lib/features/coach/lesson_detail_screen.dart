@@ -858,9 +858,9 @@ class _ExerciseCard extends StatelessWidget {
               index < exercise.notation.sections.length;
               index += 1
             ) ...[
+              if (index > 0) const SizedBox(height: 12),
               if (exercise.notation.sections.length > 1 &&
                   exercise.notation.sections[index].title != null) ...<Widget>[
-                if (index > 0) const SizedBox(height: 12),
                 Text(
                   exercise.notation.sections[index].title!,
                   style: textTheme.labelMedium?.copyWith(
@@ -876,6 +876,10 @@ class _ExerciseCard extends StatelessWidget {
                 previewBpm: previewBpm,
                 ledController: ledController,
                 ledPlaybackEnabled: ledPlaybackEnabled,
+                selectedIndexes: _guidedSelectionForSection(
+                  guidedPracticeState,
+                  index,
+                ),
                 controller: index == 0 ? primaryPreviewController : null,
               ),
             ],
@@ -932,6 +936,18 @@ class _ExerciseCard extends StatelessWidget {
       ),
     );
   }
+}
+
+Set<int> _guidedSelectionForSection(
+  GuidedPracticeState? state,
+  int sectionIndex,
+) {
+  if (state?.isActive != true) return const <int>{};
+  final GuidedPracticeExpectedEvent? event = state!.currentEvent;
+  if (event == null || event.sectionIndex != sectionIndex) {
+    return const <int>{};
+  }
+  return event.selectedIndexes;
 }
 
 class _GuidedPracticeStatusLine extends StatelessWidget {
@@ -997,6 +1013,7 @@ class _NotationPreview extends StatelessWidget {
   final int previewBpm;
   final SerialLedController ledController;
   final bool ledPlaybackEnabled;
+  final Set<int> selectedIndexes;
   final DrumSheetNotationController? controller;
 
   const _NotationPreview({
@@ -1004,6 +1021,7 @@ class _NotationPreview extends StatelessWidget {
     required this.previewBpm,
     required this.ledController,
     required this.ledPlaybackEnabled,
+    required this.selectedIndexes,
     required this.controller,
   });
 
@@ -1036,6 +1054,7 @@ class _NotationPreview extends StatelessWidget {
           child: DrumSheetNotationDisplay(
             document: documentForNotationSection(section),
             grouping: groupingTextFromPattern(section.pattern),
+            selectedIndexes: selectedIndexes,
             selectable: false,
             compactLayout: true,
             minNoteWidth: 32,

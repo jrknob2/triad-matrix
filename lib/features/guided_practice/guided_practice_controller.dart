@@ -23,18 +23,32 @@ enum GuidedPracticeStatus { idle, running, completed, stopped, error }
 @immutable
 class GuidedPracticeExpectedEvent {
   final List<DrumVoice> voices;
+  final int sectionIndex;
+  final Set<int> selectedIndexes;
 
-  factory GuidedPracticeExpectedEvent(Iterable<DrumVoice> voices) {
+  factory GuidedPracticeExpectedEvent(
+    Iterable<DrumVoice> voices, {
+    int sectionIndex = 0,
+    Iterable<int> selectedIndexes = const <int>[],
+  }) {
     final Set<DrumVoice> seen = <DrumVoice>{};
     for (final DrumVoice voice in voices) {
       final DrumVoice canonical = canonicalGuidedPracticeVoice(voice);
       if (canonical == DrumVoice.unknown) continue;
       seen.add(canonical);
     }
-    return GuidedPracticeExpectedEvent._(List<DrumVoice>.unmodifiable(seen));
+    return GuidedPracticeExpectedEvent._(
+      List<DrumVoice>.unmodifiable(seen),
+      sectionIndex: sectionIndex,
+      selectedIndexes: Set<int>.unmodifiable(selectedIndexes),
+    );
   }
 
-  const GuidedPracticeExpectedEvent._(this.voices);
+  const GuidedPracticeExpectedEvent._(
+    this.voices, {
+    required this.sectionIndex,
+    required this.selectedIndexes,
+  });
 
   bool get isEmpty => voices.isEmpty;
   bool get isSimultaneous => voices.length > 1;

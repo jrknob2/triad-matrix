@@ -12,30 +12,46 @@ class GuidedPracticeSequenceBuilder {
   List<GuidedPracticeExpectedEvent> buildForExercise(LessonExercise exercise) {
     final List<GuidedPracticeExpectedEvent> events =
         <GuidedPracticeExpectedEvent>[];
-    for (final ExerciseNotationSection section in exercise.notation.sections) {
-      events.addAll(_eventsForSection(section));
+    for (
+      int sectionIndex = 0;
+      sectionIndex < exercise.notation.sections.length;
+      sectionIndex += 1
+    ) {
+      events.addAll(
+        _eventsForSection(
+          exercise.notation.sections[sectionIndex],
+          sectionIndex: sectionIndex,
+        ),
+      );
     }
     return List<GuidedPracticeExpectedEvent>.unmodifiable(events);
   }
 
   List<GuidedPracticeExpectedEvent> _eventsForSection(
-    ExerciseNotationSection section,
-  ) {
-    final PatternAudioPlanV1 plan = buildSheetNotationAudioPreviewPlan(
-      documentForNotationSection(section),
-    );
+    ExerciseNotationSection section, {
+    required int sectionIndex,
+  }) {
+    final DrumSheetAudioPreviewPlan previewPlan =
+        buildSheetNotationAudioPreviewPlanDetails(
+          documentForNotationSection(section),
+        );
+    final PatternAudioPlanV1 plan = previewPlan.audioPlan;
     final List<GuidedPracticeExpectedEvent> events =
         <GuidedPracticeExpectedEvent>[];
     Duration? currentOffset;
     final List<DrumVoice> currentVoices = <DrumVoice>[];
+    final Set<int> currentSelectedIndexes = <int>{};
 
     void flush() {
       if (currentVoices.isEmpty) return;
       final GuidedPracticeExpectedEvent event = GuidedPracticeExpectedEvent(
         currentVoices,
+        sectionIndex: sectionIndex,
+        selectedIndexes: currentSelectedIndexes,
       );
       if (!event.isEmpty) events.add(event);
       currentVoices.clear();
+      currentSelectedIndexes.clear();
     }
 
     for (final PatternAudioCueV1 cue in plan.cues) {
@@ -44,6 +60,10 @@ class GuidedPracticeSequenceBuilder {
         currentOffset = cue.offset;
       }
       currentVoices.add(midiDrumVoiceForPlaybackVoice(cue.voice));
+      final int? displayIndex = previewPlan.displayIndexForTokenIndex(
+        cue.tokenIndex,
+      );
+      if (displayIndex != null) currentSelectedIndexes.add(displayIndex);
     }
     flush();
     return events;

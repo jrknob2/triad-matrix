@@ -905,12 +905,31 @@ Map<String, Object?> _documentJson(DrumSheetNotationDocument document) {
 }
 
 @immutable
+class DrumSheetAudioPreviewPlan {
+  final PatternAudioPlanV1 audioPlan;
+  final List<int> displayIndexesByTokenIndex;
+
+  const DrumSheetAudioPreviewPlan({
+    required this.audioPlan,
+    required this.displayIndexesByTokenIndex,
+  });
+
+  int? displayIndexForTokenIndex(int tokenIndex) {
+    if (tokenIndex < 0 || tokenIndex >= displayIndexesByTokenIndex.length) {
+      return null;
+    }
+    return displayIndexesByTokenIndex[tokenIndex];
+  }
+}
+
+@immutable
 class _SheetNotationAudioPlan {
   final List<PatternTokenV1> tokens;
   final List<PatternNoteMarkingV1> markings;
   final List<DrumVoiceV1> voices;
   final PatternTimingV1 timing;
   final Map<int, List<DrumVoiceV1>> additionalVoicesByIndex;
+  final List<int> visibleTokenIndexes;
   final List<_SheetNotationPlayheadEvent> playheadEvents;
   final double totalBeatCount;
 
@@ -920,6 +939,7 @@ class _SheetNotationAudioPlan {
     required this.voices,
     required this.timing,
     required this.additionalVoicesByIndex,
+    required this.visibleTokenIndexes,
     required this.playheadEvents,
     required this.totalBeatCount,
   });
@@ -1059,6 +1079,7 @@ _SheetNotationAudioPlan _audioPlanForDocument(
     additionalVoicesByIndex: Map<int, List<DrumVoiceV1>>.unmodifiable(
       additionalVoicesByIndex,
     ),
+    visibleTokenIndexes: List<int>.unmodifiable(visibleTokenIndexes),
     playheadEvents: List<_SheetNotationPlayheadEvent>.unmodifiable(
       playbackPlan.events.map(
         (PatternPlaybackEventV1 event) => _SheetNotationPlayheadEvent(
@@ -1077,16 +1098,31 @@ PatternAudioPlanV1 buildSheetNotationAudioPreviewPlan(
   int bpm = 92,
   AccentVoiceV1 accentVoice = AccentVoiceV1.snare,
 }) {
-  final _SheetNotationAudioPlan plan = _audioPlanForDocument(document);
-  return PatternAudioService.buildPlan(
-    tokens: plan.tokens,
-    markings: plan.markings,
-    voices: plan.voices,
-    grouping: PatternGroupingV1.none,
-    timing: plan.timing,
+  return buildSheetNotationAudioPreviewPlanDetails(
+    document,
     bpm: bpm,
     accentVoice: accentVoice,
-    additionalVoicesByIndex: plan.additionalVoicesByIndex,
+  ).audioPlan;
+}
+
+DrumSheetAudioPreviewPlan buildSheetNotationAudioPreviewPlanDetails(
+  DrumSheetNotationDocument document, {
+  int bpm = 92,
+  AccentVoiceV1 accentVoice = AccentVoiceV1.snare,
+}) {
+  final _SheetNotationAudioPlan plan = _audioPlanForDocument(document);
+  return DrumSheetAudioPreviewPlan(
+    audioPlan: PatternAudioService.buildPlan(
+      tokens: plan.tokens,
+      markings: plan.markings,
+      voices: plan.voices,
+      grouping: PatternGroupingV1.none,
+      timing: plan.timing,
+      bpm: bpm,
+      accentVoice: accentVoice,
+      additionalVoicesByIndex: plan.additionalVoicesByIndex,
+    ),
+    displayIndexesByTokenIndex: plan.visibleTokenIndexes,
   );
 }
 
