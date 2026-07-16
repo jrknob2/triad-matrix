@@ -104,6 +104,7 @@ class LibserialportLedPlatform implements SerialLedPlatform {
   SerialLedConnection openPort(SerialLedPort port, SerialLedSettings settings) {
     final SerialPort serialPort = SerialPort(port.path);
     SerialPortConfig? config;
+    bool configOwnedByPort = false;
     try {
       if (!serialPort.openReadWrite()) {
         throw SerialLedException(_lastSerialError(port.path));
@@ -114,16 +115,18 @@ class LibserialportLedPlatform implements SerialLedPlatform {
         ..parity = settings.parity
         ..stopBits = settings.stopBits
         ..setFlowControl(settings.flowControl);
+      configOwnedByPort = true;
       serialPort.config = config;
       return _LibserialportLedConnection(serialPort);
     } catch (error) {
+      if (!configOwnedByPort) {
+        config?.dispose();
+      }
       if (serialPort.isOpen) {
         serialPort.close();
       }
       serialPort.dispose();
       throw SerialLedException(_connectionErrorMessage(port.path, error));
-    } finally {
-      config?.dispose();
     }
   }
 
