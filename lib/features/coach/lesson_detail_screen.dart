@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 
 import '../app/drumcabulary_theme.dart';
 import '../app/drumcabulary_ui.dart';
+import '../midi/serial_led_controller.dart';
+import '../midi/shared_serial_led_controller.dart';
 import '../practice/widgets/sheet_notation_display.dart';
 import 'lesson_notation_document.dart';
 import 'lesson_plan.dart';
@@ -34,8 +36,17 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
   DateTime? _practiceStartedAt;
   Duration _activeElapsed = Duration.zero;
   late int _previewBpm = _initialPreviewBpmFor(widget.lesson);
+  late final SerialLedController _ledController =
+      SharedSerialLedController.instance;
+  bool _ledPlaybackEnabled = false;
   final DrumSheetNotationController _footerPreviewController =
       DrumSheetNotationController();
+
+  @override
+  void initState() {
+    super.initState();
+    _ledController.addListener(_handleLedControllerChanged);
+  }
 
   @override
   void didUpdateWidget(covariant LessonDetailScreen oldWidget) {
@@ -48,6 +59,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
   @override
   void dispose() {
     _practiceTimer?.cancel();
+    _ledController.removeListener(_handleLedControllerChanged);
     unawaited(_footerPreviewController.stopAudioPreview());
     super.dispose();
   }
@@ -66,10 +78,13 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
         onIncrease: () => _changePreviewBpm(_previewBpmStep),
         onReset: _resetPreviewBpm,
         onPlay: () => unawaited(_footerPreviewController.toggleAudioPreview()),
+        ledPlaybackAvailable: _ledController.isConnected,
+        ledPlaybackEnabled: _ledPlaybackEnabled && _ledController.isConnected,
+        onLedPlaybackChanged: _setLedPlaybackEnabled,
       ),
       body: DrumScreen(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 136),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 176),
           children: <Widget>[
             _LessonHeader(
               lesson: lesson,
@@ -101,6 +116,9 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
                           exerciseId: lesson.exercises[index].id,
                         ),
                         previewBpm: _previewBpm,
+                        ledController: _ledController,
+                        ledPlaybackEnabled:
+                            _ledPlaybackEnabled && _ledController.isConnected,
                         active: _activeExerciseId == lesson.exercises[index].id,
                         activeElapsed: _activeElapsed,
                         onStartPractice: widget.progressService == null
@@ -143,6 +161,29 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
     setState(() {
       _previewBpm = _initialPreviewBpmFor(widget.lesson);
     });
+  }
+
+  void _handleLedControllerChanged() {
+    if (!mounted) return;
+    final bool shouldNotify =
+        _ledPlaybackEnabled &&
+        !_ledController.isConnected &&
+        _ledController.lastError != null;
+    setState(() {
+      if (!_ledController.isConnected) {
+        _ledPlaybackEnabled = false;
+      }
+    });
+    if (shouldNotify) {
+      ScaffoldMessenger.maybeOf(
+        context,
+      )?.showSnackBar(SnackBar(content: Text(_ledController.lastError!)));
+    }
+  }
+
+  void _setLedPlaybackEnabled(bool value) {
+    if (!_ledController.isConnected && value) return;
+    setState(() => _ledPlaybackEnabled = value);
   }
 
   Future<void> _startPractice(LessonExercise exercise) async {
@@ -192,6 +233,9 @@ class _LessonTempoFooter extends StatelessWidget {
   final VoidCallback onIncrease;
   final VoidCallback onReset;
   final VoidCallback onPlay;
+  final bool ledPlaybackAvailable;
+  final bool ledPlaybackEnabled;
+  final ValueChanged<bool> onLedPlaybackChanged;
 
   const _LessonTempoFooter({
     required this.bpm,
@@ -202,6 +246,9 @@ class _LessonTempoFooter extends StatelessWidget {
     required this.onIncrease,
     required this.onReset,
     required this.onPlay,
+    required this.ledPlaybackAvailable,
+    required this.ledPlaybackEnabled,
+    required this.onLedPlaybackChanged,
   });
 
   @override
@@ -223,38 +270,89 @@ class _LessonTempoFooter extends StatelessWidget {
           ),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-            child: Row(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                _FooterIconButton(
-                  tooltip: 'Reset tempo',
-                  icon: Icons.speed_rounded,
-                  onPressed: bpm != defaultBpm ? onReset : null,
+                Row(
+                  children: <Widget>[
+                    _FooterIconButton(
+                      tooltip: 'Reset tempo',
+                      icon: Icons.speed_rounded,
+                      onPressed: bpm != defaultBpm ? onReset : null,
+                    ),
+                    const Spacer(),
+                    _TempoControl(
+                      bpm: bpm,
+                      canDecrease: canDecrease,
+                      canIncrease: canIncrease,
+                      onDecrease: onDecrease,
+                      onIncrease: onIncrease,
+                    ),
+                    const Spacer(),
+                    _FooterPlayButton(onPressed: onPlay),
+                    const SizedBox(width: 10),
+                    Text(
+                      'BPM',
+                      textAlign: TextAlign.center,
+                      style: textTheme.labelSmall?.copyWith(
+                        color: DrumcabularyTheme.edgeTextMuted,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ],
                 ),
-                const Spacer(),
-                _TempoControl(
-                  bpm: bpm,
-                  canDecrease: canDecrease,
-                  canIncrease: canIncrease,
-                  onDecrease: onDecrease,
-                  onIncrease: onIncrease,
-                ),
-                const Spacer(),
-                _FooterPlayButton(onPressed: onPlay),
-                const SizedBox(width: 10),
-                Text(
-                  'BPM',
-                  textAlign: TextAlign.center,
-                  style: textTheme.labelSmall?.copyWith(
-                    color: DrumcabularyTheme.edgeTextMuted,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1,
-                  ),
+                const SizedBox(height: 10),
+                _LedPlaybackToggle(
+                  available: ledPlaybackAvailable,
+                  enabled: ledPlaybackEnabled,
+                  onChanged: onLedPlaybackChanged,
                 ),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _LedPlaybackToggle extends StatelessWidget {
+  final bool available;
+  final bool enabled;
+  final ValueChanged<bool> onChanged;
+
+  const _LedPlaybackToggle({
+    required this.available,
+    required this.enabled,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final TextTheme textTheme = Theme.of(context).textTheme;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: <Widget>[
+        Switch(
+          value: available && enabled,
+          onChanged: available ? onChanged : null,
+        ),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            'Enable LED Playback',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: textTheme.labelLarge?.copyWith(
+              color: available
+                  ? DrumcabularyTheme.edgeTextPrimary
+                  : DrumcabularyTheme.edgeTextMuted,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -514,6 +612,8 @@ class _ExerciseCard extends StatelessWidget {
   final DrumSheetNotationController? primaryPreviewController;
   final ExerciseProgress? progress;
   final int previewBpm;
+  final SerialLedController ledController;
+  final bool ledPlaybackEnabled;
   final bool active;
   final Duration activeElapsed;
   final VoidCallback? onStartPractice;
@@ -526,6 +626,8 @@ class _ExerciseCard extends StatelessWidget {
     required this.primaryPreviewController,
     required this.progress,
     required this.previewBpm,
+    required this.ledController,
+    required this.ledPlaybackEnabled,
     required this.active,
     required this.activeElapsed,
     required this.onStartPractice,
@@ -638,6 +740,8 @@ class _ExerciseCard extends StatelessWidget {
               _NotationPreview(
                 section: exercise.notation.sections[index],
                 previewBpm: previewBpm,
+                ledController: ledController,
+                ledPlaybackEnabled: ledPlaybackEnabled,
                 controller: index == 0 ? primaryPreviewController : null,
               ),
             ],
@@ -712,11 +816,15 @@ class _TeachingText extends StatelessWidget {
 class _NotationPreview extends StatelessWidget {
   final ExerciseNotationSection section;
   final int previewBpm;
+  final SerialLedController ledController;
+  final bool ledPlaybackEnabled;
   final DrumSheetNotationController? controller;
 
   const _NotationPreview({
     required this.section,
     required this.previewBpm,
+    required this.ledController,
+    required this.ledPlaybackEnabled,
     required this.controller,
   });
 
@@ -755,6 +863,8 @@ class _NotationPreview extends StatelessWidget {
             showSticking: shouldShowStickingForNotationSection(section),
             audioPreviewEnabled: true,
             audioPreviewBpm: previewBpm,
+            ledController: ledController,
+            ledPlaybackEnabled: ledPlaybackEnabled,
             backgroundColor: DrumcabularyTheme.edgeNotationPanel,
             noteColor: DrumcabularyTheme.edgeNotationInk,
             staffColor: DrumcabularyTheme.edgeNotationInk.withValues(

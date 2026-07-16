@@ -7,7 +7,9 @@ import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../../core/practice/practice_domain_v1.dart';
+import '../../midi/serial_led_controller.dart';
 import '../pattern_audio_service.dart';
+import '../pattern_led_playback_output.dart';
 import '../pattern_playback_scheduler.dart';
 
 enum DrumSheetNoteValue {
@@ -360,6 +362,8 @@ class DrumSheetNotationDisplay extends StatefulWidget {
   final bool audioPreviewEnabled;
   final int audioPreviewBpm;
   final AccentVoiceV1 audioPreviewAccentVoice;
+  final bool ledPlaybackEnabled;
+  final SerialLedController? ledController;
   final DrumSheetNotationController? controller;
 
   const DrumSheetNotationDisplay({
@@ -382,6 +386,8 @@ class DrumSheetNotationDisplay extends StatefulWidget {
     this.audioPreviewEnabled = false,
     this.audioPreviewBpm = 92,
     this.audioPreviewAccentVoice = AccentVoiceV1.snare,
+    this.ledPlaybackEnabled = false,
+    this.ledController,
     this.controller,
   });
 
@@ -501,8 +507,13 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
         (oldWidget.document != widget.document ||
             oldWidget.audioPreviewBpm != widget.audioPreviewBpm ||
             oldWidget.audioPreviewAccentVoice !=
-                widget.audioPreviewAccentVoice)) {
+                widget.audioPreviewAccentVoice ||
+            oldWidget.ledController != widget.ledController)) {
       unawaited(_stopAudioPreview());
+    }
+    if (oldWidget.ledController != widget.ledController) {
+      unawaited(_audioPreview?.dispose());
+      _audioPreview = null;
     }
   }
 
@@ -643,7 +654,7 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
       }
 
       final PatternAudioService audioPreview = _audioPreview ??=
-          PatternAudioService();
+          PatternAudioService(playbackOutputs: _playbackOutputs());
       await audioPreview.start(
         tokens: plan.tokens,
         markings: plan.markings,
@@ -711,6 +722,17 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
       const Duration(milliseconds: 33),
       (_) => _updatePlayheadFrame(),
     );
+  }
+
+  List<PatternPlaybackCueOutputV1> _playbackOutputs() {
+    final SerialLedController? ledController = widget.ledController;
+    if (ledController == null) return const <PatternPlaybackCueOutputV1>[];
+    return <PatternPlaybackCueOutputV1>[
+      PatternLedPlaybackOutput(
+        controller: ledController,
+        isEnabled: () => widget.ledPlaybackEnabled,
+      ),
+    ];
   }
 
   void _updatePlayheadFrame() {

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:audio_session/audio_session.dart';
+import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 
 import '../../core/practice/practice_domain_v1.dart';
@@ -27,12 +28,14 @@ class PatternAudioCueV1 {
   final int tokenIndex;
   final Duration offset;
   final PatternAudioSampleV1 sample;
+  final DrumVoiceV1 voice;
   final double volume;
 
   const PatternAudioCueV1({
     required this.tokenIndex,
     required this.offset,
     required this.sample,
+    required this.voice,
     required this.volume,
   });
 }
@@ -67,6 +70,10 @@ class PatternAudioMixerConfigV1 {
        assert(accentVolume >= 0 && accentVolume <= 1);
 }
 
+abstract class PatternPlaybackCueOutputV1 {
+  void triggerCue(PatternAudioCueV1 cue);
+}
+
 class PatternAudioService {
   static const int _playerPoolSize = 4;
   static const Duration _staleCueTolerance = Duration(milliseconds: 90);
@@ -88,6 +95,7 @@ class PatternAudioService {
         PatternAudioSampleV1.accentRide: 'assets/audio/accent_ride.wav',
       };
 
+  final List<PatternPlaybackCueOutputV1> _playbackOutputs;
   final Map<PatternAudioSampleV1, List<AudioPlayer>> _playersBySample =
       <PatternAudioSampleV1, List<AudioPlayer>>{
         for (final PatternAudioSampleV1 sample in PatternAudioSampleV1.values)
@@ -108,6 +116,13 @@ class PatternAudioService {
   bool _running = false;
   Timer? _cycleTimer;
   final List<Timer> _cueTimers = <Timer>[];
+
+  PatternAudioService({
+    Iterable<PatternPlaybackCueOutputV1> playbackOutputs =
+        const <PatternPlaybackCueOutputV1>[],
+  }) : _playbackOutputs = List<PatternPlaybackCueOutputV1>.unmodifiable(
+         playbackOutputs,
+       );
 
   Future<void> prepare({Iterable<PatternAudioSampleV1>? samples}) async {
     final Set<PatternAudioSampleV1> requiredSamples = samples == null
@@ -293,6 +308,7 @@ class PatternAudioService {
             microseconds: (event.startBeat * microsPerBeat).round(),
           ),
           sample: sample,
+          voice: voice,
           volume: _volumeFor(
             token: token,
             voice: voice,
@@ -321,6 +337,7 @@ class PatternAudioService {
               microseconds: (event.startBeat * microsPerBeat).round(),
             ),
             sample: additionalSample,
+            voice: additionalVoice,
             volume: _volumeFor(
               token: additionalToken,
               voice: additionalVoice,
@@ -385,6 +402,7 @@ class PatternAudioService {
   }
 
   Future<void> _triggerCue(PatternAudioCueV1 cue) async {
+    _triggerPlaybackOutputs(cue);
     final List<AudioPlayer> players = _playersBySample[cue.sample]!;
     final int nextIndex = _nextPlayerIndexBySample[cue.sample]!;
     final AudioPlayer player = players[nextIndex];
@@ -395,6 +413,16 @@ class PatternAudioService {
       await player.play();
     } catch (_) {
       // Ignore transient one-shot errors.
+    }
+  }
+
+  void _triggerPlaybackOutputs(PatternAudioCueV1 cue) {
+    for (final PatternPlaybackCueOutputV1 output in _playbackOutputs) {
+      try {
+        output.triggerCue(cue);
+      } catch (error, stackTrace) {
+        debugPrint('Pattern playback output failed: $error\n$stackTrace');
+      }
     }
   }
 

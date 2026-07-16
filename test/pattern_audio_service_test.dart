@@ -67,6 +67,9 @@ void main() {
       expect(plan.cues[0].sample, PatternAudioSampleV1.snareAccent);
       expect(plan.cues[1].sample, PatternAudioSampleV1.hihat);
       expect(plan.cues[2].sample, PatternAudioSampleV1.floorTom);
+      expect(plan.cues[0].voice, DrumVoiceV1.snare);
+      expect(plan.cues[1].voice, DrumVoiceV1.hihat);
+      expect(plan.cues[2].voice, DrumVoiceV1.floorTom);
       expect(plan.cues[0].volume, 1.0);
       expect(plan.cues[1].volume, 0.1);
       expect(plan.cues[2].volume, 0.8);
@@ -266,6 +269,10 @@ void main() {
           PatternAudioSampleV1.accentCrash,
           PatternAudioSampleV1.kick,
         },
+      );
+      expect(
+        plan.cues.map((PatternAudioCueV1 cue) => cue.voice).toSet(),
+        <DrumVoiceV1>{DrumVoiceV1.crash, DrumVoiceV1.kick},
       );
     });
 
