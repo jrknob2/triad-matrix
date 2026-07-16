@@ -65,13 +65,19 @@ void main() {
 
     test('Wrong single voice sends ERROR and does not advance', () async {
       final _GuidedHarness harness = await _GuidedHarness.connected(
-        events: <GuidedPracticeExpectedEvent>[_event(DrumVoice.snare)],
+        events: <GuidedPracticeExpectedEvent>[
+          GuidedPracticeExpectedEvent(
+            <DrumVoice>[DrumVoice.snare],
+            selectedIndexes: <int>{4},
+          ),
+        ],
       );
 
       harness.controller.start();
       harness.hit(DrumVoice.kick);
 
       expect(harness.controller.state.currentIndex, 0);
+      expect(harness.controller.state.currentEvent?.selectedIndexes, <int>{4});
       expect(harness.writes.last, 'ERROR,KICK\n');
     });
 
@@ -168,7 +174,10 @@ void main() {
       final _FakeTimerFactory timerFactory = _FakeTimerFactory();
       final _GuidedHarness harness = await _GuidedHarness.connected(
         events: <GuidedPracticeExpectedEvent>[
-          _event(DrumVoice.kick, DrumVoice.hiHatClosed),
+          GuidedPracticeExpectedEvent(
+            <DrumVoice>[DrumVoice.kick, DrumVoice.hiHatClosed],
+            selectedIndexes: <int>{0},
+          ),
         ],
         timerFactory: timerFactory.call,
       );
@@ -179,6 +188,7 @@ void main() {
 
       expect(harness.writes.last, 'MISSING,HIHAT\n');
       expect(harness.controller.state.receivedVoices, isEmpty);
+      expect(harness.controller.state.currentEvent?.selectedIndexes, <int>{0});
     });
 
     test(

@@ -1058,7 +1058,9 @@ class _NotationPreview extends StatelessWidget {
           child: DrumSheetNotationDisplay(
             document: documentForNotationSection(section),
             grouping: groupingTextFromPattern(section.pattern),
-            selectedIndexes: selectedIndexes,
+            selection: selectedIndexes.isEmpty
+                ? DrumSheetNotationSelection.empty
+                : DrumSheetNotationSelection.guidedPractice(selectedIndexes),
             selectable: false,
             compactLayout: true,
             minNoteWidth: 32,

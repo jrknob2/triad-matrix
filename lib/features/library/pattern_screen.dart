@@ -74,6 +74,8 @@ class _PatternScreenState extends State<PatternScreen> {
   String? _validationMessage;
   Set<int> _selectedNoteIndexes = const <int>{};
   _PatternEditContext _editContext = _PatternEditContext.dynamics;
+  bool _syncingPatternSelectionFromNotation = false;
+  bool _notationSelectionOwnsPatternRange = false;
   TextSelection _lastPatternSelection = const TextSelection.collapsed(
     offset: 0,
   );
@@ -192,10 +194,10 @@ class _PatternScreenState extends State<PatternScreen> {
                         grouping: _groupingTextFromPattern(
                           _patternController.text,
                         ),
-                        selectedIndexes: _selectedNoteIndexes,
-                        onSelectionChanged: (Set<int> indexes) {
-                          setState(() => _selectedNoteIndexes = indexes);
-                        },
+                        selection: DrumSheetNotationSelection.editing(
+                          _selectedNoteIndexes,
+                        ),
+                        onSelectionChanged: _syncPatternSelectionFromNotation,
                         selectable: true,
                         compactLayout: true,
                         minNoteWidth: 34,
@@ -255,7 +257,15 @@ class _PatternScreenState extends State<PatternScreen> {
     final TextSelection selection = _patternController.selection;
     if (selection == _lastPatternSelection) return;
     _lastPatternSelection = selection;
-    if (mounted) setState(() {});
+    if (_syncingPatternSelectionFromNotation) return;
+    final Set<int> selectedIndexes = _selectedIndexesForPatternSelection(
+      selection,
+    );
+    if (!mounted) return;
+    setState(() {
+      _notationSelectionOwnsPatternRange = false;
+      _selectedNoteIndexes = selectedIndexes;
+    });
   }
 
   void _handlePatternFocusChanged() {
@@ -264,7 +274,12 @@ class _PatternScreenState extends State<PatternScreen> {
 
   void _handlePatternTextChanged(String value) {
     _validatePattern(value, lenient: true);
-    setState(() => _selectedNoteIndexes = const <int>{});
+    setState(() {
+      _notationSelectionOwnsPatternRange = false;
+      _selectedNoteIndexes = _selectedIndexesForPatternSelection(
+        _patternController.selection,
+      );
+    });
   }
 
   bool get _hasPatternSelection {
@@ -358,7 +373,8 @@ class _PatternScreenState extends State<PatternScreen> {
     List<DrumSheetNotationNote> Function(List<DrumSheetNotationNote>, Set<int>)
     transform,
   ) {
-    if (_selectedNoteIndexes.isNotEmpty && !_hasPatternSelection) {
+    if (_selectedNoteIndexes.isNotEmpty &&
+        (_notationSelectionOwnsPatternRange || !_hasPatternSelection)) {
       _transformSelectedSheetNotes(transform);
       return;
     }
@@ -403,6 +419,7 @@ class _PatternScreenState extends State<PatternScreen> {
       );
       _validatePattern(next, lenient: true);
       setState(() {
+        _notationSelectionOwnsPatternRange = true;
         _selectedNoteIndexes = _selectedNoteIndexes
             .where((int index) => index >= 0 && index < edited.length)
             .toSet();
@@ -416,7 +433,8 @@ class _PatternScreenState extends State<PatternScreen> {
 
   void _toggleVoiceForSelection(DrumSheetVoice voice) {
     final _PatternSelection? selection = _selectedPatternText();
-    if (_selectedNoteIndexes.isNotEmpty && !_hasPatternSelection) {
+    if (_selectedNoteIndexes.isNotEmpty &&
+        (_notationSelectionOwnsPatternRange || !_hasPatternSelection)) {
       _transformSelectedSheetNotes(
         (List<DrumSheetNotationNote> notes, Set<int> selectedIndexes) =>
             _toggleVoiceOnNotes(notes, selectedIndexes, voice),
@@ -537,7 +555,8 @@ class _PatternScreenState extends State<PatternScreen> {
 
   List<DrumSheetNotationNote> _notesForCurrentSelection() {
     try {
-      if (_selectedNoteIndexes.isNotEmpty && !_hasPatternSelection) {
+      if (_selectedNoteIndexes.isNotEmpty &&
+          (_notationSelectionOwnsPatternRange || !_hasPatternSelection)) {
         final List<DrumSheetNotationNote> notes = DrumSheetPatternParser.parse(
           _patternController.text,
         );
@@ -586,7 +605,68 @@ class _PatternScreenState extends State<PatternScreen> {
       ),
     );
     _validatePattern(next, lenient: true);
-    setState(() {});
+    setState(() => _notationSelectionOwnsPatternRange = false);
+  }
+
+  void _syncPatternSelectionFromNotation(Set<int> indexes) {
+    final Set<int> selectedIndexes = Set<int>.unmodifiable(indexes);
+    final int collapsedOffset = _patternController.selection.extentOffset
+        .clamp(0, _patternController.text.length)
+        .toInt();
+    final TextSelection textSelection =
+        _textSelectionForNoteIndexes(selectedIndexes) ??
+        TextSelection.collapsed(offset: collapsedOffset);
+    _syncingPatternSelectionFromNotation = true;
+    try {
+      _lastPatternSelection = textSelection;
+      _patternController.value = _patternController.value.copyWith(
+        selection: textSelection,
+        composing: TextRange.empty,
+      );
+    } finally {
+      _syncingPatternSelectionFromNotation = false;
+    }
+    if (!mounted) return;
+    setState(() {
+      _notationSelectionOwnsPatternRange = selectedIndexes.isNotEmpty;
+      _selectedNoteIndexes = selectedIndexes;
+    });
+  }
+
+  Set<int> _selectedIndexesForPatternSelection(TextSelection selection) {
+    if (!selection.isValid || selection.isCollapsed) return const <int>{};
+    final int start = selection.start < selection.end
+        ? selection.start
+        : selection.end;
+    final int end = selection.start < selection.end
+        ? selection.end
+        : selection.start;
+    final List<TextRange> ranges = _patternEventTextRanges(
+      _patternController.text,
+    );
+    return <int>{
+      for (int index = 0; index < ranges.length; index += 1)
+        if (ranges[index].end > start && ranges[index].start < end) index,
+    };
+  }
+
+  TextSelection? _textSelectionForNoteIndexes(Set<int> selectedIndexes) {
+    if (selectedIndexes.isEmpty) return null;
+    final List<TextRange> ranges = _patternEventTextRanges(
+      _patternController.text,
+    );
+    final List<TextRange> selectedRanges = <TextRange>[
+      for (final int index in selectedIndexes)
+        if (index >= 0 && index < ranges.length) ranges[index],
+    ];
+    if (selectedRanges.isEmpty) return null;
+    final int start = selectedRanges
+        .map((TextRange range) => range.start)
+        .reduce((int left, int right) => left < right ? left : right);
+    final int end = selectedRanges
+        .map((TextRange range) => range.end)
+        .reduce((int left, int right) => left > right ? left : right);
+    return TextSelection(baseOffset: start, extentOffset: end);
   }
 
   Future<void> _openSavePatternModal() async {
@@ -1010,6 +1090,76 @@ class _LegendEntry extends StatelessWidget {
       ),
     );
   }
+}
+
+List<TextRange> patternEventTextRangesForTesting(String pattern) {
+  return _patternEventTextRanges(pattern);
+}
+
+List<TextRange> _patternEventTextRanges(String pattern) {
+  final List<TextRange> ranges = <TextRange>[];
+  for (int index = 0; index < pattern.length; index += 1) {
+    final String char = pattern[index];
+    if (char.trim().isEmpty) continue;
+    final int start = index;
+    int tokenIndex = index;
+    while (tokenIndex < pattern.length && pattern[tokenIndex] == '^') {
+      tokenIndex += 1;
+      while (tokenIndex < pattern.length &&
+          pattern[tokenIndex].trim().isEmpty) {
+        tokenIndex += 1;
+      }
+    }
+    if (tokenIndex >= pattern.length) {
+      ranges.add(TextRange(start: start, end: pattern.length));
+      break;
+    }
+    final String token = pattern[tokenIndex];
+    if (token == '[') {
+      final int close = _matchingTopLevelClose(pattern, tokenIndex, ']');
+      final int end = close < 0 ? pattern.length : close + 1;
+      ranges.add(TextRange(start: start, end: end));
+      index = end - 1;
+      continue;
+    }
+    if (token == '(') {
+      final int close = _matchingGhostClose(pattern, tokenIndex);
+      final int end = close < 0 ? pattern.length : close + 1;
+      ranges.add(TextRange(start: start, end: end));
+      index = end - 1;
+      continue;
+    }
+    if (_isSinglePatternEventToken(token)) {
+      ranges.add(TextRange(start: start, end: tokenIndex + 1));
+      index = tokenIndex;
+    }
+  }
+  return ranges;
+}
+
+int _matchingTopLevelClose(String pattern, int openIndex, String closeToken) {
+  for (int index = openIndex + 1; index < pattern.length; index += 1) {
+    if (pattern[index] == closeToken) return index;
+  }
+  return -1;
+}
+
+int _matchingGhostClose(String pattern, int openIndex) {
+  int bracketDepth = 0;
+  for (int index = openIndex + 1; index < pattern.length; index += 1) {
+    final String char = pattern[index];
+    if (char == '[') bracketDepth += 1;
+    if (char == ']' && bracketDepth > 0) bracketDepth -= 1;
+    if (char == ')' && bracketDepth == 0) return index;
+  }
+  return -1;
+}
+
+bool _isSinglePatternEventToken(String token) {
+  return switch (token.toUpperCase()) {
+    'R' || 'L' || 'K' || 'F' || 'X' || '_' => true,
+    _ => false,
+  };
 }
 
 @immutable

@@ -74,7 +74,7 @@ assets/content/index.yaml
   -> web/sheet_notation/app_renderer.js
   -> renderDrumNotationSvgWithMetadata(...)
   -> VexFlow SVG + Drumcabulary note metadata
-  -> selection/playhead overlays in app_host.html
+  -> shared semantic selection and active-event overlays in app_host.html
 ```
 
 Print/export uses the same parser, document JSON, WebView host, generated JS
@@ -82,7 +82,14 @@ bundle, and SVG renderer, then embeds returned SVG into a PDF.
 
 Audio preview uses the same `DrumSheetNotationDocument`, but it does not use
 VexFlow. It converts the document directly into playback tokens, timing spans,
-voices, and playhead events.
+voices, and active-event frames.
+
+Selection state is semantic, not coordinate-based. Flutter passes flattened
+notation event indexes and a selection purpose into the WebView host. The host
+resolves those stable event indexes against the current VexFlow SVG after each
+render, then draws a translucent rounded event rectangle and notehead glow.
+Interactive editing, pattern-string selection sync, audio preview active-event
+display, and Guided Practice highlighting all use this same event-index path.
 
 ## YAML Source
 
@@ -315,7 +322,7 @@ The widget owns:
 - selection channel handling
 - height channel handling
 - audio preview button and lifecycle
-- playhead frame calculation and WebView updates
+- active-event frame calculation and WebView updates
 
 The lesson display path uses the WebView/VexFlow renderer. Rendering failures
 must surface as renderer failures; Drumcabulary does not substitute a native
@@ -336,7 +343,7 @@ metadata back to Flutter.
 The note-position metadata is also used for:
 
 - note selection overlays in editor-oriented contexts
-- playhead alignment during Hear It preview
+- active-event alignment during Hear It preview
 
 ## System Width And Density
 
@@ -363,8 +370,8 @@ Current MVP rules:
 
 - render an end-repeat bar when a repeat count is authored
 - do not render a separate repeat-count text label in lesson detail
-- audio preview and playhead movement should honor repeat count
-- playhead movement should continue to the end of the written measure before wrapping
+- audio preview and active-event highlighting should honor repeat count
+- active-event highlighting should continue to the end of the written measure before wrapping
 
 ## Audio Preview
 

@@ -86,10 +86,10 @@ Developer and hardware diagnostic access:
 - the shared sheet-notation renderer is the display path for lesson notation examples
 - sticking/limb labels render only when authored
 - rendered notation may expose an ear-icon preview that plays the displayed notes through the existing sample engine
-- while notation preview is playing, the notation surface should show an animated vertical playhead aligned to rendered note positions
+- while notation preview is playing, the notation surface should highlight the active rhythmic event with the shared rounded selection treatment aligned to rendered note positions
 - lesson detail exposes a persistent footer BPM control for notation preview speed; authored exercise tempo remains guidance
 - notation preview timing should preserve written bar speed across eighth, sixteenth, and triplet-eighth subdivisions
-- notation preview playback and playhead movement should honor `repeat_count`
+- notation preview playback and active-event highlighting should honor `repeat_count`
 - notation preview audio should use the explicit mixer config for relative sample levels
 - notation preview audio must stop on app inactive, hidden, paused, or detached lifecycle states instead of catching up missed notes on return
 - renderer failures must be visible
@@ -324,7 +324,7 @@ Lesson Detail must show:
 - rendered notation for each exercise
 - ear-icon preview controls for rendered notation
 - persistent footer BPM control for rendered notation preview speed
-- animated vertical playhead over rendered notation during preview
+- active-event notation highlight during preview using the shared rounded selection treatment
 - current expected note/group highlight over rendered notation during Guided Practice
 - Practice It / Complete Exercise controls
 - Guided Practice / Stop Guided Practice controls when supported

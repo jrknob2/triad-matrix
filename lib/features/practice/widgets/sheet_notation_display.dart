@@ -225,6 +225,64 @@ class DrumSheetSelectedNote {
   });
 }
 
+enum DrumSheetNotationSelectionPurpose { editing, guidedPractice }
+
+@immutable
+class DrumSheetNotationSelection {
+  final Set<int> eventIndexes;
+  final DrumSheetNotationSelectionPurpose purpose;
+
+  factory DrumSheetNotationSelection({
+    required Iterable<int> eventIndexes,
+    DrumSheetNotationSelectionPurpose purpose =
+        DrumSheetNotationSelectionPurpose.editing,
+  }) {
+    return DrumSheetNotationSelection._(
+      Set<int>.unmodifiable(eventIndexes.where((int index) => index >= 0)),
+      purpose,
+    );
+  }
+
+  factory DrumSheetNotationSelection.editing(Iterable<int> eventIndexes) {
+    return DrumSheetNotationSelection(
+      eventIndexes: eventIndexes,
+      purpose: DrumSheetNotationSelectionPurpose.editing,
+    );
+  }
+
+  factory DrumSheetNotationSelection.guidedPractice(
+    Iterable<int> eventIndexes,
+  ) {
+    return DrumSheetNotationSelection(
+      eventIndexes: eventIndexes,
+      purpose: DrumSheetNotationSelectionPurpose.guidedPractice,
+    );
+  }
+
+  const DrumSheetNotationSelection._(this.eventIndexes, this.purpose);
+
+  static const DrumSheetNotationSelection empty = DrumSheetNotationSelection._(
+    <int>{},
+    DrumSheetNotationSelectionPurpose.editing,
+  );
+
+  bool get isEmpty => eventIndexes.isEmpty;
+  bool get isGuidedPractice =>
+      purpose == DrumSheetNotationSelectionPurpose.guidedPractice;
+
+  List<int> get sortedIndexes => eventIndexes.toList()..sort();
+
+  DrumSheetNotationSelection copyWith({
+    Iterable<int>? eventIndexes,
+    DrumSheetNotationSelectionPurpose? purpose,
+  }) {
+    return DrumSheetNotationSelection(
+      eventIndexes: eventIndexes ?? this.eventIndexes,
+      purpose: purpose ?? this.purpose,
+    );
+  }
+}
+
 class DrumSheetPatternParser {
   const DrumSheetPatternParser._();
 
@@ -352,6 +410,7 @@ class DrumSheetNotationDisplay extends StatefulWidget {
   final DrumSheetNotationDocument document;
   final String? grouping;
   final Set<int> selectedIndexes;
+  final DrumSheetNotationSelection? selection;
   final ValueChanged<Set<int>>? onSelectionChanged;
   final bool selectable;
   final bool finalRepeat;
@@ -376,6 +435,7 @@ class DrumSheetNotationDisplay extends StatefulWidget {
     required this.document,
     this.grouping,
     this.selectedIndexes = const <int>{},
+    this.selection,
     this.onSelectionChanged,
     this.selectable = true,
     this.finalRepeat = true,
@@ -764,7 +824,7 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
       'document': payload['document'],
       'options': payload['options'],
     });
-    final String selectionJson = jsonEncode(payload['selectedIndexes']);
+    final String selectionJson = jsonEncode(payload['selection']);
     final bool shouldRender = _lastRenderPayloadJson != renderPayloadJson;
     final bool shouldUpdateSelection = _lastSelectionJson != selectionJson;
     if (!shouldRender && !shouldUpdateSelection) return;
@@ -780,7 +840,7 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
   if (window.DrumcabularySheetNotation == null) {
     return;
   }
-  window.DrumcabularySheetNotation.setSelection(selected);
+  window.DrumcabularySheetNotation.setSelection(selected.indexes, selected.purpose);
 })();
 ''', action: 'selection update');
       _sendPlayheadToWebView(_playheadFrame);
@@ -833,17 +893,33 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
   }
 
   Map<String, Object?> _webViewPayloadForWidth(double width) {
+    final DrumSheetNotationSelection selection =
+        widget.selection ??
+        DrumSheetNotationSelection.editing(widget.selectedIndexes);
+    final Color selectedColor = widget.selectedColor ?? const Color(0xFFFF6A00);
     return <String, Object?>{
       'document': _documentJson(widget.document),
-      'selectedIndexes': widget.selectedIndexes.toList()..sort(),
+      'selection': <String, Object?>{
+        'indexes': selection.sortedIndexes,
+        'purpose': selection.purpose.name,
+      },
+      'selectedIndexes': selection.sortedIndexes,
+      'selectionPurpose': selection.purpose.name,
       'options': <String, Object?>{
         'availableWidth': width.floor(),
         'finalRepeat': widget.finalRepeat,
         'grouping': widget.grouping,
         'minNoteWidth': widget.minNoteWidth,
         'preserveMeasures': true,
+        'selectable': widget.selectable && !selection.isGuidedPractice,
         'showSticking': widget.showSticking,
         'theme': widget.darkTheme ? 'dark' : 'light',
+        'selectionColor': _cssColor(selectedColor),
+        'selectionFillColor': _cssColor(selectedColor.withValues(alpha: 0.18)),
+        'selectionBorderColor': _cssColor(
+          selectedColor.withValues(alpha: 0.68),
+        ),
+        'selectionGlowColor': _cssColor(selectedColor.withValues(alpha: 0.38)),
         if (widget.backgroundColor != null)
           'backgroundColor': _cssColor(widget.backgroundColor!),
         if (widget.compactLayout) ...<String, Object?>{

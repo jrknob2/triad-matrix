@@ -50,49 +50,51 @@
         -webkit-tap-highlight-color: transparent;
       }
 
-      .drum-note-selected {
-        fill: #b26a00;
-        filter: drop-shadow(0 0 3px #b26a00);
-        stroke: #b26a00;
-      }
-
-      .drum-note-selected path,
-      .drum-note-selected line,
-      .drum-note-selected rect,
-      .drum-note-selected text,
-      .drum-note-selected polygon,
-      .drum-note-selected polyline {
-        fill: #b26a00;
-        stroke: #b26a00;
-      }
-
-      .drum-selection-overlay {
-        pointer-events: none;
-      }
-
-      .drum-selection-overlay line {
-        filter: drop-shadow(0 0 3px #b26a00);
-        fill: none;
-        stroke: #b26a00;
-        stroke-linecap: round;
-        stroke-width: 2.5;
-      }
-
+      .drum-selection-overlay,
       .drum-playhead-overlay {
         pointer-events: none;
       }
 
-      .drum-playhead-overlay line {
-        filter: drop-shadow(0 0 2px rgba(29, 78, 216, 0.55));
-        fill: none;
-        stroke: #1d4ed8;
-        stroke-linecap: round;
-        stroke-width: 2.5;
+      .drum-selection-rect {
+        filter: drop-shadow(0 0 7px rgba(255, 106, 0, 0.22));
+        transition: opacity 180ms ease, transform 180ms ease;
       }
 
-      #notation.dark .drum-playhead-overlay line {
-        filter: drop-shadow(0 0 3px rgba(147, 197, 253, 0.8));
-        stroke: #93c5fd;
+      .drum-note-glow {
+        filter: blur(4px);
+        mix-blend-mode: multiply;
+        transition: opacity 180ms ease;
+      }
+
+      #notation.dark .drum-note-glow {
+        mix-blend-mode: screen;
+      }
+
+      .drum-selection-overlay.guided-practice .drum-selection-rect,
+      .drum-selection-overlay.guided-practice .drum-note-glow {
+        animation: drum-selection-pulse 1050ms ease-in-out infinite;
+      }
+
+      @keyframes drum-selection-pulse {
+        0% {
+          opacity: 0.62;
+        }
+        50% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0.62;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .drum-selection-rect,
+        .drum-note-glow,
+        .drum-selection-overlay.guided-practice .drum-selection-rect,
+        .drum-selection-overlay.guided-practice .drum-note-glow {
+          animation: none;
+          transition: none;
+        }
       }
 
       .empty-notation {
@@ -138,6 +140,9 @@
       let renderedNotes = [];
       let selectionTargetsByIndex = new Map();
       const selectedIndexes = new Set();
+      let selectionPurpose = 'editing';
+      let selectionSelectable = true;
+      let selectionInteractive = true;
       let playheadState = { visible: false };
 
       globalThis.DrumcabularySheetNotation = {
@@ -147,11 +152,31 @@
             const selected = Array.isArray(payload.selectedIndexes)
               ? payload.selectedIndexes
               : [];
+            selectionPurpose = payload.selectionPurpose ?? payload.selection?.purpose ?? 'editing';
+            selectionSelectable = payload.options?.selectable !== false;
+            selectionInteractive =
+              selectionSelectable && selectionPurpose !== 'guidedPractice';
             const isDark = payload.options?.theme === 'dark';
             const backgroundColor =
               payload.options?.backgroundColor ?? (isDark ? '#17130f' : 'transparent');
             notation.classList.toggle('dark', isDark);
             notation.style.setProperty('--sheet-background-color', backgroundColor);
+            notation.style.setProperty(
+              '--sheet-selection-color',
+              payload.options?.selectionColor ?? '#ff6a00',
+            );
+            notation.style.setProperty(
+              '--sheet-selection-fill-color',
+              payload.options?.selectionFillColor ?? 'rgba(255, 106, 0, 0.18)',
+            );
+            notation.style.setProperty(
+              '--sheet-selection-border-color',
+              payload.options?.selectionBorderColor ?? 'rgba(255, 106, 0, 0.68)',
+            );
+            notation.style.setProperty(
+              '--sheet-selection-glow-color',
+              payload.options?.selectionGlowColor ?? 'rgba(255, 106, 0, 0.38)',
+            );
             document.body.style.background = backgroundColor;
             if (!hasRenderableNotes(documentJson)) {
               renderedNotes = [];
@@ -186,13 +211,15 @@
             postHeight();
           }
         },
-        setSelection(selected) {
+        setSelection(selected, purpose) {
           selectedIndexes.clear();
           if (Array.isArray(selected)) {
             selected.forEach((index) => selectedIndexes.add(Number(index)));
           }
+          selectionPurpose = typeof purpose === 'string' ? purpose : 'editing';
+          selectionInteractive =
+            selectionSelectable && selectionPurpose !== 'guidedPractice';
           renderSelection();
-          postSelection();
         },
         setPlayhead(state) {
           playheadState = state && typeof state === 'object'
@@ -252,6 +279,7 @@
         );
 
         svg.addEventListener('click', (event) => {
+          if (!selectionInteractive) return;
           const element = event.target.closest('[data-drum-note-index], .vf-stavenote');
           if (element == null || !svg.contains(element)) {
             selectedIndexes.clear();
@@ -282,23 +310,20 @@
       }
 
       function renderSelection() {
-        notation
-          .querySelectorAll('.drum-note-selected')
-          .forEach((element) => element.classList.remove('drum-note-selected'));
         notation.querySelector('.drum-selection-overlay')?.remove();
         const svg = notation.querySelector('svg');
         const overlay = svg == null
           ? null
           : document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        overlay?.setAttribute('class', 'drum-selection-overlay');
+        overlay?.setAttribute(
+          'class',
+          `drum-selection-overlay ${selectionPurpose === 'guidedPractice' ? 'guided-practice' : 'editing'}`,
+        );
         for (const index of selectedIndexes) {
-          notation
-            .querySelectorAll(`[data-drum-note-index="${index}"]`)
-            .forEach((element) => element.classList.add('drum-note-selected'));
-          addSelectionOverlayLine(overlay, index);
+          addEventHighlight(overlay, index, { purpose: selectionPurpose });
         }
         if (overlay != null && overlay.childNodes.length > 0) {
-          svg.appendChild(overlay);
+          svg.insertBefore(overlay, svg.firstChild);
         }
       }
 
@@ -309,81 +334,13 @@
         if (svg == null) return;
         const target = selectionTargetsByIndex.get(Number(playheadState.tokenIndex));
         if (target == null) return;
-        const currentLine = playheadLineForTarget(target);
-        if (currentLine == null) return;
-
-        let x = currentLine.x;
-        const nextTarget = selectionTargetsByIndex.get(Number(playheadState.nextTokenIndex));
-        const requestedNextLine = playheadState.extendsToCycleEnd === true
-          ? playheadCycleEndLineForTarget(target, currentLine)
-          : nextTarget == null ? null : playheadLineForTarget(nextTarget);
-        const nextLine = requestedNextLine != null &&
-          sameSystem(currentLine, requestedNextLine) &&
-          requestedNextLine.x >= currentLine.x
-            ? requestedNextLine
-            : playheadCycleEndLineForTarget(target, currentLine);
-        const progress = clamp(Number(playheadState.progress), 0, 1);
-        if (
-          nextLine != null &&
-          sameSystem(currentLine, nextLine) &&
-          nextLine.x >= currentLine.x
-        ) {
-          x = currentLine.x + (nextLine.x - currentLine.x) * progress;
-        }
 
         const overlay = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         overlay.setAttribute('class', 'drum-playhead-overlay');
-        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        line.setAttribute('x1', String(x));
-        line.setAttribute('x2', String(x));
-        line.setAttribute('y1', String(currentLine.y1));
-        line.setAttribute('y2', String(currentLine.y2));
-        overlay.appendChild(line);
-        svg.appendChild(overlay);
-      }
-
-      function playheadLineForTarget(target) {
-        if (target == null) return null;
-        const bounds = target.bounds;
-        const selection = target.note?.selection ?? {};
-        const y1 = Number.isFinite(selection.stemY1)
-          ? selection.stemY1
-          : Math.max(0, bounds.y - 3);
-        const y2 = Number.isFinite(selection.stemY2)
-          ? selection.stemY2
-          : bounds.y + bounds.height + 3;
-        return { x: target.x, y1, y2 };
-      }
-
-      function playheadCycleEndLineForTarget(target, currentLine) {
-        if (target == null || currentLine == null) return null;
-        const sameSystemLines = [...selectionTargetsByIndex.values()]
-          .map((candidate) => playheadLineForTarget(candidate))
-          .filter((line) => line != null && sameSystem(currentLine, line))
-          .sort((left, right) => left.x - right.x);
-        const previousLine = [...sameSystemLines]
-          .reverse()
-          .find((line) => line.x < currentLine.x - 0.5);
-        const inferredSpacing = previousLine == null
-          ? Math.max(34, target.bounds.width + 24)
-          : Math.max(24, currentLine.x - previousLine.x);
-        const svg = notation.querySelector('svg');
-        const viewBoxWidth = svg?.viewBox?.baseVal?.width;
-        const width = Number.isFinite(viewBoxWidth) && viewBoxWidth > 0
-          ? viewBoxWidth
-          : Number(svg?.getAttribute('width'));
-        const maxX = Number.isFinite(width) && width > currentLine.x
-          ? width - 8
-          : currentLine.x + inferredSpacing;
-        return {
-          x: Math.max(currentLine.x, maxX),
-          y1: currentLine.y1,
-          y2: currentLine.y2,
-        };
-      }
-
-      function sameSystem(left, right) {
-        return Math.abs(left.y1 - right.y1) < 4 && Math.abs(left.y2 - right.y2) < 4;
+        appendEventHighlightForTarget(overlay, target, { purpose: 'playhead' });
+        if (overlay.childNodes.length > 0) {
+          svg.insertBefore(overlay, svg.firstChild);
+        }
       }
 
       function clamp(value, min, max) {
@@ -391,25 +348,109 @@
         return Math.min(max, Math.max(min, value));
       }
 
-      function addSelectionOverlayLine(overlay, index) {
+      function addEventHighlight(overlay, index, options = {}) {
         if (overlay == null) return;
         const target = selectionTargetsByIndex.get(Number(index));
         if (target == null || target.note?.rest) return;
+        appendEventHighlightForTarget(overlay, target, options);
+      }
+
+      function appendEventHighlightForTarget(overlay, target, options = {}) {
+        if (overlay == null || target == null || target.note?.rest) return;
+        const svg = notation.querySelector('svg');
+        if (svg == null) return;
+        const rectBounds = eventHighlightBounds(target, svg);
+        if (rectBounds == null) return;
+        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        rect.setAttribute('class', 'drum-selection-rect');
+        rect.setAttribute('x', formatSvgNumber(rectBounds.x));
+        rect.setAttribute('y', formatSvgNumber(rectBounds.y));
+        rect.setAttribute('width', formatSvgNumber(rectBounds.width));
+        rect.setAttribute('height', formatSvgNumber(rectBounds.height));
+        rect.setAttribute('rx', '10');
+        rect.setAttribute('ry', '10');
+        rect.style.fill = 'var(--sheet-selection-fill-color, rgba(255, 106, 0, 0.18))';
+        rect.style.stroke = 'var(--sheet-selection-border-color, rgba(255, 106, 0, 0.68))';
+        rect.style.strokeWidth = options.purpose === 'playhead' ? '1.25' : '1.5';
+        overlay.appendChild(rect);
+
+        for (const anchor of noteGlowAnchorsForTarget(target)) {
+          const glow = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          glow.setAttribute('class', 'drum-note-glow');
+          glow.setAttribute('cx', formatSvgNumber(anchor.x));
+          glow.setAttribute('cy', formatSvgNumber(anchor.y));
+          glow.setAttribute('r', formatSvgNumber(anchor.radius));
+          glow.style.fill = 'var(--sheet-selection-glow-color, rgba(255, 106, 0, 0.38))';
+          glow.style.opacity = options.purpose === 'playhead' ? '0.42' : '0.66';
+          overlay.appendChild(glow);
+        }
+      }
+
+      function eventHighlightBounds(target, svg) {
         const bounds = target.bounds;
         const selection = target.note.selection ?? {};
-        const x = target.x + 6;
-        const y1 = Number.isFinite(selection.stemY1)
+        const svgBounds = svgDrawingBounds(svg);
+        const horizontalPadding = 13;
+        const verticalPadding = 8;
+        const stemY1 = Number.isFinite(selection.stemY1)
           ? selection.stemY1
-          : Math.max(0, bounds.y - 3);
-        const y2 = Number.isFinite(selection.stemY2)
+          : bounds.y;
+        const stemY2 = Number.isFinite(selection.stemY2)
           ? selection.stemY2
-          : bounds.y + bounds.height + 3;
-        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        line.setAttribute('x1', String(x));
-        line.setAttribute('x2', String(x));
-        line.setAttribute('y1', String(y1));
-        line.setAttribute('y2', String(y2));
-        overlay.appendChild(line);
+          : bounds.y + bounds.height;
+        const rawX = Math.min(bounds.x, target.x) - horizontalPadding;
+        const rawRight = Math.max(bounds.x + bounds.width, target.x) + horizontalPadding;
+        const rawY = Math.min(bounds.y, stemY1) - verticalPadding;
+        const rawBottom = Math.max(bounds.y + bounds.height, stemY2) + verticalPadding;
+        const x = clamp(rawX, 0, svgBounds.width);
+        const y = clamp(rawY, 0, svgBounds.height);
+        const right = clamp(rawRight, x + 1, svgBounds.width);
+        const bottom = clamp(rawBottom, y + 1, svgBounds.height);
+        return {
+          x,
+          y,
+          width: right - x,
+          height: bottom - y,
+        };
+      }
+
+      function noteGlowAnchorsForTarget(target) {
+        const anchors = [];
+        const glyphs = [
+          ...target.element.querySelectorAll('path, text, polygon, polyline, ellipse, circle'),
+        ];
+        for (const glyph of glyphs) {
+          const bounds = svgBoundsFor(glyph);
+          if (bounds == null) continue;
+          if (bounds.width < 2 || bounds.height < 2) continue;
+          if (bounds.width > 34 || bounds.height > 34) continue;
+          anchors.push({
+            x: bounds.x + bounds.width / 2,
+            y: bounds.y + bounds.height / 2,
+            radius: clamp(Math.max(bounds.width, bounds.height) * 0.78, 7, 14),
+          });
+        }
+        if (anchors.length > 0) return anchors;
+        return [{
+          x: target.bounds.x + target.bounds.width / 2,
+          y: target.bounds.y + target.bounds.height / 2,
+          radius: 10,
+        }];
+      }
+
+      function svgDrawingBounds(svg) {
+        const viewBox = svg.viewBox?.baseVal;
+        const width = Number.isFinite(viewBox?.width) && viewBox.width > 0
+          ? viewBox.width
+          : Number(svg.getAttribute('width')) || 640;
+        const height = Number.isFinite(viewBox?.height) && viewBox.height > 0
+          ? viewBox.height
+          : Number(svg.getAttribute('height')) || 160;
+        return { width, height };
+      }
+
+      function formatSvgNumber(value) {
+        return Number(value).toFixed(2).replace(/\.?0+$/, '');
       }
 
       function postSelection() {

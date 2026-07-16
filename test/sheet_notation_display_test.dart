@@ -224,6 +224,21 @@ void main() {
     );
   });
 
+  test(
+    'semantic notation selection filters invalid indexes and carries purpose',
+    () {
+      final DrumSheetNotationSelection selection =
+          DrumSheetNotationSelection.guidedPractice(<int>{2, -1, 1});
+
+      expect(selection.sortedIndexes, <int>[1, 2]);
+      expect(
+        selection.purpose,
+        DrumSheetNotationSelectionPurpose.guidedPractice,
+      );
+      expect(selection.isGuidedPractice, true);
+    },
+  );
+
   testWidgets('renders sheet notation widget with WebView renderer', (
     WidgetTester tester,
   ) async {
@@ -237,7 +252,7 @@ void main() {
                 '^R[T1:L][16:R][16:L]R^L',
               ),
               grouping: '3535',
-              selectedIndexes: const <int>{1},
+              selection: DrumSheetNotationSelection.editing(<int>{1}),
               onSelectionChanged: (_) {},
             ),
           ),
