@@ -4,7 +4,13 @@ import 'package:flutter/material.dart';
 
 import '../app/drumcabulary_theme.dart';
 import '../app/drumcabulary_ui.dart';
+import '../guided_practice/guided_practice_controller.dart';
+import '../guided_practice/guided_practice_sequence_builder.dart';
+import '../midi/drum_kit_mapper.dart';
+import '../midi/midi_input_models.dart';
+import '../midi/midi_input_service.dart';
 import '../midi/serial_led_controller.dart';
+import '../midi/shared_midi_input_service.dart';
 import '../midi/shared_serial_led_controller.dart';
 import '../practice/widgets/sheet_notation_display.dart';
 import 'lesson_notation_document.dart';
@@ -36,8 +42,15 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
   DateTime? _practiceStartedAt;
   Duration _activeElapsed = Duration.zero;
   late int _previewBpm = _initialPreviewBpmFor(widget.lesson);
+  late final MidiInputService _midiService = SharedMidiInputService.instance;
   late final SerialLedController _ledController =
       SharedSerialLedController.instance;
+  final DrumKitMapper _drumKitMapper = const DrumKitMapper();
+  final GuidedPracticeSequenceBuilder _guidedSequenceBuilder =
+      const GuidedPracticeSequenceBuilder();
+  GuidedPracticeController? _guidedPracticeController;
+  String? _guidedPracticeExerciseId;
+  GuidedPracticeState _guidedPracticeState = GuidedPracticeState.idle;
   bool _ledPlaybackEnabled = false;
   final DrumSheetNotationController _footerPreviewController =
       DrumSheetNotationController();
@@ -45,7 +58,9 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
   @override
   void initState() {
     super.initState();
+    _midiService.addListener(_handleMidiServiceChanged);
     _ledController.addListener(_handleLedControllerChanged);
+    unawaited(_midiService.start());
   }
 
   @override
@@ -53,13 +68,16 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.lesson.id != widget.lesson.id) {
       _previewBpm = _initialPreviewBpmFor(widget.lesson);
+      _clearGuidedPracticeController(stop: true);
     }
   }
 
   @override
   void dispose() {
     _practiceTimer?.cancel();
+    _midiService.removeListener(_handleMidiServiceChanged);
     _ledController.removeListener(_handleLedControllerChanged);
+    _clearGuidedPracticeController(stop: true, updateUi: false);
     unawaited(_footerPreviewController.stopAudioPreview());
     super.dispose();
   }
@@ -119,6 +137,11 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
                         ledController: _ledController,
                         ledPlaybackEnabled:
                             _ledPlaybackEnabled && _ledController.isConnected,
+                        guidedPracticeState:
+                            _guidedPracticeExerciseId ==
+                                lesson.exercises[index].id
+                            ? _guidedPracticeState
+                            : null,
                         active: _activeExerciseId == lesson.exercises[index].id,
                         activeElapsed: _activeElapsed,
                         onStartPractice: widget.progressService == null
@@ -127,6 +150,18 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
                         onCompletePractice:
                             _activeExerciseId == lesson.exercises[index].id
                             ? () => _completePractice(lesson.exercises[index])
+                            : null,
+                        onStartGuidedPractice:
+                            _canStartGuidedPractice(lesson.exercises[index])
+                            ? () => unawaited(
+                                _startGuidedPractice(lesson.exercises[index]),
+                              )
+                            : null,
+                        onStopGuidedPractice:
+                            _guidedPracticeExerciseId ==
+                                    lesson.exercises[index].id &&
+                                _guidedPracticeState.isActive
+                            ? _stopGuidedPractice
                             : null,
                       ),
                     ),
@@ -174,6 +209,9 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
         _ledPlaybackEnabled = false;
       }
     });
+    if (!_ledController.isConnected) {
+      _guidedPracticeController?.handleSerialDisconnected();
+    }
     if (shouldNotify) {
       ScaffoldMessenger.maybeOf(
         context,
@@ -184,6 +222,96 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
   void _setLedPlaybackEnabled(bool value) {
     if (!_ledController.isConnected && value) return;
     setState(() => _ledPlaybackEnabled = value);
+  }
+
+  void _handleMidiServiceChanged() {
+    if (!mounted) return;
+    setState(() {});
+    if (_midiService.status != MidiInputStatus.connected) {
+      _guidedPracticeController?.handleMidiDisconnected();
+    }
+  }
+
+  bool _canStartGuidedPractice(LessonExercise exercise) {
+    if (_guidedPracticeState.isActive) return false;
+    if (_midiService.status != MidiInputStatus.connected) return false;
+    if (!_ledController.isConnected) return false;
+    return _guidedSequenceBuilder.buildForExercise(exercise).isNotEmpty;
+  }
+
+  Future<void> _startGuidedPractice(LessonExercise exercise) async {
+    final List<GuidedPracticeExpectedEvent> expectedEvents =
+        _guidedSequenceBuilder.buildForExercise(exercise);
+    if (expectedEvents.isEmpty ||
+        _midiService.status != MidiInputStatus.connected ||
+        !_ledController.isConnected) {
+      return;
+    }
+
+    await DrumSheetNotationController.stopActiveAudioPreview();
+    _clearGuidedPracticeController(stop: true);
+    final GuidedPracticeController controller = GuidedPracticeController(
+      expectedEvents: expectedEvents,
+      drumEvents: _midiService.events
+          .where(
+            (event) =>
+                event.messageType == MidiMessageType.noteOn &&
+                event.velocity > 0,
+          )
+          .map(_drumKitMapper.map),
+      ledController: _ledController,
+    )..addListener(_handleGuidedPracticeChanged);
+    setState(() {
+      _guidedPracticeController = controller;
+      _guidedPracticeExerciseId = exercise.id;
+      _guidedPracticeState = controller.state;
+    });
+    final bool started = controller.start();
+    if (!started) {
+      _clearGuidedPracticeController(stop: false);
+      if (!mounted) return;
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        const SnackBar(content: Text('Guided Practice could not start.')),
+      );
+    }
+  }
+
+  void _handleGuidedPracticeChanged() {
+    final GuidedPracticeController? controller = _guidedPracticeController;
+    if (controller == null || !mounted) return;
+    final GuidedPracticeState state = controller.state;
+    setState(() => _guidedPracticeState = state);
+    if (state.status == GuidedPracticeStatus.error && state.message != null) {
+      ScaffoldMessenger.maybeOf(
+        context,
+      )?.showSnackBar(SnackBar(content: Text(state.message!)));
+    }
+  }
+
+  void _stopGuidedPractice() {
+    _clearGuidedPracticeController(stop: true);
+  }
+
+  void _clearGuidedPracticeController({
+    required bool stop,
+    bool updateUi = true,
+  }) {
+    final GuidedPracticeController? controller = _guidedPracticeController;
+    if (controller == null) return;
+    controller.removeListener(_handleGuidedPracticeChanged);
+    if (stop) controller.stop();
+    controller.dispose();
+    if (mounted && updateUi) {
+      setState(() {
+        _guidedPracticeController = null;
+        _guidedPracticeExerciseId = null;
+        _guidedPracticeState = GuidedPracticeState.idle;
+      });
+    } else {
+      _guidedPracticeController = null;
+      _guidedPracticeExerciseId = null;
+      _guidedPracticeState = GuidedPracticeState.idle;
+    }
   }
 
   Future<void> _startPractice(LessonExercise exercise) async {
@@ -614,10 +742,13 @@ class _ExerciseCard extends StatelessWidget {
   final int previewBpm;
   final SerialLedController ledController;
   final bool ledPlaybackEnabled;
+  final GuidedPracticeState? guidedPracticeState;
   final bool active;
   final Duration activeElapsed;
   final VoidCallback? onStartPractice;
   final VoidCallback? onCompletePractice;
+  final VoidCallback? onStartGuidedPractice;
+  final VoidCallback? onStopGuidedPractice;
 
   const _ExerciseCard({
     required this.number,
@@ -628,10 +759,13 @@ class _ExerciseCard extends StatelessWidget {
     required this.previewBpm,
     required this.ledController,
     required this.ledPlaybackEnabled,
+    required this.guidedPracticeState,
     required this.active,
     required this.activeElapsed,
     required this.onStartPractice,
     required this.onCompletePractice,
+    required this.onStartGuidedPractice,
+    required this.onStopGuidedPractice,
   });
 
   @override
@@ -746,37 +880,82 @@ class _ExerciseCard extends StatelessWidget {
               ),
             ],
             const SizedBox(height: 12),
+            if (guidedPracticeState != null) ...<Widget>[
+              _GuidedPracticeStatusLine(state: guidedPracticeState!),
+              const SizedBox(height: 10),
+            ],
             Wrap(
               spacing: 10,
               runSpacing: 10,
               crossAxisAlignment: WrapCrossAlignment.center,
-              children: <Widget>[
-                if (active)
-                  FilledButton.icon(
-                    onPressed: onCompletePractice,
-                    icon: const Icon(Icons.check_rounded),
-                    label: const Text('Complete Exercise'),
-                  )
-                else
-                  OutlinedButton.icon(
-                    onPressed: onStartPractice,
-                    icon: const Icon(Icons.timer_outlined),
-                    label: const Text('Practice It'),
-                  ),
-                Text(
-                  active
-                      ? _durationLabel(activeElapsed)
-                      : _durationLabel(Duration(seconds: practicedSeconds)),
-                  style: textTheme.labelLarge?.copyWith(
-                    color: DrumcabularyTheme.edgeTextSecondary,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ],
+              children: guidedPracticeState?.isActive == true
+                  ? <Widget>[
+                      FilledButton.icon(
+                        onPressed: onStopGuidedPractice,
+                        icon: const Icon(Icons.stop_rounded),
+                        label: const Text('Stop Guided Practice'),
+                      ),
+                    ]
+                  : <Widget>[
+                      if (active)
+                        FilledButton.icon(
+                          onPressed: onCompletePractice,
+                          icon: const Icon(Icons.check_rounded),
+                          label: const Text('Complete Exercise'),
+                        )
+                      else
+                        OutlinedButton.icon(
+                          onPressed: onStartPractice,
+                          icon: const Icon(Icons.timer_outlined),
+                          label: const Text('Practice It'),
+                        ),
+                      OutlinedButton.icon(
+                        onPressed: onStartGuidedPractice,
+                        icon: const Icon(Icons.lightbulb_outline_rounded),
+                        label: const Text('Guided Practice'),
+                      ),
+                      Text(
+                        active
+                            ? _durationLabel(activeElapsed)
+                            : _durationLabel(
+                                Duration(seconds: practicedSeconds),
+                              ),
+                        style: textTheme.labelLarge?.copyWith(
+                          color: DrumcabularyTheme.edgeTextSecondary,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _GuidedPracticeStatusLine extends StatelessWidget {
+  final GuidedPracticeState state;
+
+  const _GuidedPracticeStatusLine({required this.state});
+
+  @override
+  Widget build(BuildContext context) {
+    final String label = switch (state.status) {
+      GuidedPracticeStatus.running =>
+        'Guided Practice ${state.completedEvents + 1}/${state.totalEvents}',
+      GuidedPracticeStatus.completed => 'Guided Practice Complete',
+      GuidedPracticeStatus.error => state.message ?? 'Guided Practice stopped',
+      GuidedPracticeStatus.stopped => 'Guided Practice stopped',
+      GuidedPracticeStatus.idle => '',
+    };
+    if (label.isEmpty) return const SizedBox.shrink();
+    return _MetadataPill(
+      label: label,
+      accent:
+          state.status == GuidedPracticeStatus.running ||
+          state.status == GuidedPracticeStatus.completed,
+      outlinedAccent: state.status == GuidedPracticeStatus.error,
     );
   }
 }

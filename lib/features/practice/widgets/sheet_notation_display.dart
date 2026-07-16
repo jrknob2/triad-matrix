@@ -40,6 +40,11 @@ class DrumSheetNotationController {
     await _state?._stopAudioPreview();
   }
 
+  static Future<void> stopActiveAudioPreview() async {
+    await _DrumSheetNotationDisplayState._activeAudioPreviewOwner
+        ?._stopAudioPreview();
+  }
+
   void _attach(_DrumSheetNotationDisplayState state) {
     _state = state;
   }
@@ -1067,8 +1072,7 @@ _SheetNotationAudioPlan _audioPlanForDocument(
   );
 }
 
-@visibleForTesting
-PatternAudioPlanV1 buildSheetNotationAudioPreviewPlanForTesting(
+PatternAudioPlanV1 buildSheetNotationAudioPreviewPlan(
   DrumSheetNotationDocument document, {
   int bpm = 92,
   AccentVoiceV1 accentVoice = AccentVoiceV1.snare,
@@ -1083,6 +1087,19 @@ PatternAudioPlanV1 buildSheetNotationAudioPreviewPlanForTesting(
     bpm: bpm,
     accentVoice: accentVoice,
     additionalVoicesByIndex: plan.additionalVoicesByIndex,
+  );
+}
+
+@visibleForTesting
+PatternAudioPlanV1 buildSheetNotationAudioPreviewPlanForTesting(
+  DrumSheetNotationDocument document, {
+  int bpm = 92,
+  AccentVoiceV1 accentVoice = AccentVoiceV1.snare,
+}) {
+  return buildSheetNotationAudioPreviewPlan(
+    document,
+    bpm: bpm,
+    accentVoice: accentVoice,
   );
 }
 

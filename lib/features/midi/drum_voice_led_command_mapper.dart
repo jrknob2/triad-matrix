@@ -5,19 +5,24 @@ class DrumVoiceLedCommandMapper {
 
   static const String snareCommand = 'SNARE\n';
 
-  String? commandFor(DrumVoice voice) {
+  String? voiceNameFor(DrumVoice voice) {
     return switch (voice) {
-      DrumVoice.snare => snareCommand,
-      DrumVoice.kick => 'KICK\n',
+      DrumVoice.snare => 'SNARE',
+      DrumVoice.kick => 'KICK',
       DrumVoice.hiHatClosed ||
       DrumVoice.hiHatOpen ||
-      DrumVoice.hiHatPedal => 'HIHAT\n',
-      DrumVoice.tom1 => 'TOM1\n',
-      DrumVoice.tom2 => 'TOM2\n',
-      DrumVoice.floorTom => 'FLOORTOM\n',
-      DrumVoice.crash => 'CRASH\n',
-      DrumVoice.ride => 'RIDE\n',
+      DrumVoice.hiHatPedal => 'HIHAT',
+      DrumVoice.tom1 => 'TOM1',
+      DrumVoice.tom2 => 'TOM2',
+      DrumVoice.floorTom => 'FLOORTOM',
+      DrumVoice.crash => 'CRASH',
+      DrumVoice.ride => 'RIDE',
       DrumVoice.unknown => null,
     };
+  }
+
+  String? commandFor(DrumVoice voice) {
+    final String? name = voiceNameFor(voice);
+    return name == null ? null : '$name\n';
   }
 }

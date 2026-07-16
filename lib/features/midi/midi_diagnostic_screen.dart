@@ -15,6 +15,7 @@ import 'midi_input_models.dart';
 import 'midi_input_service.dart';
 import 'midi_pattern_capture.dart';
 import 'serial_led_controller.dart';
+import 'shared_midi_input_service.dart';
 import 'shared_serial_led_controller.dart';
 
 class MidiDiagnosticScreen extends StatefulWidget {
@@ -39,7 +40,8 @@ class _MidiDiagnosticScreenState extends State<MidiDiagnosticScreen> {
   @override
   void initState() {
     super.initState();
-    _service = MidiInputService()..addListener(_handleServiceChanged);
+    _service = SharedMidiInputService.instance
+      ..addListener(_handleServiceChanged);
     _mapper = const DrumKitMapper();
     _eventLog = BoundedMidiEventLog(maxEntries: 100);
     _captureController = MidiPatternCaptureController();
@@ -57,7 +59,6 @@ class _MidiDiagnosticScreenState extends State<MidiDiagnosticScreen> {
     _ledController.removeListener(_handleLedChanged);
     _captureController.dispose();
     unawaited(_eventSubscription?.cancel());
-    _service.dispose();
     super.dispose();
   }
 
