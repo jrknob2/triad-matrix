@@ -201,6 +201,8 @@ Forbidden content:
    hardware is connected, complete an exercise, print, or go back.
 8. During Guided Practice, the rendered notation highlights the current expected
    note or simultaneous note group.
+9. Guided Practice loops the exercise sequence continuously and remains active
+   until the user stops it or hardware disconnects.
 
 Owning screen:
 
@@ -221,6 +223,7 @@ Required content:
 - Practice It action/timer entry point
 - Guided Practice action when MIDI input and LED output are connected
 - current expected notation highlight during Guided Practice
+- Stop Guided Practice action while Guided Practice is running
 - Complete Exercise action
 - Print action
 

@@ -17,7 +17,7 @@ const DEFAULT_RENDER_OPTIONS = Object.freeze({
   systemEndReserve: 28,
   timeSignatureReserve: 48,
   noteSpacing: 34,
-  groupGap: 12,
+  groupGap: 0,
   stemLength: null,
   systemGapY: 140,
   finalRepeat: true,

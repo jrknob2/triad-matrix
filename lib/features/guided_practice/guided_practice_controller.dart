@@ -273,24 +273,10 @@ class GuidedPracticeController extends ChangeNotifier {
   void _completeCurrentEvent() {
     final int nextIndex = _state.currentIndex + 1;
     if (nextIndex >= expectedEvents.length) {
-      _completeSession();
+      _activateExpectedEvent(0);
       return;
     }
     _activateExpectedEvent(nextIndex);
-  }
-
-  void _completeSession() {
-    _cancelSession();
-    if (!_sendLedCommand(GuidedPracticeLedCommandBuilder.clearCommand)) return;
-    _setState(
-      GuidedPracticeState(
-        status: GuidedPracticeStatus.completed,
-        currentIndex: expectedEvents.length,
-        totalEvents: expectedEvents.length,
-        currentEvent: null,
-        message: 'Guided Practice complete.',
-      ),
-    );
   }
 
   bool _sendFeedback(String? command) {

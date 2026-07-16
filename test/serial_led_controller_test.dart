@@ -87,6 +87,32 @@ void main() {
       expect(controller.status, SerialLedConnectionStatus.deviceRemoved);
       expect(platform.lastConnection.closed, true);
     });
+
+    test('refresh failure preserves an active serial connection', () async {
+      final _FakeSerialPlatform platform = _FakeSerialPlatform();
+      final SerialLedController controller = SerialLedController(
+        platform: platform,
+      );
+      addTearDown(controller.dispose);
+
+      await controller.refreshPorts();
+      controller.selectPort(_FakeSerialPlatform.esp32.path);
+      await controller.connect();
+      platform.listError = const SerialLedException(
+        'Operation not permitted, errno = 1',
+      );
+
+      await controller.refreshPorts();
+      controller.sendCommand(DrumVoiceLedCommandMapper.snareCommand);
+
+      expect(controller.status, SerialLedConnectionStatus.connected);
+      expect(controller.isConnected, true);
+      expect(
+        controller.lastError,
+        contains('Keeping the current LED connection active'),
+      );
+      expect(platform.lastConnection.writes, <String>['SNARE\n']);
+    });
   });
 
   group('MidiLedForwarder', () {
@@ -220,12 +246,17 @@ class _FakeSerialPlatform implements SerialLedPlatform {
   );
 
   List<SerialLedPort> ports = const <SerialLedPort>[esp32];
+  Object? listError;
   final List<_FakeSerialConnection> connections = <_FakeSerialConnection>[];
 
   _FakeSerialConnection get lastConnection => connections.last;
 
   @override
-  List<SerialLedPort> listPorts() => ports;
+  List<SerialLedPort> listPorts() {
+    final Object? error = listError;
+    if (error != null) throw error;
+    return ports;
+  }
 
   @override
   SerialLedConnection openPort(SerialLedPort port, SerialLedSettings settings) {

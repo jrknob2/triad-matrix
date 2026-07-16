@@ -199,6 +199,7 @@ class SerialLedController extends ChangeNotifier {
 
   Future<void> refreshPorts() async {
     if (_disposed) return;
+    final bool wasConnected = isConnected;
     try {
       final List<SerialLedPort> nextPorts = _platform.listPorts();
       if (_disposed) return;
@@ -214,6 +215,12 @@ class SerialLedController extends ChangeNotifier {
       }
       notifyListeners();
     } catch (error) {
+      if (wasConnected && !_disposed) {
+        _lastError =
+            'Serial port refresh failed: $error. Keeping the current LED connection active.';
+        notifyListeners();
+        return;
+      }
       _setStatus(
         SerialLedConnectionStatus.connectionError,
         error: 'Serial port refresh failed: $error',

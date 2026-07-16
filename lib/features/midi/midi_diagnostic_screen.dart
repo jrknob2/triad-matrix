@@ -50,7 +50,9 @@ class _MidiDiagnosticScreenState extends State<MidiDiagnosticScreen> {
     _ledForwarder = MidiLedForwarder(controller: _ledController);
     _eventSubscription = _service.events.listen(_handleRawMidiEvent);
     unawaited(_service.start());
-    unawaited(_ledController.refreshPorts());
+    if (!_ledController.isConnected) {
+      unawaited(_ledController.refreshPorts());
+    }
   }
 
   @override

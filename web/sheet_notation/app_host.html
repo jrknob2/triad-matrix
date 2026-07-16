@@ -391,17 +391,19 @@
         const selection = target.note.selection ?? {};
         const svgBounds = svgDrawingBounds(svg);
         const horizontalPadding = 13;
-        const verticalPadding = 8;
-        const stemY1 = Number.isFinite(selection.stemY1)
-          ? selection.stemY1
-          : bounds.y;
         const stemY2 = Number.isFinite(selection.stemY2)
           ? selection.stemY2
           : bounds.y + bounds.height;
+        const staffY = Number.isFinite(stemY2)
+          ? stemY2 - 36
+          : bounds.y + bounds.height / 2 - 34;
+        const noteheadHeight = 14;
+        const fixedY = staffY - 5 + noteheadHeight / 2;
+        const fixedHeight = 95;
         const rawX = Math.min(bounds.x, target.x) - horizontalPadding;
         const rawRight = Math.max(bounds.x + bounds.width, target.x) + horizontalPadding;
-        const rawY = Math.min(bounds.y, stemY1) - verticalPadding;
-        const rawBottom = Math.max(bounds.y + bounds.height, stemY2) + verticalPadding;
+        const rawY = fixedY;
+        const rawBottom = fixedY + fixedHeight;
         const x = clamp(rawX, 0, svgBounds.width);
         const y = clamp(rawY, 0, svgBounds.height);
         const right = clamp(rawRight, x + 1, svgBounds.width);

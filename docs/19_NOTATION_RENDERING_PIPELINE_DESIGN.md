@@ -173,7 +173,7 @@ Each section creates a `DrumSheetNotationDisplay` with:
 - grouping inferred from top-level spaces in the section pattern string
 - `showSticking` only when the section authors `sticking`
 - `compactLayout: true`
-- `minNoteWidth: 32`
+- `minNoteWidth: 40`
 - `audioPreviewEnabled: true`
 
 Raw notation strings are not shown as the student-facing display. Rendering
@@ -354,6 +354,8 @@ Current MVP rules:
 
 - note density is based on renderer spacing tokens such as `noteSpacing`,
   `groupGap`, and `systemEndReserve`
+- compact lesson notation uses wider note spacing than diagnostic/editor
+  previews so selection highlights have room around each rhythmic event
 - a short measure keeps the same horizontal note spacing on narrow and wide
   screens
 - available width limits the maximum formatter width and controls when systems

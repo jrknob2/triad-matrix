@@ -256,7 +256,7 @@ void main() {
       expect(harness.writes.sublist(2), <String>['CLEAR\n', 'CUE,KICK\n']);
     });
 
-    test('Final-event completion sends CLEAR', () async {
+    test('Final event loops to the first event and keeps running', () async {
       final _GuidedHarness harness = await _GuidedHarness.connected(
         events: <GuidedPracticeExpectedEvent>[_event(DrumVoice.snare)],
       );
@@ -264,8 +264,14 @@ void main() {
       harness.controller.start();
       harness.hit(DrumVoice.snare);
 
-      expect(harness.controller.state.status, GuidedPracticeStatus.completed);
-      expect(harness.writes.last, 'CLEAR\n');
+      expect(harness.controller.state.status, GuidedPracticeStatus.running);
+      expect(harness.controller.state.currentIndex, 0);
+      expect(harness.writes, <String>[
+        'CLEAR\n',
+        'CUE,SNARE\n',
+        'CLEAR\n',
+        'CUE,SNARE\n',
+      ]);
     });
 
     test('Manual Stop sends CLEAR', () async {

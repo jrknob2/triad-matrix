@@ -962,8 +962,7 @@ class _GuidedPracticeStatusLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String label = switch (state.status) {
-      GuidedPracticeStatus.running =>
-        'Guided Practice ${state.completedEvents + 1}/${state.totalEvents}',
+      GuidedPracticeStatus.running => 'Guided Practice',
       GuidedPracticeStatus.completed => 'Guided Practice Complete',
       GuidedPracticeStatus.error => state.message ?? 'Guided Practice stopped',
       GuidedPracticeStatus.stopped => 'Guided Practice stopped',
@@ -1063,7 +1062,7 @@ class _NotationPreview extends StatelessWidget {
                 : DrumSheetNotationSelection.guidedPractice(selectedIndexes),
             selectable: false,
             compactLayout: true,
-            minNoteWidth: 32,
+            minNoteWidth: 40,
             showSticking: shouldShowStickingForNotationSection(section),
             audioPreviewEnabled: true,
             audioPreviewBpm: previewBpm,
