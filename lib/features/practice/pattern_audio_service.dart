@@ -15,6 +15,7 @@ enum PatternAudioSampleV1 {
   snareAccent,
   snareGhost,
   hihat,
+  openHihat,
   rackTom,
   tom2,
   floorTom,
@@ -96,6 +97,7 @@ class PatternAudioService {
         PatternAudioSampleV1.snareAccent: 'assets/audio/snare_accent.wav',
         PatternAudioSampleV1.snareGhost: 'assets/audio/snare_ghost.wav',
         PatternAudioSampleV1.hihat: 'assets/audio/hihat.wav',
+        PatternAudioSampleV1.openHihat: 'assets/audio/hihat.wav',
         PatternAudioSampleV1.rackTom: 'assets/audio/rack_tom.wav',
         PatternAudioSampleV1.tom2: 'assets/audio/tom2.wav',
         PatternAudioSampleV1.floorTom: 'assets/audio/floor_tom.wav',
@@ -386,7 +388,8 @@ class PatternAudioService {
       DrumVoiceV1.kick => PatternTokenV1.kick,
       DrumVoiceV1.crash ||
       DrumVoiceV1.ride ||
-      DrumVoiceV1.hihat => PatternTokenV1.accent,
+      DrumVoiceV1.hihat ||
+      DrumVoiceV1.openHiHat => PatternTokenV1.right,
       DrumVoiceV1.floorTom ||
       DrumVoiceV1.tom2 ||
       DrumVoiceV1.rackTom ||
@@ -552,6 +555,9 @@ class PatternAudioService {
       if (voice == DrumVoiceV1.hihat) {
         return PatternAudioSampleV1.hihat;
       }
+      if (voice == DrumVoiceV1.openHiHat) {
+        return PatternAudioSampleV1.openHihat;
+      }
       return switch (accentVoice) {
         AccentVoiceV1.snare => PatternAudioSampleV1.accentSnare,
         AccentVoiceV1.crash => PatternAudioSampleV1.accentCrash,
@@ -563,6 +569,7 @@ class PatternAudioService {
     }
     return switch (voice) {
       DrumVoiceV1.hihat => PatternAudioSampleV1.hihat,
+      DrumVoiceV1.openHiHat => PatternAudioSampleV1.openHihat,
       DrumVoiceV1.rackTom => PatternAudioSampleV1.rackTom,
       DrumVoiceV1.tom2 => PatternAudioSampleV1.tom2,
       DrumVoiceV1.floorTom => PatternAudioSampleV1.floorTom,
@@ -605,6 +612,7 @@ class PatternAudioService {
 
   static bool _isCymbalVoice(DrumVoiceV1 voice) {
     return voice == DrumVoiceV1.hihat ||
+        voice == DrumVoiceV1.openHiHat ||
         voice == DrumVoiceV1.crash ||
         voice == DrumVoiceV1.ride;
   }

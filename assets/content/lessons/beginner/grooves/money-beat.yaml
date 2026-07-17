@@ -21,7 +21,7 @@ lesson:
         subdivision: 8
         time_signature: "4/4"
         repeat_count: 4
-        pattern: "[HH:R][HH:R] [HH:R][HH:R] [HH:R][HH:R] [HH:R][HH:R]"
+        pattern: "[HH] [HH] [HH] [HH] [HH] [HH] [HH] [HH]"
 
     - id: hh-snare
       title: Add Snare
@@ -35,7 +35,7 @@ lesson:
         subdivision: 8
         time_signature: "4/4"
         repeat_count: 4
-        pattern: "[HH:R][HH:R] [HH S:R][HH:R] [HH:R][HH:R] [HH S:R][HH:R]"
+        pattern: "[HH] [HH] [HH S] [HH] [HH] [HH] [HH S] [HH]"
 
     - id: hh-snare-kick
       title: Add Kick
@@ -49,7 +49,7 @@ lesson:
         subdivision: 8
         time_signature: "4/4"
         repeat_count: 4
-        pattern: "[HH K:R][HH:R] [HH S:R][HH:R] [HH K:R][HH:R] [HH S:R][HH:R]"
+        pattern: "[HH K] [HH] [HH S] [HH] [HH K] [HH] [HH S] [HH]"
 
     - id: full-loop
       title: Full Money Beat Loop
@@ -63,7 +63,7 @@ lesson:
         subdivision: 8
         time_signature: "4/4"
         repeat_count: 8
-        pattern: "[HH K:R][HH:R] [HH S:R][HH:R] [HH K:R][HH:R] [HH S:R][HH:R]"
+        pattern: "[HH K] [HH] [OHH S] [HH] [HH K] [HH] [HH S] [HH]"
 
     - id: crash-resolution
       title: Crash Resolution
@@ -76,4 +76,4 @@ lesson:
       notation:
         subdivision: 8
         time_signature: "4/4"
-        pattern: "[HH K:R][HH:R] [HH S:R][HH:R] [HH K:R][HH:R] [HH S:R][HH:R] [HH K:R][HH:R] [HH S:R][HH:R] [HH K:R][HH:R] [HH S:R][HH:R] [HH K:R][HH:R] [HH S:R][HH:R] [HH K:R][HH:R] [HH S:R][HH:R] [XK][HH:R] [HH S:R][HH:R] [HH K:R][HH:R] [HH S:R][HH:R]"
+        pattern: "[HH K] [HH] [HH S] [HH] [HH K] [HH] [HH S] [HH] [HH K] [HH] [HH S] [HH] [HH K] [HH] [HH S] [HH] [HH K] [HH] [HH S] [HH] [HH K] [HH] [HH S] [HH] [CR K] [HH] [HH S] [HH] [HH K] [HH] [HH S] [HH]"

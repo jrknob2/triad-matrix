@@ -34,8 +34,7 @@ lesson:
         subdivision: 16_triplet
         time_signature: "4/4"
         repeat_count: 8
-        sticking: "R L L R R L R L L R R L R L L R R L R L L R R L"
-        pattern: "RLLRRL RLLRRL RLLRRL RLLRRL"
+        pattern: "[S:RLLRRL] [S:RLLRRL] [S:RLLRRL] [S:RLLRRL]"
 
     - id: add-accents
       title: Add Accents
@@ -50,8 +49,7 @@ lesson:
         subdivision: 16_triplet
         time_signature: "4/4"
         repeat_count: 8
-        sticking: "R L L R R L R L L R R L R L L R R L R L L R R L"
-        pattern: "^RLLRR^L ^RLLRR^L ^RLLRR^L ^RLLRR^L"
+        pattern: "[S:^RLLRR^L] [S:^RLLRR^L] [S:^RLLRR^L] [S:^RLLRR^L]"
 
     - id: add-ghost-notes
       title: Add Ghost Notes
@@ -66,8 +64,7 @@ lesson:
         subdivision: 16_triplet
         time_signature: "4/4"
         repeat_count: 8
-        sticking: "R L L R R L R L L R R L R L L R R L R L L R R L"
-        pattern: "^R(L)(L)(R)(R)^L ^R(L)(L)(R)(R)^L ^R(L)(L)(R)(R)^L ^R(L)(L)(R)(R)^L"
+        pattern: "[S:^R(L)(L)(R)(R)^L] [S:^R(L)(L)(R)(R)^L] [S:^R(L)(L)(R)(R)^L] [S:^R(L)(L)(R)(R)^L]"
 
     - id: move-around-the-kit
       title: Move Around The Kit
@@ -82,7 +79,6 @@ lesson:
         subdivision: 16_triplet
         time_signature: "4/4"
         repeat_count: 8
-        sticking: "R L L R R L R L L R R L R L L R R L R L L R R L"
         pattern: "[S:^R][S:(L)][T1:(L)][T2:(R)][T2:(R)][FT:^L] [S:^R][S:(L)][T1:(L)][T2:(R)][T2:(R)][FT:^L] [S:^R][S:(L)][T1:(L)][T2:(R)][T2:(R)][FT:^L] [S:^R][S:(L)][T1:(L)][T2:(R)][T2:(R)][FT:^L]"
 
     - id: one-beat-fill
@@ -100,13 +96,12 @@ lesson:
             subdivision: 16_triplet
             time_signature: "4/4"
             repeat_count: 4
-            sticking: "R L L R R L R L L R R L R L L R R L R L L R R L"
-            pattern: "^R(L)(L)(R)(R)^L ^R(L)(L)(R)(R)^L ^R(L)(L)(R)(R)^L ^R(L)(L)(R)(R)^L"
+            pattern: "[S:^R(L)(L)(R)(R)^L] [S:^R(L)(L)(R)(R)^L] [S:^R(L)(L)(R)(R)^L] [S:^R(L)(L)(R)(R)^L]"
           - title: Beat One Resolution
             subdivision: 8
             time_signature: "4/4"
             repeat_count: 1
-            pattern: "[XK][HH:R] [HH:R][HH:R] [HH:R][HH:R] [HH:R][HH:R]"
+            pattern: "[CR K] [HH] [HH] [HH] [HH] [HH] [HH] [HH]"
 
     - id: groove-application
       title: Groove Application
@@ -123,18 +118,17 @@ lesson:
             subdivision: 8
             time_signature: "4/4"
             repeat_count: 3
-            pattern: "[HH K:R][HH:R] [HH S:R][HH:R] [HH K:R][HH:R] [HH S:R][HH:R]"
+            pattern: "[HH K] [HH] [HH S] [HH] [HH K] [HH] [HH S] [HH]"
           - title: Six Stroke Fill
             subdivision: 16_triplet
             time_signature: "4/4"
             repeat_count: 1
-            sticking: "R L L R R L R L L R R L R L L R R L R L L R R L"
-            pattern: "^R(L)(L)(R)(R)^L ^R(L)(L)(R)(R)^L ^R(L)(L)(R)(R)^L ^R(L)(L)(R)(R)^L"
+            pattern: "[S:^R(L)(L)(R)(R)^L] [S:^R(L)(L)(R)(R)^L] [S:^R(L)(L)(R)(R)^L] [S:^R(L)(L)(R)(R)^L]"
           - title: Beat One Resolution
             subdivision: 8
             time_signature: "4/4"
             repeat_count: 1
-            pattern: "[XK][HH:R] [HH:R][HH:R] [HH:R][HH:R] [HH:R][HH:R]"
+            pattern: "[CR K] [HH] [HH] [HH] [HH] [HH] [HH] [HH]"
 
     - id: creative-application
       title: Creative Application
@@ -151,20 +145,17 @@ lesson:
             subdivision: 16_triplet
             time_signature: "4/4"
             repeat_count: 2
-            sticking: "R L L R R L R L L R R L R L L R R L R L L R R L"
             pattern: "[S:^R][S:(L)][S:(L)][T1:(R)][T2:(R)][FT:^L] [S:^R][S:(L)][S:(L)][T1:(R)][T2:(R)][FT:^L] [S:^R][S:(L)][S:(L)][T1:(R)][T2:(R)][FT:^L] [S:^R][S:(L)][S:(L)][T1:(R)][T2:(R)][FT:^L]"
           - title: Toms To Snare
             subdivision: 16_triplet
             time_signature: "4/4"
             repeat_count: 2
-            sticking: "R L L R R L R L L R R L R L L R R L R L L R R L"
             pattern: "[T1:^R][T1:(L)][T2:(L)][FT:(R)][S:(R)][S:^L] [T1:^R][T1:(L)][T2:(L)][FT:(R)][S:(R)][S:^L] [T1:^R][T1:(L)][T2:(L)][FT:(R)][S:(R)][S:^L] [T1:^R][T1:(L)][T2:(L)][FT:(R)][S:(R)][S:^L]"
           - title: Wide Orchestration
             subdivision: 16_triplet
             time_signature: "4/4"
             repeat_count: 2
-            sticking: "R L L R R L R L L R R L R L L R R L R L L R R L"
-            pattern: "[T1:^R][S:(L)][S:(L)][FT:(R)][T2:(R)][C:^L] [T1:^R][S:(L)][S:(L)][FT:(R)][T2:(R)][C:^L] [T1:^R][S:(L)][S:(L)][FT:(R)][T2:(R)][C:^L] [T1:^R][S:(L)][S:(L)][FT:(R)][T2:(R)][C:^L]"
+            pattern: "[T1:^R][S:(L)][S:(L)][FT:(R)][T2:(R)][CR:^L] [T1:^R][S:(L)][S:(L)][FT:(R)][T2:(R)][CR:^L] [T1:^R][S:(L)][S:(L)][FT:(R)][T2:(R)][CR:^L] [T1:^R][S:(L)][S:(L)][FT:(R)][T2:(R)][CR:^L]"
 
   coaching_notes:
     - Accuracy comes before speed.

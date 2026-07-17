@@ -113,6 +113,7 @@ export function renderDrumNotationSvgWithMetadata(documentJson, options = {}) {
     if (renderOptions.showSticking !== false) {
       appendStickingLabels(host, VF, notes, system, layout);
     }
+    appendOpenHiHatMarkers(host, VF, notes, system, layout);
   }
 
   return {
@@ -440,6 +441,38 @@ function appendStickingLabels(host, VF, vexNotes, system, layout) {
   );
 }
 
+function appendOpenHiHatMarkers(host, VF, vexNotes, system, layout) {
+  const markers = vexNotes
+    .map((note, index) => ({
+      x: stickingLabelX(VF, note),
+      y: openHiHatMarkerY(note, layout),
+      entry: system.entries[index],
+    }))
+    .filter((marker) =>
+      marker.entry?.note?.rest !== true &&
+      marker.entry?.note?.voices?.includes('openHiHat') === true &&
+      Number.isFinite(marker.x) &&
+      Number.isFinite(marker.y),
+    );
+  if (markers.length === 0) return;
+  appendSvgCircleElements(host, markers);
+}
+
+function openHiHatMarkerY(note, layout) {
+  if (typeof note.getYs === 'function') {
+    try {
+      const ys = note.getYs();
+      if (Array.isArray(ys) && ys.length > 0) {
+        const topY = Math.min(...ys.filter((value) => Number.isFinite(value)));
+        if (Number.isFinite(topY)) return topY - 14;
+      }
+    } catch {
+      // Fall through to a stable staff-relative position.
+    }
+  }
+  return layout.y + 18;
+}
+
 function stickingLabelX(VF, note) {
   if (typeof note.getCenterGlyphX === 'function') {
     const value = note.getCenterGlyphX();
@@ -523,6 +556,36 @@ function appendSvgTextElements(host, labels) {
     ))
     .join('')}</g>`;
   svg.outerHTML = svg.outerHTML.replace('</svg>', `${text}</svg>`);
+}
+
+function appendSvgCircleElements(host, markers) {
+  const svg = host.querySelector('svg');
+  if (svg == null) return;
+
+  if (typeof document !== 'undefined' && typeof svg.appendChild === 'function') {
+    const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    group.setAttribute('class', 'drum-open-hihat-markers');
+    group.setAttribute('fill', 'none');
+    group.setAttribute('stroke', 'currentColor');
+    group.setAttribute('stroke-width', '1.6');
+    markers.forEach((marker) => {
+      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      circle.setAttribute('cx', formatSvgNumber(marker.x));
+      circle.setAttribute('cy', formatSvgNumber(marker.y));
+      circle.setAttribute('r', '4');
+      group.appendChild(circle);
+    });
+    svg.appendChild(group);
+    return;
+  }
+
+  if (typeof svg.outerHTML !== 'string') return;
+  const circles = `<g class="drum-open-hihat-markers" fill="none" stroke="currentColor" stroke-width="1.6">${markers
+    .map((marker) => (
+      `<circle cx="${formatSvgNumber(marker.x)}" cy="${formatSvgNumber(marker.y)}" r="4"></circle>`
+    ))
+    .join('')}</g>`;
+  svg.outerHTML = svg.outerHTML.replace('</svg>', `${circles}</svg>`);
 }
 
 function formatSvgNumber(value) {

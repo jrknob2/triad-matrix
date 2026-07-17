@@ -55,6 +55,7 @@ export type DrumNotationFeel = "straight" | "triplet";
 
 export type DrumVoiceId =
   | "hihat"
+  | "openHiHat"
   | "ride"
   | "crash"
   | "snare"

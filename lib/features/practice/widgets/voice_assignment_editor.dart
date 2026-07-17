@@ -99,6 +99,7 @@ class VoiceAssignmentEditor extends StatelessWidget {
       DrumVoiceV1.tom2,
       DrumVoiceV1.floorTom,
       DrumVoiceV1.hihat,
+      DrumVoiceV1.openHiHat,
       DrumVoiceV1.crash,
       DrumVoiceV1.ride,
     ];
@@ -119,6 +120,7 @@ class VoiceAssignmentEditor extends StatelessWidget {
       DrumVoiceV1.tom2 => const Color(0xFFE3EBDD),
       DrumVoiceV1.floorTom => const Color(0xFFE3E0EF),
       DrumVoiceV1.hihat => const Color(0xFFE1EDF2),
+      DrumVoiceV1.openHiHat => const Color(0xFFDCECF1),
       DrumVoiceV1.crash => const Color(0xFFF1E4D8),
       DrumVoiceV1.ride => const Color(0xFFE1E8F2),
       DrumVoiceV1.kick => const Color(0xFFE9E2D7),
@@ -132,6 +134,7 @@ class VoiceAssignmentEditor extends StatelessWidget {
       DrumVoiceV1.tom2 => const Color(0xFF6D7F36),
       DrumVoiceV1.floorTom => const Color(0xFF6A5B97),
       DrumVoiceV1.hihat => const Color(0xFF4D7A8B),
+      DrumVoiceV1.openHiHat => const Color(0xFF3F7184),
       DrumVoiceV1.crash => const Color(0xFF9A5A28),
       DrumVoiceV1.ride => const Color(0xFF476D91),
       DrumVoiceV1.kick => const Color(0xFF8B6D4D),

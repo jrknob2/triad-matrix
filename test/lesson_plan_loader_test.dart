@@ -82,7 +82,7 @@ void main() {
     );
     expect(
       lesson.exercises.first.notation.primarySection.pattern,
-      '[HH:R][HH:R] [HH:R][HH:R] [HH:R][HH:R] [HH:R][HH:R]',
+      '[HH] [HH] [HH] [HH] [HH] [HH] [HH] [HH]',
     );
     expect(lesson.exercises.first.why, contains('timekeeper'));
     expect(lesson.exercises.first.what, contains('closed hi-hat'));
@@ -110,7 +110,7 @@ void main() {
       DrumSheetVoice.hihat,
       DrumSheetVoice.snare,
     ]);
-    expect(notes[24].sticking, 'XK');
+    expect(notes[24].sticking, isEmpty);
     expect(notes[24].voices, <DrumSheetVoice>[
       DrumSheetVoice.crash,
       DrumSheetVoice.kick,
@@ -168,7 +168,7 @@ void main() {
     ];
     expect(stickingSection.subdivision, '16_triplet');
     expect(stickingSection.timeSignature, '4/4');
-    expect(stickingSection.sticking, sixStrokeSticking.join(' '));
+    expect(stickingSection.sticking, isNull);
 
     final DrumSheetNotationDocument stickingDocument =
         documentForNotationSection(stickingSection);
@@ -225,8 +225,10 @@ void main() {
     expect(grooveApplication.notation.sections[0].repeatCount, 3);
     expect(grooveApplication.notation.sections[1].title, 'Six Stroke Fill');
     expect(
-      grooveApplication.notation.sections[1].sticking,
-      sixStrokeSticking.join(' '),
+      documentForNotationSection(
+        grooveApplication.notation.sections[1],
+      ).flattenedNotes.map((DrumSheetNotationNote note) => note.sticking),
+      sixStrokeSticking,
     );
     expect(grooveApplication.notation.sections[2].title, 'Beat One Resolution');
   });
@@ -252,8 +254,8 @@ void main() {
     expect(fillSection.subdivision, 'triplet');
     expect(fillSection.timeSignature, '4/4');
     expect(fillSection.repeatCount, 1);
-    expect(fillSection.sticking, 'R L K R K L R L L XK');
-    expect(shouldShowStickingForNotationSection(fillSection), isTrue);
+    expect(fillSection.sticking, isNull);
+    expect(shouldShowStickingForNotationSection(fillSection), isFalse);
 
     final DrumSheetNotationDocument fillDocument = documentForNotationSection(
       fillSection,
@@ -264,7 +266,11 @@ void main() {
       fillDocument.flattenedNotes.where((note) => !note.rest),
       hasLength(10),
     );
-    expect(fillDocument.flattenedNotes.last.sticking, 'XK');
+    expect(fillDocument.flattenedNotes.last.sticking, isEmpty);
+    expect(fillDocument.flattenedNotes.last.voices, <DrumSheetVoice>[
+      DrumSheetVoice.crash,
+      DrumSheetVoice.kick,
+    ]);
   });
 
   test('parses standalone index and lesson YAML', () {
@@ -274,7 +280,10 @@ void main() {
     final Lesson lesson = LessonPlanLoader.parseLesson(_validLesson);
     expect(lesson.id, 'test-lesson');
     expect(lesson.exercises.single.notation.sections, hasLength(1));
-    expect(lesson.exercises.single.notation.primarySection.pattern, 'R L');
+    expect(
+      lesson.exercises.single.notation.primarySection.pattern,
+      '[S:R] [S:L]',
+    );
   });
 
   test('rejects duplicate lesson IDs in loaded content', () async {
@@ -350,14 +359,14 @@ lesson:
       what: Test.
       how: Test.
       notation:
-        pattern: "R L"
+        pattern: "[S:R] [S:L]"
     - id: duplicate
       title: Second
       why: Test.
       what: Test.
       how: Test.
       notation:
-        pattern: "R L"
+        pattern: "[S:R] [S:L]"
 '''),
       throwsA(
         isA<LessonPlanLoadException>().having(
@@ -391,7 +400,7 @@ lesson:
         start: 100
         target: 60
       notation:
-        pattern: "R L"
+        pattern: "[S:R] [S:L]"
 '''),
       throwsA(isA<LessonPlanLoadException>()),
     );
@@ -415,7 +424,7 @@ lesson:
       how: Test.
       notation:
         repeat_count: 0
-        pattern: "R L"
+        pattern: "[S:R] [S:L]"
 '''),
       throwsA(isA<LessonPlanLoadException>()),
     );
@@ -481,5 +490,5 @@ lesson:
       notation:
         subdivision: 8
         time_signature: "4/4"
-        pattern: "R L"
+        pattern: "[S:R] [S:L]"
 ''';

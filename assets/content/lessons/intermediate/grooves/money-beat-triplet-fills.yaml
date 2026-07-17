@@ -21,7 +21,7 @@ lesson:
         subdivision: 8
         time_signature: "4/4"
         repeat_count: 4
-        pattern: "[HH K:R][HH:R] [HH S:R][HH:R] [HH K:R][HH:R] [HH S:R][HH:R]"
+        pattern: "[HH K] [HH] [HH S] [HH] [HH K] [HH] [HH S] [HH]"
 
     - id: triplet-fill-alone
       title: Triplet Fill Alone
@@ -35,8 +35,7 @@ lesson:
         subdivision: triplet
         time_signature: "4/4"
         repeat_count: 4
-        sticking: "R L K R K L R L L XK"
-        pattern: "RLK RKL R(L)(L) [XK]"
+        pattern: "[S:RL][K] [S:R][K][S:L] [S:R(L)(L)] [CR K]"
 
     - id: groove-three-fill-one
       title: Three Bars Groove, One Bar Fill
@@ -52,10 +51,9 @@ lesson:
             subdivision: 8
             time_signature: "4/4"
             repeat_count: 3
-            pattern: "[HH K:R][HH:R] [HH S:R][HH:R] [HH K:R][HH:R] [HH S:R][HH:R]"
+            pattern: "[HH K] [HH] [HH S] [HH] [HH K] [HH] [HH S] [HH]"
           - title: Triplet Fill
             subdivision: triplet
             time_signature: "4/4"
             repeat_count: 1
-            sticking: "R L K R K L R L L XK"
-            pattern: "RLK RKL R(L)(L) [XK]"
+            pattern: "[S:RL][K] [S:R][K][S:L] [S:R(L)(L)] [CR K]"

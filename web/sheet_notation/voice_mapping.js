@@ -1,5 +1,6 @@
 export const DRUM_VOICE_IDS = Object.freeze([
   'hihat',
+  'openHiHat',
   'ride',
   'crash',
   'snare',
@@ -24,6 +25,12 @@ export const DRUM_VOICE_MAP = Object.freeze({
     key: 'f/5',
     notehead: 'x',
     stemDirection: 1,
+  }),
+  openHiHat: Object.freeze({
+    key: 'f/5',
+    notehead: 'x',
+    stemDirection: 1,
+    openMarker: true,
   }),
   tom1: Object.freeze({
     key: 'e/5',

@@ -24,7 +24,7 @@ void main() {
           timestamp: startedAt,
         ),
       );
-      expect(controller.stop(), 'R');
+      expect(controller.stop(), '[S]');
 
       controller.record();
 
@@ -81,7 +81,7 @@ void main() {
           timestamp: startedAt,
         ),
       );
-      expect(controller.stop(), 'R');
+      expect(controller.stop(), '[S]');
 
       controller.record();
       controller.capture(
@@ -92,7 +92,7 @@ void main() {
         ),
       );
 
-      expect(controller.stop(), 'K');
+      expect(controller.stop(), '[K]');
     });
 
     test('Record clears the previous tempo estimate', () {
@@ -165,7 +165,7 @@ void main() {
         await Future<void>.delayed(const Duration(milliseconds: 130));
 
         expect(controller.isRecording, true);
-        expect(controller.generatedPattern, 'R');
+        expect(controller.generatedPattern, '[S]');
       },
     );
 
@@ -184,11 +184,11 @@ void main() {
       );
 
       expect(controller.generatedPattern, isEmpty);
-      expect(controller.stop(), 'R');
+      expect(controller.stop(), '[S]');
       expect(controller.isRecording, false);
 
       await Future<void>.delayed(const Duration(milliseconds: 130));
-      expect(controller.generatedPattern, 'R');
+      expect(controller.generatedPattern, '[S]');
     });
 
     test(
@@ -222,45 +222,45 @@ void main() {
   group('MidiPatternBuilder', () {
     const MidiPatternBuilder builder = MidiPatternBuilder();
 
-    test('velocity 1-10 maps to ghost', () {
+    test('captured voices serialize without inferred sticking', () {
       expect(
         builder.buildPattern(<CapturedMidiHit>[
           _hit(DrumVoice.snare, velocity: 1),
           _hit(
-            DrumVoice.snare,
-            velocity: 10,
-            offset: const Duration(milliseconds: 40),
-          ),
-        ]),
-        '(R) (R)',
-      );
-    });
-
-    test('velocity 11-119 maps to normal', () {
-      expect(
-        builder.buildPattern(<CapturedMidiHit>[
-          _hit(DrumVoice.snare, velocity: 11),
-          _hit(
-            DrumVoice.snare,
-            velocity: 119,
-            offset: const Duration(milliseconds: 40),
-          ),
-        ]),
-        'R R',
-      );
-    });
-
-    test('velocity 120-127 maps to accent', () {
-      expect(
-        builder.buildPattern(<CapturedMidiHit>[
-          _hit(DrumVoice.snare, velocity: 120),
-          _hit(
-            DrumVoice.snare,
+            DrumVoice.hiHatClosed,
             velocity: 127,
             offset: const Duration(milliseconds: 40),
           ),
         ]),
-        '^R ^R',
+        '[S] [HH]',
+      );
+    });
+
+    test('closed and open hi-hat serialize distinctly', () {
+      expect(
+        builder.buildPattern(<CapturedMidiHit>[
+          _hit(DrumVoice.hiHatClosed, velocity: 90),
+          _hit(
+            DrumVoice.hiHatOpen,
+            velocity: 90,
+            offset: const Duration(milliseconds: 40),
+          ),
+        ]),
+        '[HH] [OHH]',
+      );
+    });
+
+    test('kick and tom voices serialize as canonical voice roots', () {
+      expect(
+        builder.buildPattern(<CapturedMidiHit>[
+          _hit(DrumVoice.kick, velocity: 120),
+          _hit(
+            DrumVoice.tom2,
+            velocity: 127,
+            offset: const Duration(milliseconds: 40),
+          ),
+        ]),
+        '[K] [T2]',
       );
     });
 
@@ -274,7 +274,7 @@ void main() {
             offset: const Duration(milliseconds: 10),
           ),
         ]),
-        '[RK]',
+        '[S K]',
       );
     });
 
@@ -298,7 +298,7 @@ void main() {
             offset: const Duration(milliseconds: 88),
           ),
         ]),
-        '[RK] [RK]',
+        '[S K] [S K]',
       );
     });
 
@@ -317,26 +317,23 @@ void main() {
         ),
       ]);
 
-      expect(pattern, '[XRK]');
+      expect(pattern, '[CR S K]');
       expect(() => DrumSheetPatternParser.parse(pattern), returnsNormally);
     });
 
-    test(
-      'simultaneous voices retain independent expression classification',
-      () {
-        final String pattern = builder.buildPattern(<CapturedMidiHit>[
-          _hit(DrumVoice.snare, velocity: 10),
-          _hit(
-            DrumVoice.kick,
-            velocity: 120,
-            offset: const Duration(milliseconds: 8),
-          ),
-        ]);
+    test('simultaneous open hi-hat and kick serialize together', () {
+      final String pattern = builder.buildPattern(<CapturedMidiHit>[
+        _hit(DrumVoice.hiHatOpen, velocity: 10),
+        _hit(
+          DrumVoice.kick,
+          velocity: 120,
+          offset: const Duration(milliseconds: 8),
+        ),
+      ]);
 
-        expect(pattern, '[(R)^K]');
-        expect(() => DrumSheetPatternParser.parse(pattern), returnsNormally);
-      },
-    );
+      expect(pattern, '[OHH K]');
+      expect(() => DrumSheetPatternParser.parse(pattern), returnsNormally);
+    });
 
     test('Stop generates a pattern string accepted by the existing parser', () {
       final DateTime startedAt = DateTime(2026);
@@ -491,10 +488,10 @@ void main() {
       WidgetTester tester,
     ) async {
       final MidiPatternCaptureController controller =
-          _controllerWithStoppedPattern('R');
+          _controllerWithStoppedPattern('[S]');
 
       await _pumpCaptureCard(tester, controller);
-      await tester.enterText(find.byType(TextField), 'K');
+      await tester.enterText(find.byType(TextField), '[K]');
       await tester.pump(const Duration(milliseconds: 250));
 
       final DrumSheetNotationDisplay display = tester.widget(
@@ -509,7 +506,7 @@ void main() {
       'an invalid manual edit preserves text and last valid preview',
       (WidgetTester tester) async {
         final MidiPatternCaptureController controller =
-            _controllerWithStoppedPattern('R');
+            _controllerWithStoppedPattern('[S]');
 
         await _pumpCaptureCard(tester, controller);
         await tester.enterText(find.byType(TextField), '[');
@@ -524,7 +521,9 @@ void main() {
         final DrumSheetNotationDisplay display = tester.widget(
           find.byType(DrumSheetNotationDisplay),
         );
-        expect(display.document.flattenedNotes.single.sticking, 'R');
+        expect(display.document.flattenedNotes.single.voices, <DrumSheetVoice>[
+          DrumSheetVoice.snare,
+        ]);
       },
     );
 
@@ -532,7 +531,7 @@ void main() {
       'Starting Record clears prior text, preview, and validation error',
       (WidgetTester tester) async {
         final MidiPatternCaptureController controller =
-            _controllerWithStoppedPattern('R');
+            _controllerWithStoppedPattern('[S]');
 
         await _pumpCaptureCard(tester, controller);
         await tester.enterText(find.byType(TextField), '[');
@@ -574,7 +573,7 @@ void main() {
 
       expect(
         tester.widget<TextField>(find.byType(TextField)).controller!.text,
-        'R',
+        '[S]',
       );
       expect(find.byType(DrumSheetNotationDisplay), findsOneWidget);
     });
@@ -650,17 +649,12 @@ MidiPatternCaptureController _controllerWithStoppedPattern(String pattern) {
     clock: () => startedAt,
   );
   controller.record();
-  for (int index = 0; index < pattern.length; index += 1) {
-    final String token = pattern[index].toUpperCase();
-    final DrumVoice voice = token == 'K' ? DrumVoice.kick : DrumVoice.snare;
-    controller.capture(
-      _diagnosticEvent(
-        voice: voice,
-        velocity: 72,
-        timestamp: startedAt.add(Duration(milliseconds: index * 40)),
-      ),
-    );
-  }
+  final DrumVoice voice = pattern.contains('K')
+      ? DrumVoice.kick
+      : DrumVoice.snare;
+  controller.capture(
+    _diagnosticEvent(voice: voice, velocity: 72, timestamp: startedAt),
+  );
   controller.stop();
   return controller;
 }

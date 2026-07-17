@@ -156,7 +156,7 @@ void main() {
       );
 
       harness.controller.start();
-      harness.hit(DrumVoice.hiHatOpen);
+      harness.hit(DrumVoice.hiHatClosed);
       harness.hit(DrumVoice.kick);
 
       expect(harness.controller.state.currentIndex, 1);
@@ -372,9 +372,9 @@ void main() {
     const GuidedPracticeSequenceBuilder builder =
         GuidedPracticeSequenceBuilder();
 
-    test('Rests do not become expected input steps', () {
+    test('Multi-stroke phrases become sequential input steps', () {
       final List<GuidedPracticeExpectedEvent> events = builder.buildForExercise(
-        _exercise(pattern: 'R _ K'),
+        _exercise(pattern: '[S:RL][K]'),
       );
 
       expect(
@@ -382,6 +382,7 @@ void main() {
             .map((GuidedPracticeExpectedEvent event) => event.voices)
             .toList(),
         <List<DrumVoice>>[
+          <DrumVoice>[DrumVoice.snare],
           <DrumVoice>[DrumVoice.snare],
           <DrumVoice>[DrumVoice.kick],
         ],
@@ -392,6 +393,7 @@ void main() {
             .toList(),
         <Set<int>>[
           <int>{0},
+          <int>{1},
           <int>{2},
         ],
       );
@@ -399,7 +401,7 @@ void main() {
 
     test('Ghost and accent markings resolve to underlying DrumVoice', () {
       final List<GuidedPracticeExpectedEvent> events = builder.buildForExercise(
-        _exercise(pattern: '(R) ^R'),
+        _exercise(pattern: '[S:(R)] [S:^R]'),
       );
 
       expect(
@@ -415,7 +417,7 @@ void main() {
 
     test('Simultaneous notation becomes one expected voice group', () {
       final List<GuidedPracticeExpectedEvent> events = builder.buildForExercise(
-        _exercise(pattern: '[HH K:R]'),
+        _exercise(pattern: '[HH K]'),
       );
 
       expect(events.single.voices.toSet(), <DrumVoice>{
@@ -425,9 +427,25 @@ void main() {
       expect(events.single.selectedIndexes, <int>{0});
     });
 
+    test('Open hi-hat remains identifiable in expected voice groups', () {
+      final List<GuidedPracticeExpectedEvent> events = builder.buildForExercise(
+        _exercise(pattern: '[OHH:R K]'),
+      );
+
+      expect(events.single.voices.toSet(), <DrumVoice>{
+        DrumVoice.hiHatOpen,
+        DrumVoice.kick,
+      });
+      expect(
+        events.single.cueForVoice(DrumVoice.hiHatOpen)?.sticking,
+        StickingCue.right,
+      );
+      expect(events.single.cueForVoice(DrumVoice.kick)?.sticking, isNull);
+    });
+
     test('Authored sticking is carried into expected cues', () {
       final List<GuidedPracticeExpectedEvent> events = builder.buildForExercise(
-        _exercise(pattern: '[HH K:R] [T1:R]', sticking: 'R L'),
+        _exercise(pattern: '[HH:R K] [T1:L]'),
       );
 
       expect(events[0].cues, hasLength(2));
@@ -441,7 +459,7 @@ void main() {
 
     test('Both-hand and flam sticking labels convert to cue tokens', () {
       final List<GuidedPracticeExpectedEvent> events = builder.buildForExercise(
-        _exercise(pattern: 'R F F', sticking: 'B FL FR'),
+        _exercise(pattern: '[S] [S] [S]', sticking: 'B FL FR'),
       );
 
       expect(events[0].cues.single.sticking, StickingCue.both);
@@ -459,8 +477,8 @@ void main() {
           how: 'How',
           notation: const ExerciseNotation(
             sections: <ExerciseNotationSection>[
-              ExerciseNotationSection(pattern: 'R'),
-              ExerciseNotationSection(pattern: 'K'),
+              ExerciseNotationSection(pattern: '[S]'),
+              ExerciseNotationSection(pattern: '[K]'),
             ],
           ),
         ),

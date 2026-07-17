@@ -8,6 +8,7 @@ DrumVoice midiDrumVoiceForPlaybackVoice(DrumVoiceV1 voice) {
     DrumVoiceV1.tom2 => DrumVoice.tom2,
     DrumVoiceV1.floorTom => DrumVoice.floorTom,
     DrumVoiceV1.hihat => DrumVoice.hiHatClosed,
+    DrumVoiceV1.openHiHat => DrumVoice.hiHatOpen,
     DrumVoiceV1.crash => DrumVoice.crash,
     DrumVoiceV1.ride => DrumVoice.ride,
     DrumVoiceV1.kick => DrumVoice.kick,
@@ -16,7 +17,7 @@ DrumVoice midiDrumVoiceForPlaybackVoice(DrumVoiceV1 voice) {
 
 DrumVoice canonicalGuidedPracticeVoice(DrumVoice voice) {
   return switch (voice) {
-    DrumVoice.hiHatOpen || DrumVoice.hiHatPedal => DrumVoice.hiHatClosed,
+    DrumVoice.hiHatPedal => DrumVoice.hiHatClosed,
     _ => voice,
   };
 }

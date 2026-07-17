@@ -244,6 +244,20 @@ void main() {
       );
     });
 
+    test('open hi-hat remains distinct in playback cues', () {
+      final PatternAudioPlanV1 plan = PatternAudioService.buildPlan(
+        tokens: const <PatternTokenV1>[PatternTokenV1.right],
+        markings: const <PatternNoteMarkingV1>[PatternNoteMarkingV1.normal],
+        voices: const <DrumVoiceV1>[DrumVoiceV1.openHiHat],
+        grouping: PatternGroupingV1.none,
+        timing: const PatternTimingV1.auto(),
+        bpm: 60,
+      );
+
+      expect(plan.cues.single.voice, DrumVoiceV1.openHiHat);
+      expect(plan.cues.single.sample, PatternAudioSampleV1.openHihat);
+    });
+
     test('schedules simultaneous hit voices at the same offset', () {
       final PatternAudioPlanV1 plan = PatternAudioService.buildPlan(
         tokens: const <PatternTokenV1>[PatternTokenV1.accent],

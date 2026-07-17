@@ -8,82 +8,88 @@ import 'support/fake_webview_platform.dart';
 void main() {
   setUp(installFakeWebViewPlatform);
 
-  test('parses duration and voice overrides separately from sticking', () {
-    final DrumSheetNotationDocument document =
-        DrumSheetNotationDocument.fromPattern('^R[T1:L][16:R][16:L]R^L');
-
-    expect(document.subdivision, DrumSheetNoteValue.eighth);
-    expect(
-      document.flattenedNotes
-          .map(
-            (DrumSheetNotationNote note) => <Object?>[
-              note.sticking,
-              note.voices,
-              note.value,
-              note.accent,
-            ],
-          )
-          .toList(),
-      <Object>[
-        <Object?>[
-          'R',
-          <DrumSheetVoice>[DrumSheetVoice.snare],
-          null,
-          true,
-        ],
-        <Object?>[
-          'L',
-          <DrumSheetVoice>[DrumSheetVoice.tom1],
-          null,
-          false,
-        ],
-        <Object?>[
-          'R',
-          <DrumSheetVoice>[DrumSheetVoice.snare],
-          DrumSheetNoteValue.sixteenth,
-          false,
-        ],
-        <Object?>[
-          'L',
-          <DrumSheetVoice>[DrumSheetVoice.snare],
-          DrumSheetNoteValue.sixteenth,
-          false,
-        ],
-        <Object?>[
-          'R',
-          <DrumSheetVoice>[DrumSheetVoice.snare],
-          null,
-          false,
-        ],
-        <Object?>[
-          'L',
-          <DrumSheetVoice>[DrumSheetVoice.snare],
-          null,
-          true,
-        ],
-      ],
-    );
-  });
-
-  test('parses phrase groups and multi-voice beats as one slot', () {
+  test('parses voice-first notes with optional sticking', () {
     final List<DrumSheetNotationNote> notes =
         DrumSheetNotationDocument.fromPattern(
-          '^R^L^R(L)(L) K ^R^L^R(L)(L) ^R^L^R(L)(L) [XK]',
+          '[S] [HH] [OHH] [K] [OHH:R] [S:LRLR] [S:(L)(L)^R]',
         ).flattenedNotes;
 
-    expect(notes, hasLength(17));
-    expect(notes.last.sticking, 'XK');
-    expect(notes.last.voices, <DrumSheetVoice>[
-      DrumSheetVoice.crash,
+    expect(notes[0].voices, <DrumSheetVoice>[DrumSheetVoice.snare]);
+    expect(notes[0].sticking, isEmpty);
+    expect(notes[1].voices, <DrumSheetVoice>[DrumSheetVoice.hihat]);
+    expect(notes[1].sticking, isEmpty);
+    expect(notes[2].voices, <DrumSheetVoice>[DrumSheetVoice.openHiHat]);
+    expect(notes[2].sticking, isEmpty);
+    expect(notes[3].voices, <DrumSheetVoice>[DrumSheetVoice.kick]);
+    expect(notes[3].sticking, isEmpty);
+    expect(notes[4].voices, <DrumSheetVoice>[DrumSheetVoice.openHiHat]);
+    expect(notes[4].sticking, 'R');
+
+    expect(
+      notes.sublist(5, 9).map((DrumSheetNotationNote note) => note.sticking),
+      <String>['L', 'R', 'L', 'R'],
+    );
+    expect(
+      notes.sublist(9).map((DrumSheetNotationNote note) => note.sticking),
+      <String>['L', 'L', 'R'],
+    );
+    expect(notes[9].ghost, isTrue);
+    expect(notes[10].ghost, isTrue);
+    expect(notes[11].accent, isTrue);
+  });
+
+  test('parses simultaneous voices and aligned stroke sequences', () {
+    final List<DrumSheetNotationNote> notes =
+        DrumSheetNotationDocument.fromPattern(
+          '[HH K] [OHH K] [OHH:R K] [HH:RRRR S:LRLR]',
+        ).flattenedNotes;
+
+    expect(notes[0].voices, <DrumSheetVoice>[
+      DrumSheetVoice.hihat,
       DrumSheetVoice.kick,
     ]);
+    expect(notes[0].sticking, isEmpty);
+    expect(notes[1].voices, <DrumSheetVoice>[
+      DrumSheetVoice.openHiHat,
+      DrumSheetVoice.kick,
+    ]);
+    expect(notes[1].sticking, isEmpty);
+    expect(
+      notes[2].strokeForVoice(DrumSheetVoice.openHiHat)!.hand,
+      DrumSheetStrokeHand.right,
+    );
+    expect(notes[2].strokeForVoice(DrumSheetVoice.kick), isNull);
+
+    expect(notes.sublist(3), hasLength(4));
+    expect(
+      notes.sublist(3).map((DrumSheetNotationNote note) => note.voices),
+      everyElement(<DrumSheetVoice>[
+        DrumSheetVoice.hihat,
+        DrumSheetVoice.snare,
+      ]),
+    );
+    expect(
+      notes
+          .sublist(3)
+          .map(
+            (DrumSheetNotationNote note) =>
+                note.strokeForVoice(DrumSheetVoice.snare)!.hand,
+          )
+          .toList(),
+      <DrumSheetStrokeHand>[
+        DrumSheetStrokeHand.left,
+        DrumSheetStrokeHand.right,
+        DrumSheetStrokeHand.left,
+        DrumSheetStrokeHand.right,
+      ],
+    );
   });
 
   test('builds measures from time signature subdivision and triplet feel', () {
     final DrumSheetNotationDocument straight =
         DrumSheetNotationDocument.fromPattern(
-          '[HH K:R] [HH:R] [HH S:R] [HH:R] [HH K:R] [HH:R] [HH S:R] [HH:R] '
-          '[HH K:R] [HH:R] [HH S:R] [HH:R] [HH K:R] [HH:R] [HH S:R] [HH:R]',
+          '[HH K] [HH] [HH S] [HH] [HH K] [HH] [HH S] [HH] '
+          '[HH K] [HH] [HH S] [HH] [HH K] [HH] [HH S] [HH]',
           subdivision: DrumSheetNoteValue.eighth,
           timeSignature: '4/4',
         );
@@ -93,7 +99,7 @@ void main() {
 
     final DrumSheetNotationDocument triplet =
         DrumSheetNotationDocument.fromPattern(
-          'R L R L R L R L R L R L',
+          '[S:RLRLRLRLRLRL]',
           subdivision: DrumSheetNoteValue.eighth,
           feel: DrumSheetFeel.triplet,
           timeSignature: '4/4',
@@ -104,111 +110,66 @@ void main() {
     expect(triplet.feel, DrumSheetFeel.triplet);
   });
 
-  test('parses multi-voice hand and limb beats', () {
-    expect(
-      DrumSheetNotationDocument.fromPattern(
-        '[RL]',
-      ).flattenedNotes.single.sticking,
-      'RL',
+  test(
+    'rejects invalid voice-first syntax and obsolete root-sticking syntax',
+    () {
+      for (final String source in <String>[
+        '[]',
+        '[:R]',
+        '[S:]',
+        '[S:^]',
+        '[S:()]',
+        '[S:(R]',
+        '[S:R)]',
+        '[UNKNOWN:R]',
+        '[HH:RRRR K]',
+        '[OHH:RRRR K]',
+        'RLRL',
+        'K',
+        '^R',
+        '(L)',
+      ]) {
+        expect(
+          () => DrumSheetNotationDocument.fromPattern(source),
+          throwsFormatException,
+          reason: source,
+        );
+      }
+    },
+  );
+
+  test('serializes canonical voice-first notation', () {
+    String roundTrip(String source) => DrumSheetPatternParser.serialize(
+      DrumSheetNotationDocument.fromPattern(source).flattenedNotes,
     );
-    final DrumSheetNotationNote note = DrumSheetNotationDocument.fromPattern(
-      '[RKL]',
-    ).flattenedNotes.single;
-    expect(note.sticking, 'RKL');
-    expect(note.voices, contains(DrumSheetVoice.kick));
+
+    expect(roundTrip('[HH]'), '[HH]');
+    expect(roundTrip('[OHH]'), '[OHH]');
+    expect(roundTrip('[OHH:R]'), '[OHH:R]');
+    expect(roundTrip('[S:LRLR]'), '[S:LRLR]');
+    expect(roundTrip('[S:(L)(L)^R]'), '[S:(L)(L)^R]');
+    expect(roundTrip('[HH K]'), '[HH K]');
+    expect(roundTrip('[OHH:R K]'), '[OHH:R K]');
   });
 
-  test('parses accent and ghost decorations inside or outside brackets', () {
+  test('serializes selected-note edits without inventing sticking', () {
     final List<DrumSheetNotationNote> notes =
         DrumSheetNotationDocument.fromPattern(
-          '^[T1:R][T2:^L][T1:(L)]([T2:R])',
+          '[S:R] [S:L] [HH]',
         ).flattenedNotes;
-
-    expect(notes[0].accent, true);
-    expect(notes[0].voices, <DrumSheetVoice>[DrumSheetVoice.tom1]);
-    expect(notes[1].accent, true);
-    expect(notes[1].voices, <DrumSheetVoice>[DrumSheetVoice.tom2]);
-    expect(notes[2].ghost, true);
-    expect(notes[2].voices, <DrumSheetVoice>[DrumSheetVoice.tom1]);
-    expect(notes[3].ghost, true);
-    expect(notes[3].voices, <DrumSheetVoice>[DrumSheetVoice.tom2]);
-  });
-
-  test('rejects accented ghost notes', () {
-    expect(
-      () => DrumSheetNotationDocument.fromPattern('^(L)'),
-      throwsFormatException,
-    );
-    expect(
-      () => DrumSheetNotationDocument.fromPattern('[T1:^(L)]'),
-      throwsFormatException,
-    );
-    expect(
-      () => DrumSheetNotationDocument.fromPattern('^[T1:(L)]'),
-      throwsFormatException,
-    );
-  });
-
-  test('rejects invalid tokens and malformed multi-voice beats', () {
-    expect(
-      () => DrumSheetNotationDocument.fromPattern('B'),
-      throwsFormatException,
-    );
-    expect(
-      () => DrumSheetNotationDocument.fromPattern('[B]'),
-      throwsFormatException,
-    );
-    expect(
-      () => DrumSheetNotationDocument.fromPattern('[]'),
-      throwsFormatException,
-    );
-    expect(
-      () => DrumSheetNotationDocument.fromPattern('[X_]'),
-      throwsFormatException,
-    );
-  });
-
-  test('serializes selected-note edits back to bracket syntax', () {
-    final List<DrumSheetNotationNote> notes =
-        DrumSheetNotationDocument.fromPattern('R L').flattenedNotes;
     final List<DrumSheetNotationNote> edited =
         DrumSheetPatternParser.toggleGhost(
           DrumSheetPatternParser.toggleAccent(
-            DrumSheetPatternParser.applyVoiceOverride(
-              DrumSheetPatternParser.applyValueOverride(notes, <int>{
-                1,
-              }, DrumSheetNoteValue.sixteenth),
-              <int>{1},
-              DrumSheetVoice.tom2,
-            ),
+            DrumSheetPatternParser.applyVoiceOverride(notes, <int>{
+              1,
+            }, DrumSheetVoice.tom2),
             <int>{0},
           ),
           <int>{1},
         );
 
-    expect(
-      DrumSheetPatternParser.serialize(
-        edited,
-        subdivision: DrumSheetNoteValue.eighth,
-      ),
-      '^R[T2 16:(L)]',
-    );
+    expect(DrumSheetPatternParser.serialize(edited), '[S:^R] [T2:(L)] [HH]');
   });
-
-  test(
-    'serializes multiple override voices and uppercases sticking labels',
-    () {
-      final List<DrumSheetNotationNote> notes =
-          DrumSheetNotationDocument.fromPattern('[S T1:l]').flattenedNotes;
-
-      expect(notes.single.sticking, 'L');
-      expect(notes.single.voices, <DrumSheetVoice>[
-        DrumSheetVoice.snare,
-        DrumSheetVoice.tom1,
-      ]);
-      expect(DrumSheetPatternParser.serialize(notes), '[S T1:L]');
-    },
-  );
 
   test('lenient parsing tolerates incomplete editing states', () {
     expect(
@@ -217,10 +178,10 @@ void main() {
     );
     expect(
       DrumSheetNotationDocument.fromPattern(
-        'R[32:',
+        '[S:',
         lenient: true,
-      ).flattenedNotes.single.sticking,
-      'R',
+      ).flattenedNotes,
+      isEmpty,
     );
   });
 
@@ -249,7 +210,7 @@ void main() {
             width: 360,
             child: DrumSheetNotationDisplay(
               document: DrumSheetNotationDocument.fromPattern(
-                '^R[T1:L][16:R][16:L]R^L',
+                '[S:^R][T1:L][S:R][S:L][S:R][S:^L]',
               ),
               grouping: '3535',
               selection: DrumSheetNotationSelection.editing(<int>{1}),
@@ -275,7 +236,7 @@ void main() {
               width: 360,
               child: DrumSheetNotationDisplay(
                 document: DrumSheetNotationDocument.fromPattern(
-                  'R L L R R L R L L R R L',
+                  '[S:RLLRRL] [S:RLLRRL]',
                   subdivision: DrumSheetNoteValue.sixteenth,
                   feel: DrumSheetFeel.triplet,
                   timeSignature: '4/4',

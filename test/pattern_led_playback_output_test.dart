@@ -86,6 +86,18 @@ void main() {
       },
     );
 
+    test('open hi-hat playback maps to the physical hi-hat LED', () async {
+      final _PlaybackLedHarness harness = await _PlaybackLedHarness.connected();
+
+      harness.output.triggerCue(
+        _cue(DrumVoiceV1.openHiHat, sticking: StickingCue.right),
+      );
+
+      expect(harness.platform.lastConnection.writes, <String>[
+        _frame('CUE,HIHAT,R'),
+      ]);
+    });
+
     test('playback stop sends CLEAR', () async {
       final _PlaybackLedHarness harness = await _PlaybackLedHarness.connected();
 

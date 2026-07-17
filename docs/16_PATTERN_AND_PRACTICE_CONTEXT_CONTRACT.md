@@ -140,10 +140,10 @@ after they run.
 
 Sheet-music sticking labels are concise assignment labels. Single-voice beats
 print their normal assignment. Multi-voice beats may print a label only when one
-is meaningful: `[XK]` prints `K`, `[HH S:R]` prints `R`, and unlabeled
-multi-voice beats must not invent a label. Cymbal voices (`HH`, crash/`X`, and
-ride) must render with an X notehead whenever they are present, including inside
-a multi-voice beat.
+is meaningful: `[CR K]` prints no hand cue, `[HH:R S:L]` prints the authored
+hand assignment, and unlabeled multi-voice beats must not invent a label.
+Cymbal voices (`HH`, `OHH`, `CR`, and `RD`) must render with an X notehead
+whenever they are present, including inside a multi-voice beat.
 Selected staff-note styling must be driven by renderer note indexes and a
 renderer-owned overlay when needed. Do not assign selected stems by nearest
 VexFlow DOM geometry; that path has proven ambiguous for beamed and multi-voice

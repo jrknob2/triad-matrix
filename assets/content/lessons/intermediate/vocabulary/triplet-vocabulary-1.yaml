@@ -21,8 +21,7 @@ lesson:
         subdivision: triplet
         time_signature: "4/4"
         repeat_count: 8
-        sticking: "R L L"
-        pattern: "R(L)(L)"
+        pattern: "[S:R(L)(L)]"
 
     - id: cell-b
       title: B - Right Left Kick
@@ -36,8 +35,7 @@ lesson:
         subdivision: triplet
         time_signature: "4/4"
         repeat_count: 8
-        sticking: "R L K"
-        pattern: "RLK"
+        pattern: "[S:RL][K]"
 
     - id: cell-c
       title: C - Right Kick Left
@@ -51,8 +49,7 @@ lesson:
         subdivision: triplet
         time_signature: "4/4"
         repeat_count: 8
-        sticking: "R K L"
-        pattern: "RKL"
+        pattern: "[S:R][K][S:L]"
 
     - id: combine-a-b
       title: Combine A + B
@@ -66,8 +63,7 @@ lesson:
         subdivision: triplet
         time_signature: "4/4"
         repeat_count: 6
-        sticking: "R L L R L K"
-        pattern: "R(L)(L) RLK"
+        pattern: "[S:R(L)(L)] [S:RL][K]"
 
     - id: combine-a-c
       title: Combine A + C
@@ -81,5 +77,4 @@ lesson:
         subdivision: triplet
         time_signature: "4/4"
         repeat_count: 6
-        sticking: "R L L R K L"
-        pattern: "R(L)(L) RKL"
+        pattern: "[S:R(L)(L)] [S:R][K][S:L]"

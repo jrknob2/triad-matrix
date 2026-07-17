@@ -271,7 +271,8 @@ extension DrumVoiceLabel on DrumVoiceV1 {
     DrumVoiceV1.tom2 => 'T2',
     DrumVoiceV1.floorTom => 'FT',
     DrumVoiceV1.hihat => 'HH',
-    DrumVoiceV1.crash => 'X',
+    DrumVoiceV1.openHiHat => 'OHH',
+    DrumVoiceV1.crash => 'CR',
     DrumVoiceV1.ride => 'RD',
     DrumVoiceV1.kick => 'K',
   };
@@ -282,6 +283,7 @@ extension DrumVoiceLabel on DrumVoiceV1 {
     DrumVoiceV1.tom2 => 'Tom 2',
     DrumVoiceV1.floorTom => 'Floor Tom',
     DrumVoiceV1.hihat => 'Hi-Hat',
+    DrumVoiceV1.openHiHat => 'Open Hi-Hat',
     DrumVoiceV1.crash => 'Crash',
     DrumVoiceV1.ride => 'Ride',
     DrumVoiceV1.kick => 'Kick',

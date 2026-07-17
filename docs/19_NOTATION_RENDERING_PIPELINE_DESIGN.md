@@ -113,7 +113,7 @@ notation:
   subdivision: 8
   time_signature: "4/4"
   repeat_count: 4
-  pattern: "[HH:R][HH:R] [HH:R][HH:R] [HH:R][HH:R] [HH:R][HH:R]"
+  pattern: "[HH] [HH] [HH] [HH] [HH] [HH] [HH] [HH]"
 ```
 
 Or sectioned:
@@ -125,13 +125,12 @@ notation:
       subdivision: 8
       time_signature: "4/4"
       repeat_count: 3
-      pattern: "[HH K:R][HH:R] [HH S:R][HH:R] [HH K:R][HH:R] [HH S:R][HH:R]"
+      pattern: "[HH K] [HH] [HH S] [HH] [HH K] [HH] [HH S] [HH]"
     - title: Triplet Fill
       subdivision: triplet
       time_signature: "4/4"
       repeat_count: 1
-      sticking: "R L K R L K R L K R L K"
-      pattern: "RLK RKL R(L)(L) [XK]"
+      pattern: "[S:RL][K] [S:R][K][S:L] [S:R(L)(L)] [CR K]"
 ```
 
 The loader normalizes the single-section form into one

@@ -173,7 +173,7 @@ LessonExercise _exercise(String id) {
     how: 'How.',
     notation: const ExerciseNotation(
       sections: <ExerciseNotationSection>[
-        ExerciseNotationSection(pattern: 'R L'),
+        ExerciseNotationSection(pattern: '[S:R] [S:L]'),
       ],
     ),
   );

@@ -220,7 +220,7 @@ lesson:
         subdivision: 8
         time_signature: "4/4"
         repeat_count: 4
-        pattern: "[HH:R][HH:R] [HH:R][HH:R] [HH:R][HH:R] [HH:R][HH:R]"
+        pattern: "[HH] [HH] [HH] [HH] [HH] [HH] [HH] [HH]"
 ```
 
 Fields:
@@ -257,7 +257,7 @@ Exercises are the main authored teaching unit inside a lesson.
     subdivision: 8
     time_signature: "4/4"
     repeat_count: 4
-    pattern: "[HH K:R][HH:R] [HH S:R][HH:R] [HH K:R][HH:R] [HH S:R][HH:R]"
+    pattern: "[HH K] [HH] [HH S] [HH] [HH K] [HH] [HH S] [HH]"
 ```
 
 Fields:
@@ -288,8 +288,7 @@ notation:
   subdivision: 8
   time_signature: "4/4"
   repeat_count: 4
-  sticking: "R R R R R R R R"
-  pattern: "[HH:R][HH:R] [HH:R][HH:R] [HH:R][HH:R] [HH:R][HH:R]"
+  pattern: "[HH] [HH] [HH] [HH] [HH] [HH] [HH] [HH]"
 ```
 
 Sectioned form:
@@ -301,13 +300,12 @@ notation:
       subdivision: 8
       time_signature: "4/4"
       repeat_count: 3
-      pattern: "[HH K:R][HH:R] [HH S:R][HH:R] [HH K:R][HH:R] [HH S:R][HH:R]"
+      pattern: "[HH K] [HH] [HH S] [HH] [HH K] [HH] [HH S] [HH]"
     - title: Triplet Fill
       subdivision: triplet
       time_signature: "4/4"
       repeat_count: 1
-      sticking: "R L K R L K R L K R L K"
-      pattern: "RLK RKL R(L)(L) [XK]"
+      pattern: "[S:RL][K] [S:R][K][S:L] [S:R(L)(L)] [CR K]"
 ```
 
 Section fields:

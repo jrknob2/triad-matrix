@@ -24,7 +24,74 @@ enum DrumSheetNoteValue {
 
 enum DrumSheetFeel { straight, triplet }
 
-enum DrumSheetVoice { hihat, ride, crash, snare, tom1, tom2, floorTom, kick }
+enum DrumSheetVoice {
+  hihat,
+  openHiHat,
+  ride,
+  crash,
+  snare,
+  tom1,
+  tom2,
+  floorTom,
+  kick,
+}
+
+enum DrumSheetStrokeHand { left, right }
+
+enum DrumSheetStrokeArticulation { normal, accent, ghost }
+
+@immutable
+class DrumSheetStrokeDescriptor {
+  final DrumSheetStrokeHand hand;
+  final DrumSheetStrokeArticulation articulation;
+
+  const DrumSheetStrokeDescriptor({
+    required this.hand,
+    this.articulation = DrumSheetStrokeArticulation.normal,
+  });
+
+  String get patternLabel {
+    final String handLabel = hand == DrumSheetStrokeHand.left ? 'L' : 'R';
+    return switch (articulation) {
+      DrumSheetStrokeArticulation.normal => handLabel,
+      DrumSheetStrokeArticulation.accent => '^$handLabel',
+      DrumSheetStrokeArticulation.ghost => '($handLabel)',
+    };
+  }
+
+  String get displayLabel => hand == DrumSheetStrokeHand.left ? 'L' : 'R';
+
+  StickingCue get stickingCue =>
+      hand == DrumSheetStrokeHand.left ? StickingCue.left : StickingCue.right;
+
+  @override
+  bool operator ==(Object other) {
+    return other is DrumSheetStrokeDescriptor &&
+        other.hand == hand &&
+        other.articulation == articulation;
+  }
+
+  @override
+  int get hashCode => Object.hash(hand, articulation);
+}
+
+@immutable
+class DrumSheetVoiceStroke {
+  final DrumSheetVoice voice;
+  final DrumSheetStrokeDescriptor? stroke;
+
+  const DrumSheetVoiceStroke({required this.voice, this.stroke});
+
+  @override
+  bool operator ==(Object other) {
+    return other is DrumSheetVoiceStroke &&
+        other.voice == voice &&
+        other.stroke == stroke;
+  }
+
+  @override
+  int get hashCode => Object.hash(voice, stroke);
+}
 
 class DrumSheetNotationController {
   _DrumSheetNotationDisplayState? _state;
@@ -165,6 +232,7 @@ class DrumSheetNotationMeasure {
 class DrumSheetNotationNote {
   final DrumSheetNoteValue? value;
   final List<DrumSheetVoice> voices;
+  final List<DrumSheetVoiceStroke> voiceStrokes;
   final bool rest;
   final String sticking;
   final bool accent;
@@ -175,6 +243,7 @@ class DrumSheetNotationNote {
   const DrumSheetNotationNote({
     this.value,
     this.voices = const <DrumSheetVoice>[],
+    this.voiceStrokes = const <DrumSheetVoiceStroke>[],
     this.rest = false,
     this.sticking = '',
     this.accent = false,
@@ -187,6 +256,7 @@ class DrumSheetNotationNote {
     DrumSheetNoteValue? value,
     bool clearValue = false,
     List<DrumSheetVoice>? voices,
+    List<DrumSheetVoiceStroke>? voiceStrokes,
     bool? rest,
     String? sticking,
     bool? accent,
@@ -197,6 +267,7 @@ class DrumSheetNotationNote {
     return DrumSheetNotationNote(
       value: clearValue ? null : value ?? this.value,
       voices: voices ?? this.voices,
+      voiceStrokes: voiceStrokes ?? this.voiceStrokes,
       rest: rest ?? this.rest,
       sticking: sticking ?? this.sticking,
       accent: accent ?? this.accent,
@@ -208,6 +279,14 @@ class DrumSheetNotationNote {
 
   DrumSheetNoteValue resolvedValue(DrumSheetNoteValue subdivision) {
     return value ?? subdivision;
+  }
+
+  DrumSheetStrokeDescriptor? strokeForVoice(DrumSheetVoice voice) {
+    for (final DrumSheetVoiceStroke voiceStroke in voiceStrokes) {
+      if (voiceStroke.voice == voice) return voiceStroke.stroke;
+    }
+    if (voices.length != 1 || voices.single != voice) return null;
+    return _singleStrokeDescriptorFromLegacySticking(sticking);
   }
 }
 
@@ -298,34 +377,22 @@ class DrumSheetPatternParser {
     List<DrumSheetNotationNote> notes, {
     DrumSheetNoteValue subdivision = DrumSheetNoteValue.eighth,
   }) {
-    return notes.map((DrumSheetNotationNote note) {
-      if (_isSimultaneousNote(note)) {
-        final String sticking = note.sticking.toUpperCase();
-        final String simultaneous = note.accent
-            ? '[^$sticking]'
-            : '[$sticking]';
-        final List<String> overrides = <String>[];
-        if (note.value != null && note.value != subdivision) {
-          overrides.add(note.value!.patternLabel);
-        }
-        return overrides.isEmpty
-            ? simultaneous
-            : '[${overrides.join(' ')}:$simultaneous]';
+    final List<String> events = <String>[];
+    for (int index = 0; index < notes.length;) {
+      final _SerializedPhrase? phrase = _serializedPhraseAt(
+        notes,
+        index,
+        subdivision: subdivision,
+      );
+      if (phrase != null) {
+        events.add(phrase.text);
+        index += phrase.noteCount;
+        continue;
       }
-      if (note.accent && note.ghost) {
-        throw ArgumentError('Ghost notes cannot be accented.');
-      }
-      final String base = _baseTokenForNote(note);
-      final String marked = note.ghost ? '($base)' : base;
-      final String token = note.accent ? '^$marked' : marked;
-      final List<String> overrides = <String>[];
-      final String? voiceOverride = _voiceOverrideLabelForNote(note);
-      if (voiceOverride != null) overrides.add(voiceOverride);
-      if (note.value != null && note.value != subdivision) {
-        overrides.add(note.value!.patternLabel);
-      }
-      return overrides.isEmpty ? token : '[${overrides.join(' ')}:$token]';
-    }).join();
+      events.add(_serializeSingleNote(notes[index], subdivision: subdivision));
+      index += 1;
+    }
+    return events.join(' ');
   }
 
   static List<DrumSheetNotationNote> applyValueOverride(
@@ -353,6 +420,10 @@ class DrumSheetPatternParser {
                 voices: voice == null
                     ? _defaultVoicesForNote(notes[index])
                     : <DrumSheetVoice>[voice],
+                voiceStrokes: _voiceStrokesAfterVoiceOverride(
+                  notes[index],
+                  voice,
+                ),
               )
             : notes[index],
     ];
@@ -371,6 +442,12 @@ class DrumSheetPatternParser {
             ? notes[index].copyWith(
                 accent: shouldAccent,
                 ghost: shouldAccent ? false : notes[index].ghost,
+                voiceStrokes: _voiceStrokesWithArticulation(
+                  notes[index],
+                  shouldAccent
+                      ? DrumSheetStrokeArticulation.accent
+                      : DrumSheetStrokeArticulation.normal,
+                ),
               )
             : notes[index],
     ];
@@ -389,6 +466,12 @@ class DrumSheetPatternParser {
             ? notes[index].copyWith(
                 ghost: shouldGhost,
                 accent: shouldGhost ? false : notes[index].accent,
+                voiceStrokes: _voiceStrokesWithArticulation(
+                  notes[index],
+                  shouldGhost
+                      ? DrumSheetStrokeArticulation.ghost
+                      : DrumSheetStrokeArticulation.normal,
+                ),
               )
             : notes[index],
     ];
@@ -1303,32 +1386,12 @@ _NotationPlayheadFrame? _playheadFrameForElapsed({
 PatternTokenV1 _audioTokenForSheetNote(DrumSheetNotationNote note) {
   if (note.rest) return PatternTokenV1.rest;
   if (note.flam) return PatternTokenV1.flam;
-
-  final String sticking = note.sticking.trim().toUpperCase();
-  for (int index = 0; index < sticking.length; index += 1) {
-    final String char = sticking[index];
-    switch (char) {
-      case 'R':
-        return PatternTokenV1.right;
-      case 'L':
-        return PatternTokenV1.left;
-      case 'K':
-        return PatternTokenV1.kick;
-      case 'F':
-        return PatternTokenV1.flam;
-      case 'X':
-        return PatternTokenV1.accent;
-      case '_':
-        return PatternTokenV1.rest;
-    }
-  }
-
   if (note.voices.contains(DrumSheetVoice.kick)) {
     return PatternTokenV1.kick;
   }
-  if (note.voices.contains(DrumSheetVoice.crash) ||
-      note.voices.contains(DrumSheetVoice.ride)) {
-    return PatternTokenV1.accent;
+  final DrumSheetStrokeDescriptor? firstStroke = _firstAuthoredStroke(note);
+  if (firstStroke?.hand == DrumSheetStrokeHand.left) {
+    return PatternTokenV1.left;
   }
   return PatternTokenV1.right;
 }
@@ -1345,16 +1408,6 @@ DrumVoiceV1 _primaryAudioVoiceForNote(
   List<DrumVoiceV1> voices,
 ) {
   if (token.isKick) return DrumVoiceV1.kick;
-  if (token.kind == PatternTokenKindV1.accent) {
-    for (final DrumVoiceV1 voice in voices) {
-      if (voice == DrumVoiceV1.crash ||
-          voice == DrumVoiceV1.ride ||
-          voice == DrumVoiceV1.hihat) {
-        return voice;
-      }
-    }
-    return DrumVoiceV1.crash;
-  }
   for (final DrumVoiceV1 voice in voices) {
     if (voice != DrumVoiceV1.kick) return voice;
   }
@@ -1364,6 +1417,7 @@ DrumVoiceV1 _primaryAudioVoiceForNote(
 DrumVoiceV1 _audioVoiceForSheetVoice(DrumSheetVoice voice) {
   return switch (voice) {
     DrumSheetVoice.hihat => DrumVoiceV1.hihat,
+    DrumSheetVoice.openHiHat => DrumVoiceV1.openHiHat,
     DrumSheetVoice.ride => DrumVoiceV1.ride,
     DrumSheetVoice.crash => DrumVoiceV1.crash,
     DrumSheetVoice.snare => DrumVoiceV1.snare,
@@ -1383,39 +1437,23 @@ Map<DrumVoiceV1, StickingCue?> _stickingCuesByAudioVoice({
     return const <DrumVoiceV1, StickingCue?>{};
   }
   final String sticking = note.sticking.trim().toUpperCase();
-  final StickingCue? eventCue = stickingCueFromText(sticking, flam: note.flam);
-  if (noteVoices.length == 1) {
+  final bool hasStructuredSticking = note.voiceStrokes.any(
+    (DrumSheetVoiceStroke voiceStroke) => voiceStroke.stroke != null,
+  );
+  if (!hasStructuredSticking) {
+    final StickingCue? eventCue = stickingCueFromText(
+      sticking,
+      flam: note.flam,
+    );
     return eventCue == null
         ? const <DrumVoiceV1, StickingCue?>{}
         : <DrumVoiceV1, StickingCue?>{primaryVoice: eventCue};
   }
-
-  final List<StickingCue?> ordered = _orderedStickingCuesForVoices(
-    sticking,
-    noteVoices.length,
-  );
-  if (ordered.isNotEmpty) {
-    return <DrumVoiceV1, StickingCue?>{
-      for (int index = 0; index < noteVoices.length; index += 1)
-        if (ordered[index] != null) noteVoices[index]: ordered[index],
-    };
-  }
-  return eventCue == null
-      ? const <DrumVoiceV1, StickingCue?>{}
-      : <DrumVoiceV1, StickingCue?>{primaryVoice: eventCue};
-}
-
-List<StickingCue?> _orderedStickingCuesForVoices(
-  String sticking,
-  int voiceCount,
-) {
-  final String normalized = sticking.replaceAll(RegExp(r'\s+'), '');
-  if (normalized.length != voiceCount) return const <StickingCue?>[];
-  final List<StickingCue?> cues = <StickingCue?>[];
-  for (int index = 0; index < normalized.length; index += 1) {
-    final StickingCue? cue = stickingCueFromText(normalized[index]);
-    if (cue == null) return const <StickingCue?>[];
-    cues.add(cue);
+  final Map<DrumVoiceV1, StickingCue?> cues = <DrumVoiceV1, StickingCue?>{};
+  for (final DrumSheetVoice sheetVoice in note.voices) {
+    final DrumSheetStrokeDescriptor? stroke = note.strokeForVoice(sheetVoice);
+    if (stroke == null) continue;
+    cues[_audioVoiceForSheetVoice(sheetVoice)] = stroke.stickingCue;
   }
   return cues;
 }
@@ -1472,6 +1510,14 @@ Map<String, Object?> _noteJson(DrumSheetNotationNote note) {
 }
 
 String _displayStickingForNote(DrumSheetNotationNote note) {
+  if (note.voiceStrokes.isNotEmpty) {
+    final String sticking = _stickingForVoiceStrokes(note.voiceStrokes);
+    if (sticking.isEmpty || note.voices.length <= 1) return sticking;
+    if (sticking.length == 1) return sticking;
+    if (sticking.contains('R')) return 'R';
+    if (sticking.contains('L')) return 'L';
+    return '';
+  }
   final String sticking = note.sticking.trim().toUpperCase();
   if (sticking.isEmpty) return '';
   if (note.rest || note.voices.length <= 1) return sticking;
@@ -1484,19 +1530,18 @@ String _displayStickingForNote(DrumSheetNotationNote note) {
   return '';
 }
 
+DrumSheetStrokeDescriptor? _firstAuthoredStroke(DrumSheetNotationNote note) {
+  for (final DrumSheetVoiceStroke voiceStroke in note.voiceStrokes) {
+    if (voiceStroke.stroke != null) return voiceStroke.stroke;
+  }
+  return _singleStrokeDescriptorFromLegacySticking(note.sticking);
+}
+
 @immutable
 class _ParseOptions {
   final bool lenient;
-  final bool initialAccent;
-  final DrumSheetNoteValue? value;
-  final List<DrumSheetVoice>? voices;
 
-  const _ParseOptions({
-    required this.lenient,
-    this.initialAccent = false,
-    this.value,
-    this.voices,
-  });
+  const _ParseOptions({required this.lenient});
 }
 
 List<DrumSheetNotationNote> _parsePattern(
@@ -1504,58 +1549,9 @@ List<DrumSheetNotationNote> _parsePattern(
   _ParseOptions options,
 ) {
   final List<DrumSheetNotationNote> notes = <DrumSheetNotationNote>[];
-  bool accent = options.initialAccent;
   for (int index = 0; index < pattern.length; index += 1) {
     final String char = pattern[index];
     if (char.trim().isEmpty) continue;
-    if (char == '^') {
-      accent = true;
-      continue;
-    }
-    if (char == '(') {
-      final int close = pattern.indexOf(')', index + 1);
-      if (close < 0) {
-        if (options.lenient) break;
-        throw const FormatException('Unclosed ghost note group.');
-      }
-      final String inner = pattern.substring(index + 1, close).trim();
-      if (inner.isEmpty) {
-        if (options.lenient) {
-          accent = false;
-          index = close;
-          continue;
-        }
-        throw const FormatException('Empty ghost note group.');
-      }
-      if (accent) {
-        throw const FormatException('Ghost notes cannot be accented.');
-      }
-      final List<DrumSheetNotationNote> ghostNotes = _parsePattern(
-        inner,
-        _ParseOptions(
-          lenient: options.lenient,
-          value: options.value,
-          voices: options.voices,
-        ),
-      );
-      if (ghostNotes.length != 1) {
-        if (options.lenient) {
-          accent = false;
-          index = close;
-          continue;
-        }
-        throw const FormatException(
-          'Ghost note groups must contain exactly one note.',
-        );
-      }
-      if (ghostNotes.first.accent) {
-        throw const FormatException('Ghost notes cannot be accented.');
-      }
-      notes.add(ghostNotes.first.copyWith(ghost: true));
-      accent = false;
-      index = close;
-      continue;
-    }
     if (char == '[') {
       final int close = pattern.indexOf(']', index + 1);
       if (close < 0) {
@@ -1563,269 +1559,342 @@ List<DrumSheetNotationNote> _parsePattern(
         throw const FormatException('Unclosed bracket group.');
       }
       final String body = pattern.substring(index + 1, close);
-      final int separator = body.indexOf(':');
-      if (separator < 0) {
-        try {
-          notes.add(
-            _simultaneousNoteFromBody(
-              body,
-              accent: accent,
-              value: options.value,
-            ),
-          );
-        } on FormatException {
-          if (!options.lenient) rethrow;
-        }
-        accent = false;
-        index = close;
-        continue;
-      }
-      late final _ParsedOverride override;
       try {
-        override = _overrideFromLabel(body.substring(0, separator).trim());
+        notes.addAll(_notesFromVoiceFirstEventBody(body));
       } on FormatException {
-        if (options.lenient) {
-          accent = false;
-          index = close;
-          continue;
-        }
-        rethrow;
+        if (!options.lenient) rethrow;
       }
-      notes.addAll(
-        _parsePattern(
-          body.substring(separator + 1),
-          _ParseOptions(
-            initialAccent: accent,
-            lenient: options.lenient,
-            value: override.value ?? options.value,
-            voices: override.voices ?? options.voices,
-          ),
-        ),
-      );
-      accent = false;
       index = close;
       continue;
     }
-    final String? multi = _multiCharacterTokenAt(pattern, index);
-    if (multi != null) {
-      notes.add(
-        _noteFromToken(
-          multi,
-          accent: accent,
-          value: options.value,
-          voices: options.voices,
-        ),
+    if (!options.lenient) {
+      throw FormatException(
+        'Voice-first notation events must be bracketed: unexpected "$char".',
       );
-      accent = false;
-      index += multi.length - 1;
-      continue;
     }
-    try {
-      notes.add(
-        _noteFromToken(
-          char,
-          accent: accent,
-          value: options.value,
-          voices: options.voices,
-        ),
-      );
-    } on FormatException {
-      if (!options.lenient) rethrow;
-    }
-    accent = false;
   }
   return notes;
 }
 
-DrumSheetNotationNote _simultaneousNoteFromBody(
-  String body, {
-  required bool accent,
-  DrumSheetNoteValue? value,
-}) {
+@immutable
+class _ParsedVoiceSpec {
+  final DrumSheetVoice voice;
+  final List<DrumSheetStrokeDescriptor>? strokes;
+
+  const _ParsedVoiceSpec({required this.voice, required this.strokes});
+
+  int get strokeCount => strokes?.length ?? 1;
+}
+
+List<DrumSheetNotationNote> _notesFromVoiceFirstEventBody(String body) {
   final String trimmed = body.trim();
   if (trimmed.isEmpty) {
-    throw const FormatException(
-      'Empty bracket. Use a multi-voice beat like [XK] or an override like [T1:L].',
-    );
+    throw const FormatException('Empty notation event.');
   }
-
-  final List<DrumSheetNotationNote> parts = _parsePattern(
-    trimmed,
-    const _ParseOptions(lenient: false),
-  );
-  if (parts.length < 2) {
-    throw const FormatException(
-      'Multi-voice beats must contain at least two notes, such as [XK] or [RL].',
-    );
+  final List<_ParsedVoiceSpec> specs = _voiceSpecsFromBody(trimmed);
+  if (specs.isEmpty) {
+    throw const FormatException('Notation event must contain a voice.');
   }
-  if (parts.any((DrumSheetNotationNote note) => note.rest)) {
-    throw const FormatException(
-      'Rests are not allowed inside multi-voice beats.',
-    );
-  }
-
-  final List<DrumSheetVoice> voices = <DrumSheetVoice>[];
-  final StringBuffer sticking = StringBuffer();
-  bool hasGhost = false;
-  bool hasAccent = accent;
-  bool hasFlam = false;
-  for (final DrumSheetNotationNote note in parts) {
-    for (final DrumSheetVoice voice in note.voices) {
-      if (!voices.contains(voice)) voices.add(voice);
+  final Set<DrumSheetVoice> seen = <DrumSheetVoice>{};
+  for (final _ParsedVoiceSpec spec in specs) {
+    if (!seen.add(spec.voice)) {
+      throw FormatException(
+        'Voice ${_voiceLabel(spec.voice)} appears more than once in one event.',
+      );
     }
-    sticking.write(_baseTokenForNote(note));
-    hasGhost = hasGhost || note.ghost;
-    hasAccent = hasAccent || note.accent;
-    hasFlam = hasFlam || note.flam;
   }
-  return DrumSheetNotationNote(
-    value: value,
-    voices: voices,
-    sticking: sticking.toString(),
-    accent: hasAccent,
-    ghost: hasGhost,
-    flam: hasFlam,
-  );
+  final int strokeCount = specs.first.strokeCount;
+  for (final _ParsedVoiceSpec spec in specs.skip(1)) {
+    if (spec.strokeCount != strokeCount) {
+      throw const FormatException(
+        'All voices in one event must have equal stroke counts.',
+      );
+    }
+  }
+
+  return <DrumSheetNotationNote>[
+    for (int strokeIndex = 0; strokeIndex < strokeCount; strokeIndex += 1)
+      _noteFromAlignedVoiceSpecs(specs, strokeIndex),
+  ];
 }
 
-@immutable
-class _ParsedOverride {
-  final DrumSheetNoteValue? value;
-  final List<DrumSheetVoice>? voices;
-
-  const _ParsedOverride({this.value, this.voices});
-}
-
-_ParsedOverride _overrideFromLabel(String label) {
-  final List<String> parts = label
+List<_ParsedVoiceSpec> _voiceSpecsFromBody(String body) {
+  final List<String> tokens = body
       .split(RegExp(r'[,\s]+'))
-      .map((String part) => part.trim())
-      .where((String part) => part.isNotEmpty)
+      .map((String token) => token.trim())
+      .where((String token) => token.isNotEmpty)
       .toList(growable: false);
-  if (parts.isEmpty) {
-    throw const FormatException('Override label cannot be empty.');
-  }
-  DrumSheetNoteValue? value;
-  List<DrumSheetVoice>? voices;
-  for (final String part in parts) {
-    final DrumSheetNoteValue? parsedValue =
-        DrumSheetNoteValueSyntax.fromPatternLabel(part);
-    if (parsedValue != null) {
-      value = parsedValue;
-      continue;
-    }
-    final List<DrumSheetVoice>? parsedVoices = _voicesFromLabel(part);
-    if (parsedVoices != null) {
-      voices = <DrumSheetVoice>[
-        ...?voices,
-        for (final DrumSheetVoice voice in parsedVoices)
-          if (!(voices ?? const <DrumSheetVoice>[]).contains(voice)) voice,
-      ];
-      continue;
-    }
-    throw FormatException('Unsupported override: $part');
-  }
-  return _ParsedOverride(value: value, voices: voices);
+  return <_ParsedVoiceSpec>[
+    for (final String token in tokens) _voiceSpecFromToken(token),
+  ];
 }
 
-String? _multiCharacterTokenAt(String pattern, int index) {
-  return null;
+_ParsedVoiceSpec _voiceSpecFromToken(String token) {
+  final int colon = token.indexOf(':');
+  final String voiceText = colon < 0 ? token : token.substring(0, colon);
+  final DrumSheetVoice? voice = _voiceFromLabel(voiceText);
+  if (voice == null) {
+    throw FormatException('Unknown drum voice: $voiceText');
+  }
+  if (colon < 0) {
+    return _ParsedVoiceSpec(voice: voice, strokes: null);
+  }
+  final String strokeText = token.substring(colon + 1);
+  if (strokeText.isEmpty) {
+    throw const FormatException('Stroke sequence cannot be empty.');
+  }
+  return _ParsedVoiceSpec(
+    voice: voice,
+    strokes: _parseStrokeSequence(strokeText),
+  );
 }
 
-DrumSheetNotationNote _noteFromToken(
-  String symbol, {
-  required bool accent,
-  DrumSheetNoteValue? value,
-  List<DrumSheetVoice>? voices,
-}) {
-  final String token = symbol.toUpperCase();
-  DrumSheetNotationNote note({
-    required String sticking,
-    required List<DrumSheetVoice> defaultVoices,
-    bool flam = false,
-    bool rest = false,
-  }) {
-    return DrumSheetNotationNote(
-      value: value,
-      voices: rest ? const <DrumSheetVoice>[] : voices ?? defaultVoices,
-      rest: rest,
-      sticking: sticking,
-      accent: accent,
-      flam: flam,
-    );
+List<DrumSheetStrokeDescriptor> _parseStrokeSequence(String source) {
+  final List<DrumSheetStrokeDescriptor> strokes = <DrumSheetStrokeDescriptor>[];
+  for (int index = 0; index < source.length;) {
+    final String char = source[index];
+    if (char == '^') {
+      if (index + 1 >= source.length) {
+        throw const FormatException('Accent must be followed by L or R.');
+      }
+      final DrumSheetStrokeHand hand = _parseHand(source[index + 1]);
+      strokes.add(
+        DrumSheetStrokeDescriptor(
+          hand: hand,
+          articulation: DrumSheetStrokeArticulation.accent,
+        ),
+      );
+      index += 2;
+      continue;
+    }
+    if (char == '(') {
+      if (index + 2 >= source.length || source[index + 2] != ')') {
+        throw const FormatException(
+          'Ghost stroke must be written as (L) or (R).',
+        );
+      }
+      final DrumSheetStrokeHand hand = _parseHand(source[index + 1]);
+      strokes.add(
+        DrumSheetStrokeDescriptor(
+          hand: hand,
+          articulation: DrumSheetStrokeArticulation.ghost,
+        ),
+      );
+      index += 3;
+      continue;
+    }
+    strokes.add(DrumSheetStrokeDescriptor(hand: _parseHand(char)));
+    index += 1;
   }
+  if (strokes.isEmpty) {
+    throw const FormatException('Stroke sequence cannot be empty.');
+  }
+  return strokes;
+}
 
-  return switch (token) {
-    'R' || 'L' => note(
-      sticking: token,
-      defaultVoices: <DrumSheetVoice>[DrumSheetVoice.snare],
-    ),
-    'K' => note(
-      sticking: 'K',
-      defaultVoices: <DrumSheetVoice>[DrumSheetVoice.kick],
-    ),
-    'F' => note(
-      sticking: 'F',
-      defaultVoices: <DrumSheetVoice>[DrumSheetVoice.snare],
-      flam: true,
-    ),
-    'B' => throw const FormatException(
-      'Invalid token: B is no longer supported. Use [RL] for both hands/unison or assign explicit voices.',
-    ),
-    'X' => note(
-      sticking: 'X',
-      defaultVoices: <DrumSheetVoice>[DrumSheetVoice.crash],
-    ),
-    '_' => note(
-      sticking: '_',
-      defaultVoices: const <DrumSheetVoice>[],
-      rest: true,
-    ),
-    _ => throw FormatException('Unsupported pattern token: $symbol'),
+DrumSheetStrokeHand _parseHand(String source) {
+  return switch (source.toUpperCase()) {
+    'L' => DrumSheetStrokeHand.left,
+    'R' => DrumSheetStrokeHand.right,
+    _ => throw FormatException('Unsupported stroke hand: $source'),
   };
 }
 
-List<DrumSheetVoice>? _voicesFromLabel(String label) {
-  return switch (label.toUpperCase()) {
-    'S' || 'SN' || 'SNARE' => <DrumSheetVoice>[DrumSheetVoice.snare],
-    'T1' || 'TOM1' => <DrumSheetVoice>[DrumSheetVoice.tom1],
-    'T2' || 'TOM2' => <DrumSheetVoice>[DrumSheetVoice.tom2],
-    'FT' ||
-    'FLOORTOM' ||
-    'FLOOR_TOM' => <DrumSheetVoice>[DrumSheetVoice.floorTom],
-    'K' || 'KICK' => <DrumSheetVoice>[DrumSheetVoice.kick],
-    'HH' || 'HIHAT' || 'HIGHHAT' => <DrumSheetVoice>[DrumSheetVoice.hihat],
-    'C' || 'X' || 'CRASH' => <DrumSheetVoice>[DrumSheetVoice.crash],
-    'RD' || 'RIDE' => <DrumSheetVoice>[DrumSheetVoice.ride],
+DrumSheetNotationNote _noteFromAlignedVoiceSpecs(
+  List<_ParsedVoiceSpec> specs,
+  int strokeIndex,
+) {
+  final List<DrumSheetVoice> voices = <DrumSheetVoice>[
+    for (final _ParsedVoiceSpec spec in specs) spec.voice,
+  ];
+  final List<DrumSheetVoiceStroke> voiceStrokes = <DrumSheetVoiceStroke>[
+    for (final _ParsedVoiceSpec spec in specs)
+      DrumSheetVoiceStroke(
+        voice: spec.voice,
+        stroke: spec.strokes == null ? null : spec.strokes![strokeIndex],
+      ),
+  ];
+  final String sticking = _stickingForVoiceStrokes(voiceStrokes);
+  final Iterable<DrumSheetStrokeDescriptor> authoredStrokes = voiceStrokes
+      .map((DrumSheetVoiceStroke voiceStroke) => voiceStroke.stroke)
+      .whereType<DrumSheetStrokeDescriptor>();
+  final bool accent = authoredStrokes.any(
+    (DrumSheetStrokeDescriptor stroke) =>
+        stroke.articulation == DrumSheetStrokeArticulation.accent,
+  );
+  final bool ghost =
+      authoredStrokes.isNotEmpty &&
+      authoredStrokes.every(
+        (DrumSheetStrokeDescriptor stroke) =>
+            stroke.articulation == DrumSheetStrokeArticulation.ghost,
+      );
+  return DrumSheetNotationNote(
+    voices: voices,
+    voiceStrokes: voiceStrokes,
+    sticking: sticking,
+    accent: accent,
+    ghost: ghost,
+  );
+}
+
+String _stickingForVoiceStrokes(List<DrumSheetVoiceStroke> voiceStrokes) {
+  final List<String> labels = <String>[
+    for (final DrumSheetVoiceStroke voiceStroke in voiceStrokes)
+      if (voiceStroke.stroke != null) voiceStroke.stroke!.displayLabel,
+  ];
+  return labels.join();
+}
+
+@immutable
+class _SerializedPhrase {
+  final String text;
+  final int noteCount;
+
+  const _SerializedPhrase({required this.text, required this.noteCount});
+}
+
+_SerializedPhrase? _serializedPhraseAt(
+  List<DrumSheetNotationNote> notes,
+  int start, {
+  required DrumSheetNoteValue subdivision,
+}) {
+  final DrumSheetNotationNote first = notes[start];
+  if (!_canPhraseSerialize(first, subdivision: subdivision)) return null;
+  final List<DrumSheetVoice> voices = first.voices;
+  int end = start + 1;
+  while (end < notes.length &&
+      _samePhraseShape(
+        first,
+        notes[end],
+        subdivision: subdivision,
+        voices: voices,
+      )) {
+    end += 1;
+  }
+  if (end - start < 2) return null;
+  final List<DrumSheetNotationNote> phraseNotes = notes.sublist(start, end);
+  return _SerializedPhrase(
+    text: _serializePhraseNotes(phraseNotes),
+    noteCount: phraseNotes.length,
+  );
+}
+
+bool _canPhraseSerialize(
+  DrumSheetNotationNote note, {
+  required DrumSheetNoteValue subdivision,
+}) {
+  if (note.rest || (note.value != null && note.value != subdivision)) {
+    return false;
+  }
+  if (note.voices.isEmpty) return false;
+  return note.voices.every(
+    (DrumSheetVoice voice) => _strokeForSerialization(note, voice) != null,
+  );
+}
+
+bool _samePhraseShape(
+  DrumSheetNotationNote first,
+  DrumSheetNotationNote candidate, {
+  required DrumSheetNoteValue subdivision,
+  required List<DrumSheetVoice> voices,
+}) {
+  if (!_canPhraseSerialize(candidate, subdivision: subdivision)) return false;
+  if (candidate.voices.length != voices.length) return false;
+  for (int index = 0; index < voices.length; index += 1) {
+    if (candidate.voices[index] != voices[index]) return false;
+  }
+  return true;
+}
+
+String _serializePhraseNotes(List<DrumSheetNotationNote> notes) {
+  final List<DrumSheetVoice> voices = notes.first.voices;
+  final List<String> specs = <String>[];
+  for (final DrumSheetVoice voice in voices) {
+    final String strokes = notes.map((DrumSheetNotationNote note) {
+      return _strokeForSerialization(note, voice)!.patternLabel;
+    }).join();
+    specs.add('${_voiceLabel(voice)}:$strokes');
+  }
+  return '[${specs.join(' ')}]';
+}
+
+String _serializeSingleNote(
+  DrumSheetNotationNote note, {
+  required DrumSheetNoteValue subdivision,
+}) {
+  if (note.rest) {
+    throw ArgumentError(
+      'Rests are not part of the voice-first notation syntax.',
+    );
+  }
+  final List<String> specs = <String>[];
+  for (final DrumSheetVoice voice in note.voices) {
+    final DrumSheetStrokeDescriptor? stroke = _strokeForSerialization(
+      note,
+      voice,
+    );
+    specs.add(
+      stroke == null
+          ? _voiceLabel(voice)
+          : '${_voiceLabel(voice)}:${stroke.patternLabel}',
+    );
+  }
+  return '[${specs.join(' ')}]';
+}
+
+DrumSheetStrokeDescriptor? _strokeForSerialization(
+  DrumSheetNotationNote note,
+  DrumSheetVoice voice,
+) {
+  final DrumSheetStrokeDescriptor? structured = note.strokeForVoice(voice);
+  if (structured != null) return structured;
+  if (note.voiceStrokes.isNotEmpty) return null;
+  if (note.voices.length != 1 || note.voices.single != voice) return null;
+  return _singleStrokeDescriptorFromLegacySticking(
+    note.sticking,
+    accent: note.accent,
+    ghost: note.ghost,
+  );
+}
+
+DrumSheetStrokeDescriptor? _singleStrokeDescriptorFromLegacySticking(
+  String sticking, {
+  bool accent = false,
+  bool ghost = false,
+}) {
+  final String normalized = sticking.trim().toUpperCase();
+  if (normalized != 'L' && normalized != 'R') return null;
+  return DrumSheetStrokeDescriptor(
+    hand: normalized == 'L'
+        ? DrumSheetStrokeHand.left
+        : DrumSheetStrokeHand.right,
+    articulation: accent
+        ? DrumSheetStrokeArticulation.accent
+        : ghost
+        ? DrumSheetStrokeArticulation.ghost
+        : DrumSheetStrokeArticulation.normal,
+  );
+}
+
+DrumSheetVoice? _voiceFromLabel(String label) {
+  return switch (label.trim().toUpperCase()) {
+    'S' || 'SN' || 'SNARE' => DrumSheetVoice.snare,
+    'T1' || 'TOM1' => DrumSheetVoice.tom1,
+    'T2' || 'TOM2' => DrumSheetVoice.tom2,
+    'FT' || 'FLOORTOM' || 'FLOOR_TOM' => DrumSheetVoice.floorTom,
+    'K' || 'KICK' => DrumSheetVoice.kick,
+    'HH' || 'HIHAT' || 'HIGHHAT' => DrumSheetVoice.hihat,
+    'OHH' ||
+    'OPEN_HH' ||
+    'OPENHIHAT' ||
+    'OPEN_HIHAT' => DrumSheetVoice.openHiHat,
+    'CR' || 'C' || 'X' || 'CRASH' => DrumSheetVoice.crash,
+    'RD' || 'RIDE' => DrumSheetVoice.ride,
     _ => null,
   };
 }
 
-String _baseTokenForNote(DrumSheetNotationNote note) {
-  if (note.rest) return '_';
-  if (note.flam) return 'F';
-  final String sticking = note.sticking.toUpperCase();
-  if (_isLimbSticking(sticking)) return sticking;
-  if (note.voices.contains(DrumSheetVoice.kick)) return 'K';
-  if (note.voices.contains(DrumSheetVoice.hihat) &&
-      note.voices.contains(DrumSheetVoice.snare)) {
-    return '[RL]';
-  }
-  if (note.voices.contains(DrumSheetVoice.crash)) {
-    return 'X';
-  }
-  return sticking.isEmpty ? 'R' : sticking;
-}
-
-String? _voiceOverrideLabelForNote(DrumSheetNotationNote note) {
-  if (!_isLimbSticking(note.sticking)) return null;
-  if (note.voices.length == 1 && note.voices.first == DrumSheetVoice.snare) {
-    return null;
-  }
-  return note.voices.map(_voiceOverrideLabel).join(' ');
-}
-
-String _voiceOverrideLabel(DrumSheetVoice voice) {
+String _voiceLabel(DrumSheetVoice voice) {
   return switch (voice) {
     DrumSheetVoice.snare => 'S',
     DrumSheetVoice.tom1 => 'T1',
@@ -1833,30 +1902,63 @@ String _voiceOverrideLabel(DrumSheetVoice voice) {
     DrumSheetVoice.floorTom => 'FT',
     DrumSheetVoice.kick => 'K',
     DrumSheetVoice.hihat => 'HH',
-    DrumSheetVoice.crash => 'X',
+    DrumSheetVoice.openHiHat => 'OHH',
+    DrumSheetVoice.crash => 'CR',
     DrumSheetVoice.ride => 'RD',
   };
 }
 
 List<DrumSheetVoice> _defaultVoicesForNote(DrumSheetNotationNote note) {
   if (note.rest) return const <DrumSheetVoice>[];
-  if (note.flam) return const <DrumSheetVoice>[DrumSheetVoice.snare];
-  return switch (note.sticking.toUpperCase()) {
-    'K' => const <DrumSheetVoice>[DrumSheetVoice.kick],
-    'X' => const <DrumSheetVoice>[DrumSheetVoice.crash],
-    _ => const <DrumSheetVoice>[DrumSheetVoice.snare],
-  };
+  return note.voices.isEmpty
+      ? const <DrumSheetVoice>[DrumSheetVoice.snare]
+      : note.voices;
 }
 
-bool _isLimbSticking(String sticking) {
-  final String normalized = sticking.toUpperCase();
-  return normalized == 'R' || normalized == 'L';
+List<DrumSheetVoiceStroke> _voiceStrokesAfterVoiceOverride(
+  DrumSheetNotationNote note,
+  DrumSheetVoice? voice,
+) {
+  final List<DrumSheetVoice> nextVoices = voice == null
+      ? _defaultVoicesForNote(note)
+      : <DrumSheetVoice>[voice];
+  if (nextVoices.isEmpty) return const <DrumSheetVoiceStroke>[];
+  if (nextVoices.length == note.voices.length &&
+      nextVoices.every((DrumSheetVoice next) => note.voices.contains(next))) {
+    return note.voiceStrokes;
+  }
+  final DrumSheetStrokeDescriptor? existingStroke = _firstAuthoredStroke(note);
+  return <DrumSheetVoiceStroke>[
+    for (final DrumSheetVoice next in nextVoices)
+      DrumSheetVoiceStroke(voice: next, stroke: existingStroke),
+  ];
 }
 
-bool _isSimultaneousNote(DrumSheetNotationNote note) {
-  if (note.rest) return false;
-  if (note.sticking.length < 2) return false;
-  return RegExp(r'^[RLKFX]+$').hasMatch(note.sticking.toUpperCase());
+List<DrumSheetVoiceStroke> _voiceStrokesWithArticulation(
+  DrumSheetNotationNote note,
+  DrumSheetStrokeArticulation articulation,
+) {
+  final List<DrumSheetVoiceStroke> source = note.voiceStrokes.isNotEmpty
+      ? note.voiceStrokes
+      : <DrumSheetVoiceStroke>[
+          for (final DrumSheetVoice voice in note.voices)
+            DrumSheetVoiceStroke(
+              voice: voice,
+              stroke: _singleStrokeDescriptorFromLegacySticking(note.sticking),
+            ),
+        ];
+  return <DrumSheetVoiceStroke>[
+    for (final DrumSheetVoiceStroke voiceStroke in source)
+      DrumSheetVoiceStroke(
+        voice: voiceStroke.voice,
+        stroke: voiceStroke.stroke == null
+            ? null
+            : DrumSheetStrokeDescriptor(
+                hand: voiceStroke.stroke!.hand,
+                articulation: articulation,
+              ),
+      ),
+  ];
 }
 
 extension DrumSheetNoteValueSyntax on DrumSheetNoteValue {
@@ -1900,6 +2002,7 @@ extension DrumSheetVoiceSyntax on DrumSheetVoice {
   String get id {
     return switch (this) {
       DrumSheetVoice.hihat => 'hihat',
+      DrumSheetVoice.openHiHat => 'openHiHat',
       DrumSheetVoice.ride => 'ride',
       DrumSheetVoice.crash => 'crash',
       DrumSheetVoice.snare => 'snare',

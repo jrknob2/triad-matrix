@@ -52,7 +52,7 @@ void main() {
         id: 'authored',
         family: MaterialFamilyV1.custom,
         name: 'Authored',
-        pattern: '[S HH:R]LRLLKRLRLL[KX]',
+        pattern: '[S HH:R] [S:RLRLLK] [CR K]',
         sequence: PatternSequenceV1.parse('RLRLLKRLRLLK'),
         accentedNoteIndices: const <int>[],
         ghostNoteIndices: const <int>[],
@@ -63,7 +63,10 @@ void main() {
         saved: true,
       );
 
-      expect(markedPatternTextForPracticeItem(item), '[S HH:R]LRLLKRLRLL[KX]');
+      expect(
+        markedPatternTextForPracticeItem(item),
+        '[S HH:R] [S:RLRLLK] [CR K]',
+      );
     });
   });
 }

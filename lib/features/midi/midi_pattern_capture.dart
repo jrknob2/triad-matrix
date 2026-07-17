@@ -286,83 +286,11 @@ class MidiPatternBuilder {
   }
 
   String _patternForGroup(List<CapturedMidiHit> group) {
-    if (group.length == 1) return _patternForSingleHit(group.single);
-    if (group.every((CapturedMidiHit hit) => _directToken(hit.voice) != null)) {
-      return '[${group.map(_directDecoratedToken).join()}]';
-    }
-
     final String labels = group
         .map((CapturedMidiHit hit) => _voiceLabel(hit.voice))
         .whereType<String>()
         .join(' ');
-    final String anchor = _anchorTokenForVoices(
-      group.map((CapturedMidiHit hit) => hit.voice),
-    );
-    return '[$labels:${_decorateToken(anchor, _groupExpression(group))}]';
-  }
-
-  String _patternForSingleHit(CapturedMidiHit hit) {
-    final String? directToken = _directToken(hit.voice);
-    if (directToken != null) {
-      return _decorateToken(directToken, _expressionForVelocity(hit.velocity));
-    }
-
-    final String? label = _voiceLabel(hit.voice);
-    if (label == null) return '';
-    final String anchor = _anchorTokenForVoices(<DrumVoice>[hit.voice]);
-    return '[$label:${_decorateToken(anchor, _expressionForVelocity(hit.velocity))}]';
-  }
-
-  String _directDecoratedToken(CapturedMidiHit hit) {
-    return _decorateToken(
-      _directToken(hit.voice)!,
-      _expressionForVelocity(hit.velocity),
-    );
-  }
-
-  _MidiVelocityExpression _expressionForVelocity(int velocity) {
-    if (velocity <= config.ghostVelocityMax) {
-      return _MidiVelocityExpression.ghost;
-    }
-    if (velocity >= config.accentVelocityMin) {
-      return _MidiVelocityExpression.accent;
-    }
-    return _MidiVelocityExpression.normal;
-  }
-
-  _MidiVelocityExpression _groupExpression(List<CapturedMidiHit> group) {
-    final List<_MidiVelocityExpression> expressions = group
-        .map((CapturedMidiHit hit) => _expressionForVelocity(hit.velocity))
-        .toList(growable: false);
-    if (expressions.contains(_MidiVelocityExpression.accent)) {
-      return _MidiVelocityExpression.accent;
-    }
-    if (expressions.every(
-      (_MidiVelocityExpression expression) =>
-          expression == _MidiVelocityExpression.ghost,
-    )) {
-      return _MidiVelocityExpression.ghost;
-    }
-    return _MidiVelocityExpression.normal;
-  }
-
-  String _decorateToken(String token, _MidiVelocityExpression expression) {
-    return switch (expression) {
-      _MidiVelocityExpression.ghost => '($token)',
-      _MidiVelocityExpression.accent => '^$token',
-      _MidiVelocityExpression.normal => token,
-    };
-  }
-
-  String _anchorTokenForVoices(Iterable<DrumVoice> voices) {
-    final Set<DrumVoice> voiceSet = voices.toSet();
-    if (voiceSet.length == 1 && voiceSet.contains(DrumVoice.kick)) return 'K';
-    if (voiceSet.any(
-      (DrumVoice voice) => voice == DrumVoice.crash || voice == DrumVoice.ride,
-    )) {
-      return 'X';
-    }
-    return 'R';
+    return labels.isEmpty ? '' : '[$labels]';
   }
 }
 
@@ -374,35 +302,16 @@ bool _tempoEstimateEquals(MidiTempoEstimate? left, MidiTempoEstimate? right) {
       left.averageOnsetInterval == right.averageOnsetInterval;
 }
 
-enum _MidiVelocityExpression { ghost, normal, accent }
-
-String? _directToken(DrumVoice voice) {
-  return switch (voice) {
-    DrumVoice.snare => 'R',
-    DrumVoice.kick => 'K',
-    DrumVoice.crash => 'X',
-    DrumVoice.hiHatClosed ||
-    DrumVoice.hiHatOpen ||
-    DrumVoice.hiHatPedal ||
-    DrumVoice.tom1 ||
-    DrumVoice.tom2 ||
-    DrumVoice.floorTom ||
-    DrumVoice.ride ||
-    DrumVoice.unknown => null,
-  };
-}
-
 String? _voiceLabel(DrumVoice voice) {
   return switch (voice) {
     DrumVoice.snare => 'S',
     DrumVoice.kick => 'K',
-    DrumVoice.hiHatClosed ||
-    DrumVoice.hiHatOpen ||
-    DrumVoice.hiHatPedal => 'HH',
+    DrumVoice.hiHatClosed || DrumVoice.hiHatPedal => 'HH',
+    DrumVoice.hiHatOpen => 'OHH',
     DrumVoice.tom1 => 'T1',
     DrumVoice.tom2 => 'T2',
     DrumVoice.floorTom => 'FT',
-    DrumVoice.crash => 'X',
+    DrumVoice.crash => 'CR',
     DrumVoice.ride => 'RD',
     DrumVoice.unknown => null,
   };

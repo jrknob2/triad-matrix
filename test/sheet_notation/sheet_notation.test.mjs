@@ -131,6 +131,9 @@ describe('voice mapping and VexFlow conversion', () => {
     assert.equal(voiceMappingFor('floorTom').stemDirection, -1);
     assert.equal(voiceMappingFor('kick').key, 'f/4');
     assert.equal(voiceMappingFor('kick').stemDirection, -1);
+    assert.equal(voiceMappingFor('openHiHat').key, 'f/5');
+    assert.equal(voiceMappingFor('openHiHat').notehead, 'x');
+    assert.equal(voiceMappingFor('openHiHat').openMarker, true);
   });
 
   test('multi-voice note conversion', () => {
@@ -224,6 +227,34 @@ describe('voice mapping and VexFlow conversion', () => {
     assert.deepEqual(hihat.options.keys, ['f/5/x']);
     assert.deepEqual(crash.options.keys, ['a/5/x']);
     assert.deepEqual(ride.options.keys, ['g/5/x']);
+  });
+
+  test('open hi-hat renders an open marker distinct from closed hi-hat', () => {
+    const VF = createFakeVexFlow();
+    const openSvg = renderDrumNotationSvg(
+      {
+        measures: [
+          {
+            notes: [{ value: '8n', voices: ['openHiHat'] }],
+          },
+        ],
+      },
+      { vexFlow: VF },
+    );
+    const closedSvg = renderDrumNotationSvg(
+      {
+        measures: [
+          {
+            notes: [{ value: '8n', voices: ['hihat'] }],
+          },
+        ],
+      },
+      { vexFlow: createFakeVexFlow() },
+    );
+
+    assert.match(openSvg, /drum-open-hihat-markers/);
+    assert.match(openSvg, /<circle /);
+    assert.doesNotMatch(closedSvg, /drum-open-hihat-markers/);
   });
 
   test('cymbal voices keep x noteheads inside multi-voice beats', () => {
