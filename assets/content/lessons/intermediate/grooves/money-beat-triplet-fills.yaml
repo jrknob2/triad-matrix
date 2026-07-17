@@ -21,7 +21,7 @@ lesson:
         subdivision: 8
         time_signature: "4/4"
         repeat_count: 4
-        pattern: "[HH K] [HH] [HH S] [HH] [HH K] [HH] [HH S] [HH]"
+        pattern: "[HH K] [HH] [HH S] [HH] [HH K] [OHH] [HH S] [HH]"
 
     - id: triplet-fill-alone
       title: Triplet Fill Alone
