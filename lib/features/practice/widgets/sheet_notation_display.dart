@@ -1005,7 +1005,6 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
         'selectionBorderColor': _cssColor(
           selectedColor.withValues(alpha: 0.68),
         ),
-        'selectionGlowColor': _cssColor(selectedColor.withValues(alpha: 0.38)),
         if (widget.backgroundColor != null)
           'backgroundColor': _cssColor(widget.backgroundColor!),
         if (widget.compactLayout) ...<String, Object?>{

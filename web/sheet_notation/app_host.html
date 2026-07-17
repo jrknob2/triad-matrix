@@ -60,18 +60,7 @@
         transition: opacity 180ms ease, transform 180ms ease;
       }
 
-      .drum-note-glow {
-        filter: blur(4px);
-        mix-blend-mode: multiply;
-        transition: opacity 180ms ease;
-      }
-
-      #notation.dark .drum-note-glow {
-        mix-blend-mode: screen;
-      }
-
-      .drum-selection-overlay.guided-practice .drum-selection-rect,
-      .drum-selection-overlay.guided-practice .drum-note-glow {
+      .drum-selection-overlay.guided-practice .drum-selection-rect {
         animation: drum-selection-pulse 1050ms ease-in-out infinite;
       }
 
@@ -89,9 +78,7 @@
 
       @media (prefers-reduced-motion: reduce) {
         .drum-selection-rect,
-        .drum-note-glow,
-        .drum-selection-overlay.guided-practice .drum-selection-rect,
-        .drum-selection-overlay.guided-practice .drum-note-glow {
+        .drum-selection-overlay.guided-practice .drum-selection-rect {
           animation: none;
           transition: none;
         }
@@ -172,10 +159,6 @@
             notation.style.setProperty(
               '--sheet-selection-border-color',
               payload.options?.selectionBorderColor ?? 'rgba(255, 106, 0, 0.68)',
-            );
-            notation.style.setProperty(
-              '--sheet-selection-glow-color',
-              payload.options?.selectionGlowColor ?? 'rgba(255, 106, 0, 0.38)',
             );
             document.body.style.background = backgroundColor;
             if (!hasRenderableNotes(documentJson)) {
@@ -373,17 +356,6 @@
         rect.style.stroke = 'var(--sheet-selection-border-color, rgba(255, 106, 0, 0.68))';
         rect.style.strokeWidth = options.purpose === 'playhead' ? '1.25' : '1.5';
         overlay.appendChild(rect);
-
-        for (const anchor of noteGlowAnchorsForTarget(target)) {
-          const glow = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-          glow.setAttribute('class', 'drum-note-glow');
-          glow.setAttribute('cx', formatSvgNumber(anchor.x));
-          glow.setAttribute('cy', formatSvgNumber(anchor.y));
-          glow.setAttribute('r', formatSvgNumber(anchor.radius));
-          glow.style.fill = 'var(--sheet-selection-glow-color, rgba(255, 106, 0, 0.38))';
-          glow.style.opacity = options.purpose === 'playhead' ? '0.42' : '0.66';
-          overlay.appendChild(glow);
-        }
       }
 
       function eventHighlightBounds(target, svg) {
@@ -414,30 +386,6 @@
           width: right - x,
           height: bottom - y,
         };
-      }
-
-      function noteGlowAnchorsForTarget(target) {
-        const anchors = [];
-        const glyphs = [
-          ...target.element.querySelectorAll('path, text, polygon, polyline, ellipse, circle'),
-        ];
-        for (const glyph of glyphs) {
-          const bounds = svgBoundsFor(glyph);
-          if (bounds == null) continue;
-          if (bounds.width < 2 || bounds.height < 2) continue;
-          if (bounds.width > 34 || bounds.height > 34) continue;
-          anchors.push({
-            x: bounds.x + bounds.width / 2,
-            y: bounds.y + bounds.height / 2,
-            radius: clamp(Math.max(bounds.width, bounds.height) * 0.78, 7, 14),
-          });
-        }
-        if (anchors.length > 0) return anchors;
-        return [{
-          x: target.bounds.x + target.bounds.width / 2,
-          y: target.bounds.y + target.bounds.height / 2,
-          radius: 10,
-        }];
       }
 
       function svgDrawingBounds(svg) {
