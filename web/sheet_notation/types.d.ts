@@ -86,5 +86,20 @@ export function renderDrumNotationSvgWithMetadata(
     flam: boolean;
     ghost: boolean;
     tie: boolean;
+    selection: {
+      bounds: {
+        y: number;
+        height: number;
+      };
+      horizontalPadding: number;
+      anchors: {
+        staff: {
+          staveTop: number;
+          selectionTop: number;
+          selectionBottom: number;
+          stickingFallbackY: number;
+        };
+      };
+    };
   }>;
 };

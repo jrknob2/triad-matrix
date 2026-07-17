@@ -131,6 +131,9 @@
       let selectionSelectable = true;
       let selectionInteractive = true;
       let playheadState = { visible: false };
+      const FALLBACK_SELECTION_HORIZONTAL_PADDING = 13;
+      const FALLBACK_SELECTION_VERTICAL_PADDING = 8;
+      const FALLBACK_SELECTION_MIN_SIZE = 1;
 
       globalThis.DrumcabularySheetNotation = {
         render(payload) {
@@ -362,29 +365,41 @@
         const bounds = target.bounds;
         const selection = target.note.selection ?? {};
         const svgBounds = svgDrawingBounds(svg);
-        const horizontalPadding = 13;
-        const stemY2 = Number.isFinite(selection.stemY2)
-          ? selection.stemY2
-          : bounds.y + bounds.height;
-        const staffY = Number.isFinite(stemY2)
-          ? stemY2 - 36
-          : bounds.y + bounds.height / 2 - 34;
-        const noteheadHeight = 14;
-        const fixedY = staffY - 5 + noteheadHeight / 2;
-        const fixedHeight = 95;
+        const horizontalPadding = Number.isFinite(selection.horizontalPadding)
+          ? selection.horizontalPadding
+          : FALLBACK_SELECTION_HORIZONTAL_PADDING;
+        const verticalBounds = selectionVerticalBounds(selection, bounds);
         const rawX = Math.min(bounds.x, target.x) - horizontalPadding;
         const rawRight = Math.max(bounds.x + bounds.width, target.x) + horizontalPadding;
-        const rawY = fixedY;
-        const rawBottom = fixedY + fixedHeight;
+        const rawY = verticalBounds.y;
+        const rawBottom = verticalBounds.y + verticalBounds.height;
         const x = clamp(rawX, 0, svgBounds.width);
         const y = clamp(rawY, 0, svgBounds.height);
-        const right = clamp(rawRight, x + 1, svgBounds.width);
-        const bottom = clamp(rawBottom, y + 1, svgBounds.height);
+        const right = clamp(rawRight, x + FALLBACK_SELECTION_MIN_SIZE, svgBounds.width);
+        const bottom = clamp(rawBottom, y + FALLBACK_SELECTION_MIN_SIZE, svgBounds.height);
         return {
           x,
           y,
           width: right - x,
           height: bottom - y,
+        };
+      }
+
+      function selectionVerticalBounds(selection, fallbackBounds) {
+        const bounds = selection.bounds;
+        if (
+          Number.isFinite(bounds?.y) &&
+          Number.isFinite(bounds?.height) &&
+          bounds.height > 0
+        ) {
+          return {
+            y: bounds.y,
+            height: bounds.height,
+          };
+        }
+        return {
+          y: fallbackBounds.y - FALLBACK_SELECTION_VERTICAL_PADDING,
+          height: fallbackBounds.height + FALLBACK_SELECTION_VERTICAL_PADDING * 2,
         };
       }
 

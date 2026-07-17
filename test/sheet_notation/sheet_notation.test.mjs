@@ -254,7 +254,7 @@ describe('voice mapping and VexFlow conversion', () => {
 
     assert.match(openSvg, /drum-open-hihat-markers/);
     assert.match(openSvg, /stroke-width="1\.85"/);
-    assert.match(openSvg, /<circle cx="32" cy="27\.5" r="5\.25"><\/circle>/);
+    assert.match(openSvg, /<circle cx="32" cy="25\.5" r="5\.25"><\/circle>/);
     assert.doesNotMatch(closedSvg, /drum-open-hihat-markers/);
   });
 
@@ -271,8 +271,8 @@ describe('voice mapping and VexFlow conversion', () => {
       { vexFlow: VF },
     );
 
-    assert.match(svg, /<circle cx="32" cy="27\.5" r="5\.25"><\/circle>/);
-    assert.doesNotMatch(svg, /cy="9\.5"/);
+    assert.match(svg, /<circle cx="32" cy="25\.5" r="5\.25"><\/circle>/);
+    assert.doesNotMatch(svg, /cy="7\.5"/);
   });
 
   test('cymbal voices keep x noteheads inside multi-voice beats', () => {
@@ -1049,8 +1049,19 @@ describe('svg rendering', () => {
       ghost: false,
       tie: false,
       selection: {
-        stemY1: -26,
-        stemY2: 46,
+        bounds: {
+          y: 12,
+          height: 95,
+        },
+        horizontalPadding: 13,
+        anchors: {
+          staff: {
+            staveTop: 10,
+            selectionTop: 12,
+            selectionBottom: 107,
+            stickingFallbackY: -18,
+          },
+        },
       },
     });
     assert.equal(VF.calls.notes[0].attributes['data-drum-note-index'], '0');

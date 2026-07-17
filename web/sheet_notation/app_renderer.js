@@ -262,15 +262,18 @@ const DEFAULT_RENDER_OPTIONS = Object.freeze({
 const STICKING_FONT_FAMILY = 'Arial';
 const STICKING_FONT_SIZE = 12;
 const STICKING_FONT_WEIGHT = '';
-const STICKING_TOP_TEXT_OFFSET = 18;
+// Symbol spacing constants are semantic distances applied to anchors derived
+// from VexFlow geometry. They are intentionally centralized so new symbols can
+// reuse anchors without trial-and-error offsets in placement code.
+const STICKING_LABEL_GAP_ABOVE_TOP_TEXT = 18;
+const STICKING_LABEL_FALLBACK_GAP_ABOVE_STAVE = 28;
 const OPEN_HIHAT_MARKER_RADIUS = 5.25;
 const OPEN_HIHAT_MARKER_STROKE_WIDTH = 1.85;
-const OPEN_HIHAT_NOTEHEAD_HALF_HEIGHT = 5;
 const OPEN_HIHAT_MARKER_CLEARANCE = 4.25;
-const OPEN_HIHAT_MARKER_CENTER_OFFSET =
-  OPEN_HIHAT_NOTEHEAD_HALF_HEIGHT +
-  OPEN_HIHAT_MARKER_RADIUS +
-  OPEN_HIHAT_MARKER_CLEARANCE;
+const FALLBACK_NOTEHEAD_SIZE = 10;
+const SELECTION_EVENT_HORIZONTAL_PADDING = 13;
+const SELECTION_EVENT_TOP_FROM_STAVE_TOP = 2;
+const SELECTION_EVENT_HEIGHT = 95;
 
 function renderDrumNotationSvg(documentJson, options = {}) {
   return renderDrumNotationSvgWithMetadata(documentJson, options).svg;
@@ -655,7 +658,7 @@ function appendStickingLabels(host, VF, vexNotes, system, layout) {
   const labels = vexNotes
     .map((note, index) => ({
       text: note.__drumcabularyStickingLabel,
-      x: stickingLabelX(VF, note),
+      x: eventCenterX(VF, note),
       entry: system.entries[index],
     }))
     .filter((label) =>
@@ -696,37 +699,99 @@ function openHiHatMarkersForEntry(VF, note, entry, layout) {
   return voices
     .map((voice, voiceIndex) => {
       if (voice !== 'openHiHat') return null;
+      const anchors = noteAnchorsForVoice(VF, note, voiceIndex, layout);
+      const center = pointAbove(
+        anchors.notehead.top,
+        OPEN_HIHAT_MARKER_RADIUS + OPEN_HIHAT_MARKER_CLEARANCE,
+      );
       return {
-        x: noteheadCenterX(VF, note, voiceIndex),
-        y: openHiHatMarkerY(note, voiceIndex, layout),
+        x: center.x,
+        y: center.y,
         radius: OPEN_HIHAT_MARKER_RADIUS,
       };
     })
     .filter((marker) => marker != null);
 }
 
-function openHiHatMarkerY(note, voiceIndex, layout) {
-  const noteheadY = noteheadCenterY(note, voiceIndex, layout);
-  return noteheadY - OPEN_HIHAT_MARKER_CENTER_OFFSET;
+function noteAnchorsForVoice(VF, note, voiceIndex, layout) {
+  return {
+    staff: staffAnchorsForLayout(layout),
+    notehead: noteheadAnchorsForVoice(VF, note, voiceIndex, layout),
+  };
+}
+
+function noteheadAnchorsForVoice(VF, note, voiceIndex, layout) {
+  const center = {
+    x: noteheadCenterX(VF, note, voiceIndex),
+    y: noteheadCenterY(note, voiceIndex, layout),
+  };
+  const size = noteheadSize(note, voiceIndex);
+  const halfWidth = size.width / 2;
+  const halfHeight = size.height / 2;
+  const bounds = {
+    x: center.x - halfWidth,
+    y: center.y - halfHeight,
+    width: size.width,
+    height: size.height,
+  };
+  return {
+    center,
+    top: { x: center.x, y: bounds.y },
+    bottom: { x: center.x, y: bounds.y + bounds.height },
+    left: { x: bounds.x, y: center.y },
+    right: { x: bounds.x + bounds.width, y: center.y },
+    bounds,
+  };
+}
+
+function staffAnchorsForLayout(layout) {
+  return {
+    staveTop: layout.y,
+    selectionTop: layout.y + SELECTION_EVENT_TOP_FROM_STAVE_TOP,
+    selectionBottom:
+      layout.y + SELECTION_EVENT_TOP_FROM_STAVE_TOP + SELECTION_EVENT_HEIGHT,
+    stickingFallbackY: layout.y - STICKING_LABEL_FALLBACK_GAP_ABOVE_STAVE,
+  };
+}
+
+function selectionBoundsForLayout(layout) {
+  const staff = staffAnchorsForLayout(layout);
+  return {
+    y: staff.selectionTop,
+    height: staff.selectionBottom - staff.selectionTop,
+  };
+}
+
+function pointAbove(anchor, gap) {
+  return {
+    x: anchor.x,
+    y: anchor.y - gap,
+  };
 }
 
 function noteheadCenterY(note, voiceIndex, layout) {
-  if (typeof note.getYs === 'function') {
-    try {
-      const ys = note.getYs();
-      if (Array.isArray(ys) && ys.length > 0) {
-        const voiceY = ys[voiceIndex];
-        if (Number.isFinite(voiceY)) return voiceY;
-        const topY = Math.min(...ys.filter((value) => Number.isFinite(value)));
-        if (Number.isFinite(topY)) return topY;
-      }
-    } catch {
-      // Fall through to a stable staff-relative position.
-    }
+  const ys = noteYPositions(note);
+  if (ys.length > 0) {
+    const voiceY = ys[voiceIndex];
+    if (Number.isFinite(voiceY)) return voiceY;
+    const topY = Math.min(...ys.filter((value) => Number.isFinite(value)));
+    if (Number.isFinite(topY)) return topY;
   }
   const noteHead = noteheadForVoice(note, voiceIndex);
   if (Number.isFinite(noteHead?.y)) return noteHead.y;
-  return layout.y + 18 + OPEN_HIHAT_MARKER_CENTER_OFFSET;
+  return staffAnchorsForLayout(layout).selectionTop;
+}
+
+function noteYPositions(note) {
+  if (typeof note?.getYs !== 'function') return [];
+  try {
+    const ys = note.getYs();
+    return Array.isArray(ys)
+      ? ys.filter((value) => Number.isFinite(value))
+      : [];
+  } catch {
+    return [];
+  }
 }
 
 function noteheadCenterX(VF, note, voiceIndex) {
@@ -734,13 +799,47 @@ function noteheadCenterX(VF, note, voiceIndex) {
   const noteHeadX = noteHeadCenterX(noteHead);
   if (Number.isFinite(noteHeadX)) return noteHeadX;
 
+  const bounds = noteheadHorizontalBounds(note);
+  if (bounds != null) return bounds.x + bounds.width / 2;
+
+  return eventCenterX(VF, note);
+}
+
+function noteheadSize(note, voiceIndex) {
+  const noteHead = noteheadForVoice(note, voiceIndex);
+  const width = noteheadWidth(noteHead) ?? noteheadHorizontalBounds(note)?.width;
+  const normalizedWidth = Number.isFinite(width) && width > 0
+    ? width
+    : FALLBACK_NOTEHEAD_SIZE;
+  return {
+    width: normalizedWidth,
+    height: normalizedWidth,
+  };
+}
+
+function noteheadWidth(noteHead) {
+  if (noteHead == null) return null;
+  try {
+    const width =
+      typeof noteHead.getGlyphWidth === 'function'
+        ? noteHead.getGlyphWidth()
+        : noteHead.width;
+    return Number.isFinite(width) && width > 0 ? width : null;
+  } catch {
+    return null;
+  }
+}
+
+function noteheadHorizontalBounds(note) {
   const begin = noteheadBoundaryX(note, 'getNoteHeadBeginX');
   const end = noteheadBoundaryX(note, 'getNoteHeadEndX');
   if (Number.isFinite(begin) && Number.isFinite(end) && end > begin) {
-    return begin + (end - begin) / 2;
+    return {
+      x: begin,
+      width: end - begin,
+    };
   }
-
-  return stickingLabelX(VF, note);
+  return null;
 }
 
 function noteheadForVoice(note, voiceIndex) {
@@ -760,10 +859,7 @@ function noteHeadCenterX(noteHead) {
       typeof noteHead.getXShift === 'function'
         ? noteHead.getXShift()
         : noteHead.x_shift ?? 0;
-    const width =
-      typeof noteHead.getGlyphWidth === 'function'
-        ? noteHead.getGlyphWidth()
-        : noteHead.width;
+    const width = noteheadWidth(noteHead);
     if (Number.isFinite(x) && Number.isFinite(width)) {
       return x + (Number.isFinite(xShift) ? xShift : 0) + width / 2;
     }
@@ -783,12 +879,12 @@ function noteheadBoundaryX(note, methodName) {
   }
 }
 
-function stickingLabelX(VF, note) {
-  if (typeof note.getCenterGlyphX === 'function') {
+function eventCenterX(VF, note) {
+  if (typeof note?.getCenterGlyphX === 'function') {
     const value = note.getCenterGlyphX();
     if (Number.isFinite(value)) return value;
   }
-  if (typeof note.getModifierStartXY === 'function') {
+  if (typeof note?.getModifierStartXY === 'function') {
     const position = VF.ModifierPosition?.ABOVE ?? VF.Modifier?.Position?.ABOVE;
     if (position != null) {
       try {
@@ -799,7 +895,7 @@ function stickingLabelX(VF, note) {
       }
     }
   }
-  if (typeof note.getAbsoluteX === 'function') {
+  if (typeof note?.getAbsoluteX === 'function') {
     try {
       const absoluteX = note.getAbsoluteX();
       const xShift =
@@ -826,8 +922,10 @@ function stickingLabelY(vexNotes, layout) {
       }
     })
     .filter((value) => Number.isFinite(value));
-  if (noteYs.length > 0) return Math.min(...noteYs) - STICKING_TOP_TEXT_OFFSET;
-  return layout.y - 10 - STICKING_TOP_TEXT_OFFSET;
+  if (noteYs.length > 0) {
+    return Math.min(...noteYs) - STICKING_LABEL_GAP_ABOVE_TOP_TEXT;
+  }
+  return staffAnchorsForLayout(layout).stickingFallbackY;
 }
 
 function appendSvgTextElements(host, labels) {
@@ -1166,6 +1264,8 @@ function noteMetadataForEntry(entry, layout) {
   const sticking = entry.note.sticking == null
     ? entry.note.sticking
     : String(entry.note.sticking).toUpperCase();
+  const staff = staffAnchorsForLayout(layout);
+  const selectionBounds = selectionBoundsForLayout(layout);
   return {
     index: entry.index,
     measureIndex: entry.measureIndex,
@@ -1179,8 +1279,11 @@ function noteMetadataForEntry(entry, layout) {
     ghost: entry.note.ghost,
     tie: entry.note.tie,
     selection: {
-      stemY1: layout.y - 36,
-      stemY2: layout.y + 36,
+      bounds: selectionBounds,
+      horizontalPadding: SELECTION_EVENT_HORIZONTAL_PADDING,
+      anchors: {
+        staff,
+      },
     },
   };
 }

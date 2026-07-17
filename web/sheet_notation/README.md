@@ -91,6 +91,37 @@ const { svg, notes } = renderDrumNotationSvgWithMetadata(documentJson, options);
 The metadata result exposes selectable note information for the Flutter WebView
 integration.
 
+## Geometry Anchors
+
+`renderer.js` positions renderer-owned symbols from anchors derived from the
+rendered VexFlow note geometry. Callers should not place musical symbols by
+guessing offsets from the stave origin.
+
+Available note-level anchors include:
+
+- `notehead.center`
+- `notehead.top`
+- `notehead.bottom`
+- `notehead.left`
+- `notehead.right`
+- `notehead.bounds`
+- `staff.staveTop`
+- `staff.selectionTop`
+- `staff.selectionBottom`
+
+The coordinate system is the SVG/VexFlow coordinate system: `x` increases to the
+right and `y` increases downward. To place a symbol above a notehead, use the
+notehead anchor and a named semantic gap. For example, the open hi-hat marker is
+centered above `notehead.top` by `markerRadius + markerClearance`; it is not
+positioned from the stem, beam, or an arbitrary stave coordinate.
+
+Named spacing constants such as `OPEN_HIHAT_MARKER_CLEARANCE`,
+`STICKING_LABEL_GAP_ABOVE_TOP_TEXT`, and `SELECTION_EVENT_HORIZONTAL_PADDING`
+are allowed when they describe engraving spacing. Avoid inline values such as
+`x + 7` or `y - 22` in symbol placement. If a future symbol needs collision
+avoidance, add it as a resolver that consumes these same anchors rather than
+introducing another coordinate model.
+
 ## Renderer Options
 
 Common options:
