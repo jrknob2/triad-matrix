@@ -60,6 +60,37 @@ void main() {
       expect(harness.writes, <String>[_frame('CUE,KICK', 'CUE,HIHAT,R')]);
     });
 
+    test('Starting serializes ghost, accent, and flam stroke cues', () async {
+      final _GuidedHarness harness = await _GuidedHarness.connected(
+        events: <GuidedPracticeExpectedEvent>[
+          GuidedPracticeExpectedEvent.fromCues(const <LedCue>[
+            LedCue(DrumVoice.snare, sticking: StickingCue.ghostRight),
+          ]),
+          GuidedPracticeExpectedEvent.fromCues(const <LedCue>[
+            LedCue(DrumVoice.snare, sticking: StickingCue.accentRight),
+          ]),
+          GuidedPracticeExpectedEvent.fromCues(const <LedCue>[
+            LedCue(DrumVoice.snare, sticking: StickingCue.flamRight),
+          ]),
+          GuidedPracticeExpectedEvent.fromCues(const <LedCue>[
+            LedCue(DrumVoice.snare, sticking: StickingCue.flamLeft),
+          ]),
+        ],
+      );
+
+      harness.controller.start();
+      harness.hit(DrumVoice.snare);
+      harness.hit(DrumVoice.snare);
+      harness.hit(DrumVoice.snare);
+
+      expect(harness.writes, <String>[
+        _frame('CUE,SNARE,(R)'),
+        _frame('CUE,SNARE,^R'),
+        _frame('CUE,SNARE,(L)R'),
+        _frame('CUE,SNARE,(R)L'),
+      ]);
+    });
+
     test('Correct single voice advances immediately', () async {
       final _GuidedHarness harness = await _GuidedHarness.connected(
         events: <GuidedPracticeExpectedEvent>[
@@ -414,7 +445,7 @@ void main() {
         ],
       );
       expect(events[0].cues.single.sticking, StickingCue.ghostRight);
-      expect(events[1].cues.single.sticking, StickingCue.right);
+      expect(events[1].cues.single.sticking, StickingCue.accentRight);
     });
 
     test('Simultaneous notation becomes one expected voice group', () {
@@ -459,15 +490,22 @@ void main() {
       expect(events[1].cueForVoice(DrumVoice.tom1)?.sticking, StickingCue.left);
     });
 
-    test('Both-hand and flam sticking labels convert to cue tokens', () {
-      final List<GuidedPracticeExpectedEvent> events = builder.buildForExercise(
-        _exercise(pattern: '[S] [S] [S]', sticking: 'B FL FR'),
-      );
+    test(
+      'Both-hand and flam sticking labels convert to semantic cue tokens',
+      () {
+        final List<GuidedPracticeExpectedEvent> events = builder
+            .buildForExercise(
+              _exercise(pattern: '[S] [S] [S]', sticking: 'B FL FR'),
+            );
 
-      expect(events[0].cues.single.sticking, StickingCue.both);
-      expect(events[1].cues.single.sticking, StickingCue.flamLeft);
-      expect(events[2].cues.single.sticking, StickingCue.flamRight);
-    });
+        expect(events[0].cues.single.sticking, StickingCue.both);
+        expect(events[1].cues.single.sticking, StickingCue.flamLeft);
+        expect(events[2].cues.single.sticking, StickingCue.flamRight);
+        expect(events[0].cues.single.sticking?.protocolValue, 'LR');
+        expect(events[1].cues.single.sticking?.protocolValue, '(R)L');
+        expect(events[2].cues.single.sticking?.protocolValue, '(L)R');
+      },
+    );
 
     test('Sectioned notation records the owning section for highlights', () {
       final List<GuidedPracticeExpectedEvent> events = builder.buildForExercise(

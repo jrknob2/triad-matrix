@@ -11,6 +11,7 @@ import '../midi/midi_input_service.dart';
 import '../midi/serial_led_controller.dart';
 import '../midi/shared_midi_input_service.dart';
 import '../midi/shared_serial_led_controller.dart';
+import '../practice/sticking_cue.dart';
 
 class HardwareMidiSettingsScreen extends StatefulWidget {
   const HardwareMidiSettingsScreen({super.key});
@@ -156,9 +157,10 @@ class _HardwareMidiSettingsScreenState
     if (!_ledController.isConnected) return;
     setState(() => _testingLeds = true);
     _ledController.sendCueFrame(const <LedCue>[
-      LedCue(DrumVoice.snare),
+      LedCue(DrumVoice.snare, sticking: StickingCue.right),
       LedCue(DrumVoice.kick),
-      LedCue(DrumVoice.hiHatClosed),
+      LedCue(DrumVoice.hiHatClosed, sticking: StickingCue.ghostLeft),
+      LedCue(DrumVoice.crash, sticking: StickingCue.accentRight),
     ]);
     await Future<void>.delayed(const Duration(milliseconds: 700));
     _ledController.sendCommand('CLEAR');

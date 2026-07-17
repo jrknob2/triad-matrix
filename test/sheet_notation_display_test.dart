@@ -172,20 +172,44 @@ void main() {
     expect(DrumSheetPatternParser.serialize(edited), '[S:^R] [T2:(L)] [HH]');
   });
 
-  test('ghost strokes become dim sticking cues in playback plans', () {
+  test(
+    'ghost and accent strokes become semantic sticking cues in playback plans',
+    () {
+      final DrumSheetAudioPreviewPlan plan =
+          buildSheetNotationAudioPreviewPlanDetails(
+            DrumSheetNotationDocument.fromPattern('[S:(L)] [OHH:(R) K] [S:^R]'),
+          );
+
+      expect(plan.audioPlan.cues[0].sticking, StickingCue.ghostLeft);
+      expect(
+        plan.audioPlan.cues
+            .where((cue) => cue.tokenIndex == 1)
+            .map((cue) => cue.sticking)
+            .toList(),
+        contains(StickingCue.ghostRight),
+      );
+      expect(plan.audioPlan.cues.last.sticking, StickingCue.accentRight);
+      expect(plan.audioPlan.cues[0].sticking?.protocolValue, '(L)');
+      expect(plan.audioPlan.cues.last.sticking?.protocolValue, '^R');
+    },
+  );
+
+  test('multi-stroke ghost and accent phrases produce separate cue frames', () {
     final DrumSheetAudioPreviewPlan plan =
         buildSheetNotationAudioPreviewPlanDetails(
-          DrumSheetNotationDocument.fromPattern('[S:(L)] [OHH:(R) K]'),
+          DrumSheetNotationDocument.fromPattern('[S:(L)(L)^R]'),
         );
 
-    expect(plan.audioPlan.cues[0].sticking, StickingCue.ghostLeft);
+    expect(plan.audioPlan.cues, hasLength(3));
     expect(
-      plan.audioPlan.cues
-          .where((cue) => cue.tokenIndex == 1)
-          .map((cue) => cue.sticking)
-          .toList(),
-      contains(StickingCue.ghostRight),
+      plan.audioPlan.cues.map((cue) => cue.sticking?.protocolValue).toList(),
+      <String?>['(L)', '(L)', '^R'],
     );
+    expect(plan.audioPlan.cues.map((cue) => cue.tokenIndex).toList(), <int>[
+      0,
+      1,
+      2,
+    ]);
   });
 
   test('lenient parsing tolerates incomplete editing states', () {

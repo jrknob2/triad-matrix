@@ -67,6 +67,10 @@ class DrumSheetStrokeDescriptor {
         StickingCue.ghostLeft,
       (DrumSheetStrokeHand.right, DrumSheetStrokeArticulation.ghost) =>
         StickingCue.ghostRight,
+      (DrumSheetStrokeHand.left, DrumSheetStrokeArticulation.accent) =>
+        StickingCue.accentLeft,
+      (DrumSheetStrokeHand.right, DrumSheetStrokeArticulation.accent) =>
+        StickingCue.accentRight,
       (DrumSheetStrokeHand.left, _) => StickingCue.left,
       (DrumSheetStrokeHand.right, _) => StickingCue.right,
     };

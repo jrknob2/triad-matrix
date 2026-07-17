@@ -38,6 +38,23 @@ void main() {
       ]);
     });
 
+    test('playback serializes ghost, accent, and flam strokes', () async {
+      final _PlaybackLedHarness harness = await _PlaybackLedHarness.connected();
+
+      harness.output
+        ..triggerCue(_cue(DrumVoiceV1.snare, sticking: StickingCue.ghostRight))
+        ..triggerCue(_cue(DrumVoiceV1.snare, sticking: StickingCue.accentRight))
+        ..triggerCue(_cue(DrumVoiceV1.snare, sticking: StickingCue.flamRight))
+        ..triggerCue(_cue(DrumVoiceV1.snare, sticking: StickingCue.flamLeft));
+
+      expect(harness.platform.lastConnection.writes, <String>[
+        _frame('CUE,SNARE,(R)'),
+        _frame('CUE,SNARE,^R'),
+        _frame('CUE,SNARE,(L)R'),
+        _frame('CUE,SNARE,(R)L'),
+      ]);
+    });
+
     test('disabled playback sends nothing', () async {
       final _PlaybackLedHarness harness = await _PlaybackLedHarness.connected(
         enabled: false,

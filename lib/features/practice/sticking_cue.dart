@@ -1,18 +1,122 @@
-enum StickingCue {
-  left('L'),
-  right('R'),
-  // The app keeps ghost sticking semantically distinct, but the current ESP32
-  // protocol only accepts L/R/B/FL/FR sticking tokens. Ghost cues therefore
-  // serialize to their supported hand token until firmware exposes dim tokens.
-  ghostLeft('L'),
-  ghostRight('R'),
-  both('B'),
-  flamLeft('FL'),
-  flamRight('FR');
+enum LedStrokeHand { left, right }
 
-  final String protocolValue;
+enum LedStrokeArticulation { normal, ghost, accent }
 
-  const StickingCue(this.protocolValue);
+class LedStroke {
+  final LedStrokeHand hand;
+  final LedStrokeArticulation articulation;
+
+  const LedStroke({
+    required this.hand,
+    this.articulation = LedStrokeArticulation.normal,
+  });
+
+  String get protocolValue {
+    final String handLabel = hand == LedStrokeHand.left ? 'L' : 'R';
+    return switch (articulation) {
+      LedStrokeArticulation.normal => handLabel,
+      LedStrokeArticulation.ghost => '($handLabel)',
+      LedStrokeArticulation.accent => '^$handLabel',
+    };
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is LedStroke &&
+        other.hand == hand &&
+        other.articulation == articulation;
+  }
+
+  @override
+  int get hashCode => Object.hash(hand, articulation);
+}
+
+class StickingCue {
+  static const StickingCue left = StickingCue._(<LedStroke>[
+    LedStroke(hand: LedStrokeHand.left),
+  ]);
+  static const StickingCue right = StickingCue._(<LedStroke>[
+    LedStroke(hand: LedStrokeHand.right),
+  ]);
+  static const StickingCue ghostLeft = StickingCue._(<LedStroke>[
+    LedStroke(
+      hand: LedStrokeHand.left,
+      articulation: LedStrokeArticulation.ghost,
+    ),
+  ]);
+  static const StickingCue ghostRight = StickingCue._(<LedStroke>[
+    LedStroke(
+      hand: LedStrokeHand.right,
+      articulation: LedStrokeArticulation.ghost,
+    ),
+  ]);
+  static const StickingCue accentLeft = StickingCue._(<LedStroke>[
+    LedStroke(
+      hand: LedStrokeHand.left,
+      articulation: LedStrokeArticulation.accent,
+    ),
+  ]);
+  static const StickingCue accentRight = StickingCue._(<LedStroke>[
+    LedStroke(
+      hand: LedStrokeHand.right,
+      articulation: LedStrokeArticulation.accent,
+    ),
+  ]);
+
+  /// Legacy both-hands cue. Canonical output is the semantic sequence `LR`.
+  static const StickingCue both = StickingCue._(<LedStroke>[
+    LedStroke(hand: LedStrokeHand.left),
+    LedStroke(hand: LedStrokeHand.right),
+  ]);
+
+  /// Legacy `FL` input: right grace stroke, left primary stroke.
+  static const StickingCue flamLeft = StickingCue._(<LedStroke>[
+    LedStroke(
+      hand: LedStrokeHand.right,
+      articulation: LedStrokeArticulation.ghost,
+    ),
+    LedStroke(hand: LedStrokeHand.left),
+  ]);
+
+  /// Legacy `FR` input: left grace stroke, right primary stroke.
+  static const StickingCue flamRight = StickingCue._(<LedStroke>[
+    LedStroke(
+      hand: LedStrokeHand.left,
+      articulation: LedStrokeArticulation.ghost,
+    ),
+    LedStroke(hand: LedStrokeHand.right),
+  ]);
+
+  final List<LedStroke> strokes;
+
+  const StickingCue._(this.strokes);
+
+  factory StickingCue.fromStrokes(Iterable<LedStroke> strokes) {
+    return StickingCue._(List<LedStroke>.unmodifiable(strokes));
+  }
+
+  String get protocolValue {
+    return strokes.map((LedStroke stroke) => stroke.protocolValue).join();
+  }
+
+  StickingCue merge(StickingCue other) {
+    if (this == other) return this;
+    return StickingCue.fromStrokes(<LedStroke>[...strokes, ...other.strokes]);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (other is! StickingCue || other.strokes.length != strokes.length) {
+      return false;
+    }
+    for (int index = 0; index < strokes.length; index += 1) {
+      if (other.strokes[index] != strokes[index]) return false;
+    }
+    return true;
+  }
+
+  @override
+  int get hashCode => Object.hashAll(strokes);
 }
 
 StickingCue? stickingCueFromText(
@@ -25,24 +129,59 @@ StickingCue? stickingCueFromText(
     '',
   );
   if (normalized.isEmpty) return null;
-  if (normalized == '(L)') return StickingCue.ghostLeft;
-  if (normalized == '(R)') return StickingCue.ghostRight;
-  if (normalized == '(R)L' || normalized == 'FL') {
-    return StickingCue.flamLeft;
-  }
-  if (normalized == '(L)R' || normalized == 'FR') {
-    return StickingCue.flamRight;
-  }
+  if (normalized == 'FL') return StickingCue.flamLeft;
+  if (normalized == 'FR') return StickingCue.flamRight;
   if (flam && normalized == 'L') return StickingCue.flamLeft;
   if (flam && normalized == 'R') return StickingCue.flamRight;
-  if (normalized == 'B' || normalized == 'LR' || normalized == 'RL') {
-    return StickingCue.both;
-  }
+  if (normalized == 'B') return StickingCue.both;
   if (normalized == 'L') {
     return ghost ? StickingCue.ghostLeft : StickingCue.left;
   }
   if (normalized == 'R') {
     return ghost ? StickingCue.ghostRight : StickingCue.right;
   }
+  final StickingCue? parsed = _parseSemanticStrokeSequence(normalized);
+  if (parsed != null) return parsed;
   return null;
+}
+
+StickingCue? _parseSemanticStrokeSequence(String value) {
+  final List<LedStroke> strokes = <LedStroke>[];
+  for (int index = 0; index < value.length;) {
+    final String char = value[index];
+    if (char == '^') {
+      if (index + 1 >= value.length) return null;
+      final LedStrokeHand? hand = _ledStrokeHandFromText(value[index + 1]);
+      if (hand == null) return null;
+      strokes.add(
+        LedStroke(hand: hand, articulation: LedStrokeArticulation.accent),
+      );
+      index += 2;
+      continue;
+    }
+    if (char == '(') {
+      if (index + 2 >= value.length || value[index + 2] != ')') return null;
+      final LedStrokeHand? hand = _ledStrokeHandFromText(value[index + 1]);
+      if (hand == null) return null;
+      strokes.add(
+        LedStroke(hand: hand, articulation: LedStrokeArticulation.ghost),
+      );
+      index += 3;
+      continue;
+    }
+    final LedStrokeHand? hand = _ledStrokeHandFromText(char);
+    if (hand == null) return null;
+    strokes.add(LedStroke(hand: hand));
+    index += 1;
+  }
+  if (strokes.isEmpty) return null;
+  return StickingCue.fromStrokes(strokes);
+}
+
+LedStrokeHand? _ledStrokeHandFromText(String value) {
+  return switch (value.toUpperCase()) {
+    'L' => LedStrokeHand.left,
+    'R' => LedStrokeHand.right,
+    _ => null,
+  };
 }

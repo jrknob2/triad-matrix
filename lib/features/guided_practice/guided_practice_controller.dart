@@ -100,13 +100,7 @@ class GuidedPracticeExpectedEvent {
 StickingCue? _mergeStickingCue(StickingCue? current, StickingCue? next) {
   if (current == null) return next;
   if (next == null || next == current) return current;
-  if ((current == StickingCue.left && next == StickingCue.right) ||
-      (current == StickingCue.right && next == StickingCue.left) ||
-      current == StickingCue.both ||
-      next == StickingCue.both) {
-    return StickingCue.both;
-  }
-  return current;
+  return current.merge(next);
 }
 
 @immutable

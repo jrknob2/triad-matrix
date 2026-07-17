@@ -307,12 +307,46 @@ The physical LED hardware has one hi-hat location.
 
 Both `HH` and `OHH` map to the firmware command `HIHAT`.
 
+Atomic cue frames use the controller protocol:
+
+```text
+FRAME_BEGIN
+CUE,<VOICE>[,<STROKE_SEQUENCE>]
+FRAME_END
+```
+
+The optional third field uses the same semantic stroke notation as the
+voice-first notation language:
+
+| Stroke | Meaning |
+| --- | --- |
+| `R` | normal right-hand cue |
+| `L` | normal left-hand cue |
+| `(R)` | ghost/dim right-hand cue |
+| `(L)` | ghost/dim left-hand cue |
+| `^R` | accented right-hand cue |
+| `^L` | accented left-hand cue |
+
+Adjacent strokes in one `CUE` field are illuminated together. For example,
+`(L)R` means a dim left cue and normal right cue in the same displayed event,
+and `(R)^L` means a dim right cue with accented left cue. Sequential notation
+strokes normally expand into separate playback or Guided Practice events and
+therefore produce separate cue frames.
+
+`FR` and `FL` are deprecated legacy controller aliases. Drumcabulary may read
+them in old fixtures or diagnostics, but app-generated commands emit only the
+canonical semantic stroke syntax. Direct live MIDI hit commands such as
+`SNARE`, `KICK`, and `HIHAT` remain supported and are not cue frames.
+
 Examples:
 
 ```text
 [HH]      -> CUE,HIHAT
 [OHH]     -> CUE,HIHAT
 [OHH:R]   -> CUE,HIHAT,R
+[S:(R)]   -> CUE,SNARE,(R)
+[S:^R]    -> CUE,SNARE,^R
+[S:(L)R]  -> CUE,SNARE,(L)R
 [OHH K]   -> CUE,HIHAT and CUE,KICK in one atomic frame
 ```
 
