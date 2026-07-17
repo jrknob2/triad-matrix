@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import '../../features/app/app_formatters.dart';
 import '../../features/app/drumcabulary_ui.dart';
 import '../../features/app/drumcabulary_theme.dart';
-import '../../features/app/midi_diagnostic_action.dart';
 import '../../state/app_controller.dart';
 import '../../core/practice/practice_domain_v1.dart';
 import 'metronome_service.dart';
@@ -278,7 +277,6 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                   icon: const Icon(Icons.settings_outlined),
                   tooltip: 'Session settings',
                 ),
-                const MidiDiagnosticAppBarAction(),
               ],
             ),
           ),

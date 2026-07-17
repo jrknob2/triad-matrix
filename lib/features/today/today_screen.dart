@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../app/drumcabulary_theme.dart';
 import '../app/drumcabulary_ui.dart';
-import '../app/midi_diagnostic_action.dart';
 import '../coach/lesson_detail_screen.dart';
 import '../coach/lesson_plan.dart';
 import '../coach/lesson_plan_loader.dart';
@@ -210,10 +209,7 @@ class _SkillListScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final List<String> skills = data.library.skillsForLevel(level.id);
     return Scaffold(
-      appBar: AppBar(
-        title: Text(level.title),
-        actions: const <Widget>[MidiDiagnosticAppBarAction()],
-      ),
+      appBar: AppBar(title: Text(level.title)),
       body: DrumScreen(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
@@ -376,10 +372,7 @@ class _SkillLessonsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_labelFor(skill)),
-        actions: const <Widget>[MidiDiagnosticAppBarAction()],
-      ),
+      appBar: AppBar(title: Text(_labelFor(skill))),
       body: DrumScreen(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),

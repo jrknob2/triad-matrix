@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'midi_diagnostic_action.dart';
 import '../today/today_screen.dart';
 
 class AppShell extends StatelessWidget {
@@ -9,10 +8,7 @@ class AppShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Coach'),
-        actions: const <Widget>[MidiDiagnosticAppBarAction()],
-      ),
+      appBar: AppBar(title: const Text('Coach')),
       body: const TodayScreen(),
     );
   }

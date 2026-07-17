@@ -105,6 +105,16 @@ class MidiPatternCaptureController extends ChangeNotifier {
     return _generatedPattern;
   }
 
+  void clear() {
+    _liveUpdateTimer?.cancel();
+    _liveUpdateTimer = null;
+    _hits.clear();
+    _generatedPattern = '';
+    _tempoEstimate = null;
+    _startedAt = _isRecording ? _clock() : null;
+    notifyListeners();
+  }
+
   void capture(MidiDiagnosticEvent event) {
     if (!_isRecording) {
       return;

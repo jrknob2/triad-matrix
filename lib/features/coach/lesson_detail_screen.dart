@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 
 import '../app/drumcabulary_theme.dart';
 import '../app/drumcabulary_ui.dart';
-import '../app/midi_diagnostic_action.dart';
 import '../guided_practice/guided_practice_controller.dart';
 import '../guided_practice/guided_practice_sequence_builder.dart';
 import '../midi/drum_kit_mapper.dart';
@@ -87,10 +86,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
   Widget build(BuildContext context) {
     final Lesson lesson = widget.lesson;
     return Scaffold(
-      appBar: AppBar(
-        title: Text(lesson.title),
-        actions: const <Widget>[MidiDiagnosticAppBarAction()],
-      ),
+      appBar: AppBar(title: Text(lesson.title)),
       bottomNavigationBar: _LessonTempoFooter(
         bpm: _previewBpm,
         defaultBpm: _initialPreviewBpmFor(lesson),

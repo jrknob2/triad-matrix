@@ -4,9 +4,10 @@ import '../../core/practice/practice_domain_v1.dart';
 import '../../features/app/app_formatters.dart';
 import '../../features/app/app_runtime_flags.dart';
 import '../../features/app/drumcabulary_theme.dart';
-import '../../features/app/midi_diagnostic_action.dart';
 import '../../features/app/unsaved_changes_dialog.dart';
+import '../../features/hardware/hardware_capabilities.dart';
 import '../../state/app_controller.dart';
+import 'hardware_midi_settings_screen.dart';
 
 class AppSettingsScreen extends StatefulWidget {
   final AppController controller;
@@ -40,13 +41,26 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
         }
       },
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Settings'),
-          actions: const <Widget>[MidiDiagnosticAppBarAction()],
-        ),
+        appBar: AppBar(title: const Text('Settings')),
         body: ListView(
           padding: const EdgeInsets.all(16),
           children: <Widget>[
+            if (HardwareCapabilities.supportsDesktopHardware) ...<Widget>[
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.usb_rounded),
+                  title: const Text('Hardware & MIDI'),
+                  subtitle: const Text('Configure desktop MIDI and LEDs.'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const HardwareMidiSettingsScreen(),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),

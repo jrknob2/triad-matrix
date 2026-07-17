@@ -1,10 +1,17 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/practice/practice_domain_v1.dart';
 import '../../features/app/drumcabulary_theme.dart';
 import '../../features/app/drumcabulary_ui.dart';
-import '../../features/app/midi_diagnostic_action.dart';
+import '../../features/hardware/hardware_capabilities.dart';
+import '../../features/midi/drum_kit_mapper.dart';
+import '../../features/midi/midi_input_models.dart';
+import '../../features/midi/midi_input_service.dart';
+import '../../features/midi/midi_pattern_capture.dart';
+import '../../features/midi/shared_midi_input_service.dart';
 import '../../features/app/unsaved_changes_dialog.dart';
 import '../../state/app_controller.dart';
 import '../practice/widgets/pattern_text_styles.dart';
@@ -71,6 +78,10 @@ class _PatternScreenState extends State<PatternScreen> {
   late final TextEditingController _notesController;
   late final TextEditingController _patternController;
   late final FocusNode _patternFocusNode;
+  late final MidiPatternCaptureController _captureController;
+  MidiInputService? _midiInputService;
+  StreamSubscription<RawMidiEvent>? _midiCaptureSubscription;
+  final DrumKitMapper _drumKitMapper = const DrumKitMapper();
 
   final List<_PatternDraftSnapshot> _undoStack = <_PatternDraftSnapshot>[];
   String? _validationMessage;
@@ -81,6 +92,7 @@ class _PatternScreenState extends State<PatternScreen> {
   TextSelection _lastPatternSelection = const TextSelection.collapsed(
     offset: 0,
   );
+  String? _captureMessage;
 
   @override
   void initState() {
@@ -95,12 +107,24 @@ class _PatternScreenState extends State<PatternScreen> {
     _patternFocusNode = FocusNode();
     _patternController.addListener(_handlePatternControllerChanged);
     _patternFocusNode.addListener(_handlePatternFocusChanged);
+    _captureController = MidiPatternCaptureController()
+      ..addListener(_handleCaptureChanged);
+    if (HardwareCapabilities.supportsPatternMidiCapture) {
+      final MidiInputService service = SharedMidiInputService.instance;
+      _midiInputService = service;
+      unawaited(service.start());
+      _midiCaptureSubscription = service.events.listen(_handleMidiCaptureEvent);
+    }
   }
 
   @override
   void dispose() {
     _patternController.removeListener(_handlePatternControllerChanged);
     _patternFocusNode.removeListener(_handlePatternFocusChanged);
+    _midiCaptureSubscription?.cancel();
+    _captureController
+      ..removeListener(_handleCaptureChanged)
+      ..dispose();
     _titleController.dispose();
     _tagsController.dispose();
     _notesController.dispose();
@@ -142,7 +166,6 @@ class _PatternScreenState extends State<PatternScreen> {
                   icon: const Icon(Icons.help_outline),
                   tooltip: 'Notation Grammar',
                 ),
-                const MidiDiagnosticAppBarAction(),
               ],
             ),
             body: ListView(
@@ -208,6 +231,19 @@ class _PatternScreenState extends State<PatternScreen> {
                         audioPreviewAccentVoice:
                             widget.controller.profile.accentVoice,
                       ),
+                      if (HardwareCapabilities.supportsPatternMidiCapture) ...[
+                        const SizedBox(height: 12),
+                        _PatternMidiCapturePanel(
+                          controller: _captureController,
+                          midiService: _midiInputService,
+                          message: _captureMessage,
+                          onRecord: _startMidiCapture,
+                          onStop: _stopMidiCapture,
+                          onClear: _clearMidiCapture,
+                          onReplace: _replacePatternWithCapture,
+                          onAppend: _appendCapturedPattern,
+                        ),
+                      ],
                       const SizedBox(height: 10),
                       _PatternContextPills(
                         selected: _editContext,
@@ -267,6 +303,90 @@ class _PatternScreenState extends State<PatternScreen> {
     setState(() {
       _notationSelectionOwnsPatternRange = false;
       _selectedNoteIndexes = selectedIndexes;
+    });
+  }
+
+  void _handleCaptureChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _handleMidiCaptureEvent(RawMidiEvent raw) {
+    final MidiInputService? service = _midiInputService;
+    if (service == null || !_captureController.isRecording) return;
+    final DrumInputEvent drum = _drumKitMapper.map(raw);
+    if (drum.voice == DrumVoice.unknown) {
+      if (raw.messageType == MidiMessageType.noteOn && raw.velocity > 0) {
+        setState(() {
+          _captureMessage = 'Unmapped MIDI note ${raw.note}; hit ignored.';
+        });
+      }
+      return;
+    }
+    _captureController.capture(MidiDiagnosticEvent(raw: raw, drum: drum));
+  }
+
+  Future<void> _startMidiCapture() async {
+    final MidiInputService? service = _midiInputService;
+    if (service == null) return;
+    if (service.status != MidiInputStatus.connected) {
+      setState(() {
+        _captureMessage = 'Connect a MIDI input in Settings first.';
+      });
+      return;
+    }
+    _captureController.record();
+    setState(() {
+      _captureMessage = 'Recording MIDI hits...';
+    });
+  }
+
+  void _stopMidiCapture() {
+    final String pattern = _captureController.stop();
+    setState(() {
+      _captureMessage = pattern.isEmpty
+          ? 'No supported MIDI hits captured.'
+          : 'Capture ready. Replace or append it to the pattern.';
+    });
+  }
+
+  void _clearMidiCapture() {
+    _captureController.clear();
+    setState(() {
+      _captureMessage = null;
+    });
+  }
+
+  void _replacePatternWithCapture() {
+    final String captured = _captureController.generatedPattern.trim();
+    if (captured.isEmpty) return;
+    _recordUndo();
+    _patternController.value = TextEditingValue(
+      text: captured,
+      selection: TextSelection.collapsed(offset: captured.length),
+    );
+    _validatePattern(captured, lenient: true);
+    setState(() {
+      _notationSelectionOwnsPatternRange = false;
+      _selectedNoteIndexes = const <int>{};
+      _captureMessage = 'Captured pattern replaced the editor text.';
+    });
+  }
+
+  void _appendCapturedPattern() {
+    final String captured = _captureController.generatedPattern.trim();
+    if (captured.isEmpty) return;
+    final String existing = _patternController.text.trim();
+    final String next = existing.isEmpty ? captured : '$existing $captured';
+    _recordUndo();
+    _patternController.value = TextEditingValue(
+      text: next,
+      selection: TextSelection.collapsed(offset: next.length),
+    );
+    _validatePattern(next, lenient: true);
+    setState(() {
+      _notationSelectionOwnsPatternRange = false;
+      _selectedNoteIndexes = const <int>{};
+      _captureMessage = 'Captured pattern appended to the editor text.';
     });
   }
 
@@ -860,6 +980,138 @@ class _PatternScreenState extends State<PatternScreen> {
       },
     );
   }
+}
+
+class _PatternMidiCapturePanel extends StatelessWidget {
+  final MidiPatternCaptureController controller;
+  final MidiInputService? midiService;
+  final String? message;
+  final VoidCallback onRecord;
+  final VoidCallback onStop;
+  final VoidCallback onClear;
+  final VoidCallback onReplace;
+  final VoidCallback onAppend;
+
+  const _PatternMidiCapturePanel({
+    required this.controller,
+    required this.midiService,
+    required this.message,
+    required this.onRecord,
+    required this.onStop,
+    required this.onClear,
+    required this.onReplace,
+    required this.onAppend,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final MidiInputStatus? status = midiService?.status;
+    final bool connected = status == MidiInputStatus.connected;
+    final bool hasCapture = controller.generatedPattern.trim().isNotEmpty;
+    return DrumPanel(
+      tone: DrumPanelTone.warm,
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              const Expanded(child: DrumSectionTitle(text: 'MIDI Capture')),
+              Text(
+                _midiCaptureStatusLabel(status),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: connected
+                      ? DrumcabularyTheme.edgeOrange
+                      : DrumcabularyTheme.edgeTextSecondary,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (controller.generatedPattern.isNotEmpty)
+            SelectableText(
+              controller.generatedPattern,
+              style: PatternTextStyles.editableInput(
+                context,
+              ).copyWith(fontSize: 18, height: 1.25),
+            )
+          else
+            Text(
+              'Capture from the configured MIDI input, then replace or append.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: DrumcabularyTheme.edgeTextSecondary,
+              ),
+            ),
+          if (controller.tempoEstimate != null) ...<Widget>[
+            const SizedBox(height: 6),
+            Text(
+              'Estimated ${controller.tempoEstimate!.roundedBpm} BPM',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: DrumcabularyTheme.edgeTextSecondary,
+              ),
+            ),
+          ],
+          if (message != null) ...<Widget>[
+            const SizedBox(height: 6),
+            Text(
+              message!,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: DrumcabularyTheme.edgeTextSecondary,
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: <Widget>[
+              FilledButton.icon(
+                onPressed: connected && !controller.isRecording
+                    ? onRecord
+                    : null,
+                icon: const Icon(Icons.fiber_manual_record_rounded),
+                label: const Text('Record'),
+              ),
+              OutlinedButton(
+                onPressed: controller.isRecording ? onStop : null,
+                child: const Text('Stop'),
+              ),
+              OutlinedButton(
+                onPressed: controller.isRecording || hasCapture
+                    ? onClear
+                    : null,
+                child: const Text('Clear Capture'),
+              ),
+              OutlinedButton(
+                onPressed: hasCapture && !controller.isRecording
+                    ? onReplace
+                    : null,
+                child: const Text('Replace Pattern'),
+              ),
+              OutlinedButton(
+                onPressed: hasCapture && !controller.isRecording
+                    ? onAppend
+                    : null,
+                child: const Text('Append'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _midiCaptureStatusLabel(MidiInputStatus? status) {
+  return switch (status) {
+    MidiInputStatus.connected => 'Connected',
+    MidiInputStatus.connecting => 'Connecting',
+    MidiInputStatus.scanning => 'Scanning',
+    MidiInputStatus.connectionError => 'Connection Error',
+    MidiInputStatus.noDevicesFound => 'No Device',
+    MidiInputStatus.disconnected || null => 'Disconnected',
+  };
 }
 
 class _PatternContextPills extends StatelessWidget {
