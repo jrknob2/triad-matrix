@@ -253,8 +253,26 @@ describe('voice mapping and VexFlow conversion', () => {
     );
 
     assert.match(openSvg, /drum-open-hihat-markers/);
-    assert.match(openSvg, /<circle /);
+    assert.match(openSvg, /stroke-width="1\.85"/);
+    assert.match(openSvg, /<circle cx="32" cy="27\.5" r="5\.25"><\/circle>/);
     assert.doesNotMatch(closedSvg, /drum-open-hihat-markers/);
+  });
+
+  test('open hi-hat marker anchors to the open hi-hat notehead inside a chord', () => {
+    const VF = createFakeVexFlow();
+    const svg = renderDrumNotationSvg(
+      {
+        measures: [
+          {
+            notes: [{ value: '8n', voices: ['crash', 'openHiHat'] }],
+          },
+        ],
+      },
+      { vexFlow: VF },
+    );
+
+    assert.match(svg, /<circle cx="32" cy="27\.5" r="5\.25"><\/circle>/);
+    assert.doesNotMatch(svg, /cy="9\.5"/);
   });
 
   test('cymbal voices keep x noteheads inside multi-voice beats', () => {

@@ -35,6 +35,14 @@ const STICKING_FONT_FAMILY = 'Arial';
 const STICKING_FONT_SIZE = 12;
 const STICKING_FONT_WEIGHT = '';
 const STICKING_TOP_TEXT_OFFSET = 18;
+const OPEN_HIHAT_MARKER_RADIUS = 5.25;
+const OPEN_HIHAT_MARKER_STROKE_WIDTH = 1.85;
+const OPEN_HIHAT_NOTEHEAD_HALF_HEIGHT = 5;
+const OPEN_HIHAT_MARKER_CLEARANCE = 4.25;
+const OPEN_HIHAT_MARKER_CENTER_OFFSET =
+  OPEN_HIHAT_NOTEHEAD_HALF_HEIGHT +
+  OPEN_HIHAT_MARKER_RADIUS +
+  OPEN_HIHAT_MARKER_CLEARANCE;
 
 export function renderDrumNotationSvg(documentJson, options = {}) {
   return renderDrumNotationSvgWithMetadata(documentJson, options).svg;
@@ -443,14 +451,10 @@ function appendStickingLabels(host, VF, vexNotes, system, layout) {
 
 function appendOpenHiHatMarkers(host, VF, vexNotes, system, layout) {
   const markers = vexNotes
-    .map((note, index) => ({
-      x: stickingLabelX(VF, note),
-      y: openHiHatMarkerY(note, layout),
-      entry: system.entries[index],
-    }))
+    .flatMap((note, index) =>
+      openHiHatMarkersForEntry(VF, note, system.entries[index], layout),
+    )
     .filter((marker) =>
-      marker.entry?.note?.rest !== true &&
-      marker.entry?.note?.voices?.includes('openHiHat') === true &&
       Number.isFinite(marker.x) &&
       Number.isFinite(marker.y),
     );
@@ -458,19 +462,97 @@ function appendOpenHiHatMarkers(host, VF, vexNotes, system, layout) {
   appendSvgCircleElements(host, markers);
 }
 
-function openHiHatMarkerY(note, layout) {
+function openHiHatMarkersForEntry(VF, note, entry, layout) {
+  const voices = entry?.note?.voices;
+  if (entry?.note?.rest === true || !Array.isArray(voices)) return [];
+  return voices
+    .map((voice, voiceIndex) => {
+      if (voice !== 'openHiHat') return null;
+      return {
+        x: noteheadCenterX(VF, note, voiceIndex),
+        y: openHiHatMarkerY(note, voiceIndex, layout),
+        radius: OPEN_HIHAT_MARKER_RADIUS,
+      };
+    })
+    .filter((marker) => marker != null);
+}
+
+function openHiHatMarkerY(note, voiceIndex, layout) {
+  const noteheadY = noteheadCenterY(note, voiceIndex, layout);
+  return noteheadY - OPEN_HIHAT_MARKER_CENTER_OFFSET;
+}
+
+function noteheadCenterY(note, voiceIndex, layout) {
   if (typeof note.getYs === 'function') {
     try {
       const ys = note.getYs();
       if (Array.isArray(ys) && ys.length > 0) {
+        const voiceY = ys[voiceIndex];
+        if (Number.isFinite(voiceY)) return voiceY;
         const topY = Math.min(...ys.filter((value) => Number.isFinite(value)));
-        if (Number.isFinite(topY)) return topY - 14;
+        if (Number.isFinite(topY)) return topY;
       }
     } catch {
       // Fall through to a stable staff-relative position.
     }
   }
-  return layout.y + 18;
+  const noteHead = noteheadForVoice(note, voiceIndex);
+  if (Number.isFinite(noteHead?.y)) return noteHead.y;
+  return layout.y + 18 + OPEN_HIHAT_MARKER_CENTER_OFFSET;
+}
+
+function noteheadCenterX(VF, note, voiceIndex) {
+  const noteHead = noteheadForVoice(note, voiceIndex);
+  const noteHeadX = noteHeadCenterX(noteHead);
+  if (Number.isFinite(noteHeadX)) return noteHeadX;
+
+  const begin = noteheadBoundaryX(note, 'getNoteHeadBeginX');
+  const end = noteheadBoundaryX(note, 'getNoteHeadEndX');
+  if (Number.isFinite(begin) && Number.isFinite(end) && end > begin) {
+    return begin + (end - begin) / 2;
+  }
+
+  return stickingLabelX(VF, note);
+}
+
+function noteheadForVoice(note, voiceIndex) {
+  const noteHeads = note?._noteHeads;
+  if (!Array.isArray(noteHeads)) return null;
+  return noteHeads[voiceIndex] ?? null;
+}
+
+function noteHeadCenterX(noteHead) {
+  if (noteHead == null) return Number.NaN;
+  try {
+    const x =
+      typeof noteHead.getAbsoluteX === 'function'
+        ? noteHead.getAbsoluteX()
+        : noteHead.x;
+    const xShift =
+      typeof noteHead.getXShift === 'function'
+        ? noteHead.getXShift()
+        : noteHead.x_shift ?? 0;
+    const width =
+      typeof noteHead.getGlyphWidth === 'function'
+        ? noteHead.getGlyphWidth()
+        : noteHead.width;
+    if (Number.isFinite(x) && Number.isFinite(width)) {
+      return x + (Number.isFinite(xShift) ? xShift : 0) + width / 2;
+    }
+  } catch {
+    return Number.NaN;
+  }
+  return Number.NaN;
+}
+
+function noteheadBoundaryX(note, methodName) {
+  if (typeof note?.[methodName] !== 'function') return Number.NaN;
+  try {
+    const value = note[methodName]();
+    return Number.isFinite(value) ? value : Number.NaN;
+  } catch {
+    return Number.NaN;
+  }
 }
 
 function stickingLabelX(VF, note) {
@@ -567,12 +649,12 @@ function appendSvgCircleElements(host, markers) {
     group.setAttribute('class', 'drum-open-hihat-markers');
     group.setAttribute('fill', 'none');
     group.setAttribute('stroke', 'currentColor');
-    group.setAttribute('stroke-width', '1.6');
+    group.setAttribute('stroke-width', formatSvgNumber(OPEN_HIHAT_MARKER_STROKE_WIDTH));
     markers.forEach((marker) => {
       const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
       circle.setAttribute('cx', formatSvgNumber(marker.x));
       circle.setAttribute('cy', formatSvgNumber(marker.y));
-      circle.setAttribute('r', '4');
+      circle.setAttribute('r', formatSvgNumber(marker.radius));
       group.appendChild(circle);
     });
     svg.appendChild(group);
@@ -580,9 +662,13 @@ function appendSvgCircleElements(host, markers) {
   }
 
   if (typeof svg.outerHTML !== 'string') return;
-  const circles = `<g class="drum-open-hihat-markers" fill="none" stroke="currentColor" stroke-width="1.6">${markers
+  const circles = `<g class="drum-open-hihat-markers" fill="none" stroke="currentColor" stroke-width="${formatSvgNumber(
+    OPEN_HIHAT_MARKER_STROKE_WIDTH,
+  )}">${markers
     .map((marker) => (
-      `<circle cx="${formatSvgNumber(marker.x)}" cy="${formatSvgNumber(marker.y)}" r="4"></circle>`
+      `<circle cx="${formatSvgNumber(marker.x)}" cy="${formatSvgNumber(marker.y)}" r="${formatSvgNumber(
+        marker.radius,
+      )}"></circle>`
     ))
     .join('')}</g>`;
   svg.outerHTML = svg.outerHTML.replace('</svg>', `${circles}</svg>`);

@@ -125,6 +125,26 @@ export function createFakeVexFlow() {
       return this.absoluteX + this.xShift + this.glyphWidth / 2;
     }
 
+    getNoteHeadBeginX() {
+      return this.absoluteX + this.xShift + 1;
+    }
+
+    getNoteHeadEndX() {
+      return this.absoluteX + this.xShift + 15;
+    }
+
+    getYs() {
+      return this.options.keys.map((key) => {
+        if (key.startsWith('a/5')) return 24;
+        if (key.startsWith('g/5')) return 34;
+        if (key.startsWith('f/5')) return 42;
+        if (key.startsWith('e/5')) return 52;
+        if (key.startsWith('c/5')) return 64;
+        if (key.startsWith('f/4')) return 82;
+        return 60;
+      });
+    }
+
     getYForTopText() {
       return -12;
     }
