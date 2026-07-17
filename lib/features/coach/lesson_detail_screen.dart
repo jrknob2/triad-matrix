@@ -404,8 +404,8 @@ class _LessonTempoFooter extends StatelessWidget {
                 Row(
                   children: <Widget>[
                     _FooterIconButton(
-                      tooltip: 'Reset tempo',
-                      icon: Icons.speed_rounded,
+                      tooltip: 'Reset BPM to default',
+                      icon: Icons.restart_alt_rounded,
                       onPressed: bpm != defaultBpm ? onReset : null,
                     ),
                     const Spacer(),
