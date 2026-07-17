@@ -61,8 +61,16 @@ class DrumSheetStrokeDescriptor {
 
   String get displayLabel => hand == DrumSheetStrokeHand.left ? 'L' : 'R';
 
-  StickingCue get stickingCue =>
-      hand == DrumSheetStrokeHand.left ? StickingCue.left : StickingCue.right;
+  StickingCue get stickingCue {
+    return switch ((hand, articulation)) {
+      (DrumSheetStrokeHand.left, DrumSheetStrokeArticulation.ghost) =>
+        StickingCue.ghostLeft,
+      (DrumSheetStrokeHand.right, DrumSheetStrokeArticulation.ghost) =>
+        StickingCue.ghostRight,
+      (DrumSheetStrokeHand.left, _) => StickingCue.left,
+      (DrumSheetStrokeHand.right, _) => StickingCue.right,
+    };
+  }
 
   @override
   bool operator ==(Object other) {
@@ -605,6 +613,10 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
         },
       )
       ..addJavaScriptChannel(
+        'SheetScroll',
+        onMessageReceived: _handleSheetScroll,
+      )
+      ..addJavaScriptChannel(
         'SheetLog',
         onMessageReceived: (JavaScriptMessage message) {
           debugPrint('Drum sheet notation WebView: ${message.message}');
@@ -631,6 +643,41 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
     _controller = controller;
     unawaited(_loadHostAsset(controller));
     return controller;
+  }
+
+  void _handleSheetScroll(JavaScriptMessage message) {
+    if (!mounted) return;
+    final Object? decoded;
+    try {
+      decoded = jsonDecode(message.message);
+    } catch (_) {
+      return;
+    }
+    if (decoded is! Map<String, Object?>) return;
+    final double deltaY = _normalizedWheelDelta(
+      decoded['deltaY'],
+      decoded['deltaMode'],
+    );
+    if (deltaY == 0) return;
+    final ScrollableState? scrollable = Scrollable.maybeOf(context);
+    final ScrollPosition? position = scrollable?.position;
+    if (position == null || !position.hasPixels) return;
+    final double target = (position.pixels + deltaY)
+        .clamp(position.minScrollExtent, position.maxScrollExtent)
+        .toDouble();
+    if (target == position.pixels) return;
+    position.jumpTo(target);
+  }
+
+  double _normalizedWheelDelta(Object? deltaValue, Object? deltaModeValue) {
+    final double? delta = deltaValue is num ? deltaValue.toDouble() : null;
+    if (delta == null || !delta.isFinite || delta == 0) return 0;
+    final int deltaMode = deltaModeValue is num ? deltaModeValue.toInt() : 0;
+    return switch (deltaMode) {
+      1 => delta * 16,
+      2 => delta * _webViewHeight,
+      _ => delta,
+    };
   }
 
   Future<void> _loadHostAsset(WebViewController controller) async {
@@ -1443,6 +1490,7 @@ Map<DrumVoiceV1, StickingCue?> _stickingCuesByAudioVoice({
     final StickingCue? eventCue = stickingCueFromText(
       sticking,
       flam: note.flam,
+      ghost: note.ghost,
     );
     return eventCue == null
         ? const <DrumVoiceV1, StickingCue?>{}

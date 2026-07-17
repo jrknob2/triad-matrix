@@ -46,6 +46,10 @@ void main() {
   group('SerialLedController', () {
     test('sticking text conversion supports both hands and flams', () {
       expect(stickingCueFromText('B'), StickingCue.both);
+      expect(stickingCueFromText('(L)'), StickingCue.ghostLeft);
+      expect(stickingCueFromText('(R)'), StickingCue.ghostRight);
+      expect(stickingCueFromText('L', ghost: true), StickingCue.ghostLeft);
+      expect(stickingCueFromText('R', ghost: true), StickingCue.ghostRight);
       expect(stickingCueFromText('(R)L', flam: true), StickingCue.flamLeft);
       expect(stickingCueFromText('(L)R', flam: true), StickingCue.flamRight);
       expect(stickingCueFromText('FL'), StickingCue.flamLeft);
@@ -61,7 +65,7 @@ void main() {
       );
     });
 
-    test('sticking values serialize correctly', () {
+    test('sticking values serialize using firmware-supported tokens', () {
       const LedFrameCommandEncoder encoder = LedFrameCommandEncoder();
 
       expect(
@@ -71,6 +75,8 @@ void main() {
           LedCue(DrumVoice.tom1, sticking: StickingCue.both),
           LedCue(DrumVoice.tom2, sticking: StickingCue.flamLeft),
           LedCue(DrumVoice.floorTom, sticking: StickingCue.flamRight),
+          LedCue(DrumVoice.crash, sticking: StickingCue.ghostLeft),
+          LedCue(DrumVoice.ride, sticking: StickingCue.ghostRight),
         ]),
         'FRAME_BEGIN\n'
         'CUE,SNARE,L\n'
@@ -78,6 +84,8 @@ void main() {
         'CUE,TOM1,B\n'
         'CUE,TOM2,FL\n'
         'CUE,FLOORTOM,FR\n'
+        'CUE,CRASH,L\n'
+        'CUE,RIDE,R\n'
         'FRAME_END\n',
       );
     });

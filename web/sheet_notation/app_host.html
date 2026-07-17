@@ -424,11 +424,31 @@
         );
       }
 
+      function postSheetScroll(event) {
+        const deltaX = Number(event.deltaX);
+        const deltaY = Number(event.deltaY);
+        if (!Number.isFinite(deltaX) && !Number.isFinite(deltaY)) return;
+        try {
+          globalThis.SheetScroll?.postMessage(
+            JSON.stringify({
+              deltaX: Number.isFinite(deltaX) ? deltaX : 0,
+              deltaY: Number.isFinite(deltaY) ? deltaY : 0,
+              deltaMode: Number(event.deltaMode) || 0,
+            }),
+          );
+          event.preventDefault();
+        } catch (_) {
+          // Scroll forwarding is best effort; never break notation interaction.
+        }
+      }
+
       function postHeight() {
         const height = Math.ceil(document.documentElement.scrollHeight);
         globalThis.SheetHeight?.postMessage(String(height));
         return height;
       }
+
+      notation.addEventListener('wheel', postSheetScroll, { passive: false });
 
     </script>
   </body>

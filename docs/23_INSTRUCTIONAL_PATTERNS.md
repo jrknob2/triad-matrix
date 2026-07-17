@@ -528,4 +528,4 @@ Every lesson should build confidence.
 
 Every lesson should move naturally from understanding to musical application.
 
-Consistency in teaching creates confidence in learning.
+Consistency in teaching creates confidence in learning. 

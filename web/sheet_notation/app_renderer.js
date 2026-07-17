@@ -295,73 +295,77 @@ function renderDrumNotationSvgWithMetadata(documentJson, options = {}) {
     Math.max(0, systemCount - 1) * renderOptions.systemGapY;
 
   const host = createDetachedHost();
-  const renderer = new VF.Renderer(host, VF.Renderer.Backends.SVG);
-  renderer.resize(width, height);
-  const context = renderer.getContext();
+  try {
+    const renderer = new VF.Renderer(host, VF.Renderer.Backends.SVG);
+    renderer.resize(width, height);
+    const context = renderer.getContext();
 
-  for (let index = 0; index < systems.length; index += 1) {
-    const system = systems[index];
-    const layout = systemLayoutForIndex(index, renderOptions);
-    const stave = new VF.Stave(
-      layout.x,
-      layout.y,
-      renderOptions.measureWidth,
-    );
-    if (layout.isSystemStart && renderOptions.repeatClefEverySystem) {
-      stave.addClef('percussion');
-    }
-    if (index === 0 && typeof stave.addTimeSignature === 'function') {
-      stave.addTimeSignature(document.timeSignature);
-    }
-    if (renderOptions.finalRepeat === true && index === systems.length - 1) {
-      setEndRepeatBar(VF, stave);
-    }
-    stave.setContext(context).draw();
+    for (let index = 0; index < systems.length; index += 1) {
+      const system = systems[index];
+      const layout = systemLayoutForIndex(index, renderOptions);
+      const stave = new VF.Stave(
+        layout.x,
+        layout.y,
+        renderOptions.measureWidth,
+      );
+      if (layout.isSystemStart && renderOptions.repeatClefEverySystem) {
+        stave.addClef('percussion');
+      }
+      if (index === 0 && typeof stave.addTimeSignature === 'function') {
+        stave.addTimeSignature(document.timeSignature);
+      }
+      if (renderOptions.finalRepeat === true && index === systems.length - 1) {
+        setEndRepeatBar(VF, stave);
+      }
+      stave.setContext(context).draw();
 
-    const notes = system.entries.map((entry) =>
-      createVexFlowNote(VF, resolvedNoteForEntry(entry, document), {
-        stemMode: renderOptions.stemMode,
-        metadata: entry,
-        standardAccents: renderOptions.standardAccents,
-        stemLength: renderOptions.stemLength,
+      const notes = system.entries.map((entry) =>
+        createVexFlowNote(VF, resolvedNoteForEntry(entry, document), {
+          stemMode: renderOptions.stemMode,
+          metadata: entry,
+          standardAccents: renderOptions.standardAccents,
+          stemLength: renderOptions.stemLength,
+        }),
+      );
+      const voice = new VF.Voice({
+        num_beats: numBeatsForSystem(system, document),
+        beat_value: beatValueForSystem(system, document),
+      }).setStrict(false);
+      voice.addTickables(notes);
+      const formatterWidth = formatterWidthForSystem(system, renderOptions, {
+        document,
+        systemIndex: index,
+      });
+      new VF.Formatter()
+        .joinVoices([voice])
+        .format([voice], formatterWidth);
+      applyGroupSpacing(notes, system, renderOptions);
+      const beams = createBeams(
+        VF,
+        notes,
+        system,
+        renderOptions,
+      );
+      const tuplets = createTuplets(VF, notes, system, document);
+      voice.draw(context, stave);
+      drawBeams(context, beams);
+      drawTuplets(context, tuplets);
+      if (renderOptions.showSticking !== false) {
+        appendStickingLabels(host, VF, notes, system, layout);
+      }
+      appendOpenHiHatMarkers(host, VF, notes, system, layout);
+    }
+
+    return {
+      svg: extractSvg(host),
+      notes: systems.flatMap((system, systemIndex) => {
+        const layout = systemLayoutForIndex(systemIndex, renderOptions);
+        return system.entries.map((entry) => noteMetadataForEntry(entry, layout));
       }),
-    );
-    const voice = new VF.Voice({
-      num_beats: numBeatsForSystem(system, document),
-      beat_value: beatValueForSystem(system, document),
-    }).setStrict(false);
-    voice.addTickables(notes);
-    const formatterWidth = formatterWidthForSystem(system, renderOptions, {
-      document,
-      systemIndex: index,
-    });
-    new VF.Formatter()
-      .joinVoices([voice])
-      .format([voice], formatterWidth);
-    applyGroupSpacing(notes, system, renderOptions);
-    const beams = createBeams(
-      VF,
-      notes,
-      system,
-      renderOptions,
-    );
-    const tuplets = createTuplets(VF, notes, system, document);
-    voice.draw(context, stave);
-    drawBeams(context, beams);
-    drawTuplets(context, tuplets);
-    if (renderOptions.showSticking !== false) {
-      appendStickingLabels(host, VF, notes, system, layout);
-    }
-    appendOpenHiHatMarkers(host, VF, notes, system, layout);
+    };
+  } finally {
+    disposeDetachedHost(host);
   }
-
-  return {
-    svg: extractSvg(host),
-    notes: systems.flatMap((system, systemIndex) => {
-      const layout = systemLayoutForIndex(systemIndex, renderOptions);
-      return system.entries.map((entry) => noteMetadataForEntry(entry, layout));
-    }),
-  };
 }
 
 function createVexFlowNote(VF, note, options = {}) {
@@ -683,7 +687,7 @@ function appendStickingLabels(host, VF, vexNotes, system, layout) {
 function appendOpenHiHatMarkers(host, VF, vexNotes, system, layout) {
   const markers = vexNotes
     .flatMap((note, index) =>
-      openHiHatMarkersForEntry(VF, note, system.entries[index], layout),
+      openHiHatMarkersForEntry(host, VF, note, system.entries[index], layout),
     )
     .filter((marker) =>
       Number.isFinite(marker.x) &&
@@ -693,13 +697,13 @@ function appendOpenHiHatMarkers(host, VF, vexNotes, system, layout) {
   appendSvgCircleElements(host, markers);
 }
 
-function openHiHatMarkersForEntry(VF, note, entry, layout) {
+function openHiHatMarkersForEntry(host, VF, note, entry, layout) {
   const voices = entry?.note?.voices;
   if (entry?.note?.rest === true || !Array.isArray(voices)) return [];
   return voices
     .map((voice, voiceIndex) => {
       if (voice !== 'openHiHat') return null;
-      const anchors = noteAnchorsForVoice(VF, note, voiceIndex, layout);
+      const anchors = noteAnchorsForVoice(host, VF, note, voiceIndex, layout);
       const center = pointAbove(
         anchors.notehead.top,
         OPEN_HIHAT_MARKER_RADIUS + OPEN_HIHAT_MARKER_CLEARANCE,
@@ -713,19 +717,23 @@ function openHiHatMarkersForEntry(VF, note, entry, layout) {
     .filter((marker) => marker != null);
 }
 
-function noteAnchorsForVoice(VF, note, voiceIndex, layout) {
+function noteAnchorsForVoice(host, VF, note, voiceIndex, layout) {
   return {
     staff: staffAnchorsForLayout(layout),
-    notehead: noteheadAnchorsForVoice(VF, note, voiceIndex, layout),
+    notehead: noteheadAnchorsForVoice(host, VF, note, voiceIndex, layout),
   };
 }
 
-function noteheadAnchorsForVoice(VF, note, voiceIndex, layout) {
+function noteheadAnchorsForVoice(host, VF, note, voiceIndex, layout) {
+  const visualBounds = noteheadVisualBounds(
+    host,
+    noteheadForVoice(note, voiceIndex),
+  );
   const center = {
-    x: noteheadCenterX(VF, note, voiceIndex),
-    y: noteheadCenterY(note, voiceIndex, layout),
+    x: visualBounds?.center?.x ?? noteheadCenterX(VF, note, voiceIndex),
+    y: visualBounds?.center?.y ?? noteheadCenterY(note, voiceIndex, layout),
   };
-  const size = noteheadSize(note, voiceIndex);
+  const size = visualBounds?.size ?? noteheadSize(note, voiceIndex);
   const halfWidth = size.width / 2;
   const halfHeight = size.height / 2;
   const bounds = {
@@ -846,6 +854,59 @@ function noteheadForVoice(note, voiceIndex) {
   const noteHeads = note?._noteHeads;
   if (!Array.isArray(noteHeads)) return null;
   return noteHeads[voiceIndex] ?? null;
+}
+
+function noteheadVisualBounds(host, noteHead) {
+  try {
+    const element = noteheadSvgElement(host, noteHead);
+    if (element == null || typeof element.getBBox !== 'function') return null;
+    const box = element.getBBox();
+    if (
+      !Number.isFinite(box?.x) ||
+      !Number.isFinite(box?.y) ||
+      !Number.isFinite(box?.width) ||
+      !Number.isFinite(box?.height) ||
+      box.width <= 0 ||
+      box.height <= 0
+    ) {
+      return null;
+    }
+    return {
+      center: {
+        x: box.x + box.width / 2,
+        y: box.y + box.height / 2,
+      },
+      size: {
+        width: box.width,
+        height: box.height,
+      },
+    };
+  } catch {
+    return null;
+  }
+}
+
+function noteheadSvgElement(host, noteHead) {
+  if (noteHead == null) return null;
+  if (typeof noteHead.getSVGElement === 'function') {
+    try {
+      const element = noteHead.getSVGElement();
+      if (element != null) return element;
+    } catch {
+      // Fall through to searching the renderer host.
+    }
+  }
+  if (typeof host?.querySelector !== 'function') return null;
+  const id =
+    typeof noteHead.getAttribute === 'function'
+      ? noteHead.getAttribute('id')
+      : null;
+  if (id == null || id === '') return null;
+  try {
+    return host.querySelector(`#vf-${id}`);
+  } catch {
+    return null;
+  }
 }
 
 function noteHeadCenterX(noteHead) {
@@ -1323,7 +1384,18 @@ function resolvedNoteForEntry(entry, document) {
 
 function createDetachedHost() {
   if (typeof document !== 'undefined') {
-    return document.createElement('div');
+    const host = document.createElement('div');
+    host.style.position = 'absolute';
+    host.style.left = '-10000px';
+    host.style.top = '-10000px';
+    host.style.width = '1px';
+    host.style.height = '1px';
+    host.style.overflow = 'visible';
+    host.style.pointerEvents = 'none';
+    host.style.visibility = 'hidden';
+    host.dataset.drumcabularyDetachedNotationHost = 'true';
+    document.body?.appendChild(host);
+    return host;
   }
   return {
     children: [],
@@ -1335,6 +1407,15 @@ function createDetachedHost() {
       return this.children.find((child) => child?.tagName === 'svg') ?? null;
     },
   };
+}
+
+function disposeDetachedHost(host) {
+  if (
+    host?.dataset?.drumcabularyDetachedNotationHost === 'true' &&
+    typeof host.remove === 'function'
+  ) {
+    host.remove();
+  }
 }
 
 function extractSvg(host) {

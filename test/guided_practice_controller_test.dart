@@ -413,6 +413,8 @@ void main() {
           <DrumVoice>[DrumVoice.snare],
         ],
       );
+      expect(events[0].cues.single.sticking, StickingCue.ghostRight);
+      expect(events[1].cues.single.sticking, StickingCue.right);
     });
 
     test('Simultaneous notation becomes one expected voice group', () {

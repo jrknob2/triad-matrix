@@ -1,4 +1,5 @@
 import 'package:drumcabulary/features/practice/widgets/sheet_notation_display.dart';
+import 'package:drumcabulary/features/practice/sticking_cue.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -169,6 +170,22 @@ void main() {
         );
 
     expect(DrumSheetPatternParser.serialize(edited), '[S:^R] [T2:(L)] [HH]');
+  });
+
+  test('ghost strokes become dim sticking cues in playback plans', () {
+    final DrumSheetAudioPreviewPlan plan =
+        buildSheetNotationAudioPreviewPlanDetails(
+          DrumSheetNotationDocument.fromPattern('[S:(L)] [OHH:(R) K]'),
+        );
+
+    expect(plan.audioPlan.cues[0].sticking, StickingCue.ghostLeft);
+    expect(
+      plan.audioPlan.cues
+          .where((cue) => cue.tokenIndex == 1)
+          .map((cue) => cue.sticking)
+          .toList(),
+      contains(StickingCue.ghostRight),
+    );
   });
 
   test('lenient parsing tolerates incomplete editing states', () {
