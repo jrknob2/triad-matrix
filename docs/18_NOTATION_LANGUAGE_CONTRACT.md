@@ -333,10 +333,9 @@ and `(R)^L` means a dim right cue with accented left cue. Sequential notation
 strokes normally expand into separate playback or Guided Practice events and
 therefore produce separate cue frames.
 
-`FR` and `FL` are deprecated legacy controller aliases. Drumcabulary may read
-them in old fixtures or diagnostics, but app-generated commands emit only the
-canonical semantic stroke syntax. Direct live MIDI hit commands such as
-`SNARE`, `KICK`, and `HIHAT` remain supported and are not cue frames.
+Only canonical semantic stroke syntax is valid in cue frames. Direct live MIDI
+hit commands such as `SNARE`, `KICK`, and `HIHAT` remain supported and are not
+cue frames.
 
 Examples:
 

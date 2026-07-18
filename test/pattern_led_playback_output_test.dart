@@ -44,8 +44,12 @@ void main() {
       harness.output
         ..triggerCue(_cue(DrumVoiceV1.snare, sticking: StickingCue.ghostRight))
         ..triggerCue(_cue(DrumVoiceV1.snare, sticking: StickingCue.accentRight))
-        ..triggerCue(_cue(DrumVoiceV1.snare, sticking: StickingCue.flamRight))
-        ..triggerCue(_cue(DrumVoiceV1.snare, sticking: StickingCue.flamLeft));
+        ..triggerCue(
+          _cue(DrumVoiceV1.snare, sticking: StickingCue.ghostLeftRight),
+        )
+        ..triggerCue(
+          _cue(DrumVoiceV1.snare, sticking: StickingCue.ghostRightLeft),
+        );
 
       expect(harness.platform.lastConnection.writes, <String>[
         _frame('CUE,SNARE,(R)'),

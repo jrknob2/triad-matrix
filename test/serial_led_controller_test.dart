@@ -45,21 +45,26 @@ void main() {
 
   group('SerialLedController', () {
     test('sticking text conversion supports semantic stroke sequences', () {
-      expect(stickingCueFromText('B'), StickingCue.both);
       expect(stickingCueFromText('(L)'), StickingCue.ghostLeft);
       expect(stickingCueFromText('(R)'), StickingCue.ghostRight);
       expect(stickingCueFromText('^L'), StickingCue.accentLeft);
       expect(stickingCueFromText('^R'), StickingCue.accentRight);
+      expect(stickingCueFromText('LR'), StickingCue.leftRight);
       expect(stickingCueFromText('L', ghost: true), StickingCue.ghostLeft);
       expect(stickingCueFromText('R', ghost: true), StickingCue.ghostRight);
-      expect(stickingCueFromText('(R)L', flam: true), StickingCue.flamLeft);
-      expect(stickingCueFromText('(L)R', flam: true), StickingCue.flamRight);
-      expect(stickingCueFromText('FL'), StickingCue.flamLeft);
-      expect(stickingCueFromText('FR'), StickingCue.flamRight);
+      expect(
+        stickingCueFromText('(R)L', flam: true),
+        StickingCue.ghostRightLeft,
+      );
+      expect(
+        stickingCueFromText('(L)R', flam: true),
+        StickingCue.ghostLeftRight,
+      );
       expect(stickingCueFromText('(L)^R')?.protocolValue, '(L)^R');
       expect(stickingCueFromText('(R)^L')?.protocolValue, '(R)^L');
-      expect(stickingCueFromText('FL')?.protocolValue, '(R)L');
-      expect(stickingCueFromText('FR')?.protocolValue, '(L)R');
+      for (final String token in _removedLegacyLedTokens()) {
+        expect(stickingCueFromText(token), isNull);
+      }
     });
 
     test('stroke serializer is deterministic', () {
@@ -132,9 +137,9 @@ void main() {
       final String? frame = encoder.encodeCueFrame(const <LedCue>[
         LedCue(DrumVoice.snare, sticking: StickingCue.left),
         LedCue(DrumVoice.kick, sticking: StickingCue.right),
-        LedCue(DrumVoice.tom1, sticking: StickingCue.both),
-        LedCue(DrumVoice.tom2, sticking: StickingCue.flamLeft),
-        LedCue(DrumVoice.floorTom, sticking: StickingCue.flamRight),
+        LedCue(DrumVoice.tom1, sticking: StickingCue.leftRight),
+        LedCue(DrumVoice.tom2, sticking: StickingCue.ghostRightLeft),
+        LedCue(DrumVoice.floorTom, sticking: StickingCue.ghostLeftRight),
         LedCue(DrumVoice.crash, sticking: StickingCue.ghostLeft),
         LedCue(DrumVoice.ride, sticking: StickingCue.ghostRight),
         LedCue(DrumVoice.hiHatClosed, sticking: StickingCue.accentRight),
@@ -153,8 +158,9 @@ void main() {
         'CUE,HIHAT,^R\n'
         'FRAME_END\n',
       );
-      expect(frame, isNot(contains(',FL\n')));
-      expect(frame, isNot(contains(',FR\n')));
+      for (final String token in _removedLegacyLedTokens()) {
+        expect(frame, isNot(contains(',$token\n')));
+      }
     });
 
     test('unsupported voices are skipped in frames', () {
@@ -187,7 +193,10 @@ void main() {
       expect(
         encoder.feedbackCommand(
           'MISSING',
-          const LedCue(DrumVoice.hiHatClosed, sticking: StickingCue.flamRight),
+          const LedCue(
+            DrumVoice.hiHatClosed,
+            sticking: StickingCue.ghostLeftRight,
+          ),
         ),
         'MISSING,HIHAT,(L)R\n',
       );
@@ -461,6 +470,14 @@ class _FakeSerialConnection implements SerialLedConnection {
   void close() {
     closed = true;
   }
+}
+
+List<String> _removedLegacyLedTokens() {
+  return <String>[
+    String.fromCharCode(66),
+    String.fromCharCodes(<int>[70, 76]),
+    String.fromCharCodes(<int>[70, 82]),
+  ];
 }
 
 MidiDiagnosticEvent _diagnosticEvent({

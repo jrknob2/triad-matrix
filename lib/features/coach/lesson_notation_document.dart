@@ -44,7 +44,7 @@ List<String> stickingLabels(String sticking) {
       .toList(growable: false);
   if (spaced.length > 1) return spaced;
   final Iterable<RegExpMatch> cueMatches = RegExp(
-    r'\([RLrl]\)[RLrl]|[Ff][LRlr]|[RrLlBbKkFfXx_]',
+    r'\([RLrl]\)\^?[RLrl]|[RrLlKkFfXx_]',
   ).allMatches(trimmed);
   final List<String> cueLabels = <String>[
     for (final RegExpMatch match in cueMatches) match.group(0)!.toUpperCase(),

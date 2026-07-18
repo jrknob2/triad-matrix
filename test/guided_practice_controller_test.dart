@@ -70,10 +70,10 @@ void main() {
             LedCue(DrumVoice.snare, sticking: StickingCue.accentRight),
           ]),
           GuidedPracticeExpectedEvent.fromCues(const <LedCue>[
-            LedCue(DrumVoice.snare, sticking: StickingCue.flamRight),
+            LedCue(DrumVoice.snare, sticking: StickingCue.ghostLeftRight),
           ]),
           GuidedPracticeExpectedEvent.fromCues(const <LedCue>[
-            LedCue(DrumVoice.snare, sticking: StickingCue.flamLeft),
+            LedCue(DrumVoice.snare, sticking: StickingCue.ghostRightLeft),
           ]),
         ],
       );
@@ -490,22 +490,18 @@ void main() {
       expect(events[1].cueForVoice(DrumVoice.tom1)?.sticking, StickingCue.left);
     });
 
-    test(
-      'Both-hand and flam sticking labels convert to semantic cue tokens',
-      () {
-        final List<GuidedPracticeExpectedEvent> events = builder
-            .buildForExercise(
-              _exercise(pattern: '[S] [S] [S]', sticking: 'B FL FR'),
-            );
+    test('Combined semantic sticking labels convert to cue strokes', () {
+      final List<GuidedPracticeExpectedEvent> events = builder.buildForExercise(
+        _exercise(pattern: '[S] [S] [S]', sticking: 'LR (R)L (L)R'),
+      );
 
-        expect(events[0].cues.single.sticking, StickingCue.both);
-        expect(events[1].cues.single.sticking, StickingCue.flamLeft);
-        expect(events[2].cues.single.sticking, StickingCue.flamRight);
-        expect(events[0].cues.single.sticking?.protocolValue, 'LR');
-        expect(events[1].cues.single.sticking?.protocolValue, '(R)L');
-        expect(events[2].cues.single.sticking?.protocolValue, '(L)R');
-      },
-    );
+      expect(events[0].cues.single.sticking, StickingCue.leftRight);
+      expect(events[1].cues.single.sticking, StickingCue.ghostRightLeft);
+      expect(events[2].cues.single.sticking, StickingCue.ghostLeftRight);
+      expect(events[0].cues.single.sticking?.protocolValue, 'LR');
+      expect(events[1].cues.single.sticking?.protocolValue, '(R)L');
+      expect(events[2].cues.single.sticking?.protocolValue, '(L)R');
+    });
 
     test('Sectioned notation records the owning section for highlights', () {
       final List<GuidedPracticeExpectedEvent> events = builder.buildForExercise(

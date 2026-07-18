@@ -63,28 +63,25 @@ class StickingCue {
     ),
   ]);
 
-  /// Legacy both-hands cue. Canonical output is the semantic sequence `LR`.
-  static const StickingCue both = StickingCue._(<LedStroke>[
+  static const StickingCue leftRight = StickingCue._(<LedStroke>[
     LedStroke(hand: LedStrokeHand.left),
     LedStroke(hand: LedStrokeHand.right),
   ]);
 
-  /// Legacy `FL` input: right grace stroke, left primary stroke.
-  static const StickingCue flamLeft = StickingCue._(<LedStroke>[
-    LedStroke(
-      hand: LedStrokeHand.right,
-      articulation: LedStrokeArticulation.ghost,
-    ),
-    LedStroke(hand: LedStrokeHand.left),
-  ]);
-
-  /// Legacy `FR` input: left grace stroke, right primary stroke.
-  static const StickingCue flamRight = StickingCue._(<LedStroke>[
+  static const StickingCue ghostLeftRight = StickingCue._(<LedStroke>[
     LedStroke(
       hand: LedStrokeHand.left,
       articulation: LedStrokeArticulation.ghost,
     ),
     LedStroke(hand: LedStrokeHand.right),
+  ]);
+
+  static const StickingCue ghostRightLeft = StickingCue._(<LedStroke>[
+    LedStroke(
+      hand: LedStrokeHand.right,
+      articulation: LedStrokeArticulation.ghost,
+    ),
+    LedStroke(hand: LedStrokeHand.left),
   ]);
 
   final List<LedStroke> strokes;
@@ -129,11 +126,8 @@ StickingCue? stickingCueFromText(
     '',
   );
   if (normalized.isEmpty) return null;
-  if (normalized == 'FL') return StickingCue.flamLeft;
-  if (normalized == 'FR') return StickingCue.flamRight;
-  if (flam && normalized == 'L') return StickingCue.flamLeft;
-  if (flam && normalized == 'R') return StickingCue.flamRight;
-  if (normalized == 'B') return StickingCue.both;
+  if (flam && normalized == 'L') return StickingCue.ghostRightLeft;
+  if (flam && normalized == 'R') return StickingCue.ghostLeftRight;
   if (normalized == 'L') {
     return ghost ? StickingCue.ghostLeft : StickingCue.left;
   }
