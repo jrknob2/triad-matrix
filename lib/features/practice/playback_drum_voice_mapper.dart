@@ -21,3 +21,12 @@ DrumVoice canonicalGuidedPracticeVoice(DrumVoice voice) {
     _ => voice,
   };
 }
+
+DrumVoice guidedPracticeMatchVoice(DrumVoice voice) {
+  return switch (voice) {
+    DrumVoice.hiHatClosed ||
+    DrumVoice.hiHatOpen ||
+    DrumVoice.hiHatPedal => DrumVoice.hiHatClosed,
+    _ => voice,
+  };
+}

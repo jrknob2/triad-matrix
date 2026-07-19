@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' as io;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_libserialport/flutter_libserialport.dart';
@@ -80,22 +81,29 @@ class LibserialportLedPlatform implements SerialLedPlatform {
   @override
   List<SerialLedPort> listPorts() {
     final List<SerialLedPort> ports = <SerialLedPort>[];
-    for (final String path in SerialPort.availablePorts) {
-      final SerialPort port = SerialPort(path);
+    for (final String path in _availablePortPaths()) {
+      SerialPort? port;
       try {
+        port = SerialPort(path);
         ports.add(
           SerialLedPort(
             path: path,
-            description: port.description,
-            manufacturer: port.manufacturer,
-            productName: port.productName,
-            serialNumber: port.serialNumber,
-            vendorId: port.vendorId,
-            productId: port.productId,
+            description: _readPortMetadata(() => port!.description),
+            manufacturer: _readPortMetadata(() => port!.manufacturer),
+            productName: _readPortMetadata(() => port!.productName),
+            serialNumber: _readPortMetadata(() => port!.serialNumber),
+            vendorId: _readPortMetadata(() => port!.vendorId),
+            productId: _readPortMetadata(() => port!.productId),
           ),
         );
+      } catch (_) {
+        ports.add(SerialLedPort(path: path));
       } finally {
-        port.dispose();
+        try {
+          port?.dispose();
+        } catch (_) {
+          // A transient port should not fail the whole refresh.
+        }
       }
     }
     ports.sort(_comparePorts);
@@ -139,6 +147,37 @@ class LibserialportLedPlatform implements SerialLedPlatform {
       return leftUsbModem ? -1 : 1;
     }
     return left.path.compareTo(right.path);
+  }
+
+  static List<String> _availablePortPaths() {
+    try {
+      return SerialPort.availablePorts;
+    } catch (error) {
+      final List<String> fallbackPorts = _macOSSerialDevicePaths();
+      if (fallbackPorts.isNotEmpty) return fallbackPorts;
+      throw SerialLedException('Could not enumerate serial ports. $error');
+    }
+  }
+
+  static List<String> _macOSSerialDevicePaths() {
+    if (!io.Platform.isMacOS) return const <String>[];
+    try {
+      return io.Directory('/dev')
+          .listSync(followLinks: false)
+          .map((io.FileSystemEntity entity) => entity.path)
+          .where((String path) => path.startsWith('/dev/cu.'))
+          .toList();
+    } catch (_) {
+      return const <String>[];
+    }
+  }
+
+  static T? _readPortMetadata<T>(T? Function() read) {
+    try {
+      return read();
+    } catch (_) {
+      return null;
+    }
   }
 
   static String _lastSerialError(String path) {
@@ -214,10 +253,16 @@ class SerialLedController extends ChangeNotifier {
           !_ports.any((port) => port.path == selected.path)) {
         if (isConnected) {
           _markDeviceRemoved();
+          return;
         } else {
           _selectedPort = null;
         }
       }
+      if (_status == SerialLedConnectionStatus.connectionError ||
+          _status == SerialLedConnectionStatus.deviceRemoved) {
+        _status = SerialLedConnectionStatus.disconnected;
+      }
+      _lastError = null;
       notifyListeners();
     } catch (error) {
       if (wasConnected && !_disposed) {

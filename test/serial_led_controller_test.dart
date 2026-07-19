@@ -296,6 +296,12 @@ void main() {
         contains('Keeping the current LED connection active'),
       );
       expect(platform.lastConnection.writes, <String>['SNARE\n']);
+
+      platform.listError = null;
+      await controller.refreshPorts();
+
+      expect(controller.status, SerialLedConnectionStatus.connected);
+      expect(controller.lastError, isNull);
     });
   });
 

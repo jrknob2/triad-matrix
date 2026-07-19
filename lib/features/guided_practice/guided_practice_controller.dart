@@ -87,6 +87,9 @@ class GuidedPracticeExpectedEvent {
   bool get isEmpty => voices.isEmpty;
   bool get isSimultaneous => voices.length > 1;
   Set<DrumVoice> get voiceSet => voices.toSet();
+  Set<DrumVoice> get matchVoiceSet => <DrumVoice>{
+    for (final DrumVoice voice in voices) guidedPracticeMatchVoice(voice),
+  };
 
   LedCue? cueForVoice(DrumVoice voice) {
     final DrumVoice canonical = canonicalGuidedPracticeVoice(voice);
@@ -252,12 +255,13 @@ class GuidedPracticeController extends ChangeNotifier {
   void _handleDrumInput(DrumInputEvent event) {
     if (!isRunning || event.velocity <= 0) return;
     final DrumVoice playedVoice = canonicalGuidedPracticeVoice(event.voice);
-    if (playedVoice == DrumVoice.unknown) return;
+    final DrumVoice playedMatchVoice = guidedPracticeMatchVoice(playedVoice);
+    if (playedMatchVoice == DrumVoice.unknown) return;
 
     final GuidedPracticeExpectedEvent? expected = _state.currentEvent;
     if (expected == null) return;
-    final Set<DrumVoice> expectedVoices = expected.voiceSet;
-    if (!expectedVoices.contains(playedVoice)) {
+    final Set<DrumVoice> expectedVoices = expected.matchVoiceSet;
+    if (!expectedVoices.contains(playedMatchVoice)) {
       _sendFeedback(commandBuilder.errorCommandFor(playedVoice));
       return;
     }
@@ -268,7 +272,7 @@ class GuidedPracticeController extends ChangeNotifier {
     }
 
     final bool firstExpectedVoice = _receivedVoices.isEmpty;
-    _receivedVoices.add(playedVoice);
+    _receivedVoices.add(playedMatchVoice);
     if (firstExpectedVoice) {
       _completionTimer = timerFactory(
         simultaneousCompletionWindow,
@@ -291,7 +295,7 @@ class GuidedPracticeController extends ChangeNotifier {
     if (expected == null) return;
     final List<DrumVoice> missing = <DrumVoice>[
       for (final DrumVoice voice in expected.voices)
-        if (!_receivedVoices.contains(voice)) voice,
+        if (!_receivedVoices.contains(guidedPracticeMatchVoice(voice))) voice,
     ];
     for (final DrumVoice voice in missing) {
       final LedCue? cue = expected.cueForVoice(voice);

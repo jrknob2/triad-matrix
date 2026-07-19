@@ -194,6 +194,51 @@ void main() {
     });
 
     test(
+      'Hi-hat MIDI variants satisfy closed hi-hat expected events',
+      () async {
+        final _GuidedHarness harness = await _GuidedHarness.connected(
+          events: <GuidedPracticeExpectedEvent>[
+            _event(DrumVoice.kick, DrumVoice.hiHatClosed),
+            _event(DrumVoice.snare),
+          ],
+        );
+
+        harness.controller.start();
+        harness.hit(DrumVoice.hiHatOpen);
+        harness.hit(DrumVoice.kick);
+
+        expect(harness.controller.state.currentIndex, 1);
+        expect(harness.writes.sublist(1), <String>[_frame('CUE,SNARE')]);
+      },
+    );
+
+    test(
+      'Open hi-hat cues keep their voice while matching hi-hat input',
+      () async {
+        final _GuidedHarness harness = await _GuidedHarness.connected(
+          events: <GuidedPracticeExpectedEvent>[
+            GuidedPracticeExpectedEvent.fromCues(const <LedCue>[
+              LedCue(DrumVoice.hiHatOpen),
+            ]),
+            _event(DrumVoice.snare),
+          ],
+        );
+
+        harness.controller.start();
+        harness.hit(DrumVoice.hiHatClosed);
+
+        expect(harness.controller.expectedEvents.first.voices, <DrumVoice>[
+          DrumVoice.hiHatOpen,
+        ]);
+        expect(harness.controller.state.currentIndex, 1);
+        expect(harness.writes, <String>[
+          _frame('CUE,HIHAT'),
+          _frame('CUE,SNARE'),
+        ]);
+      },
+    );
+
+    test(
       'Duplicate expected voice hits do not falsely complete a group',
       () async {
         final _FakeTimerFactory timerFactory = _FakeTimerFactory();
