@@ -223,7 +223,7 @@ In the LED Controller section:
 2. Click `Refresh`.
 3. Select the `/dev/cu.usbmodem...` serial port.
 4. Click `Connect`.
-5. Click `Test Flash` to send `SNARE\n`.
+5. Click `Test LEDs` to send a semantic `FLASH` frame followed by `CLEAR`.
 6. Connect the LEKATO MIDI device in the MIDI device section.
 7. Enable `Forward MIDI Hits`.
 8. Strike pads on the LEKATO.

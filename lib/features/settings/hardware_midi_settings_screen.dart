@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../app/drumcabulary_theme.dart';
 import '../app/drumcabulary_ui.dart';
 import '../midi/drum_kit_mapper.dart';
+import '../midi/led_controller_protocol.dart';
 import '../midi/led_frame_command_encoder.dart';
 import '../midi/midi_input_models.dart';
 import '../midi/midi_input_service.dart';
@@ -42,6 +43,9 @@ class _HardwareMidiSettingsScreenState
     _ledController.addListener(_handleHardwareChanged);
     unawaited(_midiService.start());
     unawaited(_ledController.refreshPorts());
+    if (_ledController.isConnected) {
+      _ledController.requestOrientations();
+    }
   }
 
   @override
@@ -156,14 +160,14 @@ class _HardwareMidiSettingsScreenState
   Future<void> _testLeds() async {
     if (!_ledController.isConnected) return;
     setState(() => _testingLeds = true);
-    _ledController.sendCueFrame(const <LedCue>[
+    _ledController.sendFlashFrame(const <LedCue>[
       LedCue(DrumVoice.snare, sticking: StickingCue.right),
       LedCue(DrumVoice.kick, sticking: StickingCue.right),
       LedCue(DrumVoice.hiHatClosed, sticking: StickingCue.ghostLeft),
       LedCue(DrumVoice.crash, sticking: StickingCue.accentRight),
     ]);
     await Future<void>.delayed(const Duration(milliseconds: 700));
-    _ledController.sendCommand('CLEAR');
+    _ledController.sendCommand(ledClearCommand);
     if (mounted) setState(() => _testingLeds = false);
   }
 }
@@ -301,7 +305,7 @@ class _LedControllerPanel extends StatelessWidget {
           const SizedBox(height: 10),
           _StatusText(
             label: _serialStatusLabel(controller.status),
-            error: controller.lastError,
+            error: controller.controllerSettingsError ?? controller.lastError,
           ),
           const SizedBox(height: 12),
           Wrap(
@@ -323,8 +327,93 @@ class _LedControllerPanel extends StatelessWidget {
               ),
             ],
           ),
+          if (connected) ...<Widget>[
+            const SizedBox(height: 16),
+            _LedOrientationSettings(controller: controller),
+          ],
         ],
       ),
+    );
+  }
+}
+
+class _LedOrientationSettings extends StatelessWidget {
+  final SerialLedController controller;
+
+  const _LedOrientationSettings({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    final TextTheme textTheme = Theme.of(context).textTheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Text(
+          'LED Orientation',
+          style: textTheme.labelLarge?.copyWith(
+            color: DrumcabularyTheme.edgeTextPrimary,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Set which end of each physical stick has the DI connector.',
+          style: textTheme.bodySmall?.copyWith(
+            color: DrumcabularyTheme.edgeTextSecondary,
+          ),
+        ),
+        const SizedBox(height: 10),
+        for (final LedControllerVoice voice in LedControllerVoice.values)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              children: <Widget>[
+                Expanded(child: Text(voice.displayName)),
+                if (controller.pendingOrientations.contains(voice))
+                  const Padding(
+                    padding: EdgeInsets.only(right: 8),
+                    child: SizedBox.square(
+                      dimension: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
+                DropdownButton<LedOrientation>(
+                  value: controller.orientations[voice],
+                  hint: const Text('Unknown'),
+                  items: LedOrientation.values
+                      .map(
+                        (LedOrientation orientation) =>
+                            DropdownMenuItem<LedOrientation>(
+                              value: orientation,
+                              child: Text(orientation.protocolName),
+                            ),
+                      )
+                      .toList(growable: false),
+                  onChanged: (LedOrientation? orientation) {
+                    if (orientation == null) return;
+                    controller.setOrientation(voice, orientation);
+                  },
+                ),
+              ],
+            ),
+          ),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: <Widget>[
+            OutlinedButton.icon(
+              onPressed: () => controller.requestOrientations(),
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Refresh Orientation'),
+            ),
+            OutlinedButton.icon(
+              onPressed: () => controller.resetOrientations(),
+              icon: const Icon(Icons.restart_alt_rounded),
+              label: const Text('Reset Orientation'),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

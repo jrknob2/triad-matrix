@@ -579,6 +579,7 @@ void main() {
 String _frame(String firstCue, [String? secondCue]) {
   return <String>[
     'FRAME_BEGIN',
+    'ANIMATION,SOLID,55',
     firstCue,
     if (secondCue != null) secondCue,
     'FRAME_END',
@@ -639,6 +640,7 @@ class _GuidedHarness {
     await ledController.refreshPorts();
     ledController.selectPort(_FakeSerialPlatform.esp32.path);
     await ledController.connect();
+    platform.lastConnection.writes.clear();
     final GuidedPracticeController controller = GuidedPracticeController(
       expectedEvents: events,
       drumEvents: inputController.stream,
@@ -728,10 +730,15 @@ class _FakeSerialPlatform implements SerialLedPlatform {
 
 class _FakeSerialConnection implements SerialLedConnection {
   final List<String> writes = <String>[];
+  final StreamController<Uint8List> _inputController =
+      StreamController<Uint8List>.broadcast();
   bool closed = false;
 
   @override
   bool get isOpen => !closed;
+
+  @override
+  Stream<Uint8List> get input => _inputController.stream;
 
   @override
   int write(Uint8List bytes) {
@@ -742,5 +749,6 @@ class _FakeSerialConnection implements SerialLedConnection {
   @override
   void close() {
     closed = true;
+    _inputController.close();
   }
 }

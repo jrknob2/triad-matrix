@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../midi/drum_voice_led_command_mapper.dart';
+import '../midi/led_controller_protocol.dart';
 import '../midi/led_frame_command_encoder.dart';
 import '../midi/midi_input_models.dart';
 import '../midi/serial_led_controller.dart';
@@ -153,9 +154,11 @@ class GuidedPracticeLedCommandBuilder {
     this.encoder = const LedFrameCommandEncoder(),
   });
 
-  static const String clearCommand = 'CLEAR\n';
+  static const String clearCommand = ledClearCommand;
 
-  String? cueFrameFor(Iterable<LedCue> cues) => encoder.encodeCueFrame(cues);
+  String? cueFrameFor(Iterable<LedCue> cues) {
+    return encoder.encodeSolidFrame(cues);
+  }
 
   String? errorCommandFor(DrumVoice voice) {
     return encoder.feedbackCommand('ERROR', LedCue(voice));

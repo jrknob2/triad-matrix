@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -18,9 +19,9 @@ void main() {
       harness.output.triggerCue(_cue(DrumVoiceV1.hihat));
 
       expect(harness.platform.lastConnection.writes, <String>[
-        _frame('CUE,SNARE,R'),
-        _frame('CUE,KICK,R'),
-        _frame('CUE,HIHAT,R'),
+        _flashFrame('CUE,SNARE,R'),
+        _flashFrame('CUE,KICK,R'),
+        _flashFrame('CUE,HIHAT,R'),
       ]);
     });
 
@@ -34,7 +35,7 @@ void main() {
       ]);
 
       expect(harness.platform.lastConnection.writes, <String>[
-        _frame('CUE,KICK,R', 'CUE,HIHAT,R', 'CUE,SNARE,L'),
+        _flashFrame('CUE,KICK,R', 'CUE,HIHAT,R', 'CUE,SNARE,L'),
       ]);
     });
 
@@ -52,10 +53,10 @@ void main() {
         );
 
       expect(harness.platform.lastConnection.writes, <String>[
-        _frame('CUE,SNARE,(R)'),
-        _frame('CUE,SNARE,^R'),
-        _frame('CUE,SNARE,(L)R'),
-        _frame('CUE,SNARE,(R)L'),
+        _flashFrame('CUE,SNARE,(R)'),
+        _flashFrame('CUE,SNARE,^R'),
+        _flashFrame('CUE,SNARE,(L)R'),
+        _flashFrame('CUE,SNARE,(R)L'),
       ]);
     });
 
@@ -98,11 +99,11 @@ void main() {
           ..triggerCue(_cue(DrumVoiceV1.ride));
 
         expect(harness.platform.lastConnection.writes, <String>[
-          _frame('CUE,TOM1,R'),
-          _frame('CUE,TOM2,R'),
-          _frame('CUE,FLOORTOM,R'),
-          _frame('CUE,CRASH,R'),
-          _frame('CUE,RIDE,R'),
+          _flashFrame('CUE,TOM1,R'),
+          _flashFrame('CUE,TOM2,R'),
+          _flashFrame('CUE,FLOORTOM,R'),
+          _flashFrame('CUE,CRASH,R'),
+          _flashFrame('CUE,RIDE,R'),
         ]);
       },
     );
@@ -115,7 +116,27 @@ void main() {
       );
 
       expect(harness.platform.lastConnection.writes, <String>[
-        _frame('CUE,OHH,R'),
+        _flashFrame('CUE,OHH,R'),
+      ]);
+    });
+
+    test('play along uses lead time and fade-in frames', () async {
+      final _PlaybackLedHarness harness = await _PlaybackLedHarness.connected(
+        presentation: PatternLedPlaybackPresentation.playAlong,
+      );
+
+      expect(harness.output.leadTime, const Duration(milliseconds: 250));
+
+      harness.output.triggerCue(_cue(DrumVoiceV1.snare));
+      expect(harness.platform.lastConnection.writes, isEmpty);
+
+      harness.output.triggerLeadCueGroup(<PatternAudioCueV1>[
+        _cue(DrumVoiceV1.kick),
+        _cue(DrumVoiceV1.hihat, sticking: StickingCue.right),
+      ]);
+
+      expect(harness.platform.lastConnection.writes, <String>[
+        _fadeInFrame('CUE,KICK,R', 'CUE,HIHAT,R'),
       ]);
     });
 
@@ -150,6 +171,42 @@ void main() {
         1,
       ]);
     });
+
+    test('play along lead delay is scheduled before the target beat', () {
+      expect(
+        PatternAudioService.playAlongLeadDelayForTesting(
+          cueOffset: const Duration(milliseconds: 700),
+          phase: Duration.zero,
+          cycleDuration: const Duration(seconds: 1),
+          leadTime: const Duration(milliseconds: 250),
+        ),
+        const Duration(milliseconds: 450),
+      );
+    });
+
+    test('play along lead delay wraps for early next-cycle beats', () {
+      expect(
+        PatternAudioService.playAlongLeadDelayForTesting(
+          cueOffset: const Duration(milliseconds: 100),
+          phase: Duration.zero,
+          cycleDuration: const Duration(seconds: 1),
+          leadTime: const Duration(milliseconds: 250),
+        ),
+        const Duration(milliseconds: 850),
+      );
+    });
+
+    test('late play along frames are skipped', () {
+      expect(
+        PatternAudioService.playAlongLeadDelayForTesting(
+          cueOffset: const Duration(milliseconds: 500),
+          phase: const Duration(milliseconds: 300),
+          cycleDuration: const Duration(seconds: 1),
+          leadTime: const Duration(milliseconds: 250),
+        ),
+        isNull,
+      );
+    });
   });
 }
 
@@ -168,9 +225,23 @@ PatternAudioCueV1 _cue(
   );
 }
 
-String _frame(String firstCue, [String? secondCue, String? thirdCue]) {
+String _flashFrame(String firstCue, [String? secondCue, String? thirdCue]) {
+  return _frame('ANIMATION,FLASH,220', firstCue, secondCue, thirdCue);
+}
+
+String _fadeInFrame(String firstCue, [String? secondCue, String? thirdCue]) {
+  return _frame('ANIMATION,FADE_IN,250,180', firstCue, secondCue, thirdCue);
+}
+
+String _frame(
+  String animation,
+  String firstCue, [
+  String? secondCue,
+  String? thirdCue,
+]) {
   return <String>[
     'FRAME_BEGIN',
+    animation,
     firstCue,
     if (secondCue != null) secondCue,
     if (thirdCue != null) thirdCue,
@@ -190,7 +261,11 @@ class _PlaybackLedHarness {
     required this.output,
   });
 
-  static Future<_PlaybackLedHarness> connected({bool enabled = true}) async {
+  static Future<_PlaybackLedHarness> connected({
+    bool enabled = true,
+    PatternLedPlaybackPresentation presentation =
+        PatternLedPlaybackPresentation.hearIt,
+  }) async {
     final _FakeSerialPlatform platform = _FakeSerialPlatform();
     final SerialLedController controller = SerialLedController(
       platform: platform,
@@ -199,9 +274,11 @@ class _PlaybackLedHarness {
     await controller.refreshPorts();
     controller.selectPort(_FakeSerialPlatform.esp32.path);
     await controller.connect();
+    platform.lastConnection.writes.clear();
     final PatternLedPlaybackOutput output = PatternLedPlaybackOutput(
       controller: controller,
       isEnabled: () => enabled,
+      presentation: presentation,
     );
     return _PlaybackLedHarness(
       platform: platform,
@@ -236,10 +313,15 @@ class _FakeSerialPlatform implements SerialLedPlatform {
 
 class _FakeSerialConnection implements SerialLedConnection {
   final List<String> writes = <String>[];
+  final StreamController<Uint8List> _inputController =
+      StreamController<Uint8List>.broadcast();
   bool closed = false;
 
   @override
   bool get isOpen => !closed;
+
+  @override
+  Stream<Uint8List> get input => _inputController.stream;
 
   @override
   int write(Uint8List bytes) {
@@ -250,5 +332,6 @@ class _FakeSerialConnection implements SerialLedConnection {
   @override
   void close() {
     closed = true;
+    _inputController.close();
   }
 }

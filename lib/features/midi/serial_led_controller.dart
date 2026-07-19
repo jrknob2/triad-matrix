@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_libserialport/flutter_libserialport.dart';
 
 import 'led_frame_command_encoder.dart';
+import 'led_controller_protocol.dart';
 
 enum SerialLedConnectionStatus {
   disconnected,
@@ -71,6 +72,7 @@ abstract class SerialLedPlatform {
 
 abstract class SerialLedConnection {
   bool get isOpen;
+  Stream<Uint8List> get input;
   int write(Uint8List bytes);
   void close();
 }
@@ -193,17 +195,24 @@ class LibserialportLedPlatform implements SerialLedPlatform {
 
 class _LibserialportLedConnection implements SerialLedConnection {
   final SerialPort _port;
+  late final SerialPortReader _reader;
 
-  _LibserialportLedConnection(this._port);
+  _LibserialportLedConnection(this._port) {
+    _reader = SerialPortReader(_port);
+  }
 
   @override
   bool get isOpen => _port.isOpen;
+
+  @override
+  Stream<Uint8List> get input => _reader.stream;
 
   @override
   int write(Uint8List bytes) => _port.write(bytes);
 
   @override
   void close() {
+    _reader.close();
     if (_port.isOpen) {
       _port.close();
     }
@@ -221,8 +230,14 @@ class SerialLedController extends ChangeNotifier {
   List<SerialLedPort> _ports = const <SerialLedPort>[];
   SerialLedPort? _selectedPort;
   SerialLedConnection? _connection;
+  StreamSubscription<Uint8List>? _responseSubscription;
+  String _responseBuffer = '';
   SerialLedConnectionStatus _status = SerialLedConnectionStatus.disconnected;
   String? _lastError;
+  Map<LedControllerVoice, LedOrientation> _orientations =
+      const <LedControllerVoice, LedOrientation>{};
+  Set<LedControllerVoice> _pendingOrientations = const <LedControllerVoice>{};
+  String? _controllerSettingsError;
   Timer? _deviceMonitorTimer;
   bool _disposed = false;
 
@@ -237,6 +252,11 @@ class SerialLedController extends ChangeNotifier {
   SerialLedPort? get selectedPort => _selectedPort;
   SerialLedConnectionStatus get status => _status;
   String? get lastError => _lastError;
+  Map<LedControllerVoice, LedOrientation> get orientations =>
+      Map<LedControllerVoice, LedOrientation>.unmodifiable(_orientations);
+  Set<LedControllerVoice> get pendingOrientations =>
+      Set<LedControllerVoice>.unmodifiable(_pendingOrientations);
+  String? get controllerSettingsError => _controllerSettingsError;
   bool get isConnected =>
       _status == SerialLedConnectionStatus.connected &&
       (_connection?.isOpen ?? false);
@@ -303,8 +323,10 @@ class SerialLedController extends ChangeNotifier {
         _closeConnection();
         return;
       }
+      _listenToControllerResponses(_connection!);
       _setStatus(SerialLedConnectionStatus.connected);
       _startDeviceMonitor();
+      requestOrientations();
     } catch (error) {
       _closeConnection();
       _setStatus(SerialLedConnectionStatus.connectionError, error: '$error');
@@ -326,8 +348,44 @@ class SerialLedController extends ChangeNotifier {
     _sendPayload(normalized);
   }
 
-  void sendCueFrame(Iterable<LedCue> cues) {
-    final String? frame = _frameEncoder.encodeCueFrame(cues);
+  void sendCueFrame(
+    Iterable<LedCue> cues, {
+    required LedFrameAnimation animation,
+  }) {
+    final String? frame = _frameEncoder.encodeCueFrame(
+      cues,
+      animation: animation,
+    );
+    _sendEncodedFrame(frame);
+  }
+
+  void sendSolidFrame(
+    Iterable<LedCue> cues, {
+    int retriggerMs = LedControllerProtocolDefaults.guidedSolidRetriggerMs,
+  }) {
+    _sendEncodedFrame(
+      _frameEncoder.encodeSolidFrame(cues, retriggerMs: retriggerMs),
+    );
+  }
+
+  void sendFlashFrame(
+    Iterable<LedCue> cues, {
+    int decayMs = LedControllerProtocolDefaults.hearItFlashDecayMs,
+  }) {
+    _sendEncodedFrame(_frameEncoder.encodeFlashFrame(cues, decayMs: decayMs));
+  }
+
+  void sendFadeInFrame(
+    Iterable<LedCue> cues, {
+    int leadMs = LedControllerProtocolDefaults.playAlongLeadMs,
+    int decayMs = LedControllerProtocolDefaults.playAlongDecayMs,
+  }) {
+    _sendEncodedFrame(
+      _frameEncoder.encodeFadeInFrame(cues, leadMs: leadMs, decayMs: decayMs),
+    );
+  }
+
+  void _sendEncodedFrame(String? frame) {
     if (frame == null) {
       if (kDebugMode) {
         debugPrint('LED frame skipped: no valid cue commands.');
@@ -336,6 +394,39 @@ class SerialLedController extends ChangeNotifier {
     }
     _logLedFrame(frame);
     _sendPayload(frame);
+  }
+
+  void requestOrientations({LedControllerVoice? voice}) {
+    if (_disposed || !isConnected) return;
+    _controllerSettingsError = null;
+    sendCommand(buildGetOrientationCommand(voice));
+  }
+
+  void setOrientation(LedControllerVoice voice, LedOrientation orientation) {
+    if (_disposed || !isConnected) return;
+    _controllerSettingsError = null;
+    _pendingOrientations = <LedControllerVoice>{..._pendingOrientations, voice};
+    notifyListeners();
+    sendCommand(buildSetOrientationCommand(voice, orientation));
+    if (!isConnected) {
+      _pendingOrientations = <LedControllerVoice>{..._pendingOrientations}
+        ..remove(voice);
+      notifyListeners();
+    }
+  }
+
+  void resetOrientations({LedControllerVoice? voice}) {
+    if (_disposed || !isConnected) return;
+    _controllerSettingsError = null;
+    _pendingOrientations = voice == null
+        ? LedControllerVoice.values.toSet()
+        : <LedControllerVoice>{..._pendingOrientations, voice};
+    notifyListeners();
+    sendCommand(buildResetOrientationCommand(voice));
+    if (!isConnected) {
+      _pendingOrientations = <LedControllerVoice>{};
+      notifyListeners();
+    }
   }
 
   void _sendPayload(String payload) {
@@ -366,7 +457,83 @@ class SerialLedController extends ChangeNotifier {
 
   bool _isCueFrame(String payload) {
     return payload.startsWith('FRAME_BEGIN\n') &&
+        payload.contains('\nANIMATION,') &&
         payload.contains('\nFRAME_END\n');
+  }
+
+  void _listenToControllerResponses(SerialLedConnection connection) {
+    unawaited(_responseSubscription?.cancel());
+    _responseBuffer = '';
+    _responseSubscription = connection.input.listen(
+      _handleControllerBytes,
+      onError: (Object error, StackTrace stackTrace) {
+        if (kDebugMode) {
+          debugPrint('LED controller read failed: $error\n$stackTrace');
+        }
+      },
+      cancelOnError: false,
+    );
+  }
+
+  void _handleControllerBytes(Uint8List bytes) {
+    if (_disposed) return;
+    _responseBuffer += utf8.decode(bytes, allowMalformed: true);
+    while (true) {
+      final int newline = _responseBuffer.indexOf('\n');
+      if (newline < 0) return;
+      final String line = _responseBuffer.substring(0, newline).trim();
+      _responseBuffer = _responseBuffer.substring(newline + 1);
+      if (line.isEmpty) continue;
+      _handleControllerResponse(parseLedControllerResponse(line));
+    }
+  }
+
+  void _handleControllerResponse(LedControllerResponse response) {
+    switch (response) {
+      case LedAnimationAckResponse():
+        if (kDebugMode) {
+          final String phase = response.frameCommitted
+              ? 'frame committed'
+              : 'animation accepted';
+          debugPrint(
+            'LED controller $phase: ${response.animation.commandLine}',
+          );
+        }
+      case LedOrientationValueResponse():
+        _orientations = <LedControllerVoice, LedOrientation>{
+          ..._orientations,
+          response.voice: response.orientation,
+        };
+        _pendingOrientations = <LedControllerVoice>{..._pendingOrientations}
+          ..remove(response.voice);
+        _controllerSettingsError = null;
+        notifyListeners();
+      case LedOrientationResetResponse():
+        if (response.all) {
+          _orientations = const <LedControllerVoice, LedOrientation>{};
+          _pendingOrientations = const <LedControllerVoice>{};
+        } else {
+          _orientations = <LedControllerVoice, LedOrientation>{..._orientations}
+            ..remove(response.voice);
+          _pendingOrientations = <LedControllerVoice>{..._pendingOrientations}
+            ..remove(response.voice);
+        }
+        _controllerSettingsError = null;
+        notifyListeners();
+        requestOrientations(voice: response.voice);
+      case LedControllerErrorResponse():
+        _controllerSettingsError = response.detail.isEmpty
+            ? 'Controller error: ${response.code}'
+            : 'Controller error: ${response.code}: ${response.detail}';
+        if (kDebugMode) {
+          debugPrint(_controllerSettingsError);
+        }
+        notifyListeners();
+      case LedControllerUnknownResponse():
+        if (kDebugMode) {
+          debugPrint('LED controller response: ${response.line}');
+        }
+    }
   }
 
   void _startDeviceMonitor() {
@@ -412,6 +579,10 @@ class SerialLedController extends ChangeNotifier {
   }
 
   void _closeConnection() {
+    unawaited(_responseSubscription?.cancel());
+    _responseSubscription = null;
+    _responseBuffer = '';
+    _pendingOrientations = const <LedControllerVoice>{};
     final SerialLedConnection? connection = _connection;
     _connection = null;
     if (connection == null) return;

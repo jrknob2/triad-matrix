@@ -315,13 +315,27 @@ Closed and open hi-hat remain distinct in cue frames:
 Direct live MIDI hit commands remain backward-compatible voice flashes, so both
 closed and open hi-hat live hits still use `HIHAT\n` in that direct-hit path.
 
-Atomic cue frames use the controller protocol:
+Atomic cue frames use the controller protocol. Every frame must include exactly
+one animation primitive before any committed frame end:
 
 ```text
 FRAME_BEGIN
+ANIMATION,<TYPE>,...
 CUE,<VOICE>,<STROKE_SEQUENCE>
 FRAME_END
 ```
+
+Flutter owns educational modes and maps them to controller rendering
+primitives:
+
+| App behavior | Controller primitive | Default timing |
+| --- | --- | --- |
+| Guided Practice | `ANIMATION,SOLID,55` | 55 ms retrigger |
+| Hear It | `ANIMATION,FLASH,220` | 220 ms decay |
+| Play Along | `ANIMATION,FADE_IN,250,180` | 250 ms lead, 180 ms decay |
+
+The controller never receives educational mode names such as Guided Practice,
+Hear It, or Play Along. Bare frames without `ANIMATION` are invalid.
 
 The third field uses the same semantic stroke notation as the voice-first
 notation language:

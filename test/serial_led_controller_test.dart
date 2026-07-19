@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:drumcabulary/features/midi/drum_voice_led_command_mapper.dart';
+import 'package:drumcabulary/features/midi/led_controller_protocol.dart';
 import 'package:drumcabulary/features/midi/led_frame_command_encoder.dart';
 import 'package:drumcabulary/features/midi/midi_input_models.dart';
 import 'package:drumcabulary/features/midi/midi_led_forwarder.dart';
@@ -129,15 +131,15 @@ void main() {
       const LedFrameCommandEncoder encoder = LedFrameCommandEncoder();
 
       expect(
-        encoder.encodeCueFrame(const <LedCue>[LedCue(DrumVoice.snare)]),
-        'FRAME_BEGIN\nCUE,SNARE,R\nFRAME_END\n',
+        encoder.encodeSolidFrame(const <LedCue>[LedCue(DrumVoice.snare)]),
+        'FRAME_BEGIN\nANIMATION,SOLID,55\nCUE,SNARE,R\nFRAME_END\n',
       );
     });
 
     test('sticking values serialize using semantic stroke tokens', () {
       const LedFrameCommandEncoder encoder = LedFrameCommandEncoder();
 
-      final String? frame = encoder.encodeCueFrame(const <LedCue>[
+      final String? frame = encoder.encodeFlashFrame(const <LedCue>[
         LedCue(DrumVoice.snare, sticking: StickingCue.left),
         LedCue(DrumVoice.kick, sticking: StickingCue.right),
         LedCue(DrumVoice.tom1, sticking: StickingCue.leftRight),
@@ -151,6 +153,7 @@ void main() {
       expect(
         frame,
         'FRAME_BEGIN\n'
+        'ANIMATION,FLASH,220\n'
         'CUE,SNARE,L\n'
         'CUE,KICK,R\n'
         'CUE,TOM1,LR\n'
@@ -167,11 +170,11 @@ void main() {
       const LedFrameCommandEncoder encoder = LedFrameCommandEncoder();
 
       expect(
-        encoder.encodeCueFrame(const <LedCue>[
+        encoder.encodeFadeInFrame(const <LedCue>[
           LedCue(DrumVoice.unknown),
           LedCue(DrumVoice.ride),
         ]),
-        'FRAME_BEGIN\nCUE,RIDE,R\nFRAME_END\n',
+        'FRAME_BEGIN\nANIMATION,FADE_IN,250,180\nCUE,RIDE,R\nFRAME_END\n',
       );
     });
 
@@ -179,11 +182,15 @@ void main() {
       const LedFrameCommandEncoder encoder = LedFrameCommandEncoder();
 
       expect(
-        encoder.encodeCueFrame(const <LedCue>[
+        encoder.encodeFlashFrame(const <LedCue>[
           LedCue(DrumVoice.hiHatClosed),
           LedCue(DrumVoice.hiHatOpen),
         ]),
-        'FRAME_BEGIN\nCUE,HIHAT,R\nCUE,OHH,R\nFRAME_END\n',
+        'FRAME_BEGIN\n'
+        'ANIMATION,FLASH,220\n'
+        'CUE,HIHAT,R\n'
+        'CUE,OHH,R\n'
+        'FRAME_END\n',
       );
     });
 
@@ -191,12 +198,47 @@ void main() {
       const LedFrameCommandEncoder encoder = LedFrameCommandEncoder();
 
       expect(
-        encoder.encodeCueFrame(const <LedCue>[
+        encoder.encodeSolidFrame(const <LedCue>[
           LedCue(DrumVoice.tom1, sticking: StickingCue.left),
           LedCue(DrumVoice.ride, sticking: StickingCue.right),
         ]),
-        'FRAME_BEGIN\nCUE,TOM1,L\nCUE,RIDE,R\nFRAME_END\n',
+        'FRAME_BEGIN\nANIMATION,SOLID,55\nCUE,TOM1,L\nCUE,RIDE,R\nFRAME_END\n',
       );
+    });
+
+    test('animation and orientation responses parse', () {
+      final LedControllerResponse animation = parseLedControllerResponse(
+        'OK:ANIMATION:FADE_IN:250:180',
+      );
+      expect(animation, isA<LedAnimationAckResponse>());
+      expect((animation as LedAnimationAckResponse).frameCommitted, false);
+      expect(
+        animation.animation,
+        const LedFrameAnimation.fadeIn(leadMs: 250, decayMs: 180),
+      );
+
+      final LedControllerResponse frame = parseLedControllerResponse(
+        'OK:FRAME_END:FLASH:220',
+      );
+      expect(frame, isA<LedAnimationAckResponse>());
+      expect((frame as LedAnimationAckResponse).frameCommitted, true);
+      expect(frame.animation, const LedFrameAnimation.flash(220));
+
+      final LedControllerResponse orientation = parseLedControllerResponse(
+        'OK:ORIENTATION:HIHAT:RIGHT',
+      );
+      expect(orientation, isA<LedOrientationValueResponse>());
+      expect(
+        (orientation as LedOrientationValueResponse).voice,
+        LedControllerVoice.hiHat,
+      );
+      expect(orientation.orientation, LedOrientation.right);
+
+      final LedControllerResponse error = parseLedControllerResponse(
+        'ERROR:ANIMATION_REQUIRED',
+      );
+      expect(error, isA<LedControllerErrorResponse>());
+      expect((error as LedControllerErrorResponse).code, 'ANIMATION_REQUIRED');
     });
 
     test('feedback command includes resolved sticking', () {
@@ -228,6 +270,7 @@ void main() {
       await controller.refreshPorts();
       controller.selectPort(_FakeSerialPlatform.esp32.path);
       await controller.connect();
+      platform.lastConnection.writes.clear();
       controller.sendCommand(DrumVoiceLedCommandMapper.snareCommand);
 
       expect(platform.lastConnection.writes, <String>['SNARE\n']);
@@ -243,14 +286,43 @@ void main() {
       await controller.refreshPorts();
       controller.selectPort(_FakeSerialPlatform.esp32.path);
       await controller.connect();
-      controller.sendCueFrame(const <LedCue>[
+      platform.lastConnection.writes.clear();
+      controller.sendFlashFrame(const <LedCue>[
         LedCue(DrumVoice.kick),
         LedCue(DrumVoice.hiHatClosed, sticking: StickingCue.right),
       ]);
 
       expect(platform.lastConnection.writes, <String>[
-        'FRAME_BEGIN\nCUE,KICK,R\nCUE,HIHAT,R\nFRAME_END\n',
+        'FRAME_BEGIN\n'
+            'ANIMATION,FLASH,220\n'
+            'CUE,KICK,R\n'
+            'CUE,HIHAT,R\n'
+            'FRAME_END\n',
       ]);
+    });
+
+    test('connection requests and stores controller orientation', () async {
+      final _FakeSerialPlatform platform = _FakeSerialPlatform();
+      final SerialLedController controller = SerialLedController(
+        platform: platform,
+      );
+      addTearDown(controller.dispose);
+
+      await controller.refreshPorts();
+      controller.selectPort(_FakeSerialPlatform.esp32.path);
+      await controller.connect();
+
+      expect(platform.lastConnection.writes, <String>[
+        'SYS,GET,ORIENTATION,ALL\n',
+      ]);
+
+      platform.lastConnection.emitLine('ORIENTATION:SNARE:LEFT');
+      await Future<void>.delayed(Duration.zero);
+
+      expect(
+        controller.orientations[LedControllerVoice.snare],
+        LedOrientation.left,
+      );
     });
 
     test('disposal closes the serial connection', () async {
@@ -294,6 +366,7 @@ void main() {
       await controller.refreshPorts();
       controller.selectPort(_FakeSerialPlatform.esp32.path);
       await controller.connect();
+      platform.lastConnection.writes.clear();
       platform.listError = const SerialLedException(
         'Operation not permitted, errno = 1',
       );
@@ -427,6 +500,7 @@ class _ForwarderHarness {
     await controller.refreshPorts();
     controller.selectPort(_FakeSerialPlatform.esp32.path);
     await controller.connect();
+    platform.lastConnection.writes.clear();
     final MidiLedForwarder forwarder = MidiLedForwarder(
       controller: controller,
       enabled: enabled,
@@ -473,10 +547,19 @@ class _FakeSerialPlatform implements SerialLedPlatform {
 
 class _FakeSerialConnection implements SerialLedConnection {
   final List<String> writes = <String>[];
+  final StreamController<Uint8List> _inputController =
+      StreamController<Uint8List>.broadcast();
   bool closed = false;
 
   @override
   bool get isOpen => !closed;
+
+  @override
+  Stream<Uint8List> get input => _inputController.stream;
+
+  void emitLine(String line) {
+    _inputController.add(Uint8List.fromList(utf8.encode('$line\n')));
+  }
 
   @override
   int write(Uint8List bytes) {
@@ -487,6 +570,7 @@ class _FakeSerialConnection implements SerialLedConnection {
   @override
   void close() {
     closed = true;
+    _inputController.close();
   }
 }
 

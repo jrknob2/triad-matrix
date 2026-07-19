@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../../core/practice/practice_domain_v1.dart';
+import '../../midi/led_controller_protocol.dart';
 import '../../midi/serial_led_controller.dart';
 import '../pattern_audio_service.dart';
 import '../pattern_led_playback_output.dart';
@@ -523,6 +524,8 @@ class DrumSheetNotationDisplay extends StatefulWidget {
   final int audioPreviewBpm;
   final AccentVoiceV1 audioPreviewAccentVoice;
   final bool ledPlaybackEnabled;
+  final PatternLedPlaybackPresentation ledPlaybackPresentation;
+  final Duration ledPlayAlongLeadTime;
   final SerialLedController? ledController;
   final DrumSheetNotationController? controller;
 
@@ -548,6 +551,10 @@ class DrumSheetNotationDisplay extends StatefulWidget {
     this.audioPreviewBpm = 92,
     this.audioPreviewAccentVoice = AccentVoiceV1.snare,
     this.ledPlaybackEnabled = false,
+    this.ledPlaybackPresentation = PatternLedPlaybackPresentation.hearIt,
+    this.ledPlayAlongLeadTime = const Duration(
+      milliseconds: LedControllerProtocolDefaults.playAlongLeadMs,
+    ),
     this.ledController,
     this.controller,
   });
@@ -708,10 +715,15 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
             oldWidget.audioPreviewBpm != widget.audioPreviewBpm ||
             oldWidget.audioPreviewAccentVoice !=
                 widget.audioPreviewAccentVoice ||
-            oldWidget.ledController != widget.ledController)) {
+            oldWidget.ledController != widget.ledController ||
+            oldWidget.ledPlaybackPresentation !=
+                widget.ledPlaybackPresentation ||
+            oldWidget.ledPlayAlongLeadTime != widget.ledPlayAlongLeadTime)) {
       unawaited(_stopAudioPreview());
     }
-    if (oldWidget.ledController != widget.ledController) {
+    if (oldWidget.ledController != widget.ledController ||
+        oldWidget.ledPlaybackPresentation != widget.ledPlaybackPresentation ||
+        oldWidget.ledPlayAlongLeadTime != widget.ledPlayAlongLeadTime) {
       unawaited(_audioPreview?.dispose());
       _audioPreview = null;
     }
@@ -933,6 +945,8 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
       PatternLedPlaybackOutput(
         controller: ledController,
         isEnabled: () => widget.ledPlaybackEnabled,
+        presentation: widget.ledPlaybackPresentation,
+        playAlongLeadTime: widget.ledPlayAlongLeadTime,
       ),
     ];
   }

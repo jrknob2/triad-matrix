@@ -75,6 +75,8 @@ class PatternAudioMixerConfigV1 {
 }
 
 abstract class PatternPlaybackCueOutputV1 {
+  Duration get leadTime => Duration.zero;
+
   void triggerCue(PatternAudioCueV1 cue);
 
   void triggerCueGroup(List<PatternAudioCueV1> cues) {
@@ -82,6 +84,8 @@ abstract class PatternPlaybackCueOutputV1 {
       triggerCue(cue);
     }
   }
+
+  void triggerLeadCueGroup(List<PatternAudioCueV1> cues) {}
 
   void stop() {}
 }
@@ -406,6 +410,32 @@ class PatternAudioService {
     final Stopwatch cycleStopwatch = Stopwatch()..start();
     for (final List<PatternAudioCueV1> cueGroup in _cueGroupsForPlan(plan)) {
       final Duration offset = cueGroup.first.offset;
+      for (final PatternPlaybackCueOutputV1 output in _playbackOutputs) {
+        final Duration leadTime = output.leadTime;
+        if (leadTime <= Duration.zero) continue;
+        final Duration? leadDelay = _leadCueDelayForCycle(
+          cueOffset: offset,
+          phase: phase,
+          cycleDuration: plan.cycleDuration,
+          leadTime: leadTime,
+        );
+        if (leadDelay == null) continue;
+        _cueTimers.add(
+          Timer(leadDelay, () {
+            if (!_running) return;
+            if (cycleStopwatch.elapsed - leadDelay > _staleCueTolerance) {
+              return;
+            }
+            try {
+              output.triggerLeadCueGroup(cueGroup);
+            } catch (error, stackTrace) {
+              debugPrint(
+                'Pattern playback lead output failed: $error\n$stackTrace',
+              );
+            }
+          }),
+        );
+      }
       if (phase > Duration.zero && offset < phase) {
         continue;
       }
@@ -491,6 +521,48 @@ class PatternAudioService {
     PatternAudioPlanV1 plan,
   ) {
     return _cueGroupsForPlan(plan);
+  }
+
+  @visibleForTesting
+  static Duration? playAlongLeadDelayForTesting({
+    required Duration cueOffset,
+    required Duration phase,
+    required Duration cycleDuration,
+    required Duration leadTime,
+  }) {
+    return _leadCueDelayForCycle(
+      cueOffset: cueOffset,
+      phase: phase,
+      cycleDuration: cycleDuration,
+      leadTime: leadTime,
+    );
+  }
+
+  static Duration? _leadCueDelayForCycle({
+    required Duration cueOffset,
+    required Duration phase,
+    required Duration cycleDuration,
+    required Duration leadTime,
+  }) {
+    if (cycleDuration <= Duration.zero || leadTime <= Duration.zero) {
+      return null;
+    }
+    final Duration leadOffset = _wrappedCycleOffset(
+      cueOffset - leadTime,
+      cycleDuration,
+    );
+    if (phase > Duration.zero && leadOffset < phase) {
+      return null;
+    }
+    return leadOffset - phase;
+  }
+
+  static Duration _wrappedCycleOffset(Duration offset, Duration cycleDuration) {
+    final int cycleMicros = cycleDuration.inMicroseconds;
+    if (cycleMicros <= 0) return Duration.zero;
+    final int wrappedMicros =
+        offset.inMicroseconds.remainder(cycleMicros) + cycleMicros;
+    return Duration(microseconds: wrappedMicros.remainder(cycleMicros));
   }
 
   static Duration _normalizedPhase({
