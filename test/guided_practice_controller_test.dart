@@ -20,7 +20,7 @@ void main() {
 
       expect(harness.controller.start(), true);
 
-      expect(harness.writes, <String>[_frame('CUE,SNARE')]);
+      expect(harness.writes, <String>[_frame('CUE,SNARE,R')]);
     });
 
     test('Starting cues the first expected voice', () async {
@@ -30,7 +30,7 @@ void main() {
 
       harness.controller.start();
 
-      expect(harness.writes, <String>[_frame('CUE,SNARE')]);
+      expect(harness.writes, <String>[_frame('CUE,SNARE,R')]);
     });
 
     test('Starting cues every voice in a simultaneous event', () async {
@@ -42,7 +42,7 @@ void main() {
 
       harness.controller.start();
 
-      expect(harness.writes, <String>[_frame('CUE,KICK', 'CUE,HIHAT')]);
+      expect(harness.writes, <String>[_frame('CUE,KICK,R', 'CUE,HIHAT,R')]);
     });
 
     test('Starting includes optional sticking in the cue frame', () async {
@@ -57,7 +57,7 @@ void main() {
 
       harness.controller.start();
 
-      expect(harness.writes, <String>[_frame('CUE,KICK', 'CUE,HIHAT,R')]);
+      expect(harness.writes, <String>[_frame('CUE,KICK,R', 'CUE,HIHAT,R')]);
     });
 
     test('Starting serializes ghost, accent, and flam stroke cues', () async {
@@ -103,7 +103,10 @@ void main() {
       harness.hit(DrumVoice.snare);
 
       expect(harness.controller.state.currentIndex, 1);
-      expect(harness.writes, <String>[_frame('CUE,SNARE'), _frame('CUE,KICK')]);
+      expect(harness.writes, <String>[
+        _frame('CUE,SNARE,R'),
+        _frame('CUE,KICK,R'),
+      ]);
     });
 
     test('Wrong single voice sends ERROR and does not advance', () async {
@@ -121,8 +124,8 @@ void main() {
 
       expect(harness.controller.state.currentIndex, 0);
       expect(harness.controller.state.currentEvent?.selectedIndexes, <int>{4});
-      expect(harness.writes.last, 'ERROR,KICK\n');
-      expect(harness.writes.first, _frame('CUE,SNARE'));
+      expect(harness.writes.last, 'ERROR,KICK,R\n');
+      expect(harness.writes.first, _frame('CUE,SNARE,R'));
     });
 
     test('Unknown voice does not advance', () async {
@@ -134,7 +137,7 @@ void main() {
       harness.hit(DrumVoice.unknown);
 
       expect(harness.controller.state.currentIndex, 0);
-      expect(harness.writes, <String>[_frame('CUE,SNARE')]);
+      expect(harness.writes, <String>[_frame('CUE,SNARE,R')]);
     });
 
     test(
@@ -175,7 +178,7 @@ void main() {
 
       expect(harness.controller.state.currentIndex, 1);
       expect(timerFactory.timers.single.isActive, false);
-      expect(harness.writes.sublist(1), <String>[_frame('CUE,SNARE')]);
+      expect(harness.writes.sublist(1), <String>[_frame('CUE,SNARE,R')]);
     });
 
     test('Simultaneous voices may arrive in any order', () async {
@@ -208,7 +211,7 @@ void main() {
         harness.hit(DrumVoice.kick);
 
         expect(harness.controller.state.currentIndex, 1);
-        expect(harness.writes.sublist(1), <String>[_frame('CUE,SNARE')]);
+        expect(harness.writes.sublist(1), <String>[_frame('CUE,SNARE,R')]);
       },
     );
 
@@ -232,8 +235,8 @@ void main() {
         ]);
         expect(harness.controller.state.currentIndex, 1);
         expect(harness.writes, <String>[
-          _frame('CUE,HIHAT'),
-          _frame('CUE,SNARE'),
+          _frame('CUE,OHH,R'),
+          _frame('CUE,SNARE,R'),
         ]);
       },
     );
@@ -255,7 +258,7 @@ void main() {
         timerFactory.fireLast();
 
         expect(harness.controller.state.currentIndex, 0);
-        expect(harness.writes.last, 'MISSING,HIHAT\n');
+        expect(harness.writes.last, 'MISSING,HIHAT,R\n');
       },
     );
 
@@ -275,7 +278,7 @@ void main() {
       harness.hit(DrumVoice.kick);
       timerFactory.fireLast();
 
-      expect(harness.writes.last, 'MISSING,HIHAT\n');
+      expect(harness.writes.last, 'MISSING,HIHAT,R\n');
       expect(harness.controller.state.receivedVoices, isEmpty);
       expect(harness.controller.state.currentEvent?.selectedIndexes, <int>{0});
     });
@@ -297,7 +300,7 @@ void main() {
       timerFactory.fireLast();
 
       expect(harness.writes.last, 'MISSING,HIHAT,L\n');
-      expect(harness.writes.first, _frame('CUE,KICK', 'CUE,HIHAT,L'));
+      expect(harness.writes.first, _frame('CUE,KICK,R', 'CUE,HIHAT,L'));
     });
 
     test(
@@ -319,7 +322,7 @@ void main() {
         timerFactory.fireLast();
 
         expect(harness.controller.state.currentIndex, 0);
-        expect(harness.writes.last, 'MISSING,KICK\n');
+        expect(harness.writes.last, 'MISSING,KICK,R\n');
 
         harness.hit(DrumVoice.kick);
         harness.hit(DrumVoice.hiHatClosed);
@@ -343,11 +346,11 @@ void main() {
         harness.hit(DrumVoice.kick);
         harness.hit(DrumVoice.snare);
 
-        expect(harness.writes.last, 'ERROR,SNARE\n');
+        expect(harness.writes.last, 'ERROR,SNARE,R\n');
         expect(timerFactory.timers.length, 1);
 
         timerFactory.fireLast();
-        expect(harness.writes.last, 'MISSING,HIHAT\n');
+        expect(harness.writes.last, 'MISSING,HIHAT,R\n');
       },
     );
 
@@ -362,7 +365,7 @@ void main() {
       harness.controller.start();
       harness.hit(DrumVoice.snare);
 
-      expect(harness.writes.sublist(1), <String>[_frame('CUE,KICK')]);
+      expect(harness.writes.sublist(1), <String>[_frame('CUE,KICK,R')]);
     });
 
     test('Final event loops to the first event and keeps running', () async {
@@ -376,8 +379,8 @@ void main() {
       expect(harness.controller.state.status, GuidedPracticeStatus.running);
       expect(harness.controller.state.currentIndex, 0);
       expect(harness.writes, <String>[
-        _frame('CUE,SNARE'),
-        _frame('CUE,SNARE'),
+        _frame('CUE,SNARE,R'),
+        _frame('CUE,SNARE,R'),
       ]);
     });
 

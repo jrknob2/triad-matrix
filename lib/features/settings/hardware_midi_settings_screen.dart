@@ -158,7 +158,7 @@ class _HardwareMidiSettingsScreenState
     setState(() => _testingLeds = true);
     _ledController.sendCueFrame(const <LedCue>[
       LedCue(DrumVoice.snare, sticking: StickingCue.right),
-      LedCue(DrumVoice.kick),
+      LedCue(DrumVoice.kick, sticking: StickingCue.right),
       LedCue(DrumVoice.hiHatClosed, sticking: StickingCue.ghostLeft),
       LedCue(DrumVoice.crash, sticking: StickingCue.accentRight),
     ]);

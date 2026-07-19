@@ -18,9 +18,9 @@ void main() {
       harness.output.triggerCue(_cue(DrumVoiceV1.hihat));
 
       expect(harness.platform.lastConnection.writes, <String>[
-        _frame('CUE,SNARE'),
-        _frame('CUE,KICK'),
-        _frame('CUE,HIHAT'),
+        _frame('CUE,SNARE,R'),
+        _frame('CUE,KICK,R'),
+        _frame('CUE,HIHAT,R'),
       ]);
     });
 
@@ -34,7 +34,7 @@ void main() {
       ]);
 
       expect(harness.platform.lastConnection.writes, <String>[
-        _frame('CUE,KICK', 'CUE,HIHAT,R', 'CUE,SNARE,L'),
+        _frame('CUE,KICK,R', 'CUE,HIHAT,R', 'CUE,SNARE,L'),
       ]);
     });
 
@@ -98,16 +98,16 @@ void main() {
           ..triggerCue(_cue(DrumVoiceV1.ride));
 
         expect(harness.platform.lastConnection.writes, <String>[
-          _frame('CUE,TOM1'),
-          _frame('CUE,TOM2'),
-          _frame('CUE,FLOORTOM'),
-          _frame('CUE,CRASH'),
-          _frame('CUE,RIDE'),
+          _frame('CUE,TOM1,R'),
+          _frame('CUE,TOM2,R'),
+          _frame('CUE,FLOORTOM,R'),
+          _frame('CUE,CRASH,R'),
+          _frame('CUE,RIDE,R'),
         ]);
       },
     );
 
-    test('open hi-hat playback maps to the physical hi-hat LED', () async {
+    test('open hi-hat playback serializes as OHH', () async {
       final _PlaybackLedHarness harness = await _PlaybackLedHarness.connected();
 
       harness.output.triggerCue(
@@ -115,7 +115,7 @@ void main() {
       );
 
       expect(harness.platform.lastConnection.writes, <String>[
-        _frame('CUE,HIHAT,R'),
+        _frame('CUE,OHH,R'),
       ]);
     });
 

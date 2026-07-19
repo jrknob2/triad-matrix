@@ -303,20 +303,28 @@ No hand is inferred from voice.
 
 ## LED Output
 
-The physical LED hardware has one hi-hat location.
+The physical LED hardware owns all rendering, animation, brightness, and
+endpoint indicator behavior. The app emits only semantic voice and stroke cues;
+it never addresses pixels or left/right output channels directly.
 
-Both `HH` and `OHH` map to the firmware command `HIHAT`.
+Closed and open hi-hat remain distinct in cue frames:
+
+- `HH` maps to the controller voice `HIHAT`.
+- `OHH` maps to the controller voice `OHH`.
+
+Direct live MIDI hit commands remain backward-compatible voice flashes, so both
+closed and open hi-hat live hits still use `HIHAT\n` in that direct-hit path.
 
 Atomic cue frames use the controller protocol:
 
 ```text
 FRAME_BEGIN
-CUE,<VOICE>[,<STROKE_SEQUENCE>]
+CUE,<VOICE>,<STROKE_SEQUENCE>
 FRAME_END
 ```
 
-The optional third field uses the same semantic stroke notation as the
-voice-first notation language:
+The third field uses the same semantic stroke notation as the voice-first
+notation language:
 
 | Stroke | Meaning |
 | --- | --- |
@@ -337,20 +345,23 @@ Only canonical semantic stroke syntax is valid in cue frames. Direct live MIDI
 hit commands such as `SNARE`, `KICK`, and `HIHAT` remain supported and are not
 cue frames.
 
+No sticking remains semantically absent in notation, capture, and playback
+models. Because the controller requires a stroke field for every frame cue, LED
+cue generation resolves absent sticking at the transport boundary to the app's
+configured default stroke, currently normal right-hand `R`. This default is not
+written back into authored notation.
+
 Examples:
 
 ```text
-[HH]      -> CUE,HIHAT
-[OHH]     -> CUE,HIHAT
-[OHH:R]   -> CUE,HIHAT,R
+[HH]      -> CUE,HIHAT,R
+[OHH]     -> CUE,OHH,R
+[OHH:R]   -> CUE,OHH,R
 [S:(R)]   -> CUE,SNARE,(R)
 [S:^R]    -> CUE,SNARE,^R
 [S:(L)R]  -> CUE,SNARE,(L)R
-[OHH K]   -> CUE,HIHAT and CUE,KICK in one atomic frame
+[OHH K]   -> CUE,OHH,R and CUE,KICK,R in one atomic frame
 ```
-
-No-sticking events omit the third protocol field. Do not add an `OPENHIHAT`
-firmware command.
 
 ## MIDI Capture
 

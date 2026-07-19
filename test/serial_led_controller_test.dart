@@ -27,6 +27,12 @@ void main() {
       expect(mapper.commandFor(DrumVoice.hiHatPedal), 'HIHAT\n');
     });
 
+    test('frame cue voice names distinguish open hi-hat', () {
+      expect(mapper.cueVoiceNameFor(DrumVoice.hiHatClosed), 'HIHAT');
+      expect(mapper.cueVoiceNameFor(DrumVoice.hiHatOpen), 'OHH');
+      expect(mapper.cueVoiceNameFor(DrumVoice.hiHatPedal), 'HIHAT');
+    });
+
     test('tom voices map correctly', () {
       expect(mapper.commandFor(DrumVoice.tom1), 'TOM1\n');
       expect(mapper.commandFor(DrumVoice.tom2), 'TOM2\n');
@@ -62,9 +68,6 @@ void main() {
       );
       expect(stickingCueFromText('(L)^R')?.protocolValue, '(L)^R');
       expect(stickingCueFromText('(R)^L')?.protocolValue, '(R)^L');
-      for (final String token in _removedLegacyLedTokens()) {
-        expect(stickingCueFromText(token), isNull);
-      }
     });
 
     test('stroke serializer is deterministic', () {
@@ -122,12 +125,12 @@ void main() {
       );
     });
 
-    test('single voice frame serializes without sticking', () {
+    test('single voice frame serializes with resolved sticking', () {
       const LedFrameCommandEncoder encoder = LedFrameCommandEncoder();
 
       expect(
         encoder.encodeCueFrame(const <LedCue>[LedCue(DrumVoice.snare)]),
-        'FRAME_BEGIN\nCUE,SNARE\nFRAME_END\n',
+        'FRAME_BEGIN\nCUE,SNARE,R\nFRAME_END\n',
       );
     });
 
@@ -158,9 +161,6 @@ void main() {
         'CUE,HIHAT,^R\n'
         'FRAME_END\n',
       );
-      for (final String token in _removedLegacyLedTokens()) {
-        expect(frame, isNot(contains(',$token\n')));
-      }
     });
 
     test('unsupported voices are skipped in frames', () {
@@ -171,7 +171,19 @@ void main() {
           LedCue(DrumVoice.unknown),
           LedCue(DrumVoice.ride),
         ]),
-        'FRAME_BEGIN\nCUE,RIDE\nFRAME_END\n',
+        'FRAME_BEGIN\nCUE,RIDE,R\nFRAME_END\n',
+      );
+    });
+
+    test('open hi-hat cue frames serialize as OHH', () {
+      const LedFrameCommandEncoder encoder = LedFrameCommandEncoder();
+
+      expect(
+        encoder.encodeCueFrame(const <LedCue>[
+          LedCue(DrumVoice.hiHatClosed),
+          LedCue(DrumVoice.hiHatOpen),
+        ]),
+        'FRAME_BEGIN\nCUE,HIHAT,R\nCUE,OHH,R\nFRAME_END\n',
       );
     });
 
@@ -187,7 +199,7 @@ void main() {
       );
     });
 
-    test('feedback command includes optional sticking', () {
+    test('feedback command includes resolved sticking', () {
       const LedFrameCommandEncoder encoder = LedFrameCommandEncoder();
 
       expect(
@@ -202,7 +214,7 @@ void main() {
       );
       expect(
         encoder.feedbackCommand('ERROR', const LedCue(DrumVoice.snare)),
-        'ERROR,SNARE\n',
+        'ERROR,SNARE,R\n',
       );
     });
 
@@ -237,7 +249,7 @@ void main() {
       ]);
 
       expect(platform.lastConnection.writes, <String>[
-        'FRAME_BEGIN\nCUE,KICK\nCUE,HIHAT,R\nFRAME_END\n',
+        'FRAME_BEGIN\nCUE,KICK,R\nCUE,HIHAT,R\nFRAME_END\n',
       ]);
     });
 
@@ -476,14 +488,6 @@ class _FakeSerialConnection implements SerialLedConnection {
   void close() {
     closed = true;
   }
-}
-
-List<String> _removedLegacyLedTokens() {
-  return <String>[
-    String.fromCharCode(66),
-    String.fromCharCodes(<int>[70, 76]),
-    String.fromCharCodes(<int>[70, 82]),
-  ];
 }
 
 MidiDiagnosticEvent _diagnosticEvent({

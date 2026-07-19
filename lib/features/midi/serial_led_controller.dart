@@ -320,12 +320,21 @@ class SerialLedController extends ChangeNotifier {
 
   void sendCommand(String command) {
     final String normalized = command.endsWith('\n') ? command : '$command\n';
+    if (_isCueFrame(normalized)) {
+      _logLedFrame(normalized);
+    }
     _sendPayload(normalized);
   }
 
   void sendCueFrame(Iterable<LedCue> cues) {
     final String? frame = _frameEncoder.encodeCueFrame(cues);
-    if (frame == null) return;
+    if (frame == null) {
+      if (kDebugMode) {
+        debugPrint('LED frame skipped: no valid cue commands.');
+      }
+      return;
+    }
+    _logLedFrame(frame);
     _sendPayload(frame);
   }
 
@@ -348,6 +357,16 @@ class SerialLedController extends ChangeNotifier {
         error: 'Serial write failed: $error',
       );
     }
+  }
+
+  void _logLedFrame(String frame) {
+    if (!kDebugMode) return;
+    debugPrint('LED frame:\n${frame.trimRight()}');
+  }
+
+  bool _isCueFrame(String payload) {
+    return payload.startsWith('FRAME_BEGIN\n') &&
+        payload.contains('\nFRAME_END\n');
   }
 
   void _startDeviceMonitor() {

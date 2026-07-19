@@ -11,20 +11,21 @@ class LedCue {
 
 class LedFrameCommandEncoder {
   final DrumVoiceLedCommandMapper mapper;
+  final StickingCue defaultSticking;
 
   const LedFrameCommandEncoder({
     this.mapper = const DrumVoiceLedCommandMapper(),
+    this.defaultSticking = StickingCue.right,
   });
 
   String? encodeCueFrame(Iterable<LedCue> cues) {
     final List<String> lines = <String>['FRAME_BEGIN'];
     for (final LedCue cue in cues) {
-      final String? name = mapper.voiceNameFor(cue.voice);
+      final String? name = mapper.cueVoiceNameFor(cue.voice);
       if (name == null) continue;
-      final StickingCue? sticking = cue.sticking;
-      lines.add(
-        sticking == null ? 'CUE,$name' : 'CUE,$name,${sticking.protocolValue}',
-      );
+      final StickingCue sticking = _resolvedSticking(cue);
+      if (!_hasValidProtocolValue(sticking)) continue;
+      lines.add('CUE,$name,${sticking.protocolValue}');
     }
     if (lines.length == 1) return null;
     lines.add('FRAME_END');
@@ -32,11 +33,18 @@ class LedFrameCommandEncoder {
   }
 
   String? feedbackCommand(String action, LedCue cue) {
-    final String? name = mapper.voiceNameFor(cue.voice);
+    final String? name = mapper.cueVoiceNameFor(cue.voice);
     if (name == null) return null;
-    final StickingCue? sticking = cue.sticking;
-    return sticking == null
-        ? '$action,$name\n'
-        : '$action,$name,${sticking.protocolValue}\n';
+    final StickingCue sticking = _resolvedSticking(cue);
+    if (!_hasValidProtocolValue(sticking)) return null;
+    return '$action,$name,${sticking.protocolValue}\n';
+  }
+
+  StickingCue _resolvedSticking(LedCue cue) {
+    return cue.sticking ?? defaultSticking;
+  }
+
+  bool _hasValidProtocolValue(StickingCue sticking) {
+    return sticking.protocolValue.isNotEmpty;
   }
 }
