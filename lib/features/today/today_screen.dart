@@ -236,7 +236,7 @@ class _HomeView extends StatelessWidget {
                   ),
           ),
           const SizedBox(height: 14),
-          _ProgressSummaryPanel(stats: stats, onOpenInsights: onOpenInsights),
+          _ActivityPanel(stats: stats, onOpenInsights: onOpenInsights),
           const SizedBox(height: 14),
           _UpNextPanel(
             target: nextTarget,
@@ -244,10 +244,6 @@ class _HomeView extends StatelessWidget {
                 ? onOpenExplore
                 : () => _openLesson(context, nextTarget.lesson),
           ),
-          if (stats.recentActivity.isNotEmpty) ...<Widget>[
-            const SizedBox(height: 14),
-            _RecentActivityPanel(activity: stats.recentActivity),
-          ],
         ],
       ],
     );
@@ -532,9 +528,6 @@ class _ContinuePracticePanel extends StatelessWidget {
         child: Text('Choose a lesson to start practicing.'),
       );
     }
-    final double progress = target!.exerciseCount == 0
-        ? 0
-        : target!.completedExerciseCount / target!.exerciseCount;
     return DrumPanel(
       tone: DrumPanelTone.warm,
       padding: const EdgeInsets.all(18),
@@ -577,16 +570,6 @@ class _ContinuePracticePanel extends StatelessWidget {
             },
           ),
           const SizedBox(height: 14),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: LinearProgressIndicator(
-              value: progress.clamp(0, 1),
-              minHeight: 6,
-              backgroundColor: DrumcabularyTheme.edgeBackground,
-              color: DrumcabularyTheme.edgeOrange,
-            ),
-          ),
-          const SizedBox(height: 8),
           Text(
             '${target!.completedExerciseCount} of ${target!.exerciseCount} complete',
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
@@ -705,6 +688,9 @@ class _ExerciseChecklistRow extends StatelessWidget {
             final bool completed =
                 item.status == LessonProgressStatus.completed;
             final bool current = item.status == LessonProgressStatus.inProgress;
+            final Color borderColor = completed || current
+                ? DrumcabularyTheme.edgeOrange
+                : DrumcabularyTheme.edgeOrange.withValues(alpha: 0.34);
             return Padding(
               padding: const EdgeInsets.only(left: 3),
               child: DecoratedBox(
@@ -714,10 +700,8 @@ class _ExerciseChecklistRow extends StatelessWidget {
                       : DrumcabularyTheme.edgeSurface,
                   borderRadius: BorderRadius.circular(3),
                   border: Border.all(
-                    color: completed || current
-                        ? DrumcabularyTheme.edgeOrange
-                        : DrumcabularyTheme.edgeBorder,
-                    width: current ? 1.4 : 1,
+                    color: borderColor,
+                    width: current ? 1.4 : 1.1,
                   ),
                 ),
                 child: const SizedBox(width: 12, height: 12),
@@ -735,14 +719,11 @@ class _ExerciseChecklistRow extends StatelessWidget {
   }
 }
 
-class _ProgressSummaryPanel extends StatelessWidget {
+class _ActivityPanel extends StatelessWidget {
   final _PracticeStats stats;
   final VoidCallback? onOpenInsights;
 
-  const _ProgressSummaryPanel({
-    required this.stats,
-    required this.onOpenInsights,
-  });
+  const _ActivityPanel({required this.stats, required this.onOpenInsights});
 
   @override
   Widget build(BuildContext context) {
@@ -751,76 +732,140 @@ class _ProgressSummaryPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: Text(
-                  'Progress',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: DrumcabularyTheme.edgeTextPrimary,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0,
-                  ),
-                ),
-              ),
-              TextButton(
-                onPressed: onOpenInsights,
-                child: const Text('View My Insights'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
+          const DrumSectionTitle(text: 'Activity'),
+          const SizedBox(height: 16),
           LayoutBuilder(
             builder: (BuildContext context, BoxConstraints constraints) {
-              final bool compact = constraints.maxWidth < 560;
-              final List<Widget> metrics = <Widget>[
-                _MetricBlock(
-                  value: '${stats.currentStreakDays}',
-                  label: 'Day Streak',
-                  sublabel: stats.currentStreakDays > 0
-                      ? 'Keep it going.'
-                      : null,
-                ),
-                _MetricBlock(
-                  value: _durationValue(stats.practiceSecondsThisWeek),
-                  label: 'This Week',
-                ),
-                _MetricBlock(
-                  value: '${stats.exercisesMastered}',
-                  label: 'Exercises',
-                  sublabel: stats.lessonsWithMasteredExercises == 0
-                      ? null
-                      : 'Across ${stats.lessonsWithMasteredExercises} lessons',
-                ),
-              ];
+              final bool compact =
+                  constraints.maxWidth < 820 || stats.recentActivity.isEmpty;
+              final Widget recent = _RecentSummary(
+                stats: stats,
+                onOpenInsights: onOpenInsights,
+              );
+              final Widget progress = _ProgressActivityList(
+                activity: stats.recentActivity,
+              );
               if (compact) {
                 return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    for (final Widget metric in metrics) ...<Widget>[
-                      metric,
-                      if (metric != metrics.last)
-                        const Divider(color: DrumcabularyTheme.edgeBorder),
+                    recent,
+                    if (stats.recentActivity.isNotEmpty) ...<Widget>[
+                      const SizedBox(height: 14),
+                      const Divider(color: DrumcabularyTheme.edgeBorder),
+                      const SizedBox(height: 14),
+                      progress,
                     ],
                   ],
                 );
               }
               return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  for (final Widget metric in metrics) ...<Widget>[
-                    Expanded(child: metric),
-                    if (metric != metrics.last)
-                      const SizedBox(
-                        height: 54,
-                        child: VerticalDivider(
-                          color: DrumcabularyTheme.edgeBorder,
-                        ),
-                      ),
-                  ],
+                  Expanded(child: recent),
+                  const SizedBox(width: 18),
+                  const SizedBox(
+                    height: 138,
+                    child: VerticalDivider(color: DrumcabularyTheme.edgeBorder),
+                  ),
+                  const SizedBox(width: 18),
+                  Expanded(child: progress),
                 ],
               );
             },
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _RecentSummary extends StatelessWidget {
+  final _PracticeStats stats;
+  final VoidCallback? onOpenInsights;
+
+  const _RecentSummary({required this.stats, required this.onOpenInsights});
+
+  @override
+  Widget build(BuildContext context) {
+    final List<Widget> metrics = <Widget>[
+      _MetricBlock(
+        value: '${stats.currentStreakDays}',
+        label: 'Day Streak',
+        sublabel: stats.currentStreakDays > 0 ? 'Keep it going.' : null,
+      ),
+      _MetricBlock(
+        value: _durationValue(stats.practiceSecondsThisWeek),
+        label: 'This Week',
+      ),
+      _MetricBlock(
+        value: '${stats.exercisesMastered}',
+        label: 'Exercises',
+        sublabel: stats.lessonsWithMasteredExercises == 0
+            ? null
+            : 'Across ${stats.lessonsWithMasteredExercises} lessons',
+      ),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            Expanded(child: _ActivitySubsectionTitle(text: 'Recent')),
+            TextButton(
+              onPressed: onOpenInsights,
+              child: const Text('View My Insights'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+            if (constraints.maxWidth < 520) {
+              return Column(
+                children: <Widget>[
+                  for (final Widget metric in metrics) ...<Widget>[
+                    metric,
+                    if (metric != metrics.last)
+                      const Divider(color: DrumcabularyTheme.edgeBorder),
+                  ],
+                ],
+              );
+            }
+            return Row(
+              children: <Widget>[
+                for (final Widget metric in metrics) ...<Widget>[
+                  Expanded(child: metric),
+                  if (metric != metrics.last)
+                    const SizedBox(
+                      height: 54,
+                      child: VerticalDivider(
+                        color: DrumcabularyTheme.edgeBorder,
+                      ),
+                    ),
+                ],
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _ActivitySubsectionTitle extends StatelessWidget {
+  final String text;
+
+  const _ActivitySubsectionTitle({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+        color: DrumcabularyTheme.edgeTextPrimary,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0,
       ),
     );
   }
@@ -948,27 +993,25 @@ class _UpNextPanel extends StatelessWidget {
   }
 }
 
-class _RecentActivityPanel extends StatelessWidget {
+class _ProgressActivityList extends StatelessWidget {
   final List<_RecentPracticeActivity> activity;
 
-  const _RecentActivityPanel({required this.activity});
+  const _ProgressActivityList({required this.activity});
 
   @override
   Widget build(BuildContext context) {
-    return DrumPanel(
-      padding: const EdgeInsets.all(18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          const DrumSectionTitle(text: 'Recent Activity'),
-          const SizedBox(height: 10),
-          for (final _RecentPracticeActivity item in activity) ...<Widget>[
-            _RecentActivityRow(item: item),
-            if (item != activity.last)
-              const Divider(color: DrumcabularyTheme.edgeBorder),
-          ],
+    if (activity.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        const _ActivitySubsectionTitle(text: 'Progress'),
+        const SizedBox(height: 10),
+        for (final _RecentPracticeActivity item in activity) ...<Widget>[
+          _RecentActivityRow(item: item),
+          if (item != activity.last)
+            const Divider(color: DrumcabularyTheme.edgeBorder),
         ],
-      ),
+      ],
     );
   }
 }

@@ -70,9 +70,8 @@ Top to bottom.
 1. Greeting
 2. Device Status
 3. Keep Practicing This
-4. Progress Summary
+4. Activity
 5. Up Next
-6. Recent Activity
 
 No additional sections should compete with these.
 
@@ -145,7 +144,6 @@ Contents:
 
 - lesson title
 - exercise title
-- lesson progress
 - exercise checklist
 - completion indicators
 - Resume button
@@ -185,7 +183,24 @@ Section title:
 
 ---
 
-## Progress Summary
+## Activity
+
+Purpose:
+
+Collect recent practice signals into one compact card.
+
+The outer card title is:
+
+**Activity**
+
+The card has two subsections:
+
+- **Recent**
+- **Progress**
+
+---
+
+### Recent
 
 Purpose:
 
@@ -239,6 +254,44 @@ appears here.
 
 ---
 
+### Progress
+
+Purpose:
+
+Show recent accomplishments.
+
+Items describe actions.
+
+Not simply lesson names.
+
+Examples:
+
+```
+Completed
+
+Money Beat + Triplet Fills
+
+Today
+```
+
+```
+Practiced
+
+Triplet Vocabulary
+
+Yesterday
+```
+
+```
+Practiced
+
+Groove First
+
+2 days ago
+```
+
+---
+
 ## Up Next
 
 Purpose:
@@ -275,48 +328,6 @@ Secondary action:
 **Choose Something Else**
 
 opens Explore.
-
----
-
-## Recent Activity
-
-Purpose:
-
-Show recent accomplishments.
-
-Items describe actions.
-
-Not simply lesson names.
-
-Examples:
-
-```
-Completed
-
-Money Beat + Triplet Fills
-
-Today
-```
-
-```
-Practiced
-
-Triplet Vocabulary
-
-Yesterday
-```
-
-```
-Practiced
-
-Groove First
-
-2 days ago
-```
-
-Optional:
-
-View All
 
 ---
 
