@@ -40,13 +40,14 @@ high-contrast, drummer-focused interface.
 - Screen padding: 16 px on iPhone-sized layouts.
 - Card padding: 16-20 px depending on density.
 - Exercise card internal gaps: 8-16 px.
-- Add enough bottom inset so the sticky BPM footer does not cover content.
+- Add enough bottom inset for normal scroll comfort; Lesson Detail has no
+  sticky practice footer.
 
 ## Cards
 
 - Use dark surfaces with subtle borders.
 - Border radius: 8 px for card-like surfaces.
-- Elevation is restrained and mostly used for the sticky footer.
+- Elevation is restrained and should be used only where it clarifies depth.
 - Do not nest decorative cards inside decorative cards; notation may use a
   dedicated light panel only for legibility.
 
@@ -74,7 +75,7 @@ high-contrast, drummer-focused interface.
   - large bold lesson title
   - overview/objective copy
   - lesson number and duration chips
-  - full-width Print Lesson button with print icon
+  - restrained More Actions menu for Print Lesson
 - Optional decorative treatment can use a subtle dark gradient, but not custom
   artwork unless it is already available.
 
@@ -82,20 +83,21 @@ high-contrast, drummer-focused interface.
 
 - Exercise number and title are prominent.
 - Status pill appears in the header row.
-- Why / What / How / Success labels are bold and readable.
-- Tempo guidance appears as an orange-accent chip.
-- Hear It remains attached to each rendered notation example.
+- Only the active exercise renders as a full card.
+- Goal, Focus, and Tip replace Why / What / How for student-facing labels.
+- On wide layouts, Goal, Focus, and Tip align in one row directly above
+  notation. On narrow layouts they stack.
+- Tempo guidance and interactive BPM controls live beneath Tip.
+- Hear It appears as one of the four practice-mode cards beneath notation.
 - Practice It and Complete Exercise behavior must remain unchanged.
 
-## Sticky BPM Footer
+## Lesson Detail Practice Controls
 
-- Footer is a dark elevated surface.
-- Layout:
-  - metronome/reset control on the left
-  - BPM decrement / value / increment in the center
-  - orange play/tempo accent on the right
-- Current BPM value is large and orange.
-- Footer must not cover lesson content; scroll views need bottom padding.
+- Lesson Detail does not use a sticky footer.
+- The four practice-mode cards beneath notation are the primary actions:
+  Practice It, Guided Practice, Hear It, and Play Along.
+- More Actions is restrained and contains only secondary lesson actions such as
+  Print Lesson.
 
 ## Notation Display
 
@@ -103,7 +105,8 @@ high-contrast, drummer-focused interface.
 - Preferred future direction is a true dark notation renderer with light strokes.
 - Current safe rule: on dark exercise cards, place notation on a dedicated light
   notation panel if dark rendering is not reliable.
-- Notation panels must avoid edge collisions and footer overlap.
+- Notation panels must avoid edge collisions and wrap vertically when a pattern
+  is too long for the available width.
 
 ## Accessibility Rules
 

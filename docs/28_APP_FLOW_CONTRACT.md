@@ -166,6 +166,10 @@ Lesson Detail is the main work surface.
 It owns:
 
 - lesson explanation
+- one active exercise at a time
+- exercise step navigation
+- Goal, Focus, and Tip for the active exercise
+- inline BPM controls attached to the active exercise Tip
 - rendered notation
 - Hear It playback
 - Practice It handoff
@@ -173,6 +177,17 @@ It owns:
 - Guided Practice handoff
 - completion/progress action where present
 - print/export
+
+Rules:
+
+- Lesson Detail must not render every exercise as a fully expanded section.
+- The corrected hierarchy is Lesson Header, Exercise Navigator, Active Exercise
+  Header, Goal | Focus | Tip + BPM controls, wrapped notation, then Practice It
+  | Guided Practice | Hear It | Play Along.
+- The top exercise navigator is the exercise selection surface. Do not duplicate
+  collapsed exercise rows below the active card.
+- There is no sticky lesson footer. BPM controls live beneath Tip.
+- More Actions contains only secondary lesson actions such as Print Lesson.
 
 It must not own:
 

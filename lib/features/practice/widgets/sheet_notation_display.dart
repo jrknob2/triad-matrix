@@ -574,6 +574,7 @@ class DrumSheetNotationDisplay extends StatefulWidget {
   final Color? selectedColor;
   final double minNoteWidth;
   final bool compactLayout;
+  final bool preserveMeasures;
   final bool darkTheme;
   final Color? backgroundColor;
   final bool audioPreviewEnabled;
@@ -603,6 +604,7 @@ class DrumSheetNotationDisplay extends StatefulWidget {
     this.selectedColor,
     this.minNoteWidth = defaultMinNoteWidth,
     this.compactLayout = false,
+    this.preserveMeasures = true,
     this.darkTheme = false,
     this.backgroundColor,
     this.audioPreviewEnabled = false,
@@ -1150,7 +1152,7 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
         'finalRepeat': widget.finalRepeat,
         'grouping': widget.grouping,
         'minNoteWidth': widget.minNoteWidth,
-        'preserveMeasures': true,
+        'preserveMeasures': widget.preserveMeasures,
         'selectable': widget.selectable && !selection.isGuidedPractice,
         'showSticking': widget.showSticking,
         'theme': widget.darkTheme ? 'dark' : 'light',

@@ -93,7 +93,8 @@ Developer and hardware diagnostic access:
 - sticking/limb labels render only when authored
 - rendered notation may expose an ear-icon preview that plays the displayed notes through the existing sample engine
 - while notation preview is playing, the notation surface should highlight the active rhythmic event with the shared rounded selection treatment aligned to rendered note positions
-- lesson detail exposes a persistent footer BPM control for notation preview speed; authored exercise tempo remains guidance
+- lesson detail exposes inline BPM controls in the active exercise Tip panel;
+  authored exercise tempo remains guidance
 - notation preview timing should preserve written bar speed across eighth, sixteenth, and triplet-eighth subdivisions
 - notation preview playback and active-event highlighting should honor `repeat_count`
 - notation preview audio should use the explicit mixer config for relative sample levels
@@ -200,9 +201,9 @@ Forbidden content:
 1. User opens a lesson.
 2. Opening a not-started lesson marks it `in_progress` locally.
 3. Lesson overview/objective renders.
-4. Progressive exercise cards render in authored order.
-5. Each exercise explains Why, What, and How.
-6. User can adjust lesson preview BPM from the footer.
+4. A compact exercise navigator renders all exercises in authored order.
+5. One active exercise card renders Goal, Focus, and Tip.
+6. User can adjust lesson preview BPM from the active exercise Tip panel.
 7. User can hear notation, start Practice It, start Guided Practice when
    hardware is connected, complete an exercise, print, or go back.
 8. During Guided Practice, the rendered notation highlights the current expected
@@ -221,11 +222,12 @@ Required content:
 - overview
 - objective
 - estimated minutes
-- progressive exercise cards
-- each exercise's Why, What, and How
-- rendered notation
-- Hear It action
-- footer BPM control for Hear It preview speed
+- compact exercise navigator
+- one active exercise card
+- Goal, Focus, and Tip for the active exercise
+- wrapped rendered notation for the active exercise
+- Practice It, Guided Practice, Hear It, and Play Along actions beneath notation
+- inline BPM control for Hear It and Play Along preview speed
 - Practice It action/timer entry point
 - Guided Practice action when MIDI input and LED output are connected
 - current expected notation highlight during Guided Practice
@@ -261,7 +263,7 @@ Required content:
 - lesson identity
 - overview/objective
 - progressive exercises
-- Why, What, and How
+- Goal, Focus, and Tip content derived from the exercise teaching fields
 - rendered notation examples
 - tempo guidance when authored
 
@@ -328,11 +330,13 @@ Lesson Detail must show:
 - overview
 - objective
 - estimated time
-- exercise cards in order
-- Why, What, and How for each exercise
-- rendered notation for each exercise
-- ear-icon preview controls for rendered notation
-- persistent footer BPM control for rendered notation preview speed
+- exercise navigator in authored order
+- one active exercise card
+- Goal, Focus, and Tip for the active exercise
+- wrapped rendered notation for the active exercise
+- four practice-mode cards beneath notation
+- inline BPM control in the active exercise Tip panel for rendered notation
+  preview speed
 - active-event notation highlight during preview using the shared rounded selection treatment
 - current expected note/group highlight over rendered notation during Guided Practice
 - Practice It / Complete Exercise controls

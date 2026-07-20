@@ -32,7 +32,8 @@ Supported rendering goals:
 - render YAML-authored exercise notation on Lesson Detail
 - render the same exercise notation into printable/exportable PDF content
 - provide a lightweight "Hear It" preview from rendered examples
-- allow Lesson Detail to control Hear It preview BPM from a persistent footer
+- allow Lesson Detail to control Hear It and Play Along preview BPM from the
+  active exercise Tip panel
 - preserve authored grouping spaces as visual phrasing aids
 - preserve computed measures for display and print
 - render one or more YAML-authored sections inside a single exercise
@@ -158,8 +159,10 @@ Primary file:
 
 - `lib/features/coach/lesson_detail_screen.dart`
 
-The lesson detail screen renders one exercise card per `LessonExercise`. Each
-card renders every `ExerciseNotationSection` in the exercise notation block.
+The lesson detail screen renders one full active exercise card at a time. The
+top exercise navigator selects which `LessonExercise` is active; non-active
+exercises are not rendered as duplicate expanded or collapsed rows below the
+card.
 
 Each section creates a `DrumSheetNotationDisplay` with:
 
@@ -171,8 +174,9 @@ Each section creates a `DrumSheetNotationDisplay` with:
 - lesson preview BPM
 - grouping inferred from top-level spaces in the section pattern string
 - `showSticking` only when the section authors `sticking`
-- `compactLayout: true`
-- `minNoteWidth: 40`
+- `compactLayout: false`
+- `preserveMeasures: false` so longer active patterns can wrap vertically
+- `minNoteWidth: 54`
 - `audioPreviewEnabled: true`
 
 Raw notation strings are not shown as the student-facing display. Rendering
@@ -384,8 +388,8 @@ Audio preview builds a playback plan from `DrumSheetNotationDocument`.
 
 Important behavior:
 
-- Lesson Detail owns a footer BPM control and passes that value to each
-  `DrumSheetNotationDisplay`.
+- Lesson Detail owns an inline BPM control in the active exercise Tip panel and
+  passes that value to each active `DrumSheetNotationDisplay`.
 - Changing BPM while a notation preview is running stops the active preview so
   the next Hear It action starts at the selected tempo.
 - notes in a simultaneous bracket share the same scheduled offset
