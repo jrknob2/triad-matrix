@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../state/app_controller.dart';
+import '../progress/practice_insights_screen.dart';
 import '../settings/app_settings_screen.dart';
 import '../today/today_screen.dart';
 import 'startup_splash_screen.dart';
@@ -14,6 +15,13 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   late final Future<AppController> _controllerFuture = AppController.create();
+  int _selectedIndex = 0;
+
+  void _selectDestination(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,24 +43,153 @@ class _AppShellState extends State<AppShell> {
         if (controller == null) {
           return const StartupSplashScreen();
         }
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('Coach'),
-            actions: <Widget>[
-              IconButton(
-                tooltip: 'Settings',
-                icon: const Icon(Icons.settings_outlined),
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => AppSettingsScreen(controller: controller),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          body: const TodayScreen(),
+        return _DrumAppNavigationShell(
+          selectedIndex: _selectedIndex,
+          onDestinationSelected: _selectDestination,
+          body: _destinationFor(controller),
         );
       },
+    );
+  }
+
+  Widget _destinationFor(AppController controller) {
+    return switch (_selectedIndex) {
+      0 => TodayScreen(
+        onOpenExplore: () => _selectDestination(1),
+        onOpenInsights: () => _selectDestination(2),
+        onOpenSettings: () => _selectDestination(3),
+      ),
+      1 => const ExploreLessonsScreen(),
+      2 => const PracticeInsightsScreen(),
+      3 => AppSettingsScreen(controller: controller),
+      _ => const SizedBox.shrink(),
+    };
+  }
+}
+
+class _DrumAppNavigationShell extends StatelessWidget {
+  final int selectedIndex;
+  final ValueChanged<int> onDestinationSelected;
+  final Widget body;
+
+  const _DrumAppNavigationShell({
+    required this.selectedIndex,
+    required this.onDestinationSelected,
+    required this.body,
+  });
+
+  static const List<NavigationDestination> _bottomDestinations =
+      <NavigationDestination>[
+        NavigationDestination(
+          icon: Icon(Icons.home_outlined),
+          selectedIcon: Icon(Icons.home_rounded),
+          label: 'Home',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.explore_outlined),
+          selectedIcon: Icon(Icons.explore_rounded),
+          label: 'Explore',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.bar_chart_outlined),
+          selectedIcon: Icon(Icons.bar_chart_rounded),
+          label: 'Insights',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.settings_outlined),
+          selectedIcon: Icon(Icons.settings_rounded),
+          label: 'Settings',
+        ),
+      ];
+
+  static const List<NavigationRailDestination> _railDestinations =
+      <NavigationRailDestination>[
+        NavigationRailDestination(
+          icon: Icon(Icons.home_outlined),
+          selectedIcon: Icon(Icons.home_rounded),
+          label: Text('Home'),
+        ),
+        NavigationRailDestination(
+          icon: Icon(Icons.explore_outlined),
+          selectedIcon: Icon(Icons.explore_rounded),
+          label: Text('Explore'),
+        ),
+        NavigationRailDestination(
+          icon: Icon(Icons.bar_chart_outlined),
+          selectedIcon: Icon(Icons.bar_chart_rounded),
+          label: Text('Insights'),
+        ),
+        NavigationRailDestination(
+          icon: Icon(Icons.settings_outlined),
+          selectedIcon: Icon(Icons.settings_rounded),
+          label: Text('Settings'),
+        ),
+      ];
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        if (constraints.maxWidth >= 860) {
+          return Scaffold(
+            body: Row(
+              children: <Widget>[
+                NavigationRail(
+                  selectedIndex: selectedIndex,
+                  onDestinationSelected: onDestinationSelected,
+                  labelType: NavigationRailLabelType.all,
+                  leading: const Padding(
+                    padding: EdgeInsets.fromLTRB(12, 24, 12, 20),
+                    child: _BrandMark(),
+                  ),
+                  destinations: _railDestinations,
+                ),
+                const VerticalDivider(width: 1),
+                Expanded(child: body),
+              ],
+            ),
+          );
+        }
+        return Scaffold(
+          body: body,
+          bottomNavigationBar: NavigationBar(
+            selectedIndex: selectedIndex,
+            onDestinationSelected: onDestinationSelected,
+            destinations: _bottomDestinations,
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _BrandMark extends StatelessWidget {
+  const _BrandMark();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: <Widget>[
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color: Theme.of(
+              context,
+            ).colorScheme.primary.withValues(alpha: 0.16),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: const Padding(
+            padding: EdgeInsets.all(10),
+            child: Icon(Icons.graphic_eq_rounded),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'DRUMCABULARY',
+          style: Theme.of(
+            context,
+          ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w900),
+        ),
+      ],
     );
   }
 }

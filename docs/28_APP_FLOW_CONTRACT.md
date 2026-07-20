@@ -48,34 +48,60 @@ The implemented app currently opens into a single shell:
 
 ```text
 AppShell
-  -> Coach
+  -> Home
+      -> Continue Practice
+      -> Progress Summary
+      -> Up Next
+      -> Recent Activity
+  -> Explore
       -> Choose Level
       -> Choose Skill
       -> Choose Lesson
       -> Lesson Detail
+  -> Practice Insights
   -> Settings
       -> Hardware & MIDI
       -> temporary MIDI Capture panel
 ```
 
-There is no active bottom navigation, tab bar, or navigation rail.
+The root shell uses responsive top-level navigation:
 
-The current first screen is `Coach`, backed by `TodayScreen`.
+- desktop/tablet width: navigation rail
+- phone width: bottom navigation
+
+The current first screen is `Home`, backed by `TodayScreen`.
 
 ## Active Normal Student Flow
 
 ### Flow A: Open App
 
 ```text
-Launch app -> Coach / Choose Level
+Launch app -> Home
 ```
 
-The user should immediately see lesson choices, not setup, diagnostics, or
-authoring.
+The user should immediately see what to practice next, not setup, diagnostics,
+or authoring.
 
-Allowed global actions:
+Home answers:
 
-- Settings
+- What was I practicing?
+- How much progress have I made?
+- What should I work on next?
+- What did I do recently?
+
+Returning-user Home hierarchy:
+
+1. Continue Practice
+2. Progress Summary
+3. Up Next
+4. Recent Activity
+
+First-light Home hierarchy:
+
+1. Welcome to Drumcabulary
+2. Explore Lessons
+3. Record Exercise
+4. Set Up Hardware, only as a support action
 
 Not allowed as primary first-screen content:
 
@@ -84,11 +110,13 @@ Not allowed as primary first-screen content:
 - notation source editing
 - pattern capture
 - hardware setup dashboards
+- empty charts
+- zero-value analytics
 
 ### Flow B: Choose Lesson
 
 ```text
-Choose Level -> Choose Skill -> Choose Lesson or open single lesson directly
+Explore -> Choose Level -> Choose Skill -> Choose Lesson or open single lesson directly
 ```
 
 The lesson browsing path should stay linear and low-decision.
@@ -100,6 +128,7 @@ Rules:
 - Lesson answers "which specific lesson do I want now?"
 - A skill with one lesson may open that lesson directly.
 - A skill with multiple lessons should show an ordered lesson list.
+- Lesson categories belong in Explore, not on Home.
 
 ### Flow C: Read, Hear, And Practice Lesson
 
@@ -160,7 +189,7 @@ Rules:
 Settings is a support area, not a student practice destination.
 
 ```text
-Coach app bar -> Settings
+Root navigation -> Settings
 Settings -> Hardware & MIDI
 ```
 
@@ -320,6 +349,20 @@ Rules:
 - Keep diagnostics useful for hardware troubleshooting.
 - Do not expose them as normal student cards.
 - Do not make diagnostics the only way to access production hardware setup.
+
+## Practice Insights Flow
+
+Practice Insights is a top-level destination, but it is not Home.
+
+Current implementation:
+
+- lightweight placeholder destination
+- no fake charts
+- no invented coaching
+- Home links to it from the progress summary
+
+Future implementation should consume real practice sessions and exercise
+completion data before adding charts or trend summaries.
 
 ## Implemented But Not Active In Normal Flow
 
