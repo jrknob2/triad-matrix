@@ -118,6 +118,7 @@ It owns:
 - rendered notation
 - Hear It playback
 - Practice It handoff
+- Play Along handoff
 - Guided Practice handoff
 - completion/progress action where present
 - print/export
@@ -235,6 +236,11 @@ Current behavior:
 - can Hear It from the current valid notation using the existing playback engine
 - can Play Along from the same playback engine, using LED lead cues when the
   shared LED controller is connected
+- Play Along starts by lighting the first expected voice or simultaneous voice
+  group, waits for the student to play that group, then starts the existing
+  playback timeline just after that first event
+- wrong input before Play Along starts shows LED error feedback, and incomplete
+  simultaneous input shows missing LED feedback without starting playback
 - can start Guided Practice from the current valid notation when MIDI input and
   the shared LED controller are connected
 - does not infer hand sticking from MIDI velocity

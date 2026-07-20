@@ -47,6 +47,13 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
   late final SerialLedController _ledController =
       SharedSerialLedController.instance;
   final DrumKitMapper _drumKitMapper = const DrumKitMapper();
+  late final Stream<DrumInputEvent> _mappedDrumEvents = _midiService.events
+      .where(
+        (RawMidiEvent event) =>
+            event.messageType == MidiMessageType.noteOn && event.velocity > 0,
+      )
+      .map(_drumKitMapper.map)
+      .where((DrumInputEvent event) => event.voice != DrumVoice.unknown);
   final GuidedPracticeSequenceBuilder _guidedSequenceBuilder =
       const GuidedPracticeSequenceBuilder();
   GuidedPracticeController? _guidedPracticeController;
@@ -142,6 +149,9 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
                         ledPlaybackEnabled:
                             _ledPlaybackEnabled && _ledController.isConnected,
                         ledPlaybackPresentation: _ledPlaybackPresentation,
+                        playAlongDrumEvents: _mappedDrumEvents,
+                        playAlongInputEnabled:
+                            _midiService.status == MidiInputStatus.connected,
                         guidedPracticeState:
                             _guidedPracticeExerciseId ==
                                 lesson.exercises[index].id
@@ -806,6 +816,8 @@ class _ExerciseCard extends StatelessWidget {
   final SerialLedController ledController;
   final bool ledPlaybackEnabled;
   final PatternLedPlaybackPresentation ledPlaybackPresentation;
+  final Stream<DrumInputEvent> playAlongDrumEvents;
+  final bool playAlongInputEnabled;
   final GuidedPracticeState? guidedPracticeState;
   final bool active;
   final Duration activeElapsed;
@@ -824,6 +836,8 @@ class _ExerciseCard extends StatelessWidget {
     required this.ledController,
     required this.ledPlaybackEnabled,
     required this.ledPlaybackPresentation,
+    required this.playAlongDrumEvents,
+    required this.playAlongInputEnabled,
     required this.guidedPracticeState,
     required this.active,
     required this.activeElapsed,
@@ -942,6 +956,8 @@ class _ExerciseCard extends StatelessWidget {
                 ledController: ledController,
                 ledPlaybackEnabled: ledPlaybackEnabled,
                 ledPlaybackPresentation: ledPlaybackPresentation,
+                playAlongDrumEvents: playAlongDrumEvents,
+                playAlongInputEnabled: playAlongInputEnabled,
                 selectedIndexes: _guidedSelectionForSection(
                   guidedPracticeState,
                   index,
@@ -1079,6 +1095,8 @@ class _NotationPreview extends StatelessWidget {
   final SerialLedController ledController;
   final bool ledPlaybackEnabled;
   final PatternLedPlaybackPresentation ledPlaybackPresentation;
+  final Stream<DrumInputEvent> playAlongDrumEvents;
+  final bool playAlongInputEnabled;
   final Set<int> selectedIndexes;
   final DrumSheetNotationController? controller;
 
@@ -1088,6 +1106,8 @@ class _NotationPreview extends StatelessWidget {
     required this.ledController,
     required this.ledPlaybackEnabled,
     required this.ledPlaybackPresentation,
+    required this.playAlongDrumEvents,
+    required this.playAlongInputEnabled,
     required this.selectedIndexes,
     required this.controller,
   });
@@ -1133,6 +1153,8 @@ class _NotationPreview extends StatelessWidget {
             ledController: ledController,
             ledPlaybackEnabled: ledPlaybackEnabled,
             ledPlaybackPresentation: ledPlaybackPresentation,
+            playAlongDrumEvents: playAlongDrumEvents,
+            playAlongInputEnabled: playAlongInputEnabled,
             backgroundColor: DrumcabularyTheme.edgeNotationPanel,
             noteColor: DrumcabularyTheme.edgeNotationInk,
             staffColor: DrumcabularyTheme.edgeNotationInk.withValues(

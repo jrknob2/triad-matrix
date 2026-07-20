@@ -30,6 +30,7 @@ class AppSettingsScreen extends StatefulWidget {
 
 class _AppSettingsScreenState extends State<AppSettingsScreen> {
   late UserProfileV1 _draft;
+  late final MidiInputService _midiService = SharedMidiInputService.instance;
   MidiPatternCaptureController? _captureController;
   StreamSubscription<RawMidiEvent>? _midiCaptureSubscription;
   final StreamController<DrumInputEvent> _mappedMidiEvents =
@@ -43,15 +44,20 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
     if (HardwareCapabilities.supportsPatternMidiCapture) {
       _captureController = MidiPatternCaptureController()
         ..addListener(_handleCaptureChanged);
-      final MidiInputService service = SharedMidiInputService.instance;
-      unawaited(service.start());
-      _midiCaptureSubscription = service.events.listen(_handleMidiCaptureEvent);
+      _midiService.addListener(_handleMidiServiceChanged);
+      unawaited(_midiService.start());
+      _midiCaptureSubscription = _midiService.events.listen(
+        _handleMidiCaptureEvent,
+      );
     }
   }
 
   @override
   void dispose() {
     _midiCaptureSubscription?.cancel();
+    if (HardwareCapabilities.supportsPatternMidiCapture) {
+      _midiService.removeListener(_handleMidiServiceChanged);
+    }
     _mappedMidiEvents.close();
     _captureController
       ?..removeListener(_handleCaptureChanged)
@@ -274,6 +280,8 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
               MidiPatternCaptureCard(
                 controller: _captureController!,
                 drumEvents: _mappedMidiEvents.stream,
+                playAlongInputEnabled:
+                    _midiService.status == MidiInputStatus.connected,
                 ledController: SharedSerialLedController.instance,
                 playbackBpm: _draft.defaultBpm,
                 onCreateExercise: _openExerciseDraftFromCapture,
@@ -286,6 +294,10 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
   }
 
   void _handleCaptureChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _handleMidiServiceChanged() {
     if (mounted) setState(() {});
   }
 

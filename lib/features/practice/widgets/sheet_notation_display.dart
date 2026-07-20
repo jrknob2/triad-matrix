@@ -8,9 +8,11 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../../core/practice/practice_domain_v1.dart';
 import '../../midi/led_controller_protocol.dart';
+import '../../midi/midi_input_models.dart';
 import '../../midi/serial_led_controller.dart';
 import '../pattern_audio_service.dart';
 import '../pattern_led_playback_output.dart';
+import '../pattern_play_along_input_feedback_output.dart';
 import '../pattern_playback_scheduler.dart';
 import '../sticking_cue.dart';
 
@@ -581,6 +583,8 @@ class DrumSheetNotationDisplay extends StatefulWidget {
   final PatternLedPlaybackPresentation ledPlaybackPresentation;
   final Duration ledPlayAlongLeadTime;
   final SerialLedController? ledController;
+  final Stream<DrumInputEvent>? playAlongDrumEvents;
+  final bool playAlongInputEnabled;
   final DrumSheetNotationController? controller;
 
   const DrumSheetNotationDisplay({
@@ -610,6 +614,8 @@ class DrumSheetNotationDisplay extends StatefulWidget {
       milliseconds: LedControllerProtocolDefaults.playAlongLeadMs,
     ),
     this.ledController,
+    this.playAlongDrumEvents,
+    this.playAlongInputEnabled = false,
     this.controller,
   });
 
@@ -627,6 +633,7 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
   PatternAudioService? _audioPreview;
   Timer? _playheadTicker;
   final Stopwatch _playheadStopwatch = Stopwatch();
+  Duration _playheadStartElapsed = Duration.zero;
   _SheetNotationAudioPlan? _audioPreviewPlan;
   _NotationPlayheadFrame? _playheadFrame;
   bool _hostLoaded = false;
@@ -770,12 +777,16 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
             oldWidget.audioPreviewAccentVoice !=
                 widget.audioPreviewAccentVoice ||
             oldWidget.ledController != widget.ledController ||
+            oldWidget.playAlongDrumEvents != widget.playAlongDrumEvents ||
+            oldWidget.playAlongInputEnabled != widget.playAlongInputEnabled ||
             oldWidget.ledPlaybackPresentation !=
                 widget.ledPlaybackPresentation ||
             oldWidget.ledPlayAlongLeadTime != widget.ledPlayAlongLeadTime)) {
       unawaited(_stopAudioPreview());
     }
     if (oldWidget.ledController != widget.ledController ||
+        oldWidget.playAlongDrumEvents != widget.playAlongDrumEvents ||
+        oldWidget.playAlongInputEnabled != widget.playAlongInputEnabled ||
         oldWidget.ledPlaybackPresentation != widget.ledPlaybackPresentation ||
         oldWidget.ledPlayAlongLeadTime != widget.ledPlayAlongLeadTime) {
       unawaited(_audioPreview?.dispose());
@@ -920,7 +931,11 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
       }
 
       final PatternAudioService audioPreview = _audioPreview ??=
-          PatternAudioService(playbackOutputs: _playbackOutputs());
+          PatternAudioService(
+            playbackOutputs: _playbackOutputs(),
+            onPlaybackStarted: _handleAudioPlaybackStarted,
+          );
+      _audioPreviewPlan = plan;
       await audioPreview.start(
         tokens: plan.tokens,
         markings: plan.markings,
@@ -935,16 +950,10 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
       );
       if (!mounted) return;
       _activeAudioPreviewOwner = this;
-      _audioPreviewPlan = plan;
-      _playheadStopwatch
-        ..reset()
-        ..start();
-      _startPlayheadTicker();
       setState(() {
         _audioPreviewRunning = true;
         _audioPreviewPreparing = false;
       });
-      _updatePlayheadFrame();
     } on Object catch (error, stackTrace) {
       debugPrint(
         'Drum sheet notation audio preview failed: $error\n$stackTrace',
@@ -953,6 +962,7 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
       ScaffoldMessenger.maybeOf(
         context,
       )?.showSnackBar(const SnackBar(content: Text('Notation audio failed.')));
+      _audioPreviewPlan = null;
       setState(() {
         _audioPreviewRunning = false;
         _audioPreviewPreparing = false;
@@ -970,6 +980,7 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
     _playheadStopwatch
       ..stop()
       ..reset();
+    _playheadStartElapsed = Duration.zero;
     _audioPreviewPlan = null;
     _playheadFrame = null;
     _sendPlayheadToWebView(null);
@@ -992,9 +1003,21 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
     );
   }
 
+  void _handleAudioPlaybackStarted(Duration phase) {
+    if (!mounted) return;
+    _playheadStartElapsed = phase;
+    _playheadStopwatch
+      ..reset()
+      ..start();
+    _startPlayheadTicker();
+    _updatePlayheadFrame();
+  }
+
   List<PatternPlaybackCueOutputV1> _playbackOutputs() {
     final SerialLedController? ledController = widget.ledController;
     if (ledController == null) return const <PatternPlaybackCueOutputV1>[];
+    final Stream<DrumInputEvent>? playAlongDrumEvents =
+        widget.playAlongDrumEvents;
     return <PatternPlaybackCueOutputV1>[
       PatternLedPlaybackOutput(
         controller: ledController,
@@ -1002,6 +1025,18 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
         presentation: widget.ledPlaybackPresentation,
         playAlongLeadTime: widget.ledPlayAlongLeadTime,
       ),
+      if (playAlongDrumEvents != null &&
+          widget.ledPlaybackPresentation ==
+              PatternLedPlaybackPresentation.playAlong)
+        PatternPlayAlongInputFeedbackOutput(
+          drumEvents: playAlongDrumEvents,
+          controller: ledController,
+          isEnabled: () =>
+              widget.ledPlaybackEnabled &&
+              widget.playAlongInputEnabled &&
+              widget.ledPlaybackPresentation ==
+                  PatternLedPlaybackPresentation.playAlong,
+        ),
     ];
   }
 
@@ -1013,7 +1048,7 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
       return;
     }
     final _NotationPlayheadFrame? frame = _playheadFrameForElapsed(
-      elapsed: _playheadStopwatch.elapsed,
+      elapsed: _playheadStartElapsed + _playheadStopwatch.elapsed,
       plan: plan,
       bpm: widget.audioPreviewBpm,
     );

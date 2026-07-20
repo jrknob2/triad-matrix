@@ -51,6 +51,8 @@ class PatternAudioPlanV1 {
   const PatternAudioPlanV1({required this.cues, required this.cycleDuration});
 }
 
+typedef PatternAudioPlaybackStarted = void Function(Duration phase);
+
 class PatternAudioMixerConfigV1 {
   final double kickVolume;
   final double normalNonCymbalVolume;
@@ -76,6 +78,12 @@ class PatternAudioMixerConfigV1 {
 
 abstract class PatternPlaybackCueOutputV1 {
   Duration get leadTime => Duration.zero;
+
+  bool get gatesPlaybackStart => false;
+
+  void start(PatternAudioPlanV1 plan, {Duration phase = Duration.zero}) {}
+
+  Future<void> waitForStartCueGroup(List<PatternAudioCueV1> cues) async {}
 
   void triggerCue(PatternAudioCueV1 cue);
 
@@ -113,6 +121,7 @@ class PatternAudioService {
       };
 
   final List<PatternPlaybackCueOutputV1> _playbackOutputs;
+  final PatternAudioPlaybackStarted? onPlaybackStarted;
   final Map<PatternAudioSampleV1, List<AudioPlayer>> _playersBySample =
       <PatternAudioSampleV1, List<AudioPlayer>>{
         for (final PatternAudioSampleV1 sample in PatternAudioSampleV1.values)
@@ -133,10 +142,12 @@ class PatternAudioService {
   bool _running = false;
   Timer? _cycleTimer;
   final List<Timer> _cueTimers = <Timer>[];
+  int _generation = 0;
 
   PatternAudioService({
     Iterable<PatternPlaybackCueOutputV1> playbackOutputs =
         const <PatternPlaybackCueOutputV1>[],
+    this.onPlaybackStarted,
   }) : _playbackOutputs = List<PatternPlaybackCueOutputV1>.unmodifiable(
          playbackOutputs,
        );
@@ -235,14 +246,54 @@ class PatternAudioService {
     );
 
     _running = true;
+    final int generation = ++_generation;
     final Duration phase = _normalizedPhase(
       elapsed: startElapsed,
       cycleDuration: plan.cycleDuration,
     );
-    _scheduleCycle(plan: plan, phase: phase);
+    for (final PatternPlaybackCueOutputV1 output in _playbackOutputs) {
+      try {
+        output.start(plan, phase: phase);
+      } catch (error, stackTrace) {
+        debugPrint('Pattern playback output start failed: $error\n$stackTrace');
+      }
+    }
+    final List<List<PatternAudioCueV1>> cueGroups = _cueGroupsForPlan(plan);
+    final List<PatternAudioCueV1>? startGateCueGroup =
+        _startGateCueGroupForPhase(cueGroups: cueGroups, phase: phase);
+    final List<Future<void>> startGates = <Future<void>>[];
+    if (startGateCueGroup != null) {
+      for (final PatternPlaybackCueOutputV1 output in _playbackOutputs) {
+        if (!output.gatesPlaybackStart) continue;
+        try {
+          startGates.add(output.waitForStartCueGroup(startGateCueGroup));
+        } catch (error, stackTrace) {
+          debugPrint('Pattern playback start gate failed: $error\n$stackTrace');
+        }
+      }
+    }
+
+    if (startGateCueGroup != null && startGates.isNotEmpty) {
+      _triggerLeadPlaybackOutputs(startGateCueGroup);
+      unawaited(
+        _scheduleAfterStartGate(
+          generation: generation,
+          plan: plan,
+          phase: _phaseAfterStartGateCueGroup(
+            startGateCueGroup,
+            plan.cycleDuration,
+          ),
+          startGates: startGates,
+        ),
+      );
+      return;
+    }
+
+    _beginScheduledPlayback(generation: generation, plan: plan, phase: phase);
   }
 
   Future<void> stop() async {
+    _generation += 1;
     _running = false;
     _cycleTimer?.cancel();
     _cycleTimer = null;
@@ -401,6 +452,35 @@ class PatternAudioService {
     };
   }
 
+  Future<void> _scheduleAfterStartGate({
+    required int generation,
+    required PatternAudioPlanV1 plan,
+    required Duration phase,
+    required List<Future<void>> startGates,
+  }) async {
+    try {
+      await Future.wait(startGates);
+    } catch (error, stackTrace) {
+      debugPrint('Pattern playback start gate failed: $error\n$stackTrace');
+    }
+    if (!_running || generation != _generation) return;
+    _beginScheduledPlayback(generation: generation, plan: plan, phase: phase);
+  }
+
+  void _beginScheduledPlayback({
+    required int generation,
+    required PatternAudioPlanV1 plan,
+    required Duration phase,
+  }) {
+    if (!_running || generation != _generation) return;
+    try {
+      onPlaybackStarted?.call(phase);
+    } catch (error, stackTrace) {
+      debugPrint('Pattern playback start callback failed: $error\n$stackTrace');
+    }
+    _scheduleCycle(plan: plan, phase: phase);
+  }
+
   void _scheduleCycle({
     required PatternAudioPlanV1 plan,
     required Duration phase,
@@ -489,6 +569,16 @@ class PatternAudioService {
     }
   }
 
+  void _triggerLeadPlaybackOutputs(List<PatternAudioCueV1> cues) {
+    for (final PatternPlaybackCueOutputV1 output in _playbackOutputs) {
+      try {
+        output.triggerLeadCueGroup(cues);
+      } catch (error, stackTrace) {
+        debugPrint('Pattern playback lead output failed: $error\n$stackTrace');
+      }
+    }
+  }
+
   void _stopPlaybackOutputs() {
     for (final PatternPlaybackCueOutputV1 output in _playbackOutputs) {
       try {
@@ -538,6 +628,25 @@ class PatternAudioService {
     );
   }
 
+  @visibleForTesting
+  static List<PatternAudioCueV1>? startGateCueGroupForTesting({
+    required PatternAudioPlanV1 plan,
+    required Duration phase,
+  }) {
+    return _startGateCueGroupForPhase(
+      cueGroups: _cueGroupsForPlan(plan),
+      phase: phase,
+    );
+  }
+
+  @visibleForTesting
+  static Duration phaseAfterStartGateCueGroupForTesting({
+    required List<PatternAudioCueV1> cueGroup,
+    required Duration cycleDuration,
+  }) {
+    return _phaseAfterStartGateCueGroup(cueGroup, cycleDuration);
+  }
+
   static Duration? _leadCueDelayForCycle({
     required Duration cueOffset,
     required Duration phase,
@@ -555,6 +664,30 @@ class PatternAudioService {
       return null;
     }
     return leadOffset - phase;
+  }
+
+  static List<PatternAudioCueV1>? _startGateCueGroupForPhase({
+    required List<List<PatternAudioCueV1>> cueGroups,
+    required Duration phase,
+  }) {
+    if (cueGroups.isEmpty) return null;
+    for (final List<PatternAudioCueV1> cueGroup in cueGroups) {
+      if (cueGroup.first.offset >= phase) return cueGroup;
+    }
+    return cueGroups.first;
+  }
+
+  static Duration _phaseAfterStartGateCueGroup(
+    List<PatternAudioCueV1> cueGroup,
+    Duration cycleDuration,
+  ) {
+    if (cueGroup.isEmpty || cycleDuration <= Duration.zero) {
+      return Duration.zero;
+    }
+    return _wrappedCycleOffset(
+      cueGroup.first.offset + const Duration(microseconds: 1),
+      cycleDuration,
+    );
   }
 
   static Duration _wrappedCycleOffset(Duration offset, Duration cycleDuration) {

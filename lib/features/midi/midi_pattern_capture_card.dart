@@ -17,6 +17,7 @@ import 'midi_pattern_capture.dart';
 class MidiPatternCaptureCard extends StatefulWidget {
   final MidiPatternCaptureController controller;
   final Stream<DrumInputEvent>? drumEvents;
+  final bool playAlongInputEnabled;
   final SerialLedController? ledController;
   final int playbackBpm;
   final ValueChanged<String>? onCreateExercise;
@@ -25,6 +26,7 @@ class MidiPatternCaptureCard extends StatefulWidget {
     super.key,
     required this.controller,
     this.drumEvents,
+    this.playAlongInputEnabled = false,
     this.ledController,
     this.playbackBpm = 92,
     this.onCreateExercise,
@@ -254,6 +256,8 @@ class _MidiPatternCaptureCardState extends State<MidiPatternCaptureCard> {
             selection: _guidedPracticeSelection,
             ledController: widget.ledController,
             ledPlaybackEnabled: widget.ledController?.isConnected == true,
+            playAlongDrumEvents: widget.drumEvents,
+            playAlongInputEnabled: widget.playAlongInputEnabled,
             ledPlaybackPresentation: switch (_previewPlaybackMode) {
               _CapturePlaybackMode.hearIt =>
                 PatternLedPlaybackPresentation.hearIt,
@@ -501,6 +505,8 @@ class _CapturedPatternPreview extends StatelessWidget {
   final DrumSheetNotationSelection? selection;
   final SerialLedController? ledController;
   final bool ledPlaybackEnabled;
+  final Stream<DrumInputEvent>? playAlongDrumEvents;
+  final bool playAlongInputEnabled;
   final PatternLedPlaybackPresentation ledPlaybackPresentation;
   final int playbackBpm;
 
@@ -510,6 +516,8 @@ class _CapturedPatternPreview extends StatelessWidget {
     required this.selection,
     required this.ledController,
     required this.ledPlaybackEnabled,
+    required this.playAlongDrumEvents,
+    required this.playAlongInputEnabled,
     required this.ledPlaybackPresentation,
     required this.playbackBpm,
   });
@@ -536,6 +544,8 @@ class _CapturedPatternPreview extends StatelessWidget {
           audioPreviewBpm: playbackBpm,
           ledController: ledController,
           ledPlaybackEnabled: ledPlaybackEnabled,
+          playAlongDrumEvents: playAlongDrumEvents,
+          playAlongInputEnabled: playAlongInputEnabled,
           ledPlaybackPresentation: ledPlaybackPresentation,
           backgroundColor: DrumcabularyTheme.edgeNotationPanel,
           noteColor: DrumcabularyTheme.edgeNotationInk,

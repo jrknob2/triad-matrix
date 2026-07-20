@@ -1,12 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:drumcabulary/core/practice/practice_domain_v1.dart';
+import 'package:drumcabulary/features/midi/midi_input_models.dart';
 import 'package:drumcabulary/features/midi/serial_led_controller.dart';
 import 'package:drumcabulary/features/practice/pattern_audio_service.dart';
 import 'package:drumcabulary/features/practice/pattern_led_playback_output.dart';
+import 'package:drumcabulary/features/practice/pattern_play_along_input_feedback_output.dart';
 import 'package:drumcabulary/features/practice/sticking_cue.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -207,6 +209,234 @@ void main() {
         isNull,
       );
     });
+
+    test('start gate uses the first upcoming cue group', () {
+      final PatternAudioPlanV1 plan = PatternAudioPlanV1(
+        cues: <PatternAudioCueV1>[
+          _cue(DrumVoiceV1.kick, offset: Duration.zero),
+          _cue(DrumVoiceV1.hihat, offset: Duration.zero),
+          _cue(DrumVoiceV1.snare, offset: const Duration(milliseconds: 500)),
+        ],
+        cycleDuration: const Duration(seconds: 1),
+      );
+
+      final List<PatternAudioCueV1>? group =
+          PatternAudioService.startGateCueGroupForTesting(
+            plan: plan,
+            phase: Duration.zero,
+          );
+
+      expect(group, isNotNull);
+      expect(group!.map((PatternAudioCueV1 cue) => cue.voice), <DrumVoiceV1>[
+        DrumVoiceV1.kick,
+        DrumVoiceV1.hihat,
+      ]);
+    });
+
+    test('playback phase after start gate skips the gated hit', () {
+      final List<PatternAudioCueV1> cueGroup = <PatternAudioCueV1>[
+        _cue(DrumVoiceV1.kick, offset: Duration.zero),
+        _cue(DrumVoiceV1.hihat, offset: Duration.zero),
+      ];
+
+      expect(
+        PatternAudioService.phaseAfterStartGateCueGroupForTesting(
+          cueGroup: cueGroup,
+          cycleDuration: const Duration(seconds: 1),
+        ),
+        const Duration(microseconds: 1),
+      );
+    });
+  });
+
+  group('PatternPlayAlongInputFeedbackOutput', () {
+    test('wrong voice sends ERROR without waiting for playback', () async {
+      final _PlaybackLedHarness harness = await _PlaybackLedHarness.connected();
+      final _PlayAlongFeedbackHarness feedback =
+          _PlayAlongFeedbackHarness.connected(harness);
+
+      feedback.output.start(
+        _plan(<PatternAudioCueV1>[_cue(DrumVoiceV1.snare)]),
+      );
+      feedback.output.triggerCueGroup(<PatternAudioCueV1>[
+        _cue(DrumVoiceV1.snare),
+      ]);
+      feedback.input.add(_drum(DrumVoice.kick));
+
+      expect(harness.platform.lastConnection.writes, <String>[
+        'ERROR,KICK,R\n',
+      ]);
+    });
+
+    test(
+      'missing voice sends MISSING when the timing window expires',
+      () async {
+        final _PlaybackLedHarness harness =
+            await _PlaybackLedHarness.connected();
+        final _PlayAlongFeedbackHarness feedback =
+            _PlayAlongFeedbackHarness.connected(harness);
+
+        feedback.output.start(
+          _plan(<PatternAudioCueV1>[_cue(DrumVoiceV1.snare)]),
+        );
+        feedback.output.triggerCueGroup(<PatternAudioCueV1>[
+          _cue(DrumVoiceV1.snare, sticking: StickingCue.left),
+        ]);
+        feedback.timers.fireNext();
+
+        expect(harness.platform.lastConnection.writes, <String>[
+          'MISSING,SNARE,L\n',
+        ]);
+      },
+    );
+
+    test('correct hit suppresses missing feedback', () async {
+      final _PlaybackLedHarness harness = await _PlaybackLedHarness.connected();
+      final _PlayAlongFeedbackHarness feedback =
+          _PlayAlongFeedbackHarness.connected(harness);
+
+      feedback.output.start(
+        _plan(<PatternAudioCueV1>[_cue(DrumVoiceV1.snare)]),
+      );
+      feedback.output.triggerCueGroup(<PatternAudioCueV1>[
+        _cue(DrumVoiceV1.snare),
+      ]);
+      feedback.input.add(_drum(DrumVoice.snare));
+      feedback.timers.fireNext();
+
+      expect(harness.platform.lastConnection.writes, isEmpty);
+    });
+
+    test('partial simultaneous hit reports only the missing voice', () async {
+      final _PlaybackLedHarness harness = await _PlaybackLedHarness.connected();
+      final _PlayAlongFeedbackHarness feedback =
+          _PlayAlongFeedbackHarness.connected(harness);
+      final List<PatternAudioCueV1> cueGroup = <PatternAudioCueV1>[
+        _cue(DrumVoiceV1.kick),
+        _cue(DrumVoiceV1.hihat),
+      ];
+
+      feedback.output.start(_plan(cueGroup));
+      feedback.output.triggerCueGroup(cueGroup);
+      feedback.input.add(_drum(DrumVoice.kick));
+      feedback.timers.fireNext();
+
+      expect(harness.platform.lastConnection.writes, <String>[
+        'MISSING,HIHAT,R\n',
+      ]);
+    });
+
+    test('lead window accepts a slightly early correct hit', () async {
+      final _PlaybackLedHarness harness = await _PlaybackLedHarness.connected();
+      final _PlayAlongFeedbackHarness feedback =
+          _PlayAlongFeedbackHarness.connected(harness);
+      final List<PatternAudioCueV1> cueGroup = <PatternAudioCueV1>[
+        _cue(DrumVoiceV1.snare),
+      ];
+
+      feedback.output.start(_plan(cueGroup));
+      feedback.output.triggerLeadCueGroup(cueGroup);
+      feedback.input.add(_drum(DrumVoice.snare));
+      feedback.output.triggerCueGroup(cueGroup);
+      feedback.timers.fireNext();
+
+      expect(harness.platform.lastConnection.writes, isEmpty);
+    });
+
+    test(
+      'start gate waits for a correct single voice before completing',
+      () async {
+        final _PlaybackLedHarness harness =
+            await _PlaybackLedHarness.connected();
+        final _PlayAlongFeedbackHarness feedback =
+            _PlayAlongFeedbackHarness.connected(harness);
+
+        feedback.output.start(
+          _plan(<PatternAudioCueV1>[_cue(DrumVoiceV1.snare)]),
+        );
+        final Future<void> gate = feedback.output.waitForStartCueGroup(
+          <PatternAudioCueV1>[_cue(DrumVoiceV1.snare)],
+        );
+
+        expect(await _futureCompleted(gate), isFalse);
+
+        feedback.input.add(_drum(DrumVoice.snare));
+
+        await gate;
+        expect(harness.platform.lastConnection.writes, isEmpty);
+      },
+    );
+
+    test(
+      'wrong voice during start gate sends ERROR and keeps waiting',
+      () async {
+        final _PlaybackLedHarness harness =
+            await _PlaybackLedHarness.connected();
+        final _PlayAlongFeedbackHarness feedback =
+            _PlayAlongFeedbackHarness.connected(harness);
+
+        feedback.output.start(
+          _plan(<PatternAudioCueV1>[_cue(DrumVoiceV1.snare)]),
+        );
+        final Future<void> gate = feedback.output.waitForStartCueGroup(
+          <PatternAudioCueV1>[_cue(DrumVoiceV1.snare)],
+        );
+
+        feedback.input.add(_drum(DrumVoice.kick));
+
+        expect(harness.platform.lastConnection.writes, <String>[
+          'ERROR,KICK,R\n',
+        ]);
+        expect(await _futureCompleted(gate), isFalse);
+
+        feedback.input.add(_drum(DrumVoice.snare));
+        await gate;
+      },
+    );
+
+    test('simultaneous start gate requires the complete group again', () async {
+      final _PlaybackLedHarness harness = await _PlaybackLedHarness.connected();
+      final _PlayAlongFeedbackHarness feedback =
+          _PlayAlongFeedbackHarness.connected(harness);
+      final List<PatternAudioCueV1> cueGroup = <PatternAudioCueV1>[
+        _cue(DrumVoiceV1.kick),
+        _cue(DrumVoiceV1.hihat),
+      ];
+
+      feedback.output.start(_plan(cueGroup));
+      final Future<void> gate = feedback.output.waitForStartCueGroup(cueGroup);
+
+      feedback.input.add(_drum(DrumVoice.kick));
+      feedback.timers.fireNext();
+
+      expect(harness.platform.lastConnection.writes, <String>[
+        'MISSING,HIHAT,R\n',
+      ]);
+      expect(await _futureCompleted(gate), isFalse);
+
+      feedback.input.add(_drum(DrumVoice.kick));
+      feedback.input.add(_drum(DrumVoice.hiHatClosed));
+
+      await gate;
+    });
+
+    test('stop completes an active start gate without feedback', () async {
+      final _PlaybackLedHarness harness = await _PlaybackLedHarness.connected();
+      final _PlayAlongFeedbackHarness feedback =
+          _PlayAlongFeedbackHarness.connected(harness);
+
+      feedback.output.start(
+        _plan(<PatternAudioCueV1>[_cue(DrumVoiceV1.snare)]),
+      );
+      final Future<void> gate = feedback.output.waitForStartCueGroup(
+        <PatternAudioCueV1>[_cue(DrumVoiceV1.snare)],
+      );
+
+      feedback.output.stop();
+
+      await gate;
+      expect(harness.platform.lastConnection.writes, isEmpty);
+    });
   });
 }
 
@@ -223,6 +453,29 @@ PatternAudioCueV1 _cue(
     sticking: sticking,
     volume: 1,
   );
+}
+
+PatternAudioPlanV1 _plan(List<PatternAudioCueV1> cues) {
+  return PatternAudioPlanV1(
+    cues: cues,
+    cycleDuration: const Duration(seconds: 1),
+  );
+}
+
+DrumInputEvent _drum(DrumVoice voice) {
+  return DrumInputEvent(
+    voice: voice,
+    midiNote: 38,
+    velocity: 96,
+    timestamp: DateTime(2026),
+  );
+}
+
+Future<bool> _futureCompleted(Future<void> future) async {
+  bool completed = false;
+  unawaited(future.then((_) => completed = true));
+  await Future<void>.delayed(Duration.zero);
+  return completed;
 }
 
 String _flashFrame(String firstCue, [String? secondCue, String? thirdCue]) {
@@ -285,6 +538,75 @@ class _PlaybackLedHarness {
       controller: controller,
       output: output,
     );
+  }
+}
+
+class _PlayAlongFeedbackHarness {
+  final StreamController<DrumInputEvent> input;
+  final _FakePlayAlongTimerFactory timers;
+  final PatternPlayAlongInputFeedbackOutput output;
+
+  _PlayAlongFeedbackHarness._({
+    required this.input,
+    required this.timers,
+    required this.output,
+  });
+
+  factory _PlayAlongFeedbackHarness.connected(_PlaybackLedHarness harness) {
+    final StreamController<DrumInputEvent> input =
+        StreamController<DrumInputEvent>.broadcast(sync: true);
+    final _FakePlayAlongTimerFactory timers = _FakePlayAlongTimerFactory();
+    final PatternPlayAlongInputFeedbackOutput output =
+        PatternPlayAlongInputFeedbackOutput(
+          drumEvents: input.stream,
+          controller: harness.controller,
+          timerFactory: timers.create,
+        );
+    addTearDown(() {
+      output.stop();
+      input.close();
+    });
+    return _PlayAlongFeedbackHarness._(
+      input: input,
+      timers: timers,
+      output: output,
+    );
+  }
+}
+
+class _FakePlayAlongTimerFactory {
+  final List<_FakePlayAlongTimer> timers = <_FakePlayAlongTimer>[];
+
+  PlayAlongFeedbackTimer create(Duration duration, VoidCallback callback) {
+    final _FakePlayAlongTimer timer = _FakePlayAlongTimer(callback);
+    timers.add(timer);
+    return timer;
+  }
+
+  void fireNext() {
+    final _FakePlayAlongTimer timer = timers.removeAt(0);
+    timer.fire();
+  }
+}
+
+class _FakePlayAlongTimer implements PlayAlongFeedbackTimer {
+  final VoidCallback callback;
+  bool _active = true;
+
+  _FakePlayAlongTimer(this.callback);
+
+  @override
+  bool get isActive => _active;
+
+  @override
+  void cancel() {
+    _active = false;
+  }
+
+  void fire() {
+    if (!_active) return;
+    _active = false;
+    callback();
   }
 }
 

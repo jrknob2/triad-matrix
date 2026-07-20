@@ -39,6 +39,15 @@ class PatternLedPlaybackOutput implements PatternPlaybackCueOutputV1 {
   }
 
   @override
+  bool get gatesPlaybackStart => false;
+
+  @override
+  void start(PatternAudioPlanV1 plan, {Duration phase = Duration.zero}) {}
+
+  @override
+  Future<void> waitForStartCueGroup(List<PatternAudioCueV1> cues) async {}
+
+  @override
   void triggerCue(PatternAudioCueV1 cue) {
     triggerCueGroup(<PatternAudioCueV1>[cue]);
   }
