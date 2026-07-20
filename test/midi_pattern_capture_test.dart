@@ -1,6 +1,6 @@
-import 'package:drumcabulary/features/midi/midi_diagnostic_screen.dart';
 import 'package:drumcabulary/features/midi/midi_input_models.dart';
 import 'package:drumcabulary/features/midi/midi_pattern_capture.dart';
+import 'package:drumcabulary/features/midi/midi_pattern_capture_card.dart';
 import 'package:drumcabulary/features/midi/midi_pattern_capture_panel.dart';
 import 'package:drumcabulary/features/practice/widgets/sheet_notation_display.dart';
 import 'package:flutter/material.dart';

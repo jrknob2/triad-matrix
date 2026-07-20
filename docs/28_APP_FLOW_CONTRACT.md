@@ -230,6 +230,8 @@ Current behavior:
 - records mapped MIDI hits
 - ignores Note Off and velocity-zero Note On events
 - emits voice-first notation such as `[HH K]`, `[OHH]`, and `[S]`
+- writes generated notation into an editable text field
+- renders the edited/generated notation with the shared notation preview
 - does not infer hand sticking from MIDI velocity
 - estimates BPM from grouped onset intervals
 

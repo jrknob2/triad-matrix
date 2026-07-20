@@ -131,11 +131,11 @@ does not depend on the diagnostic screen as its owner. It groups
 near-simultaneous hits first, so a kick and snare landing together count as one
 timing point.
 
-The current temporary production surface is a MIDI Capture panel at the end of
-Settings on desktop platforms. It uses the shared MIDI input service and emits
-voice-first notation for manual copying or later insertion into the Pattern
-Editor flow. The older diagnostic capture card remains available only as part
-of the raw MIDI diagnostic screen.
+The current temporary production surface is the rich MIDI Pattern Capture card
+at the end of Settings on desktop platforms. It uses the shared MIDI input
+service, writes generated voice-first notation into an editable text field, and
+renders that text with the shared notation preview. The raw MIDI diagnostic
+screen keeps the same rich capture behavior.
 
 Current MVP rules:
 
