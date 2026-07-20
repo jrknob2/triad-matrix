@@ -70,7 +70,7 @@ Top to bottom.
 1. Greeting
 2. Device Status
 3. Keep Practicing This
-4. Activity
+4. Progress
 5. Up Next
 
 No additional sections should compete with these.
@@ -183,7 +183,7 @@ Section title:
 
 ---
 
-## Activity
+## Progress
 
 Purpose:
 
@@ -191,16 +191,16 @@ Collect recent practice signals into one compact card.
 
 The outer card title is:
 
-**Activity**
+**Progress**
 
 The card has two subsections:
 
-- **Recent**
-- **Progress**
+- **Progress Summary**
+- **Recent Activity**
 
 ---
 
-### Recent
+### Progress Summary
 
 Purpose:
 
@@ -250,11 +250,12 @@ A link to:
 
 **View My Insights**
 
-appears here.
+appears in the upper-right of the Progress card when space allows. It should
+use a restrained text-button treatment and must not compete with Resume.
 
 ---
 
-### Progress
+### Recent Activity
 
 Purpose:
 

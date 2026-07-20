@@ -51,7 +51,7 @@ The implemented app currently opens into a single shell:
 AppShell
   -> Home
       -> Continue Practice
-      -> Activity
+      -> Progress
       -> Up Next
   -> Explore
       -> Search lessons and exercises
@@ -98,7 +98,7 @@ Returning-user Home hierarchy:
 1. Greeting
 2. Device Status
 3. Keep Practicing This
-4. Activity
+4. Progress
 5. Up Next
 
 First-light Home hierarchy:
