@@ -16,6 +16,7 @@ import '../../features/midi/midi_pattern_capture_card.dart';
 import '../../features/midi/shared_midi_input_service.dart';
 import '../../features/midi/shared_serial_led_controller.dart';
 import '../../state/app_controller.dart';
+import '../library/pattern_screen.dart';
 import 'hardware_midi_settings_screen.dart';
 
 class AppSettingsScreen extends StatefulWidget {
@@ -275,6 +276,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                 drumEvents: _mappedMidiEvents.stream,
                 ledController: SharedSerialLedController.instance,
                 playbackBpm: _draft.defaultBpm,
+                onCreateExercise: _openExerciseDraftFromCapture,
               ),
             ],
           ],
@@ -301,6 +303,28 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
     }
     if (captureController == null || !captureController.isRecording) return;
     captureController.captureMappedEvent(raw: raw, drum: drum);
+  }
+
+  void _openExerciseDraftFromCapture(String pattern) {
+    try {
+      final String itemId = widget.controller.createExerciseDraftFromNotation(
+        pattern: pattern,
+      );
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) =>
+              PatternScreen(controller: widget.controller, itemId: itemId),
+        ),
+      );
+    } on FormatException catch (error) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
+    } on ArgumentError catch (error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message ?? 'Invalid pattern.')),
+      );
+    }
   }
 
   Future<void> _confirmClearAppData(BuildContext context) async {

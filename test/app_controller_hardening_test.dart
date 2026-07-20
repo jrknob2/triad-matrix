@@ -121,6 +121,125 @@ void main() {
       );
     });
 
+    test('captured notation populates an unsaved exercise draft', () async {
+      final FakeAppStateStore store = FakeAppStateStore();
+      final AppController controller = await AppController.createForTesting(
+        store,
+      );
+
+      final String itemId = controller.createExerciseDraftFromNotation(
+        pattern: '[HH K] [OHH] [S]',
+      );
+      final PracticeItemV1 draft = controller.itemById(itemId);
+
+      expect(draft.id, itemId);
+      expect(draft.name, 'Untitled Exercise');
+      expect(draft.pattern, '[HH K] [OHH] [S]');
+      expect(draft.saved, isFalse);
+      expect(draft.source, PracticeItemSourceV1.userDefined);
+      expect(draft.tags, contains('exercise'));
+      expect(controller.libraryPatterns, isEmpty);
+    });
+
+    test('invalid notation does not create an exercise draft', () async {
+      final FakeAppStateStore store = FakeAppStateStore();
+      final AppController controller = await AppController.createForTesting(
+        store,
+      );
+
+      expect(
+        () => controller.createExerciseDraftFromNotation(pattern: '['),
+        throwsA(isA<FormatException>()),
+      );
+      expect(controller.libraryPatterns, isEmpty);
+    });
+
+    test('a new exercise can be saved and reloaded', () async {
+      final FakeAppStateStore store = FakeAppStateStore();
+      final AppController controller = await AppController.createForTesting(
+        store,
+      );
+      final String itemId = controller.createExerciseDraftFromNotation(
+        pattern: '[S] [K]',
+      );
+      final PracticeItemV1 draft = controller.itemById(itemId);
+
+      controller.savePracticeItemEdits(
+        itemId: itemId,
+        accentedNoteIndices: draft.accentedNoteIndices,
+        ghostNoteIndices: draft.ghostNoteIndices,
+        voiceAssignments: draft.voiceAssignments,
+        competency: CompetencyLevelV1.learning,
+        name: 'Captured Groove',
+        notes: 'Listen for the backbeat.',
+        sequence: draft.sequence,
+        pattern: draft.pattern,
+        saveAsPattern: true,
+      );
+      await controller.flushPersistence();
+
+      final AppController restored = await AppController.createForTesting(
+        FakeAppStateStore(initialSnapshot: store.savedSnapshots.last),
+      );
+      final PracticeItemV1 restoredExercise = restored.itemById(itemId);
+
+      expect(restoredExercise.id, itemId);
+      expect(restoredExercise.name, 'Captured Groove');
+      expect(restoredExercise.pattern, '[S] [K]');
+      expect(restoredExercise.notes, 'Listen for the backbeat.');
+      expect(restoredExercise.saved, isTrue);
+      expect(
+        restored.libraryPatterns.map((PracticeItemV1 item) => item.id),
+        contains(itemId),
+      );
+    });
+
+    test('editing an existing exercise updates the same ID', () async {
+      final FakeAppStateStore store = FakeAppStateStore();
+      final AppController controller = await AppController.createForTesting(
+        store,
+      );
+      final String itemId = controller.createExerciseDraftFromNotation(
+        pattern: '[S]',
+      );
+      final PracticeItemV1 draft = controller.itemById(itemId);
+      controller.savePracticeItemEdits(
+        itemId: itemId,
+        accentedNoteIndices: draft.accentedNoteIndices,
+        ghostNoteIndices: draft.ghostNoteIndices,
+        voiceAssignments: draft.voiceAssignments,
+        competency: CompetencyLevelV1.learning,
+        sequence: draft.sequence,
+        pattern: draft.pattern,
+        saveAsPattern: true,
+      );
+
+      controller.savePracticeItemEdits(
+        itemId: itemId,
+        accentedNoteIndices: const <int>[],
+        ghostNoteIndices: const <int>[],
+        voiceAssignments: const <DrumVoiceV1>[DrumVoiceV1.kick],
+        competency: CompetencyLevelV1.comfortable,
+        name: 'Edited Exercise',
+        notes: 'Updated notes.',
+        sequence: PatternSequenceV1.parse('K'),
+        pattern: '[K]',
+        saveAsPattern: true,
+      );
+
+      final PracticeItemV1 edited = controller.itemById(itemId);
+      expect(edited.id, itemId);
+      expect(edited.name, 'Edited Exercise');
+      expect(edited.pattern, '[K]');
+      expect(edited.notes, 'Updated notes.');
+      expect(
+        controller.libraryPatterns.where(
+          (PracticeItemV1 item) => item.id == itemId,
+        ),
+        hasLength(1),
+      );
+    });
+
     test(
       'removing a saved pattern hides it from library and working on',
       () async {

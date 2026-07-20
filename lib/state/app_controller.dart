@@ -6,6 +6,7 @@ import '../core/pattern/triad_matrix.dart';
 import '../core/practice/practice_domain_v1.dart';
 import '../features/app/app_formatters.dart';
 import '../features/app/app_runtime_flags.dart';
+import '../features/library/exercise_authoring_mapper.dart';
 import 'persistence/app_state_store.dart';
 
 @immutable
@@ -2234,6 +2235,50 @@ class AppController extends ChangeNotifier {
         voiceAssignments: const <DrumVoiceV1>[],
         source: PracticeItemSourceV1.userDefined,
         tags: const <String>['custom'],
+        saved: false,
+      ),
+    );
+    _items = <PracticeItemV1>[item, ..._items];
+    _notifyChanged();
+    return itemId;
+  }
+
+  String createExerciseDraftFromNotation({
+    required String pattern,
+    String title = 'Untitled Exercise',
+    String notes = '',
+  }) {
+    final String normalizedPattern = normalizeExerciseNotation(pattern);
+    final parsedNotes = parseExerciseNotation(normalizedPattern);
+    if (parsedNotes.isEmpty) {
+      throw const FormatException(
+        'Enter notation before creating an exercise.',
+      );
+    }
+
+    final String itemId = 'exercise_${DateTime.now().microsecondsSinceEpoch}';
+    final PatternSequenceV1 sequence = PatternSequenceV1(
+      tokens: parsedNotes.map(legacyTokenForSheetNote).toList(growable: false),
+    );
+    final PracticeItemV1 item = _sanitizedItem(
+      PracticeItemV1(
+        id: itemId,
+        family: MaterialFamilyV1.custom,
+        name: title.trim().isEmpty ? 'Untitled Exercise' : title.trim(),
+        pattern: normalizedPattern,
+        sequence: sequence,
+        groupingHint: PatternGroupingV1.none,
+        accentedNoteIndices: accentIndicesForSheetNotes(parsedNotes),
+        ghostNoteIndices: ghostIndicesForSheetNotes(parsedNotes),
+        voiceAssignments: parsedNotes
+            .map(legacyVoiceForSheetNote)
+            .toList(growable: false),
+        noteValueOverrides: parsedNotes
+            .map((note) => storedValueForSheetNoteValue(note.value))
+            .toList(growable: false),
+        source: PracticeItemSourceV1.userDefined,
+        tags: const <String>['exercise'],
+        notes: notes.trim(),
         saved: false,
       ),
     );

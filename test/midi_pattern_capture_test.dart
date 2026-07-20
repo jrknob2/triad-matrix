@@ -630,6 +630,52 @@ void main() {
 
       expect(find.text('Estimated BPM 120'), findsOneWidget);
     });
+
+    testWidgets('Create Exercise emits the current valid notation', (
+      WidgetTester tester,
+    ) async {
+      final MidiPatternCaptureController controller =
+          _controllerWithStoppedPattern('[S]');
+      final List<String> createdPatterns = <String>[];
+
+      await _pumpCaptureCard(
+        tester,
+        controller,
+        onCreateExercise: createdPatterns.add,
+      );
+      await tester.enterText(find.byType(TextField), '[K]');
+      await tester.pump(const Duration(milliseconds: 250));
+
+      final FilledButton createButton = tester.widget<FilledButton>(
+        find.widgetWithText(FilledButton, 'Create Exercise'),
+      );
+      createButton.onPressed!();
+      await tester.pump();
+
+      expect(createdPatterns, <String>['[K]']);
+    });
+
+    testWidgets('invalid notation blocks Create Exercise handoff', (
+      WidgetTester tester,
+    ) async {
+      final MidiPatternCaptureController controller =
+          _controllerWithStoppedPattern('[S]');
+      final List<String> createdPatterns = <String>[];
+
+      await _pumpCaptureCard(
+        tester,
+        controller,
+        onCreateExercise: createdPatterns.add,
+      );
+      await tester.enterText(find.byType(TextField), '[');
+      await tester.pump(const Duration(milliseconds: 250));
+
+      final FilledButton createButton = tester.widget<FilledButton>(
+        find.widgetWithText(FilledButton, 'Create Exercise'),
+      );
+      expect(createButton.onPressed, isNull);
+      expect(createdPatterns, isEmpty);
+    });
   });
 
   group('MidiPatternCapturePanel', () {
@@ -755,13 +801,19 @@ MidiPatternCaptureController _controllerWithStoppedPattern(String pattern) {
 
 Future<void> _pumpCaptureCard(
   WidgetTester tester,
-  MidiPatternCaptureController controller,
-) async {
+  MidiPatternCaptureController controller, {
+  ValueChanged<String>? onCreateExercise,
+}) async {
   await tester.pumpWidget(
     MaterialApp(
       home: Scaffold(
         body: ListView(
-          children: <Widget>[MidiPatternCaptureCard(controller: controller)],
+          children: <Widget>[
+            MidiPatternCaptureCard(
+              controller: controller,
+              onCreateExercise: onCreateExercise,
+            ),
+          ],
         ),
       ),
     ),

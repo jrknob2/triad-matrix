@@ -238,39 +238,61 @@ Current behavior:
 - can start Guided Practice from the current valid notation when MIDI input and
   the shared LED controller are connected
 - does not infer hand sticking from MIDI velocity
+- estimates BPM from grouped onset intervals
 
 The temporary capture panel must not create its own playback or guided-practice
 timeline. Hear It, Play Along, and Guided Practice are entry points into the
 same playback, MIDI, notation-selection, and LED services used elsewhere.
-- estimates BPM from grouped onset intervals
 
-This is not the final product location. The intended future home is the Pattern
-Editor or a Pattern authoring flow.
+This is not the final product location. The intended future home is Exercise
+Authoring.
 
-## Pattern Authoring Flow - Intended Direction
+## Exercise Authoring Flow - First Implementation
 
-The Pattern Editor exists in code, but it is not currently reachable from normal
-navigation.
+The reusable authoring unit is an Exercise.
 
-Intended future flow:
+Domain ownership:
+
+- Pattern: the Drumcabulary notation string.
+- Exercise: one reusable practice unit that owns one Pattern plus title and
+  teaching notes.
+- Lesson: an ordered collection of exercise references.
+- Curriculum: an ordered collection of lessons.
+
+Current compatibility decision:
+
+- User-authored Exercises are backed by saved `PracticeItemV1` records for now.
+- The `PracticeItemV1.pattern` field is the canonical notation source.
+- `PracticeItemV1.name` is the Exercise title.
+- `PracticeItemV1.notes` is the first-version instruction/description field.
+- Existing YAML lessons continue to embed `LessonExercise` objects until a
+  separate lesson-content migration introduces stable exercise references.
+
+Temporary capture-to-exercise flow:
 
 ```text
-Coach or Library/Patterns -> Pattern Editor
-Pattern Editor -> manual notation editing
-Pattern Editor -> optional desktop MIDI Capture
-Pattern Editor -> save/cancel
+Settings -> MIDI Capture
+MIDI Capture -> Generate notation
+MIDI Capture -> Create Exercise draft
+Exercise Editor -> review/edit notation and metadata
+Exercise Editor -> save
 ```
 
 Rules:
 
-- Pattern Editor should be cross-platform.
+- MIDI capture is only an input method. It must not persist raw MIDI as the
+  primary authored content.
+- Creating an Exercise from capture must create an unsaved in-memory draft first.
+- Saving must be explicit.
+- Reopening and saving an existing Exercise must update the same stable ID.
+- The Exercise Editor should be cross-platform.
 - Manual notation editing should work on iPhone.
 - MIDI capture should be desktop-only and optional.
 - Capture should feed the same editor source string, not a separate pattern
   system.
 - Replace and Append should be explicit actions.
 
-Do not create a separate desktop-only Pattern Editor just for MIDI capture.
+Do not create a separate desktop-only Exercise Editor just for MIDI capture.
 
 ## Developer Diagnostic Flow
 

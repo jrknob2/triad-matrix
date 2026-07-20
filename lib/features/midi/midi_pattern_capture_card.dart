@@ -19,6 +19,7 @@ class MidiPatternCaptureCard extends StatefulWidget {
   final Stream<DrumInputEvent>? drumEvents;
   final SerialLedController? ledController;
   final int playbackBpm;
+  final ValueChanged<String>? onCreateExercise;
 
   const MidiPatternCaptureCard({
     super.key,
@@ -26,6 +27,7 @@ class MidiPatternCaptureCard extends StatefulWidget {
     this.drumEvents,
     this.ledController,
     this.playbackBpm = 92,
+    this.onCreateExercise,
   });
 
   @override
@@ -263,6 +265,10 @@ class _MidiPatternCaptureCardState extends State<MidiPatternCaptureCard> {
           const SizedBox(height: 12),
           _PracticeControls(
             canPlay: _hasPlayablePattern,
+            canCreateExercise:
+                widget.onCreateExercise != null &&
+                _hasPlayablePattern &&
+                _validationError == null,
             ledAvailable: widget.ledController?.isConnected == true,
             guidedAvailable:
                 _hasPlayablePattern &&
@@ -274,6 +280,7 @@ class _MidiPatternCaptureCardState extends State<MidiPatternCaptureCard> {
             onHearIt: () => _togglePlayback(_CapturePlaybackMode.hearIt),
             onPlayAlong: () => _togglePlayback(_CapturePlaybackMode.playAlong),
             onGuidedPractice: _toggleGuidedPractice,
+            onCreateExercise: _createExerciseFromCurrentPattern,
           ),
         ],
       ),
@@ -285,6 +292,38 @@ class _MidiPatternCaptureCardState extends State<MidiPatternCaptureCard> {
           (DrumSheetNotationNote note) => !note.rest,
         ) ??
         false;
+  }
+
+  void _createExerciseFromCurrentPattern() {
+    final ValueChanged<String>? onCreateExercise = widget.onCreateExercise;
+    if (onCreateExercise == null) return;
+    final String pattern = _patternController.text.trim();
+    if (pattern.isEmpty) {
+      setState(() => _validationError = 'Capture or enter a pattern first.');
+      return;
+    }
+    try {
+      final DrumSheetNotationDocument document =
+          DrumSheetNotationDocument.fromPattern(pattern);
+      final bool hasPlayableNotes = document.flattenedNotes.any(
+        (DrumSheetNotationNote note) => !note.rest,
+      );
+      if (!hasPlayableNotes) {
+        setState(() => _validationError = 'Enter a playable pattern first.');
+        return;
+      }
+      setState(() {
+        _renderedDocument = document;
+        _validationError = null;
+      });
+      onCreateExercise(pattern);
+    } on FormatException catch (error) {
+      _setValidationError(error.message);
+    } on ArgumentError catch (error) {
+      _setValidationError(error.message ?? 'Invalid pattern.');
+    } on Object catch (error) {
+      _setValidationError('$error');
+    }
   }
 
   DrumSheetNotationSelection? get _guidedPracticeSelection {
@@ -512,6 +551,7 @@ enum _CapturePlaybackMode { hearIt, playAlong }
 
 class _PracticeControls extends StatelessWidget {
   final bool canPlay;
+  final bool canCreateExercise;
   final bool ledAvailable;
   final bool guidedAvailable;
   final _CapturePlaybackMode? activePlaybackMode;
@@ -520,9 +560,11 @@ class _PracticeControls extends StatelessWidget {
   final VoidCallback onHearIt;
   final VoidCallback onPlayAlong;
   final VoidCallback onGuidedPractice;
+  final VoidCallback onCreateExercise;
 
   const _PracticeControls({
     required this.canPlay,
+    required this.canCreateExercise,
     required this.ledAvailable,
     required this.guidedAvailable,
     required this.activePlaybackMode,
@@ -531,6 +573,7 @@ class _PracticeControls extends StatelessWidget {
     required this.onHearIt,
     required this.onPlayAlong,
     required this.onGuidedPractice,
+    required this.onCreateExercise,
   });
 
   @override
@@ -587,6 +630,15 @@ class _PracticeControls extends StatelessWidget {
               ),
             ),
           ],
+        ),
+        const SizedBox(height: 8),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: FilledButton.icon(
+            onPressed: canCreateExercise ? onCreateExercise : null,
+            icon: const Icon(Icons.edit_note_rounded),
+            label: const Text('Create Exercise'),
+          ),
         ),
         const SizedBox(height: 8),
         Wrap(

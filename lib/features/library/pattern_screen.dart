@@ -15,6 +15,7 @@ import '../../features/midi/midi_pattern_capture_panel.dart';
 import '../../features/midi/shared_midi_input_service.dart';
 import '../../features/app/unsaved_changes_dialog.dart';
 import '../../state/app_controller.dart';
+import 'exercise_authoring_mapper.dart';
 import '../practice/widgets/pattern_text_styles.dart';
 import '../practice/widgets/sheet_notation_display.dart';
 
@@ -160,7 +161,7 @@ class _PatternScreenState extends State<PatternScreen> {
           },
           child: Scaffold(
             appBar: AppBar(
-              title: const Text('Pattern'),
+              title: const Text('Exercise'),
               actions: <Widget>[
                 IconButton(
                   onPressed: _showInputLegend,
@@ -176,7 +177,7 @@ class _PatternScreenState extends State<PatternScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
-                      const DrumSectionTitle(text: 'Pattern Text'),
+                      const DrumSectionTitle(text: 'Exercise Notation'),
                       const SizedBox(height: 10),
                       TextField(
                         controller: _patternController,
@@ -200,7 +201,7 @@ class _PatternScreenState extends State<PatternScreen> {
                               _patternFocusNode.hasFocus ||
                                   _patternController.text.isNotEmpty
                               ? null
-                              : 'Enter Pattern',
+                              : 'Enter Notation',
                           border: OutlineInputBorder(),
                           contentPadding: const EdgeInsets.all(16),
                         ),
@@ -276,7 +277,7 @@ class _PatternScreenState extends State<PatternScreen> {
                 const SizedBox(height: 12),
                 FilledButton(
                   onPressed: _openSavePatternModal,
-                  child: const Text('Save'),
+                  child: const Text('Save Exercise'),
                 ),
               ],
             ),
@@ -346,7 +347,7 @@ class _PatternScreenState extends State<PatternScreen> {
     setState(() {
       _captureMessage = pattern.isEmpty
           ? 'No supported MIDI hits captured.'
-          : 'Capture ready. Replace or append it to the pattern.';
+          : 'Capture ready. Replace or append it to the exercise.';
     });
   }
 
@@ -369,7 +370,7 @@ class _PatternScreenState extends State<PatternScreen> {
     setState(() {
       _notationSelectionOwnsPatternRange = false;
       _selectedNoteIndexes = const <int>{};
-      _captureMessage = 'Captured pattern replaced the editor text.';
+      _captureMessage = 'Captured notation replaced the editor text.';
     });
   }
 
@@ -387,7 +388,7 @@ class _PatternScreenState extends State<PatternScreen> {
     setState(() {
       _notationSelectionOwnsPatternRange = false;
       _selectedNoteIndexes = const <int>{};
-      _captureMessage = 'Captured pattern appended to the editor text.';
+      _captureMessage = 'Captured notation appended to the editor text.';
     });
   }
 
@@ -808,7 +809,7 @@ class _PatternScreenState extends State<PatternScreen> {
             borderRadius: BorderRadius.circular(28),
             side: const BorderSide(color: DrumcabularyTheme.line),
           ),
-          title: const Text('Save Pattern'),
+          title: const Text('Save Exercise'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -873,7 +874,7 @@ class _PatternScreenState extends State<PatternScreen> {
       final List<DrumSheetNotationNote> notes = DrumSheetPatternParser.parse(
         _patternController.text.trim().toUpperCase(),
       );
-      return notes.isEmpty ? 'Enter a pattern before saving.' : null;
+      return notes.isEmpty ? 'Enter notation before saving.' : null;
     } on FormatException catch (error) {
       return error.message;
     } on ArgumentError catch (error) {
@@ -888,7 +889,7 @@ class _PatternScreenState extends State<PatternScreen> {
       parsedNotes = DrumSheetPatternParser.parse(patternText);
       if (parsedNotes.isEmpty) {
         setState(() {
-          _validationMessage = 'Enter a pattern before saving.';
+          _validationMessage = 'Enter notation before saving.';
         });
         return widget.itemId;
       }
@@ -901,14 +902,14 @@ class _PatternScreenState extends State<PatternScreen> {
     }
 
     final List<PatternTokenV1> tokens = parsedNotes
-        .map(_legacyTokenForSheetNote)
+        .map(legacyTokenForSheetNote)
         .toList(growable: false);
     final String savedItemId = widget.controller.savePracticeItemEdits(
       itemId: widget.itemId,
-      accentedNoteIndices: _accentIndicesFor(parsedNotes),
-      ghostNoteIndices: _ghostIndicesFor(parsedNotes),
+      accentedNoteIndices: accentIndicesForSheetNotes(parsedNotes),
+      ghostNoteIndices: ghostIndicesForSheetNotes(parsedNotes),
       voiceAssignments: parsedNotes
-          .map(_legacyVoiceForSheetNote)
+          .map(legacyVoiceForSheetNote)
           .toList(growable: false),
       competency: widget.controller.competencyFor(widget.itemId),
       name: _titleController.text.trim(),
@@ -919,7 +920,10 @@ class _PatternScreenState extends State<PatternScreen> {
       groupingHint: PatternGroupingV1.none,
       beatGrouping: _groupingTextFromPattern(patternText),
       noteValueOverrides: parsedNotes
-          .map((DrumSheetNotationNote note) => _storedValueFor(note.value))
+          .map(
+            (DrumSheetNotationNote note) =>
+                storedValueForSheetNoteValue(note.value),
+          )
           .toList(growable: false),
       saveAsPattern: true,
     );
@@ -931,7 +935,7 @@ class _PatternScreenState extends State<PatternScreen> {
     setState(() => _validationMessage = null);
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('Pattern saved.')));
+    ).showSnackBar(const SnackBar(content: Text('Exercise saved.')));
     return savedItemId;
   }
 
@@ -940,9 +944,9 @@ class _PatternScreenState extends State<PatternScreen> {
       context,
       title: 'Unsaved Changes',
       message: item.saved
-          ? 'Save your changes to this pattern before leaving?'
-          : 'Save this pattern before leaving?',
-      saveLabel: 'Save',
+          ? 'Save your changes to this exercise before leaving?'
+          : 'Save this exercise before leaving?',
+      saveLabel: 'Save Exercise',
     );
     if (!mounted) return false;
     return switch (decision) {
@@ -1324,75 +1328,6 @@ List<String> _tagListFromText(String text) {
       .toList(growable: false);
 }
 
-List<int> _accentIndicesFor(List<DrumSheetNotationNote> notes) {
-  return <int>[
-    for (int index = 0; index < notes.length; index += 1)
-      if (notes[index].accent) index,
-  ];
-}
-
-List<int> _ghostIndicesFor(List<DrumSheetNotationNote> notes) {
-  return <int>[
-    for (int index = 0; index < notes.length; index += 1)
-      if (notes[index].ghost) index,
-  ];
-}
-
-PatternTokenV1 _legacyTokenForSheetNote(DrumSheetNotationNote note) {
-  if (note.rest) return PatternTokenV1.rest;
-  if (note.flam) return PatternTokenV1.flam;
-  return switch (note.sticking.toUpperCase()) {
-    'R' => PatternTokenV1.right,
-    'L' => PatternTokenV1.left,
-    'K' => PatternTokenV1.kick,
-    'F' => PatternTokenV1.flam,
-    'X' => PatternTokenV1.accent,
-    _ =>
-      note.voices.contains(DrumSheetVoice.kick)
-          ? PatternTokenV1.kick
-          : PatternTokenV1.right,
-  };
-}
-
-DrumVoiceV1 _legacyVoiceForSheetNote(DrumSheetNotationNote note) {
-  if (note.rest || note.voices.isEmpty) return DrumVoiceV1.snare;
-  return switch (note.voices.first) {
-    DrumSheetVoice.snare => DrumVoiceV1.snare,
-    DrumSheetVoice.tom1 => DrumVoiceV1.rackTom,
-    DrumSheetVoice.tom2 => DrumVoiceV1.tom2,
-    DrumSheetVoice.floorTom => DrumVoiceV1.floorTom,
-    DrumSheetVoice.hihat => DrumVoiceV1.hihat,
-    DrumSheetVoice.openHiHat => DrumVoiceV1.openHiHat,
-    DrumSheetVoice.crash => DrumVoiceV1.crash,
-    DrumSheetVoice.ride => DrumVoiceV1.ride,
-    DrumSheetVoice.kick => DrumVoiceV1.kick,
-  };
-}
-
-PatternNoteValueV1? _storedValueFor(DrumSheetNoteValue? value) {
-  return switch (value) {
-    null => null,
-    DrumSheetNoteValue.whole => PatternNoteValueV1.whole,
-    DrumSheetNoteValue.half => PatternNoteValueV1.half,
-    DrumSheetNoteValue.quarter => PatternNoteValueV1.quarter,
-    DrumSheetNoteValue.eighth => PatternNoteValueV1.eighth,
-    DrumSheetNoteValue.sixteenth => PatternNoteValueV1.sixteenth,
-    DrumSheetNoteValue.thirtySecond => PatternNoteValueV1.thirtySecond,
-  };
-}
-
-DrumSheetNoteValue? _sheetValueFor(PatternNoteValueV1? value) {
-  return switch (value) {
-    null => null,
-    PatternNoteValueV1.whole => DrumSheetNoteValue.whole,
-    PatternNoteValueV1.half => DrumSheetNoteValue.half,
-    PatternNoteValueV1.quarter => DrumSheetNoteValue.quarter,
-    PatternNoteValueV1.eighth => DrumSheetNoteValue.eighth,
-    PatternNoteValueV1.sixteenth => DrumSheetNoteValue.sixteenth,
-    PatternNoteValueV1.thirtySecond => DrumSheetNoteValue.thirtySecond,
-  };
-}
-
 String _groupingTextFromPattern(String pattern) {
   final List<String> groups = _topLevelPatternGroups(pattern);
   if (groups.length <= 1) return '';
@@ -1446,7 +1381,7 @@ List<DrumSheetNotationNote> _sheetNotesForItem(PracticeItemV1 item) {
             ? item.voiceAssignments[index]
             : null,
         value: index < item.noteValueOverrides.length
-            ? _sheetValueFor(item.noteValueOverrides[index])
+            ? sheetValueForStoredNoteValue(item.noteValueOverrides[index])
             : null,
       ),
   ];
