@@ -134,10 +134,18 @@ Rules:
 
 - Search must match lesson titles, exercise titles, descriptions, keywords,
   notation text, and metadata labels.
-- Primary filters are Skills, Difficulty, Genre, and Time Signature.
-- More Filters may expose scalable metadata groups such as Rudiments, Tempo
-  Range, Equipment, Feel, Subdivision, Hand Focus, and Foot Focus.
+- The default Explore view keeps filters collapsed. Search, active filter
+  badges, Add Filter, results count, sorting, and results are the permanent
+  elements.
+- Add Filter expands an inline panel containing metadata groups such as Skills,
+  Difficulty, Genre, Status, Time Signature, Rudiments, Tempo Range, Equipment,
+  Feel, Subdivision, Hand Focus, and Foot Focus.
 - Multiple chips may be active at once. Filters intersect across groups.
+- Active filters appear as removable badges directly under Search. Clear All is
+  available only when filters are active.
+- Status is single-select. In Progress and Completed may be used alone. Not
+  Started is available only after search or another metadata filter narrows the
+  catalog.
 - Results are lightweight lesson cards with title, short description, metadata
   chips, duration, difficulty, and a save/favorite affordance.
 - Sorting stays simple: Relevance, Alphabetical, Newest, Shortest, and Longest.

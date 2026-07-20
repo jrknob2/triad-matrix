@@ -130,7 +130,7 @@ class _ExploreLessonsScreenState extends State<ExploreLessonsScreen> {
   late Future<_TeachingFlowData> _dataFuture = _loadData();
   late final TextEditingController _searchController;
   String _query = '';
-  bool _showMoreFilters = false;
+  bool _filterPanelExpanded = false;
   _ExploreSort _sort = _ExploreSort.relevance;
   final Map<_ExploreFilterGroupKey, Set<String>> _selectedFilters =
       <_ExploreFilterGroupKey, Set<String>>{
@@ -187,13 +187,14 @@ class _ExploreLessonsScreenState extends State<ExploreLessonsScreen> {
                 searchController: _searchController,
                 query: _query,
                 selectedFilters: _selectedFilters,
-                showMoreFilters: _showMoreFilters,
+                filterPanelExpanded: _filterPanelExpanded,
                 sort: _sort,
                 onQueryChanged: _setQuery,
                 onFilterToggled: _toggleFilter,
-                onMoreFiltersToggled: _toggleMoreFilters,
+                onFilterRemoved: _removeFilter,
+                onFilterPanelToggled: _toggleFilterPanel,
                 onSortChanged: _setSort,
-                onClearAll: _clearAll,
+                onClearFilters: _clearFilters,
                 onProgressChanged: _refresh,
               );
             },
@@ -204,21 +205,41 @@ class _ExploreLessonsScreenState extends State<ExploreLessonsScreen> {
   void _setQuery(String value) {
     setState(() {
       _query = value;
+      _enforceStatusGate();
     });
   }
 
   void _toggleFilter(_ExploreFilterGroupKey key, String value) {
     setState(() {
       final Set<String> values = _selectedFilters[key]!;
+      if (key == _ExploreFilterGroupKey.status) {
+        if (values.contains(value)) {
+          values.clear();
+        } else {
+          values
+            ..clear()
+            ..add(value);
+        }
+        _enforceStatusGate();
+        return;
+      }
       if (!values.add(value)) {
         values.remove(value);
       }
+      _enforceStatusGate();
     });
   }
 
-  void _toggleMoreFilters() {
+  void _removeFilter(_ExploreFilterGroupKey key, String value) {
     setState(() {
-      _showMoreFilters = !_showMoreFilters;
+      _selectedFilters[key]?.remove(value);
+      _enforceStatusGate();
+    });
+  }
+
+  void _toggleFilterPanel() {
+    setState(() {
+      _filterPanelExpanded = !_filterPanelExpanded;
     });
   }
 
@@ -229,15 +250,17 @@ class _ExploreLessonsScreenState extends State<ExploreLessonsScreen> {
     });
   }
 
-  void _clearAll() {
+  void _clearFilters() {
     setState(() {
-      _query = '';
-      _searchController.clear();
       for (final Set<String> values in _selectedFilters.values) {
         values.clear();
       }
-      _sort = _ExploreSort.relevance;
     });
+  }
+
+  void _enforceStatusGate() {
+    if (_statusNotStartedEnabled(_query, _selectedFilters)) return;
+    _selectedFilters[_ExploreFilterGroupKey.status]?.remove(_notStartedStatus);
   }
 }
 
@@ -1206,6 +1229,7 @@ enum _ExploreFilterGroupKey {
   skills,
   difficulty,
   genre,
+  status,
   timeSignature,
   rudiments,
   tempoRange,
@@ -1215,6 +1239,8 @@ enum _ExploreFilterGroupKey {
   handFocus,
   footFocus,
 }
+
+const String _notStartedStatus = 'Not Started';
 
 enum _ExploreSort {
   relevance('Relevance'),
@@ -1233,13 +1259,14 @@ class _ExploreSearchView extends StatelessWidget {
   final TextEditingController searchController;
   final String query;
   final Map<_ExploreFilterGroupKey, Set<String>> selectedFilters;
-  final bool showMoreFilters;
+  final bool filterPanelExpanded;
   final _ExploreSort sort;
   final ValueChanged<String> onQueryChanged;
   final void Function(_ExploreFilterGroupKey key, String value) onFilterToggled;
-  final VoidCallback onMoreFiltersToggled;
+  final void Function(_ExploreFilterGroupKey key, String value) onFilterRemoved;
+  final VoidCallback onFilterPanelToggled;
   final ValueChanged<_ExploreSort?> onSortChanged;
-  final VoidCallback onClearAll;
+  final VoidCallback onClearFilters;
   final VoidCallback onProgressChanged;
 
   const _ExploreSearchView({
@@ -1247,13 +1274,14 @@ class _ExploreSearchView extends StatelessWidget {
     required this.searchController,
     required this.query,
     required this.selectedFilters,
-    required this.showMoreFilters,
+    required this.filterPanelExpanded,
     required this.sort,
     required this.onQueryChanged,
     required this.onFilterToggled,
-    required this.onMoreFiltersToggled,
+    required this.onFilterRemoved,
+    required this.onFilterPanelToggled,
     required this.onSortChanged,
-    required this.onClearAll,
+    required this.onClearFilters,
     required this.onProgressChanged,
   });
 
@@ -1273,6 +1301,7 @@ class _ExploreSearchView extends StatelessWidget {
       query,
       selectedFilters,
     );
+    final bool hasActiveFilters = _hasActiveExploreFilters(selectedFilters);
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
@@ -1282,15 +1311,17 @@ class _ExploreSearchView extends StatelessWidget {
           query: query,
           onQueryChanged: onQueryChanged,
         ),
-        const SizedBox(height: 22),
+        const SizedBox(height: 12),
         _ExploreFilters(
           items: items,
+          query: query,
           selectedFilters: selectedFilters,
-          showMoreFilters: showMoreFilters,
-          hasActiveSearch: hasActiveSearch,
+          filterPanelExpanded: filterPanelExpanded,
+          hasActiveFilters: hasActiveFilters,
           onFilterToggled: onFilterToggled,
-          onMoreFiltersToggled: onMoreFiltersToggled,
-          onClearAll: onClearAll,
+          onFilterRemoved: onFilterRemoved,
+          onFilterPanelToggled: onFilterPanelToggled,
+          onClearFilters: onClearFilters,
         ),
         const SizedBox(height: 22),
         _ExploreResultsHeader(
@@ -1302,7 +1333,8 @@ class _ExploreSearchView extends StatelessWidget {
         if (results.isEmpty)
           _ExploreEmptyState(
             hasActiveSearch: hasActiveSearch,
-            onClear: onClearAll,
+            hasActiveFilters: hasActiveFilters,
+            onClearFilters: onClearFilters,
           )
         else
           for (final _ExploreLessonItem item in results) ...<Widget>[
@@ -1378,7 +1410,7 @@ class _ExploreHeader extends StatelessWidget {
             fontWeight: FontWeight.w800,
           ),
           decoration: InputDecoration(
-            hintText: 'Search lessons, exercises, keywords...',
+            hintText: 'Search lessons or exercises',
             hintStyle: Theme.of(context).textTheme.titleMedium?.copyWith(
               color: DrumcabularyTheme.edgeTextMuted,
               fontWeight: FontWeight.w700,
@@ -1423,73 +1455,138 @@ class _ExploreHeader extends StatelessWidget {
 
 class _ExploreFilters extends StatelessWidget {
   final List<_ExploreLessonItem> items;
+  final String query;
   final Map<_ExploreFilterGroupKey, Set<String>> selectedFilters;
-  final bool showMoreFilters;
-  final bool hasActiveSearch;
+  final bool filterPanelExpanded;
+  final bool hasActiveFilters;
   final void Function(_ExploreFilterGroupKey key, String value) onFilterToggled;
-  final VoidCallback onMoreFiltersToggled;
-  final VoidCallback onClearAll;
+  final void Function(_ExploreFilterGroupKey key, String value) onFilterRemoved;
+  final VoidCallback onFilterPanelToggled;
+  final VoidCallback onClearFilters;
 
   const _ExploreFilters({
     required this.items,
+    required this.query,
     required this.selectedFilters,
-    required this.showMoreFilters,
-    required this.hasActiveSearch,
+    required this.filterPanelExpanded,
+    required this.hasActiveFilters,
     required this.onFilterToggled,
-    required this.onMoreFiltersToggled,
-    required this.onClearAll,
+    required this.onFilterRemoved,
+    required this.onFilterPanelToggled,
+    required this.onClearFilters,
   });
 
   @override
   Widget build(BuildContext context) {
-    final List<_ExploreFilterGroup> primaryGroups = _primaryExploreGroups(
-      items,
+    final List<_ExploreFilterGroup> groups = _exploreFilterGroups(items);
+    final bool notStartedEnabled = _statusNotStartedEnabled(
+      query,
+      selectedFilters,
     );
-    final List<_ExploreFilterGroup> moreGroups = _moreExploreGroups(items);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Row(
-          children: <Widget>[
-            Text(
-              'Filters',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: DrumcabularyTheme.edgeTextPrimary,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            const Spacer(),
-            if (hasActiveSearch)
-              TextButton.icon(
-                onPressed: onClearAll,
-                icon: const Icon(Icons.refresh_rounded, size: 18),
-                label: const Text('Clear all'),
-              ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        for (final _ExploreFilterGroup group in primaryGroups)
-          _ExploreFilterGroupView(
-            group: group,
-            selectedValues: selectedFilters[group.key] ?? const <String>{},
-            onToggled: (String value) => onFilterToggled(group.key, value),
+        if (hasActiveFilters) ...<Widget>[
+          _ExploreActiveFilterBadges(
+            groups: groups,
+            selectedFilters: selectedFilters,
+            onRemoved: onFilterRemoved,
+            onClearFilters: onClearFilters,
           ),
-        const SizedBox(height: 4),
-        _MoreFiltersToggle(
-          expanded: showMoreFilters,
-          onPressed: onMoreFiltersToggled,
+          const SizedBox(height: 12),
+        ],
+        _AddFilterButton(
+          expanded: filterPanelExpanded,
+          onPressed: onFilterPanelToggled,
         ),
-        if (showMoreFilters) ...<Widget>[
-          const SizedBox(height: 8),
-          for (final _ExploreFilterGroup group in moreGroups)
-            _ExploreFilterGroupView(
-              group: group,
-              selectedValues: selectedFilters[group.key] ?? const <String>{},
-              onToggled: (String value) => onFilterToggled(group.key, value),
+        if (filterPanelExpanded) ...<Widget>[
+          const SizedBox(height: 12),
+          DrumPanel(
+            tone: DrumPanelTone.dark,
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                for (final _ExploreFilterGroup group in groups)
+                  _ExploreFilterGroupView(
+                    group: group,
+                    selectedValues:
+                        selectedFilters[group.key] ?? const <String>{},
+                    notStartedEnabled: notStartedEnabled,
+                    onToggled: (String value) =>
+                        onFilterToggled(group.key, value),
+                  ),
+              ],
             ),
+          ),
         ],
       ],
+    );
+  }
+}
+
+class _ExploreActiveFilterBadges extends StatelessWidget {
+  final List<_ExploreFilterGroup> groups;
+  final Map<_ExploreFilterGroupKey, Set<String>> selectedFilters;
+  final void Function(_ExploreFilterGroupKey key, String value) onRemoved;
+  final VoidCallback onClearFilters;
+
+  const _ExploreActiveFilterBadges({
+    required this.groups,
+    required this.selectedFilters,
+    required this.onRemoved,
+    required this.onClearFilters,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final List<Widget> badges = <Widget>[];
+    for (final _ExploreFilterGroup group in groups) {
+      final Set<String> values = selectedFilters[group.key] ?? const <String>{};
+      for (final String value in values) {
+        badges.add(
+          InputChip(
+            label: Text(value),
+            onDeleted: () => onRemoved(group.key, value),
+            deleteIcon: const Icon(Icons.close_rounded, size: 16),
+            visualDensity: VisualDensity.compact,
+            backgroundColor: DrumcabularyTheme.edgeSurfaceSecondary,
+            deleteIconColor: DrumcabularyTheme.edgeTextSecondary,
+            side: const BorderSide(color: DrumcabularyTheme.edgeOrange),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(999),
+            ),
+            labelStyle: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: DrumcabularyTheme.edgeTextPrimary,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        );
+      }
+    }
+
+    if (badges.isEmpty) return const SizedBox.shrink();
+    badges.add(
+      TextButton(onPressed: onClearFilters, child: const Text('Clear All')),
+    );
+
+    return Wrap(spacing: 8, runSpacing: 8, children: badges);
+  }
+}
+
+class _AddFilterButton extends StatelessWidget {
+  final bool expanded;
+  final VoidCallback onPressed;
+
+  const _AddFilterButton({required this.expanded, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(expanded ? Icons.remove_rounded : Icons.add_rounded),
+      label: Text(expanded ? 'Hide Filters' : 'Add Filter'),
     );
   }
 }
@@ -1497,11 +1594,13 @@ class _ExploreFilters extends StatelessWidget {
 class _ExploreFilterGroupView extends StatelessWidget {
   final _ExploreFilterGroup group;
   final Set<String> selectedValues;
+  final bool notStartedEnabled;
   final ValueChanged<String> onToggled;
 
   const _ExploreFilterGroupView({
     required this.group,
     required this.selectedValues,
+    required this.notStartedEnabled,
     required this.onToggled,
   });
 
@@ -1526,19 +1625,31 @@ class _ExploreFilterGroupView extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: <Widget>[
-              for (final String value in group.values)
-                DrumSelectablePill(
-                  selected: selectedValues.contains(value),
-                  onPressed: () => onToggled(value),
-                  label: Text(value),
+              for (final String value in group.values) _chipForValue(value),
+            ],
+          );
+          final Widget content = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              chips,
+              if (group.key == _ExploreFilterGroupKey.status &&
+                  !notStartedEnabled) ...<Widget>[
+                const SizedBox(height: 6),
+                Text(
+                  'Narrow the catalog first to use Not Started.',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: DrumcabularyTheme.edgeTextMuted,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
+              ],
             ],
           );
 
           if (constraints.maxWidth < 620) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[label, const SizedBox(height: 8), chips],
+              children: <Widget>[label, const SizedBox(height: 8), content],
             );
           }
 
@@ -1546,44 +1657,28 @@ class _ExploreFilterGroupView extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               SizedBox(width: 140, child: label),
-              Expanded(child: chips),
+              Expanded(child: content),
             ],
           );
         },
       ),
     );
   }
-}
 
-class _MoreFiltersToggle extends StatelessWidget {
-  final bool expanded;
-  final VoidCallback onPressed;
-
-  const _MoreFiltersToggle({required this.expanded, required this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: <Widget>[
-        const Expanded(child: Divider()),
-        TextButton(
-          onPressed: onPressed,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              const Text('More Filters'),
-              const SizedBox(width: 4),
-              Icon(
-                expanded
-                    ? Icons.keyboard_arrow_up_rounded
-                    : Icons.keyboard_arrow_down_rounded,
-                size: 20,
-              ),
-            ],
-          ),
-        ),
-        const Expanded(child: Divider()),
-      ],
+  Widget _chipForValue(String value) {
+    final bool disabled =
+        group.key == _ExploreFilterGroupKey.status &&
+        value == _notStartedStatus &&
+        !notStartedEnabled;
+    final Widget chip = DrumSelectablePill(
+      selected: selectedValues.contains(value),
+      onPressed: disabled ? null : () => onToggled(value),
+      label: Text(value),
+    );
+    if (!disabled) return chip;
+    return Tooltip(
+      message: 'Narrow the catalog first to use Not Started.',
+      child: chip,
     );
   }
 }
@@ -1924,11 +2019,13 @@ class _ExploreMetadataPill extends StatelessWidget {
 
 class _ExploreEmptyState extends StatelessWidget {
   final bool hasActiveSearch;
-  final VoidCallback onClear;
+  final bool hasActiveFilters;
+  final VoidCallback onClearFilters;
 
   const _ExploreEmptyState({
     required this.hasActiveSearch,
-    required this.onClear,
+    required this.hasActiveFilters,
+    required this.onClearFilters,
   });
 
   @override
@@ -1954,10 +2051,10 @@ class _ExploreEmptyState extends StatelessWidget {
               color: DrumcabularyTheme.edgeTextSecondary,
             ),
           ),
-          if (hasActiveSearch) ...<Widget>[
+          if (hasActiveFilters) ...<Widget>[
             const SizedBox(height: 12),
             OutlinedButton.icon(
-              onPressed: onClear,
+              onPressed: onClearFilters,
               icon: const Icon(Icons.refresh_rounded),
               label: const Text('Clear filters'),
             ),
@@ -2093,6 +2190,7 @@ class _ExploreLessonItem {
       _ExploreFilterGroupKey.skills => skills,
       _ExploreFilterGroupKey.difficulty => <String>{difficulty},
       _ExploreFilterGroupKey.genre => genres,
+      _ExploreFilterGroupKey.status => <String>{_statusLabel(progress.status)},
       _ExploreFilterGroupKey.timeSignature => timeSignatures,
       _ExploreFilterGroupKey.rudiments => rudiments,
       _ExploreFilterGroupKey.tempoRange => tempoRanges,
@@ -2171,9 +2269,7 @@ List<_ExploreLessonItem> _exploreLessonItems(_TeachingFlowData data) {
   return items;
 }
 
-List<_ExploreFilterGroup> _primaryExploreGroups(
-  List<_ExploreLessonItem> items,
-) {
+List<_ExploreFilterGroup> _exploreFilterGroups(List<_ExploreLessonItem> items) {
   return <_ExploreFilterGroup>[
     _ExploreFilterGroup(
       key: _ExploreFilterGroupKey.skills,
@@ -2220,6 +2316,11 @@ List<_ExploreFilterGroup> _primaryExploreGroups(
         actual: _actualFilterValues(items, _ExploreFilterGroupKey.genre),
       ),
     ),
+    const _ExploreFilterGroup(
+      key: _ExploreFilterGroupKey.status,
+      label: 'Status',
+      values: <String>['In Progress', 'Completed', _notStartedStatus],
+    ),
     _ExploreFilterGroup(
       key: _ExploreFilterGroupKey.timeSignature,
       label: 'Time Signature',
@@ -2231,11 +2332,6 @@ List<_ExploreFilterGroup> _primaryExploreGroups(
         ),
       ),
     ),
-  ];
-}
-
-List<_ExploreFilterGroup> _moreExploreGroups(List<_ExploreLessonItem> items) {
-  return <_ExploreFilterGroup>[
     _ExploreFilterGroup(
       key: _ExploreFilterGroupKey.rudiments,
       label: 'Rudiments',
@@ -2352,8 +2448,25 @@ bool _hasActiveExploreSearch(
   String query,
   Map<_ExploreFilterGroupKey, Set<String>> selectedFilters,
 ) {
+  return query.trim().isNotEmpty || _hasActiveExploreFilters(selectedFilters);
+}
+
+bool _hasActiveExploreFilters(
+  Map<_ExploreFilterGroupKey, Set<String>> selectedFilters,
+) {
+  return selectedFilters.values.any((Set<String> values) => values.isNotEmpty);
+}
+
+bool _statusNotStartedEnabled(
+  String query,
+  Map<_ExploreFilterGroupKey, Set<String>> selectedFilters,
+) {
   return query.trim().isNotEmpty ||
-      selectedFilters.values.any((Set<String> values) => values.isNotEmpty);
+      selectedFilters.entries.any(
+        (MapEntry<_ExploreFilterGroupKey, Set<String>> entry) =>
+            entry.key != _ExploreFilterGroupKey.status &&
+            entry.value.isNotEmpty,
+      );
 }
 
 int _compareExploreItems(
@@ -2686,7 +2799,7 @@ class _LessonLoadError extends StatelessWidget {
 String _statusLabel(LessonProgressStatus status) {
   return switch (status) {
     LessonProgressStatus.inProgress => 'In Progress',
-    LessonProgressStatus.completed => 'Complete',
+    LessonProgressStatus.completed => 'Completed',
     LessonProgressStatus.notStarted => 'Not Started',
   };
 }
