@@ -24,6 +24,7 @@ Read these as supporting context:
 - `docs/06_APP_SPEC.md`
 - `docs/25_DRUMMER_EDGE_UI_STYLE_GUIDE.md`
 - `docs/26_ART_DIRECTION_GUIDE.md`
+- `docs/30_HOME_SCREEN_UX_CONTRACT.md`
 
 Current warning: some older docs still describe Settings, Library, Practice,
 Matrix, and Progress as deferred MVP systems. That is historically useful, but
@@ -88,13 +89,16 @@ Home answers:
 - How much progress have I made?
 - What should I work on next?
 - What did I do recently?
+- Are my practice devices connected?
 
 Returning-user Home hierarchy:
 
-1. Continue Practice
-2. Progress Summary
-3. Up Next
-4. Recent Activity
+1. Greeting
+2. Device Status
+3. Keep Practicing This
+4. Progress Summary
+5. Up Next
+6. Recent Activity
 
 First-light Home hierarchy:
 
@@ -102,6 +106,9 @@ First-light Home hierarchy:
 2. Explore Lessons
 3. Record Exercise
 4. Set Up Hardware, only as a support action
+
+`docs/30_HOME_SCREEN_UX_CONTRACT.md` owns detailed Home content rules,
+including device chips, section labels, metric scope, and first-light behavior.
 
 Not allowed as primary first-screen content:
 
@@ -412,6 +419,7 @@ For app-flow UI work, include:
 
 ```text
 docs/28_APP_FLOW_CONTRACT.md
+docs/30_HOME_SCREEN_UX_CONTRACT.md
 docs/12_SCREEN_CONTENT_CONTRACTS_AND_APP_FLOWS.md
 docs/25_DRUMMER_EDGE_UI_STYLE_GUIDE.md
 docs/26_ART_DIRECTION_GUIDE.md

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../app/drumcabulary_theme.dart';
@@ -6,17 +8,25 @@ import '../coach/lesson_detail_screen.dart';
 import '../coach/lesson_plan.dart';
 import '../coach/lesson_plan_loader.dart';
 import '../coach/lesson_progress.dart';
+import '../hardware/hardware_capabilities.dart';
+import '../midi/midi_input_models.dart';
+import '../midi/midi_input_service.dart';
+import '../midi/serial_led_controller.dart';
+import '../midi/shared_midi_input_service.dart';
+import '../midi/shared_serial_led_controller.dart';
 
 class TodayScreen extends StatefulWidget {
   final VoidCallback? onOpenExplore;
   final VoidCallback? onOpenInsights;
   final VoidCallback? onOpenSettings;
+  final VoidCallback? onOpenDevices;
 
   const TodayScreen({
     super.key,
     this.onOpenExplore,
     this.onOpenInsights,
     this.onOpenSettings,
+    this.onOpenDevices,
   });
 
   @override
@@ -25,6 +35,27 @@ class TodayScreen extends StatefulWidget {
 
 class _TodayScreenState extends State<TodayScreen> {
   late Future<_TeachingFlowData> _dataFuture = _loadData();
+  MidiInputService? _midiService;
+  SerialLedController? _ledController;
+
+  @override
+  void initState() {
+    super.initState();
+    if (HardwareCapabilities.supportsDesktopHardware) {
+      _midiService = SharedMidiInputService.instance
+        ..addListener(_handleHardwareChanged);
+      _ledController = SharedSerialLedController.instance
+        ..addListener(_handleHardwareChanged);
+      unawaited(_midiService!.start());
+    }
+  }
+
+  @override
+  void dispose() {
+    _midiService?.removeListener(_handleHardwareChanged);
+    _ledController?.removeListener(_handleHardwareChanged);
+    super.dispose();
+  }
 
   Future<_TeachingFlowData> _loadData() async {
     final LessonContentLibrary library = await LessonPlanLoader.loadContent();
@@ -44,6 +75,11 @@ class _TodayScreenState extends State<TodayScreen> {
     });
   }
 
+  void _handleHardwareChanged() {
+    if (!mounted) return;
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     return DrumScreen(
@@ -60,13 +96,25 @@ class _TodayScreenState extends State<TodayScreen> {
               }
               return _HomeView(
                 data: data,
+                hardwareStatus: _hardwareStatus,
                 onProgressChanged: _refresh,
                 onOpenExplore: widget.onOpenExplore,
                 onOpenInsights: widget.onOpenInsights,
                 onOpenSettings: widget.onOpenSettings,
+                onOpenDevices: widget.onOpenDevices,
               );
             },
       ),
+    );
+  }
+
+  _HomeHardwareStatus? get _hardwareStatus {
+    final MidiInputService? midiService = _midiService;
+    final SerialLedController? ledController = _ledController;
+    if (midiService == null || ledController == null) return null;
+    return _HomeHardwareStatus.from(
+      midiService: midiService,
+      ledController: ledController,
     );
   }
 }
@@ -132,17 +180,21 @@ class _TeachingFlowData {
 
 class _HomeView extends StatelessWidget {
   final _TeachingFlowData data;
+  final _HomeHardwareStatus? hardwareStatus;
   final VoidCallback onProgressChanged;
   final VoidCallback? onOpenExplore;
   final VoidCallback? onOpenInsights;
   final VoidCallback? onOpenSettings;
+  final VoidCallback? onOpenDevices;
 
   const _HomeView({
     required this.data,
+    required this.hardwareStatus,
     required this.onProgressChanged,
     required this.onOpenExplore,
     required this.onOpenInsights,
     required this.onOpenSettings,
+    required this.onOpenDevices,
   });
 
   @override
@@ -162,12 +214,16 @@ class _HomeView extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
       children: <Widget>[
-        _HomeHeader(firstRun: firstRun),
+        _HomeHeader(
+          hardwareStatus: hardwareStatus,
+          onOpenDevices: onOpenDevices,
+        ),
         const SizedBox(height: 18),
         if (firstRun)
           _FirstRunPanel(
             onOpenExplore: onOpenExplore,
             onOpenSettings: onOpenSettings,
+            onOpenDevices: hardwareStatus == null ? null : onOpenDevices,
           )
         else ...<Widget>[
           _ContinuePracticePanel(
@@ -251,17 +307,21 @@ class _HomeView extends StatelessWidget {
 }
 
 class _HomeHeader extends StatelessWidget {
-  final bool firstRun;
+  final _HomeHardwareStatus? hardwareStatus;
+  final VoidCallback? onOpenDevices;
 
-  const _HomeHeader({required this.firstRun});
+  const _HomeHeader({
+    required this.hardwareStatus,
+    required this.onOpenDevices,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    final Widget greeting = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Text(
-          firstRun ? 'Welcome to Drumcabulary' : _greeting(),
+          _greeting(),
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
             color: DrumcabularyTheme.edgeTextPrimary,
             fontWeight: FontWeight.w900,
@@ -270,9 +330,7 @@ class _HomeHeader extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          firstRun
-              ? 'Turn what you learn into focused drum practice.'
-              : 'Ready to play?',
+          'Ready when you are.',
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
             color: DrumcabularyTheme.edgeTextSecondary,
             height: 1.35,
@@ -280,16 +338,125 @@ class _HomeHeader extends StatelessWidget {
         ),
       ],
     );
+
+    final _HomeHardwareStatus? status = hardwareStatus;
+    if (status == null) return greeting;
+
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final Widget devices = Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          alignment: WrapAlignment.end,
+          children: <Widget>[
+            _DeviceStatusChip(status: status.midi),
+            _DeviceStatusChip(status: status.led),
+            OutlinedButton.icon(
+              onPressed: onOpenDevices,
+              icon: const Icon(Icons.chevron_right_rounded),
+              label: const Text('View Devices'),
+            ),
+          ],
+        );
+        if (constraints.maxWidth < 760) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[greeting, const SizedBox(height: 14), devices],
+          );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Expanded(child: greeting),
+            const SizedBox(width: 18),
+            Flexible(child: devices),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _DeviceStatusChip extends StatelessWidget {
+  final _DeviceStatus status;
+
+  const _DeviceStatusChip({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: DrumcabularyTheme.edgeSurface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: DrumcabularyTheme.edgeBorder),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(status.icon, color: DrumcabularyTheme.edgeTextPrimary),
+            const SizedBox(width: 10),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 180),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Text(
+                    status.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: DrumcabularyTheme.edgeTextPrimary,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: status.connected
+                              ? const Color(0xFF52D273)
+                              : const Color(0xFFFFC857),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const SizedBox(width: 8, height: 8),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        status.subtitle,
+                        style: Theme.of(context).textTheme.labelMedium
+                            ?.copyWith(
+                              color: status.connected
+                                  ? const Color(0xFF52D273)
+                                  : DrumcabularyTheme.edgeTextSecondary,
+                              fontWeight: FontWeight.w800,
+                            ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
 class _FirstRunPanel extends StatelessWidget {
   final VoidCallback? onOpenExplore;
   final VoidCallback? onOpenSettings;
+  final VoidCallback? onOpenDevices;
 
   const _FirstRunPanel({
     required this.onOpenExplore,
     required this.onOpenSettings,
+    required this.onOpenDevices,
   });
 
   @override
@@ -300,6 +467,23 @@ class _FirstRunPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
+          Text(
+            'Welcome to Drumcabulary',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              color: DrumcabularyTheme.edgeTextPrimary,
+              fontWeight: FontWeight.w800,
+              height: 1.1,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Turn what you learn into focused practice.',
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              color: DrumcabularyTheme.edgeTextSecondary,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 18),
           FilledButton.icon(
             onPressed: onOpenExplore,
             icon: const Icon(Icons.explore_outlined),
@@ -311,12 +495,12 @@ class _FirstRunPanel extends StatelessWidget {
             icon: const Icon(Icons.graphic_eq_rounded),
             label: const Text('Record Exercise'),
           ),
-          if (onOpenSettings != null) ...<Widget>[
+          if (onOpenDevices != null) ...<Widget>[
             const SizedBox(height: 14),
             const Divider(height: 1, color: DrumcabularyTheme.edgeBorder),
             const SizedBox(height: 14),
             TextButton.icon(
-              onPressed: onOpenSettings,
+              onPressed: onOpenDevices,
               icon: const Icon(Icons.usb_rounded),
               label: const Text('Set Up Hardware'),
             ),
@@ -350,22 +534,25 @@ class _ContinuePracticePanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const DrumEyebrow(text: 'Continue Practice'),
+          const DrumEyebrow(text: 'Keep Practicing This'),
           const SizedBox(height: 14),
           LayoutBuilder(
             builder: (BuildContext context, BoxConstraints constraints) {
-              final bool compact = constraints.maxWidth < 560;
+              final bool compact = constraints.maxWidth < 720;
               final Widget details = _LessonTargetDetails(target: target!);
+              final Widget checklist = _ExerciseChecklist(target: target!);
               final Widget action = FilledButton.icon(
                 onPressed: onResume,
                 icon: const Icon(Icons.play_arrow_rounded),
-                label: const Text('Resume Practice'),
+                label: const Text('Resume'),
               );
               if (compact) {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
                     details,
+                    const SizedBox(height: 14),
+                    checklist,
                     const SizedBox(height: 14),
                     action,
                   ],
@@ -374,8 +561,10 @@ class _ContinuePracticePanel extends StatelessWidget {
               return Row(
                 children: <Widget>[
                   Expanded(child: details),
-                  const SizedBox(width: 18),
-                  action,
+                  const SizedBox(width: 20),
+                  SizedBox(width: 310, child: checklist),
+                  const SizedBox(width: 20),
+                  Align(alignment: Alignment.centerRight, child: action),
                 ],
               );
             },
@@ -388,6 +577,14 @@ class _ContinuePracticePanel extends StatelessWidget {
               minHeight: 6,
               backgroundColor: DrumcabularyTheme.edgeBackground,
               color: DrumcabularyTheme.edgeOrange,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '${target!.completedExerciseCount} of ${target!.exerciseCount} complete',
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: DrumcabularyTheme.edgeTextSecondary,
+              fontWeight: FontWeight.w800,
             ),
           ),
         ],
@@ -438,8 +635,8 @@ class _LessonTargetDetails extends StatelessWidget {
               const SizedBox(height: 5),
               Text(
                 target.exercise == null
-                    ? '${target.completedExerciseCount} of ${target.exerciseCount} exercises complete'
-                    : '${target.exercise!.title} · ${target.completedExerciseCount} of ${target.exerciseCount} complete',
+                    ? '${target.lesson.estimatedMinutes} min lesson'
+                    : '${target.exercise!.title} · Exercise ${target.nextExerciseNumber} of ${target.exerciseCount}',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: DrumcabularyTheme.edgeTextSecondary,
                   height: 1.3,
@@ -448,6 +645,79 @@ class _LessonTargetDetails extends StatelessWidget {
             ],
           ),
         ),
+      ],
+    );
+  }
+}
+
+class _ExerciseChecklist extends StatelessWidget {
+  final _HomeLessonTarget target;
+
+  const _ExerciseChecklist({required this.target});
+
+  @override
+  Widget build(BuildContext context) {
+    final List<_ExerciseChecklistItem> items = target.checklist;
+    if (items.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        for (final _ExerciseChecklistItem item in items) ...<Widget>[
+          _ExerciseChecklistRow(item: item),
+          if (item != items.last) const SizedBox(height: 8),
+        ],
+      ],
+    );
+  }
+}
+
+class _ExerciseChecklistRow extends StatelessWidget {
+  final _ExerciseChecklistItem item;
+
+  const _ExerciseChecklistRow({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        Expanded(
+          child: Text(
+            item.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: DrumcabularyTheme.edgeTextPrimary,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List<Widget>.generate(5, (int index) {
+            final bool filled = item.status == LessonProgressStatus.completed
+                ? true
+                : item.status == LessonProgressStatus.inProgress && index < 3;
+            return Padding(
+              padding: const EdgeInsets.only(left: 3),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: filled
+                      ? DrumcabularyTheme.edgeOrange
+                      : DrumcabularyTheme.edgeSurfaceSecondary,
+                  borderRadius: BorderRadius.circular(3),
+                  border: Border.all(color: DrumcabularyTheme.edgeBorder),
+                ),
+                child: const SizedBox(width: 12, height: 12),
+              ),
+            );
+          }),
+        ),
+        const SizedBox(width: 8),
+        if (item.status == LessonProgressStatus.completed)
+          const Icon(Icons.check_circle, color: Color(0xFF52D273), size: 20)
+        else
+          const SizedBox(width: 20),
       ],
     );
   }
@@ -471,29 +741,35 @@ class _ProgressSummaryPanel extends StatelessWidget {
         children: <Widget>[
           Row(
             children: <Widget>[
-              const Expanded(child: DrumSectionTitle(text: 'Your Progress')),
+              const Expanded(child: SizedBox.shrink()),
               TextButton(
                 onPressed: onOpenInsights,
-                child: const Text('View Practice Insights'),
+                child: const Text('View My Insights'),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 4),
           LayoutBuilder(
             builder: (BuildContext context, BoxConstraints constraints) {
               final bool compact = constraints.maxWidth < 560;
               final List<Widget> metrics = <Widget>[
                 _MetricBlock(
                   value: '${stats.currentStreakDays}',
-                  label: 'Current Streak',
+                  label: 'Day Streak',
+                  sublabel: stats.currentStreakDays > 0
+                      ? 'Keep it going.'
+                      : null,
                 ),
                 _MetricBlock(
                   value: _durationValue(stats.practiceSecondsThisWeek),
-                  label: 'Practice Time This Week',
+                  label: 'This Week',
                 ),
                 _MetricBlock(
                   value: '${stats.exercisesMastered}',
-                  label: 'Exercises Mastered',
+                  label: 'Exercises',
+                  sublabel: stats.lessonsWithMasteredExercises == 0
+                      ? null
+                      : 'Across ${stats.lessonsWithMasteredExercises} lessons',
                 ),
               ];
               if (compact) {
@@ -532,8 +808,9 @@ class _ProgressSummaryPanel extends StatelessWidget {
 class _MetricBlock extends StatelessWidget {
   final String value;
   final String label;
+  final String? sublabel;
 
-  const _MetricBlock({required this.value, required this.label});
+  const _MetricBlock({required this.value, required this.label, this.sublabel});
 
   @override
   Widget build(BuildContext context) {
@@ -557,6 +834,16 @@ class _MetricBlock extends StatelessWidget {
               fontWeight: FontWeight.w800,
             ),
           ),
+          if (sublabel != null) ...<Widget>[
+            const SizedBox(height: 4),
+            Text(
+              sublabel!,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: DrumcabularyTheme.edgeTextSecondary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -598,12 +885,32 @@ class _UpNextPanel extends StatelessWidget {
                       ),
                       const SizedBox(height: 5),
                       Text(
-                        target?.exercise?.title ??
-                            'Choose something focused to work on.',
+                        target == null
+                            ? 'Choose something focused to work on.'
+                            : '${_labelFor(target!.lesson.skill)} · ${target!.lesson.level}',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: DrumcabularyTheme.edgeTextSecondary,
                         ),
                       ),
+                      if (target != null) ...<Widget>[
+                        const SizedBox(height: 12),
+                        Text(
+                          target!.lesson.overview,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: DrumcabularyTheme.edgeTextSecondary,
+                                height: 1.35,
+                              ),
+                        ),
+                        const SizedBox(height: 14),
+                        OutlinedButton.icon(
+                          onPressed: onOpen,
+                          icon: const Icon(Icons.explore_outlined),
+                          label: const Text('Choose Something Else'),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -662,6 +969,19 @@ class _RecentActivityRow extends StatelessWidget {
             color: item.completed
                 ? DrumcabularyTheme.edgeOrange
                 : DrumcabularyTheme.edgeTextSecondary,
+          ),
+          const SizedBox(width: 10),
+          SizedBox(
+            width: 82,
+            child: Text(
+              item.actionLabel,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: item.completed
+                    ? const Color(0xFF52D273)
+                    : DrumcabularyTheme.edgeOrange,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -1249,17 +1569,83 @@ List<Lesson> _orderedLessons(LessonContentLibrary library) {
   return lessons;
 }
 
+class _HomeHardwareStatus {
+  final _DeviceStatus midi;
+  final _DeviceStatus led;
+
+  const _HomeHardwareStatus({required this.midi, required this.led});
+
+  factory _HomeHardwareStatus.from({
+    required MidiInputService midiService,
+    required SerialLedController ledController,
+  }) {
+    return _HomeHardwareStatus(
+      midi: _DeviceStatus(
+        icon: Icons.graphic_eq_rounded,
+        title: midiService.selectedDevice?.name ?? 'MIDI Kit',
+        subtitle: _midiStatusLabel(midiService.status),
+        connected: midiService.status == MidiInputStatus.connected,
+      ),
+      led: _DeviceStatus(
+        icon: Icons.radio_button_checked_rounded,
+        title: 'LED Controller',
+        subtitle: _serialStatusLabel(ledController.status),
+        connected: ledController.status == SerialLedConnectionStatus.connected,
+      ),
+    );
+  }
+}
+
+class _DeviceStatus {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool connected;
+
+  const _DeviceStatus({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.connected,
+  });
+}
+
+String _midiStatusLabel(MidiInputStatus status) {
+  return switch (status) {
+    MidiInputStatus.connected => 'Connected',
+    MidiInputStatus.scanning => 'Scanning',
+    MidiInputStatus.connecting => 'Connecting',
+    MidiInputStatus.noDevicesFound ||
+    MidiInputStatus.disconnected => 'Not Connected',
+    MidiInputStatus.connectionError => 'Connection Error',
+  };
+}
+
+String _serialStatusLabel(SerialLedConnectionStatus status) {
+  return switch (status) {
+    SerialLedConnectionStatus.connected => 'Connected',
+    SerialLedConnectionStatus.connecting => 'Connecting',
+    SerialLedConnectionStatus.disconnected => 'Not Connected',
+    SerialLedConnectionStatus.connectionError => 'Connection Error',
+    SerialLedConnectionStatus.deviceRemoved => 'Device Removed',
+  };
+}
+
 class _HomeLessonTarget {
   final Lesson lesson;
   final LessonExercise? exercise;
+  final List<_ExerciseChecklistItem> checklist;
   final int completedExerciseCount;
   final int exerciseCount;
+  final int nextExerciseNumber;
 
   const _HomeLessonTarget({
     required this.lesson,
     required this.exercise,
+    required this.checklist,
     required this.completedExerciseCount,
     required this.exerciseCount,
+    required this.nextExerciseNumber,
   });
 
   factory _HomeLessonTarget.from({
@@ -1267,37 +1653,60 @@ class _HomeLessonTarget {
     required LessonProgressService progressService,
   }) {
     int completed = 0;
+    int index = 0;
+    int nextIndex = 1;
     LessonExercise? nextExercise;
+    final List<_ExerciseChecklistItem> checklist = <_ExerciseChecklistItem>[];
     for (final LessonExercise exercise in lesson.exercises) {
+      index += 1;
       final ExerciseProgress progress = progressService.progressForExercise(
         lessonId: lesson.id,
         exerciseId: exercise.id,
       );
+      checklist.add(
+        _ExerciseChecklistItem(title: exercise.title, status: progress.status),
+      );
       if (progress.status == LessonProgressStatus.completed) {
         completed += 1;
       } else {
-        nextExercise ??= exercise;
+        if (nextExercise == null) {
+          nextExercise = exercise;
+          nextIndex = index;
+        }
       }
     }
     return _HomeLessonTarget(
       lesson: lesson,
       exercise: nextExercise,
+      checklist: checklist,
       completedExerciseCount: completed,
       exerciseCount: lesson.exercises.length,
+      nextExerciseNumber: nextExercise == null
+          ? lesson.exercises.length
+          : nextIndex,
     );
   }
+}
+
+class _ExerciseChecklistItem {
+  final String title;
+  final LessonProgressStatus status;
+
+  const _ExerciseChecklistItem({required this.title, required this.status});
 }
 
 class _PracticeStats {
   final int currentStreakDays;
   final int practiceSecondsThisWeek;
   final int exercisesMastered;
+  final int lessonsWithMasteredExercises;
   final List<_RecentPracticeActivity> recentActivity;
 
   const _PracticeStats({
     required this.currentStreakDays,
     required this.practiceSecondsThisWeek,
     required this.exercisesMastered,
+    required this.lessonsWithMasteredExercises,
     required this.recentActivity,
   });
 
@@ -1318,6 +1727,7 @@ class _PracticeStats {
     final List<_RecentPracticeActivity> recent = <_RecentPracticeActivity>[];
     int weekSeconds = 0;
     int mastered = 0;
+    final Set<String> masteredLessonIds = <String>{};
 
     for (final Lesson lesson in lessons) {
       final LessonProgress lessonProgress = progressService.progressForLesson(
@@ -1346,6 +1756,7 @@ class _PracticeStats {
             exerciseProgress.startedAt;
         if (exerciseProgress.status == LessonProgressStatus.completed) {
           mastered += 1;
+          masteredLessonIds.add(lesson.id);
         }
         if (exerciseDate == null) continue;
         activityDays.add(_dateOnly(exerciseDate));
@@ -1372,6 +1783,7 @@ class _PracticeStats {
       currentStreakDays: _currentStreak(activityDays),
       practiceSecondsThisWeek: weekSeconds,
       exercisesMastered: mastered,
+      lessonsWithMasteredExercises: masteredLessonIds.length,
       recentActivity: recent.take(3).toList(growable: false),
     );
   }
@@ -1387,6 +1799,8 @@ class _RecentPracticeActivity {
     required this.title,
     required this.completed,
   });
+
+  String get actionLabel => completed ? 'Completed' : 'Practiced';
 }
 
 DateTime _weekStart(DateTime date) {

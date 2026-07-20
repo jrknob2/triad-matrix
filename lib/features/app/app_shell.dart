@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../state/app_controller.dart';
 import '../progress/practice_insights_screen.dart';
 import '../settings/app_settings_screen.dart';
+import '../settings/hardware_midi_settings_screen.dart';
 import '../today/today_screen.dart';
 import 'startup_splash_screen.dart';
 
@@ -58,12 +59,21 @@ class _AppShellState extends State<AppShell> {
         onOpenExplore: () => _selectDestination(1),
         onOpenInsights: () => _selectDestination(2),
         onOpenSettings: () => _selectDestination(3),
+        onOpenDevices: _openDevices,
       ),
       1 => const ExploreLessonsScreen(),
       2 => const PracticeInsightsScreen(),
       3 => AppSettingsScreen(controller: controller),
       _ => const SizedBox.shrink(),
     };
+  }
+
+  void _openDevices() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (BuildContext context) => const HardwareMidiSettingsScreen(),
+      ),
+    );
   }
 }
 
@@ -176,10 +186,17 @@ class _BrandMark extends StatelessWidget {
               context,
             ).colorScheme.primary.withValues(alpha: 0.16),
             borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Theme.of(context).colorScheme.primary),
           ),
-          child: const Padding(
-            padding: EdgeInsets.all(10),
-            child: Icon(Icons.graphic_eq_rounded),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Text(
+              'DC',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: Theme.of(context).colorScheme.primary,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
           ),
         ),
         const SizedBox(height: 8),
