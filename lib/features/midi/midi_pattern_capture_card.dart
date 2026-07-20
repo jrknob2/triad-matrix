@@ -4,13 +4,29 @@ import 'package:flutter/material.dart';
 
 import '../app/drumcabulary_theme.dart';
 import '../app/drumcabulary_ui.dart';
+import '../guided_practice/guided_practice_controller.dart';
+import '../midi/led_frame_command_encoder.dart';
+import '../midi/midi_input_models.dart';
+import '../midi/serial_led_controller.dart';
+import '../practice/pattern_audio_service.dart';
+import '../practice/pattern_led_playback_output.dart';
+import '../practice/playback_drum_voice_mapper.dart';
 import '../practice/widgets/sheet_notation_display.dart';
 import 'midi_pattern_capture.dart';
 
 class MidiPatternCaptureCard extends StatefulWidget {
   final MidiPatternCaptureController controller;
+  final Stream<DrumInputEvent>? drumEvents;
+  final SerialLedController? ledController;
+  final int playbackBpm;
 
-  const MidiPatternCaptureCard({super.key, required this.controller});
+  const MidiPatternCaptureCard({
+    super.key,
+    required this.controller,
+    this.drumEvents,
+    this.ledController,
+    this.playbackBpm = 92,
+  });
 
   @override
   State<MidiPatternCaptureCard> createState() => _MidiPatternCaptureCardState();
@@ -20,9 +36,15 @@ class _MidiPatternCaptureCardState extends State<MidiPatternCaptureCard> {
   static const Duration _manualEditDebounce = Duration(milliseconds: 250);
 
   late final TextEditingController _patternController;
+  final DrumSheetNotationController _notationController =
+      DrumSheetNotationController();
   Timer? _manualEditTimer;
   DrumSheetNotationDocument? _renderedDocument;
+  GuidedPracticeController? _guidedPracticeController;
+  _CapturePlaybackMode? _activePlaybackMode;
+  _CapturePlaybackMode _previewPlaybackMode = _CapturePlaybackMode.hearIt;
   String? _validationError;
+  String? _practiceMessage;
   bool _syncingText = false;
 
   @override
@@ -32,22 +54,34 @@ class _MidiPatternCaptureCardState extends State<MidiPatternCaptureCard> {
       text: widget.controller.generatedPattern,
     );
     widget.controller.addListener(_handleCaptureChanged);
+    widget.ledController?.addListener(_handleLedControllerChanged);
     _syncFromCaptureController();
   }
 
   @override
   void didUpdateWidget(covariant MidiPatternCaptureCard oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.controller == widget.controller) return;
-    oldWidget.controller.removeListener(_handleCaptureChanged);
-    widget.controller.addListener(_handleCaptureChanged);
-    _syncFromCaptureController();
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_handleCaptureChanged);
+      widget.controller.addListener(_handleCaptureChanged);
+      _syncFromCaptureController();
+    }
+    if (oldWidget.ledController != widget.ledController) {
+      oldWidget.ledController?.removeListener(_handleLedControllerChanged);
+      widget.ledController?.addListener(_handleLedControllerChanged);
+      if (widget.ledController?.isConnected != true) {
+        _guidedPracticeController?.handleSerialDisconnected();
+      }
+    }
   }
 
   @override
   void dispose() {
     widget.controller.removeListener(_handleCaptureChanged);
+    widget.ledController?.removeListener(_handleLedControllerChanged);
     _manualEditTimer?.cancel();
+    _disposeGuidedPractice(sendStop: true);
+    unawaited(_notationController.stopAudioPreview());
     _patternController.dispose();
     super.dispose();
   }
@@ -84,10 +118,14 @@ class _MidiPatternCaptureCardState extends State<MidiPatternCaptureCard> {
   void _validateAndRender(String value, {required bool clearPreviewWhenEmpty}) {
     final String trimmed = value.trim();
     if (trimmed.isEmpty) {
+      _disposeGuidedPractice(sendStop: true);
+      unawaited(_notationController.stopAudioPreview());
       if (!mounted) return;
       setState(() {
         if (clearPreviewWhenEmpty) _renderedDocument = null;
         _validationError = null;
+        _activePlaybackMode = null;
+        _practiceMessage = null;
       });
       return;
     }
@@ -95,10 +133,16 @@ class _MidiPatternCaptureCardState extends State<MidiPatternCaptureCard> {
     try {
       final DrumSheetNotationDocument document =
           DrumSheetNotationDocument.fromPattern(trimmed);
+      if (_renderedDocument != document) {
+        _disposeGuidedPractice(sendStop: true);
+        unawaited(_notationController.stopAudioPreview());
+      }
       if (!mounted) return;
       setState(() {
         _renderedDocument = document;
         _validationError = null;
+        _activePlaybackMode = null;
+        _practiceMessage = null;
       });
     } on FormatException catch (error) {
       _setValidationError(error.message);
@@ -110,8 +154,14 @@ class _MidiPatternCaptureCardState extends State<MidiPatternCaptureCard> {
   }
 
   void _setValidationError(String message) {
+    _disposeGuidedPractice(sendStop: true);
+    unawaited(_notationController.stopAudioPreview());
     if (!mounted) return;
-    setState(() => _validationError = message);
+    setState(() {
+      _validationError = message;
+      _activePlaybackMode = null;
+      _practiceMessage = null;
+    });
   }
 
   @override
@@ -196,10 +246,206 @@ class _MidiPatternCaptureCardState extends State<MidiPatternCaptureCard> {
             ),
           ),
           const SizedBox(height: 6),
-          _CapturedPatternPreview(document: _renderedDocument),
+          _CapturedPatternPreview(
+            document: _renderedDocument,
+            controller: _notationController,
+            selection: _guidedPracticeSelection,
+            ledController: widget.ledController,
+            ledPlaybackEnabled: widget.ledController?.isConnected == true,
+            ledPlaybackPresentation: switch (_previewPlaybackMode) {
+              _CapturePlaybackMode.hearIt =>
+                PatternLedPlaybackPresentation.hearIt,
+              _CapturePlaybackMode.playAlong =>
+                PatternLedPlaybackPresentation.playAlong,
+            },
+            playbackBpm: widget.playbackBpm,
+          ),
+          const SizedBox(height: 12),
+          _PracticeControls(
+            canPlay: _hasPlayablePattern,
+            ledAvailable: widget.ledController?.isConnected == true,
+            guidedAvailable:
+                _hasPlayablePattern &&
+                widget.drumEvents != null &&
+                widget.ledController?.isConnected == true,
+            activePlaybackMode: _activePlaybackMode,
+            guidedState: _guidedPracticeController?.state,
+            message: _practiceMessage,
+            onHearIt: () => _togglePlayback(_CapturePlaybackMode.hearIt),
+            onPlayAlong: () => _togglePlayback(_CapturePlaybackMode.playAlong),
+            onGuidedPractice: _toggleGuidedPractice,
+          ),
         ],
       ),
     );
+  }
+
+  bool get _hasPlayablePattern {
+    return _renderedDocument?.flattenedNotes.any(
+          (DrumSheetNotationNote note) => !note.rest,
+        ) ??
+        false;
+  }
+
+  DrumSheetNotationSelection? get _guidedPracticeSelection {
+    final GuidedPracticeState? state = _guidedPracticeController?.state;
+    final GuidedPracticeExpectedEvent? event = state?.currentEvent;
+    if (state?.isActive != true || event == null) return null;
+    return DrumSheetNotationSelection.guidedPractice(event.selectedIndexes);
+  }
+
+  Future<void> _togglePlayback(_CapturePlaybackMode mode) async {
+    if (!_hasPlayablePattern) return;
+    if (_activePlaybackMode == mode) {
+      await _notationController.stopAudioPreview();
+      if (!mounted) return;
+      setState(() => _activePlaybackMode = null);
+      return;
+    }
+    _disposeGuidedPractice(sendStop: true);
+    await _notationController.stopAudioPreview();
+    if (!mounted) return;
+    setState(() {
+      _previewPlaybackMode = mode;
+      _activePlaybackMode = mode;
+      _practiceMessage = null;
+    });
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted || _activePlaybackMode != mode) return;
+    await _notationController.startAudioPreview();
+  }
+
+  void _toggleGuidedPractice() {
+    final GuidedPracticeController? existing = _guidedPracticeController;
+    if (existing?.isRunning == true) {
+      _disposeGuidedPractice(sendStop: true);
+      if (mounted) {
+        setState(() => _practiceMessage = 'Guided Practice stopped.');
+      }
+      return;
+    }
+    _startGuidedPractice();
+  }
+
+  void _startGuidedPractice() {
+    final DrumSheetNotationDocument? document = _renderedDocument;
+    final Stream<DrumInputEvent>? drumEvents = widget.drumEvents;
+    final SerialLedController? ledController = widget.ledController;
+    if (document == null || !_hasPlayablePattern) return;
+    if (drumEvents == null) {
+      setState(() => _practiceMessage = 'Connect MIDI input first.');
+      return;
+    }
+    if (ledController == null || !ledController.isConnected) {
+      setState(() => _practiceMessage = 'Connect the LED controller first.');
+      return;
+    }
+
+    final List<GuidedPracticeExpectedEvent> expectedEvents =
+        _guidedPracticeEventsForDocument(document);
+    if (expectedEvents.isEmpty) {
+      setState(() => _practiceMessage = 'No playable events found.');
+      return;
+    }
+
+    unawaited(_notationController.stopAudioPreview());
+    _activePlaybackMode = null;
+    _disposeGuidedPractice(sendStop: true);
+    final GuidedPracticeController controller = GuidedPracticeController(
+      expectedEvents: expectedEvents,
+      drumEvents: drumEvents,
+      ledController: ledController,
+    )..addListener(_handleGuidedPracticeChanged);
+    _guidedPracticeController = controller;
+    final bool started = controller.start();
+    if (!started) {
+      controller
+        ..removeListener(_handleGuidedPracticeChanged)
+        ..dispose();
+      _guidedPracticeController = null;
+      setState(() => _practiceMessage = 'Guided Practice could not start.');
+      return;
+    }
+    setState(() => _practiceMessage = 'Guided Practice active.');
+  }
+
+  void _handleGuidedPracticeChanged() {
+    final GuidedPracticeState? state = _guidedPracticeController?.state;
+    if (!mounted || state == null) return;
+    setState(() {
+      _practiceMessage = switch (state.status) {
+        GuidedPracticeStatus.running =>
+          state.message ?? 'Guided Practice active.',
+        GuidedPracticeStatus.completed => 'Guided Practice complete.',
+        GuidedPracticeStatus.stopped => 'Guided Practice stopped.',
+        GuidedPracticeStatus.error =>
+          state.message ?? 'Guided Practice stopped.',
+        _ => null,
+      };
+    });
+  }
+
+  void _handleLedControllerChanged() {
+    if (widget.ledController?.isConnected != true) {
+      _guidedPracticeController?.handleSerialDisconnected();
+    }
+    if (mounted) setState(() {});
+  }
+
+  void _disposeGuidedPractice({required bool sendStop}) {
+    final GuidedPracticeController? controller = _guidedPracticeController;
+    if (controller == null) return;
+    if (sendStop && controller.isRunning) {
+      controller.stop();
+    }
+    controller
+      ..removeListener(_handleGuidedPracticeChanged)
+      ..dispose();
+    _guidedPracticeController = null;
+  }
+
+  List<GuidedPracticeExpectedEvent> _guidedPracticeEventsForDocument(
+    DrumSheetNotationDocument document,
+  ) {
+    final DrumSheetAudioPreviewPlan previewPlan =
+        buildSheetNotationAudioPreviewPlanDetails(document);
+    final PatternAudioPlanV1 plan = previewPlan.audioPlan;
+    final List<GuidedPracticeExpectedEvent> events =
+        <GuidedPracticeExpectedEvent>[];
+    Duration? currentOffset;
+    final List<LedCue> currentCues = <LedCue>[];
+    final Set<int> currentSelectedIndexes = <int>{};
+
+    void flush() {
+      if (currentCues.isEmpty) return;
+      final GuidedPracticeExpectedEvent event =
+          GuidedPracticeExpectedEvent.fromCues(
+            currentCues,
+            selectedIndexes: currentSelectedIndexes,
+          );
+      if (!event.isEmpty) events.add(event);
+      currentCues.clear();
+      currentSelectedIndexes.clear();
+    }
+
+    for (final PatternAudioCueV1 cue in plan.cues) {
+      if (currentOffset == null || cue.offset != currentOffset) {
+        flush();
+        currentOffset = cue.offset;
+      }
+      currentCues.add(
+        LedCue(
+          midiDrumVoiceForPlaybackVoice(cue.voice),
+          sticking: cue.sticking,
+        ),
+      );
+      final int? displayIndex = previewPlan.displayIndexForTokenIndex(
+        cue.tokenIndex,
+      );
+      if (displayIndex != null) currentSelectedIndexes.add(displayIndex);
+    }
+    flush();
+    return events;
   }
 }
 
@@ -212,8 +458,22 @@ class _CapturedPatternPreview extends StatelessWidget {
       );
 
   final DrumSheetNotationDocument? document;
+  final DrumSheetNotationController controller;
+  final DrumSheetNotationSelection? selection;
+  final SerialLedController? ledController;
+  final bool ledPlaybackEnabled;
+  final PatternLedPlaybackPresentation ledPlaybackPresentation;
+  final int playbackBpm;
 
-  const _CapturedPatternPreview({required this.document});
+  const _CapturedPatternPreview({
+    required this.document,
+    required this.controller,
+    required this.selection,
+    required this.ledController,
+    required this.ledPlaybackEnabled,
+    required this.ledPlaybackPresentation,
+    required this.playbackBpm,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -228,16 +488,120 @@ class _CapturedPatternPreview extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
         child: DrumSheetNotationDisplay(
           document: document,
+          controller: controller,
+          selection: selection,
           selectable: false,
           compactLayout: true,
           minNoteWidth: 34,
           showSticking: false,
+          audioPreviewBpm: playbackBpm,
+          ledController: ledController,
+          ledPlaybackEnabled: ledPlaybackEnabled,
+          ledPlaybackPresentation: ledPlaybackPresentation,
           backgroundColor: DrumcabularyTheme.edgeNotationPanel,
           noteColor: DrumcabularyTheme.edgeNotationInk,
           staffColor: DrumcabularyTheme.edgeNotationInk.withValues(alpha: 0.62),
           selectedColor: DrumcabularyTheme.edgeOrange,
         ),
       ),
+    );
+  }
+}
+
+enum _CapturePlaybackMode { hearIt, playAlong }
+
+class _PracticeControls extends StatelessWidget {
+  final bool canPlay;
+  final bool ledAvailable;
+  final bool guidedAvailable;
+  final _CapturePlaybackMode? activePlaybackMode;
+  final GuidedPracticeState? guidedState;
+  final String? message;
+  final VoidCallback onHearIt;
+  final VoidCallback onPlayAlong;
+  final VoidCallback onGuidedPractice;
+
+  const _PracticeControls({
+    required this.canPlay,
+    required this.ledAvailable,
+    required this.guidedAvailable,
+    required this.activePlaybackMode,
+    required this.guidedState,
+    required this.message,
+    required this.onHearIt,
+    required this.onPlayAlong,
+    required this.onGuidedPractice,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bool guidedRunning = guidedState?.isActive ?? false;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Text(
+          'Practice from capture',
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+            color: DrumcabularyTheme.edgeOrange,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 8),
+        DrumActionRow(
+          children: <Widget>[
+            OutlinedButton.icon(
+              onPressed: canPlay ? onHearIt : null,
+              icon: Icon(
+                activePlaybackMode == _CapturePlaybackMode.hearIt
+                    ? Icons.stop_rounded
+                    : Icons.hearing_rounded,
+              ),
+              label: Text(
+                activePlaybackMode == _CapturePlaybackMode.hearIt
+                    ? 'Stop Hear It'
+                    : 'Hear It',
+              ),
+            ),
+            OutlinedButton.icon(
+              onPressed: canPlay ? onPlayAlong : null,
+              icon: Icon(
+                activePlaybackMode == _CapturePlaybackMode.playAlong
+                    ? Icons.stop_rounded
+                    : Icons.play_arrow_rounded,
+              ),
+              label: Text(
+                activePlaybackMode == _CapturePlaybackMode.playAlong
+                    ? 'Stop Play Along'
+                    : 'Play Along',
+              ),
+            ),
+            FilledButton.icon(
+              onPressed: guidedRunning || guidedAvailable
+                  ? onGuidedPractice
+                  : null,
+              icon: Icon(
+                guidedRunning ? Icons.stop_rounded : Icons.flag_rounded,
+              ),
+              label: Text(
+                guidedRunning ? 'Stop Guided Practice' : 'Guided Practice',
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: <Widget>[
+            Chip(label: Text(ledAvailable ? 'LEDs available' : 'Audio only')),
+            if (guidedRunning) const Chip(label: Text('Waiting for input')),
+          ],
+        ),
+        if (message != null) ...<Widget>[
+          const SizedBox(height: 8),
+          Text(message!, style: Theme.of(context).textTheme.bodySmall),
+        ],
+      ],
     );
   }
 }

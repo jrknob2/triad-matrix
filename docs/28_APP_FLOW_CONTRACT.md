@@ -232,7 +232,16 @@ Current behavior:
 - emits voice-first notation such as `[HH K]`, `[OHH]`, and `[S]`
 - writes generated notation into an editable text field
 - renders the edited/generated notation with the shared notation preview
+- can Hear It from the current valid notation using the existing playback engine
+- can Play Along from the same playback engine, using LED lead cues when the
+  shared LED controller is connected
+- can start Guided Practice from the current valid notation when MIDI input and
+  the shared LED controller are connected
 - does not infer hand sticking from MIDI velocity
+
+The temporary capture panel must not create its own playback or guided-practice
+timeline. Hear It, Play Along, and Guided Practice are entry points into the
+same playback, MIDI, notation-selection, and LED services used elsewhere.
 - estimates BPM from grouped onset intervals
 
 This is not the final product location. The intended future home is the Pattern

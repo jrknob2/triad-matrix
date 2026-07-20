@@ -14,6 +14,7 @@ import '../../features/midi/midi_input_service.dart';
 import '../../features/midi/midi_pattern_capture.dart';
 import '../../features/midi/midi_pattern_capture_card.dart';
 import '../../features/midi/shared_midi_input_service.dart';
+import '../../features/midi/shared_serial_led_controller.dart';
 import '../../state/app_controller.dart';
 import 'hardware_midi_settings_screen.dart';
 
@@ -30,6 +31,8 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
   late UserProfileV1 _draft;
   MidiPatternCaptureController? _captureController;
   StreamSubscription<RawMidiEvent>? _midiCaptureSubscription;
+  final StreamController<DrumInputEvent> _mappedMidiEvents =
+      StreamController<DrumInputEvent>.broadcast(sync: true);
   final DrumKitMapper _drumKitMapper = const DrumKitMapper();
 
   @override
@@ -48,6 +51,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
   @override
   void dispose() {
     _midiCaptureSubscription?.cancel();
+    _mappedMidiEvents.close();
     _captureController
       ?..removeListener(_handleCaptureChanged)
       ..dispose();
@@ -266,7 +270,12 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
             if (HardwareCapabilities.supportsPatternMidiCapture &&
                 _captureController != null) ...<Widget>[
               const SizedBox(height: 24),
-              MidiPatternCaptureCard(controller: _captureController!),
+              MidiPatternCaptureCard(
+                controller: _captureController!,
+                drumEvents: _mappedMidiEvents.stream,
+                ledController: SharedSerialLedController.instance,
+                playbackBpm: _draft.defaultBpm,
+              ),
             ],
           ],
         ),
@@ -280,11 +289,17 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
 
   void _handleMidiCaptureEvent(RawMidiEvent raw) {
     final MidiPatternCaptureController? captureController = _captureController;
-    if (captureController == null || !captureController.isRecording) return;
+    if (raw.messageType != MidiMessageType.noteOn || raw.velocity <= 0) {
+      return;
+    }
     final DrumInputEvent drum = _drumKitMapper.map(raw);
     if (drum.voice == DrumVoice.unknown) {
       return;
     }
+    if (!_mappedMidiEvents.isClosed) {
+      _mappedMidiEvents.add(drum);
+    }
+    if (captureController == null || !captureController.isRecording) return;
     captureController.captureMappedEvent(raw: raw, drum: drum);
   }
 
