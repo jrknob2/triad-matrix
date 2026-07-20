@@ -182,6 +182,25 @@ class DrumSheetNotationDocument {
       for (final DrumSheetNotationMeasure measure in measures) ...measure.notes,
     ];
   }
+
+  @override
+  bool operator ==(Object other) {
+    return other is DrumSheetNotationDocument &&
+        other.subdivision == subdivision &&
+        other.feel == feel &&
+        other.timeSignature == timeSignature &&
+        other.repeatCount == repeatCount &&
+        listEquals(other.measures, measures);
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    subdivision,
+    feel,
+    timeSignature,
+    repeatCount,
+    Object.hashAll(measures),
+  );
 }
 
 List<DrumSheetNotationMeasure> _measuresForNotes(
@@ -239,6 +258,14 @@ class DrumSheetNotationMeasure {
   final List<DrumSheetNotationNote> notes;
 
   const DrumSheetNotationMeasure({required this.notes});
+
+  @override
+  bool operator ==(Object other) {
+    return other is DrumSheetNotationMeasure && listEquals(other.notes, notes);
+  }
+
+  @override
+  int get hashCode => Object.hashAll(notes);
 }
 
 @immutable
@@ -301,6 +328,33 @@ class DrumSheetNotationNote {
     if (voices.length != 1 || voices.single != voice) return null;
     return _singleStrokeDescriptorFromLegacySticking(sticking);
   }
+
+  @override
+  bool operator ==(Object other) {
+    return other is DrumSheetNotationNote &&
+        other.value == value &&
+        listEquals(other.voices, voices) &&
+        listEquals(other.voiceStrokes, voiceStrokes) &&
+        other.rest == rest &&
+        other.sticking == sticking &&
+        other.accent == accent &&
+        other.flam == flam &&
+        other.ghost == ghost &&
+        other.tie == tie;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    value,
+    Object.hashAll(voices),
+    Object.hashAll(voiceStrokes),
+    rest,
+    sticking,
+    accent,
+    flam,
+    ghost,
+    tie,
+  );
 }
 
 @immutable

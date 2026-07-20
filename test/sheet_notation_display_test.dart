@@ -226,6 +226,31 @@ void main() {
     );
   });
 
+  test('semantically equivalent documents compare equal across rebuilds', () {
+    final DrumSheetNotationDocument first =
+        DrumSheetNotationDocument.fromPattern(
+          '[HH K] [OHH:R] [S:(L)R]',
+          subdivision: DrumSheetNoteValue.eighth,
+          feel: DrumSheetFeel.triplet,
+          timeSignature: '4/4',
+          repeatCount: 2,
+        );
+    final DrumSheetNotationDocument rebuilt =
+        DrumSheetNotationDocument.fromPattern(
+          '[HH K] [OHH:R] [S:(L)R]',
+          subdivision: DrumSheetNoteValue.eighth,
+          feel: DrumSheetFeel.triplet,
+          timeSignature: '4/4',
+          repeatCount: 2,
+        );
+    final DrumSheetNotationDocument changed =
+        DrumSheetNotationDocument.fromPattern('[HH K] [OHH:R] [K]');
+
+    expect(rebuilt, first);
+    expect(rebuilt.hashCode, first.hashCode);
+    expect(changed, isNot(first));
+  });
+
   test(
     'semantic notation selection filters invalid indexes and carries purpose',
     () {
