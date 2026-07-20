@@ -13,6 +13,7 @@ Practice, Matrix, Library, Progress, settings, session summary, and startup spla
 
 Detailed content inventory and wording rules also live in:
 
+- [28_APP_FLOW_CONTRACT.md](/Users/terryknoblock/Development/flutter-projects/drumcabulary/docs/28_APP_FLOW_CONTRACT.md)
 - [12_SCREEN_CONTENT_CONTRACTS_AND_APP_FLOWS.md](/Users/terryknoblock/Development/flutter-projects/drumcabulary/docs/12_SCREEN_CONTENT_CONTRACTS_AND_APP_FLOWS.md)
 - [13_COMMUNICATION_STYLE_CONTRACT.md](/Users/terryknoblock/Development/flutter-projects/drumcabulary/docs/13_COMMUNICATION_STYLE_CONTRACT.md)
 

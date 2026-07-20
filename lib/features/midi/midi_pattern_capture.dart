@@ -7,8 +7,6 @@ import 'midi_input_models.dart';
 
 @immutable
 class MidiPatternCaptureConfig {
-  final int ghostVelocityMax;
-  final int accentVelocityMin;
   final Duration simultaneousWindow;
   final Duration liveUpdateInterval;
   final int tempoIntervalSampleCount;
@@ -17,18 +15,13 @@ class MidiPatternCaptureConfig {
   final int maximumEstimatedBpm;
 
   const MidiPatternCaptureConfig({
-    this.ghostVelocityMax = 10,
-    this.accentVelocityMin = 120,
     this.simultaneousWindow = const Duration(milliseconds: 30),
     this.liveUpdateInterval = const Duration(milliseconds: 100),
     this.tempoIntervalSampleCount = 8,
     this.tempoEventsPerQuarterNote = 2,
     this.minimumEstimatedBpm = 30,
     this.maximumEstimatedBpm = 260,
-  }) : assert(ghostVelocityMax >= 0),
-       assert(accentVelocityMin <= 127),
-       assert(ghostVelocityMax < accentVelocityMin),
-       assert(tempoIntervalSampleCount > 0),
+  }) : assert(tempoIntervalSampleCount > 0),
        assert(tempoEventsPerQuarterNote > 0),
        assert(minimumEstimatedBpm > 0),
        assert(maximumEstimatedBpm >= minimumEstimatedBpm);
@@ -115,27 +108,34 @@ class MidiPatternCaptureController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void capture(MidiDiagnosticEvent event) {
+  void captureMappedEvent({
+    required RawMidiEvent raw,
+    required DrumInputEvent drum,
+  }) {
     if (!_isRecording) {
       return;
     }
-    if (event.raw.messageType != MidiMessageType.noteOn) {
+    if (raw.messageType != MidiMessageType.noteOn) {
       return;
     }
-    if (event.raw.velocity <= 0) {
+    if (raw.velocity <= 0) {
       return;
     }
 
-    final DateTime startedAt = _startedAt ?? event.raw.timestamp;
-    final Duration offset = event.raw.timestamp.difference(startedAt);
+    final DateTime startedAt = _startedAt ?? raw.timestamp;
+    final Duration offset = raw.timestamp.difference(startedAt);
     _hits.add(
       CapturedMidiHit(
-        voice: event.drum.voice,
-        velocity: event.raw.velocity,
+        voice: drum.voice,
+        velocity: raw.velocity,
         offset: offset.isNegative ? Duration.zero : offset,
       ),
     );
     _scheduleLiveUpdate();
+  }
+
+  void capture(MidiDiagnosticEvent event) {
+    captureMappedEvent(raw: event.raw, drum: event.drum);
   }
 
   void _scheduleLiveUpdate() {

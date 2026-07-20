@@ -11,6 +11,7 @@ import '../../features/midi/drum_kit_mapper.dart';
 import '../../features/midi/midi_input_models.dart';
 import '../../features/midi/midi_input_service.dart';
 import '../../features/midi/midi_pattern_capture.dart';
+import '../../features/midi/midi_pattern_capture_panel.dart';
 import '../../features/midi/shared_midi_input_service.dart';
 import '../../features/app/unsaved_changes_dialog.dart';
 import '../../state/app_controller.dart';
@@ -233,9 +234,9 @@ class _PatternScreenState extends State<PatternScreen> {
                       ),
                       if (HardwareCapabilities.supportsPatternMidiCapture) ...[
                         const SizedBox(height: 12),
-                        _PatternMidiCapturePanel(
+                        MidiPatternCapturePanel(
                           controller: _captureController,
-                          midiService: _midiInputService,
+                          midiStatus: _midiInputService?.status,
                           message: _captureMessage,
                           onRecord: _startMidiCapture,
                           onStop: _stopMidiCapture,
@@ -322,7 +323,7 @@ class _PatternScreenState extends State<PatternScreen> {
       }
       return;
     }
-    _captureController.capture(MidiDiagnosticEvent(raw: raw, drum: drum));
+    _captureController.captureMappedEvent(raw: raw, drum: drum);
   }
 
   Future<void> _startMidiCapture() async {
@@ -980,138 +981,6 @@ class _PatternScreenState extends State<PatternScreen> {
       },
     );
   }
-}
-
-class _PatternMidiCapturePanel extends StatelessWidget {
-  final MidiPatternCaptureController controller;
-  final MidiInputService? midiService;
-  final String? message;
-  final VoidCallback onRecord;
-  final VoidCallback onStop;
-  final VoidCallback onClear;
-  final VoidCallback onReplace;
-  final VoidCallback onAppend;
-
-  const _PatternMidiCapturePanel({
-    required this.controller,
-    required this.midiService,
-    required this.message,
-    required this.onRecord,
-    required this.onStop,
-    required this.onClear,
-    required this.onReplace,
-    required this.onAppend,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final MidiInputStatus? status = midiService?.status;
-    final bool connected = status == MidiInputStatus.connected;
-    final bool hasCapture = controller.generatedPattern.trim().isNotEmpty;
-    return DrumPanel(
-      tone: DrumPanelTone.warm,
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              const Expanded(child: DrumSectionTitle(text: 'MIDI Capture')),
-              Text(
-                _midiCaptureStatusLabel(status),
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: connected
-                      ? DrumcabularyTheme.edgeOrange
-                      : DrumcabularyTheme.edgeTextSecondary,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          if (controller.generatedPattern.isNotEmpty)
-            SelectableText(
-              controller.generatedPattern,
-              style: PatternTextStyles.editableInput(
-                context,
-              ).copyWith(fontSize: 18, height: 1.25),
-            )
-          else
-            Text(
-              'Capture from the configured MIDI input, then replace or append.',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: DrumcabularyTheme.edgeTextSecondary,
-              ),
-            ),
-          if (controller.tempoEstimate != null) ...<Widget>[
-            const SizedBox(height: 6),
-            Text(
-              'Estimated ${controller.tempoEstimate!.roundedBpm} BPM',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: DrumcabularyTheme.edgeTextSecondary,
-              ),
-            ),
-          ],
-          if (message != null) ...<Widget>[
-            const SizedBox(height: 6),
-            Text(
-              message!,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: DrumcabularyTheme.edgeTextSecondary,
-              ),
-            ),
-          ],
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: <Widget>[
-              FilledButton.icon(
-                onPressed: connected && !controller.isRecording
-                    ? onRecord
-                    : null,
-                icon: const Icon(Icons.fiber_manual_record_rounded),
-                label: const Text('Record'),
-              ),
-              OutlinedButton(
-                onPressed: controller.isRecording ? onStop : null,
-                child: const Text('Stop'),
-              ),
-              OutlinedButton(
-                onPressed: controller.isRecording || hasCapture
-                    ? onClear
-                    : null,
-                child: const Text('Clear Capture'),
-              ),
-              OutlinedButton(
-                onPressed: hasCapture && !controller.isRecording
-                    ? onReplace
-                    : null,
-                child: const Text('Replace Pattern'),
-              ),
-              OutlinedButton(
-                onPressed: hasCapture && !controller.isRecording
-                    ? onAppend
-                    : null,
-                child: const Text('Append'),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-String _midiCaptureStatusLabel(MidiInputStatus? status) {
-  return switch (status) {
-    MidiInputStatus.connected => 'Connected',
-    MidiInputStatus.connecting => 'Connecting',
-    MidiInputStatus.scanning => 'Scanning',
-    MidiInputStatus.connectionError => 'Connection Error',
-    MidiInputStatus.noDevicesFound => 'No Device',
-    MidiInputStatus.disconnected || null => 'Disconnected',
-  };
 }
 
 class _PatternContextPills extends StatelessWidget {

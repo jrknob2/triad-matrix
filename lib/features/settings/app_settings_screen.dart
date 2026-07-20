@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../core/practice/practice_domain_v1.dart';
@@ -6,6 +8,12 @@ import '../../features/app/app_runtime_flags.dart';
 import '../../features/app/drumcabulary_theme.dart';
 import '../../features/app/unsaved_changes_dialog.dart';
 import '../../features/hardware/hardware_capabilities.dart';
+import '../../features/midi/drum_kit_mapper.dart';
+import '../../features/midi/midi_input_models.dart';
+import '../../features/midi/midi_input_service.dart';
+import '../../features/midi/midi_pattern_capture.dart';
+import '../../features/midi/midi_pattern_capture_panel.dart';
+import '../../features/midi/shared_midi_input_service.dart';
 import '../../state/app_controller.dart';
 import 'hardware_midi_settings_screen.dart';
 
@@ -20,11 +28,35 @@ class AppSettingsScreen extends StatefulWidget {
 
 class _AppSettingsScreenState extends State<AppSettingsScreen> {
   late UserProfileV1 _draft;
+  MidiPatternCaptureController? _captureController;
+  MidiInputService? _midiInputService;
+  StreamSubscription<RawMidiEvent>? _midiCaptureSubscription;
+  final DrumKitMapper _drumKitMapper = const DrumKitMapper();
+  String? _captureMessage;
 
   @override
   void initState() {
     super.initState();
     _draft = widget.controller.profile;
+    if (HardwareCapabilities.supportsPatternMidiCapture) {
+      _captureController = MidiPatternCaptureController()
+        ..addListener(_handleCaptureChanged);
+      final MidiInputService service = SharedMidiInputService.instance;
+      _midiInputService = service;
+      service.addListener(_handleMidiServiceChanged);
+      unawaited(service.start());
+      _midiCaptureSubscription = service.events.listen(_handleMidiCaptureEvent);
+    }
+  }
+
+  @override
+  void dispose() {
+    _midiCaptureSubscription?.cancel();
+    _midiInputService?.removeListener(_handleMidiServiceChanged);
+    _captureController
+      ?..removeListener(_handleCaptureChanged)
+      ..dispose();
+    super.dispose();
   }
 
   @override
@@ -236,10 +268,79 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                 ),
               ),
             ],
+            if (HardwareCapabilities.supportsPatternMidiCapture &&
+                _captureController != null) ...<Widget>[
+              const SizedBox(height: 24),
+              MidiPatternCapturePanel(
+                controller: _captureController!,
+                midiStatus: _midiInputService?.status,
+                message: _captureMessage,
+                onRecord: _startMidiCapture,
+                onStop: _stopMidiCapture,
+                onClear: _clearMidiCapture,
+              ),
+            ],
           ],
         ),
       ),
     );
+  }
+
+  void _handleCaptureChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _handleMidiServiceChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _handleMidiCaptureEvent(RawMidiEvent raw) {
+    final MidiPatternCaptureController? captureController = _captureController;
+    if (captureController == null || !captureController.isRecording) return;
+    final DrumInputEvent drum = _drumKitMapper.map(raw);
+    if (drum.voice == DrumVoice.unknown) {
+      if (raw.messageType == MidiMessageType.noteOn && raw.velocity > 0) {
+        setState(() {
+          _captureMessage = 'Unmapped MIDI note ${raw.note}; hit ignored.';
+        });
+      }
+      return;
+    }
+    captureController.captureMappedEvent(raw: raw, drum: drum);
+  }
+
+  void _startMidiCapture() {
+    final MidiPatternCaptureController? captureController = _captureController;
+    final MidiInputService? midiService = _midiInputService;
+    if (captureController == null || midiService == null) return;
+    if (midiService.status != MidiInputStatus.connected) {
+      setState(() {
+        _captureMessage = 'Connect a MIDI input in Hardware & MIDI first.';
+      });
+      return;
+    }
+    captureController.record();
+    setState(() {
+      _captureMessage = 'Recording MIDI hits...';
+    });
+  }
+
+  void _stopMidiCapture() {
+    final MidiPatternCaptureController? captureController = _captureController;
+    if (captureController == null) return;
+    final String pattern = captureController.stop();
+    setState(() {
+      _captureMessage = pattern.isEmpty
+          ? 'No supported MIDI hits captured.'
+          : 'Capture ready.';
+    });
+  }
+
+  void _clearMidiCapture() {
+    _captureController?.clear();
+    setState(() {
+      _captureMessage = null;
+    });
   }
 
   Future<void> _confirmClearAppData(BuildContext context) async {

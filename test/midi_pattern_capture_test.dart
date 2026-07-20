@@ -1,6 +1,7 @@
 import 'package:drumcabulary/features/midi/midi_diagnostic_screen.dart';
 import 'package:drumcabulary/features/midi/midi_input_models.dart';
 import 'package:drumcabulary/features/midi/midi_pattern_capture.dart';
+import 'package:drumcabulary/features/midi/midi_pattern_capture_panel.dart';
 import 'package:drumcabulary/features/practice/widgets/sheet_notation_display.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -93,6 +94,29 @@ void main() {
       );
 
       expect(controller.stop(), '[K]');
+    });
+
+    test('captures mapped MIDI input without the diagnostic event wrapper', () {
+      final DateTime startedAt = DateTime(2026);
+      final MidiPatternCaptureController controller =
+          MidiPatternCaptureController(clock: () => startedAt);
+      final RawMidiEvent raw = _rawMidiEvent(
+        velocity: 72,
+        timestamp: startedAt,
+      );
+
+      controller.record();
+      controller.captureMappedEvent(
+        raw: raw,
+        drum: DrumInputEvent(
+          voice: DrumVoice.hiHatOpen,
+          midiNote: raw.note,
+          velocity: raw.velocity,
+          timestamp: raw.timestamp,
+        ),
+      );
+
+      expect(controller.stop(), '[OHH]');
     });
 
     test('Record clears the previous tempo estimate', () {
@@ -607,6 +631,64 @@ void main() {
       expect(find.text('Estimated BPM 120'), findsOneWidget);
     });
   });
+
+  group('MidiPatternCapturePanel', () {
+    testWidgets('shows capture output without pattern editor actions', (
+      WidgetTester tester,
+    ) async {
+      final MidiPatternCaptureController controller =
+          _controllerWithStoppedPattern('[S]');
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: MidiPatternCapturePanel(
+              controller: controller,
+              midiStatus: MidiInputStatus.connected,
+              message: 'Capture ready.',
+              onRecord: () {},
+              onStop: () {},
+              onClear: () {},
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('MIDI Capture'), findsOneWidget);
+      expect(find.text('[S]'), findsOneWidget);
+      expect(find.text('Capture ready.'), findsOneWidget);
+      expect(find.text('Record'), findsOneWidget);
+      expect(find.text('Replace Pattern'), findsNothing);
+      expect(find.text('Append'), findsNothing);
+    });
+
+    testWidgets('disables recording when MIDI is disconnected', (
+      WidgetTester tester,
+    ) async {
+      final MidiPatternCaptureController controller =
+          MidiPatternCaptureController();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: MidiPatternCapturePanel(
+              controller: controller,
+              midiStatus: MidiInputStatus.disconnected,
+              message: null,
+              onRecord: () {},
+              onStop: () {},
+              onClear: () {},
+            ),
+          ),
+        ),
+      );
+
+      final FilledButton recordButton = tester.widget<FilledButton>(
+        find.widgetWithText(FilledButton, 'Record'),
+      );
+      expect(recordButton.onPressed, isNull);
+    });
+  });
 }
 
 CapturedMidiHit _hit(
@@ -623,12 +705,8 @@ MidiDiagnosticEvent _diagnosticEvent({
   required DateTime timestamp,
   MidiMessageType messageType = MidiMessageType.noteOn,
 }) {
-  final RawMidiEvent raw = RawMidiEvent(
-    deviceId: 'edrum-id',
-    deviceName: 'edrum',
+  final RawMidiEvent raw = _rawMidiEvent(
     messageType: messageType,
-    channel: 10,
-    note: 38,
     velocity: velocity,
     timestamp: timestamp,
   );
@@ -640,6 +718,22 @@ MidiDiagnosticEvent _diagnosticEvent({
       velocity: velocity,
       timestamp: timestamp,
     ),
+  );
+}
+
+RawMidiEvent _rawMidiEvent({
+  required int velocity,
+  required DateTime timestamp,
+  MidiMessageType messageType = MidiMessageType.noteOn,
+}) {
+  return RawMidiEvent(
+    deviceId: 'edrum-id',
+    deviceName: 'edrum',
+    messageType: messageType,
+    channel: 10,
+    note: 38,
+    velocity: velocity,
+    timestamp: timestamp,
   );
 }
 

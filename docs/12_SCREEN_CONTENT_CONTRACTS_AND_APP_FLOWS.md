@@ -5,6 +5,12 @@
 This document defines the active screen/content/flow contract for the MVP
 teaching flow.
 
+For current app-wide navigation ownership, including Settings, Hardware & MIDI,
+temporary MIDI Capture placement, Pattern Editor direction, and developer
+diagnostics, use:
+
+- [28_APP_FLOW_CONTRACT.md](/Users/terryknoblock/Development/flutter-projects/drumcabulary/docs/28_APP_FLOW_CONTRACT.md)
+
 If a control or block cannot be justified by a defined MVP flow in this
 document, it should not be reachable in the active teaching UI.
 

@@ -125,9 +125,17 @@ inspection, not durable performance analysis.
 
 ## MIDI Pattern Capture BPM Estimate
 
-The MIDI Pattern Capture card estimates BPM from recent captured Note On
-onsets. It groups near-simultaneous hits first, so a kick and snare landing
-together count as one timing point.
+`MidiPatternCaptureController` estimates BPM from recent captured Note On
+onsets. It consumes mapped `RawMidiEvent` + `DrumInputEvent` pairs so capture
+does not depend on the diagnostic screen as its owner. It groups
+near-simultaneous hits first, so a kick and snare landing together count as one
+timing point.
+
+The current temporary production surface is a MIDI Capture panel at the end of
+Settings on desktop platforms. It uses the shared MIDI input service and emits
+voice-first notation for manual copying or later insertion into the Pattern
+Editor flow. The older diagnostic capture card remains available only as part
+of the raw MIDI diagnostic screen.
 
 Current MVP rules:
 
@@ -135,6 +143,8 @@ Current MVP rules:
 - The estimate uses a rolling average of recent onset intervals.
 - The estimate assumes the generated default capture pattern uses eighth-note
   spacing, so two captured event gaps equal one quarter-note beat.
+- Capture emits voice-first notation such as `[HH K]`, `[OHH]`, and `[S]`.
+- Capture does not infer hand sticking from MIDI velocity.
 - The estimate is shown for quick authoring feedback only. It is not assessment,
   scoring, or a full tempo-grid inference engine.
 
