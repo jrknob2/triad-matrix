@@ -66,7 +66,7 @@ class _AppShellState extends State<AppShell> {
         onOpenSettings: () => _selectDestination(4),
         onOpenDevices: _openDevices,
       ),
-      1 => const ExploreLessonsScreen(),
+      1 => ExploreLessonsScreen(onOpenDevices: _openDevices),
       2 => const PracticeInsightsScreen(),
       3 => FocusScreen(
         controller: controller,

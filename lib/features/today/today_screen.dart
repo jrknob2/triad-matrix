@@ -120,7 +120,9 @@ class _TodayScreenState extends State<TodayScreen> {
 }
 
 class ExploreLessonsScreen extends StatefulWidget {
-  const ExploreLessonsScreen({super.key});
+  final VoidCallback? onOpenDevices;
+
+  const ExploreLessonsScreen({super.key, this.onOpenDevices});
 
   @override
   State<ExploreLessonsScreen> createState() => _ExploreLessonsScreenState();
@@ -196,6 +198,7 @@ class _ExploreLessonsScreenState extends State<ExploreLessonsScreen> {
                 onSortChanged: _setSort,
                 onClearFilters: _clearFilters,
                 onProgressChanged: _refresh,
+                onOpenDevices: widget.onOpenDevices,
               );
             },
       ),
@@ -355,6 +358,7 @@ class _HomeView extends StatelessWidget {
           return LessonDetailScreen(
             lesson: lesson,
             progressService: data.progressService,
+            onOpenDevices: onOpenDevices,
           );
         },
       ),
@@ -1268,6 +1272,7 @@ class _ExploreSearchView extends StatelessWidget {
   final ValueChanged<_ExploreSort?> onSortChanged;
   final VoidCallback onClearFilters;
   final VoidCallback onProgressChanged;
+  final VoidCallback? onOpenDevices;
 
   const _ExploreSearchView({
     required this.data,
@@ -1283,6 +1288,7 @@ class _ExploreSearchView extends StatelessWidget {
     required this.onSortChanged,
     required this.onClearFilters,
     required this.onProgressChanged,
+    required this.onOpenDevices,
   });
 
   @override
@@ -1360,6 +1366,7 @@ class _ExploreSearchView extends StatelessWidget {
           return LessonDetailScreen(
             lesson: item.lesson,
             progressService: data.progressService,
+            onOpenDevices: onOpenDevices,
           );
         },
       ),

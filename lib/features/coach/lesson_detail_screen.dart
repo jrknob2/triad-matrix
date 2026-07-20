@@ -22,11 +22,13 @@ import 'lesson_progress.dart';
 class LessonDetailScreen extends StatefulWidget {
   final Lesson lesson;
   final LessonProgressService? progressService;
+  final VoidCallback? onOpenDevices;
 
   const LessonDetailScreen({
     super.key,
     required this.lesson,
     this.progressService,
+    this.onOpenDevices,
   });
 
   @override
@@ -97,9 +99,6 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
   Widget build(BuildContext context) {
     final Lesson lesson = widget.lesson;
     final LessonProgressService? progressService = widget.progressService;
-    final LessonProgress? lessonProgress = progressService?.progressForLesson(
-      lesson.id,
-    );
     final LessonExercise activeExercise = _selectedExerciseFor(
       lesson,
       progressService,
@@ -112,23 +111,73 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
           lessonId: lesson.id,
           exerciseId: activeExercise.id,
         );
+    final bool active = _activeExerciseId == activeExercise.id;
+    final int practicedSeconds =
+        (activeProgress?.practicedSeconds ?? 0) +
+        (active ? _activeElapsed.inSeconds : 0);
+    final GuidedPracticeState? activeGuidedState =
+        _guidedPracticeExerciseId == activeExercise.id
+        ? _guidedPracticeState
+        : null;
     return Scaffold(
-      appBar: AppBar(title: Text(lesson.title)),
+      bottomNavigationBar: _LessonPracticeFooter(
+        bpm: _previewBpm,
+        defaultBpm: _initialPreviewBpmFor(lesson),
+        minBpm: _minPreviewBpm,
+        maxBpm: _maxPreviewBpm,
+        tempo: activeExercise.tempo,
+        onBpmDecrease: () => _changePreviewBpm(-_previewBpmStep),
+        onBpmIncrease: () => _changePreviewBpm(_previewBpmStep),
+        onBpmReset: _resetPreviewBpm,
+        active: active,
+        practicedLabel: active
+            ? _durationLabel(_activeElapsed)
+            : _durationLabel(Duration(seconds: practicedSeconds)),
+        guidedPracticeActive: activeGuidedState?.isActive == true,
+        guidedPracticeAvailable: _canStartGuidedPractice(activeExercise),
+        playAlongAvailable: _midiService.status == MidiInputStatus.connected,
+        onStartPractice: active
+            ? () => _completePractice(activeExercise)
+            : progressService == null
+            ? null
+            : () => _startPractice(activeExercise),
+        onStartGuidedPractice: activeGuidedState?.isActive == true
+            ? _stopGuidedPractice
+            : _canStartGuidedPractice(activeExercise)
+            ? () => unawaited(_startGuidedPractice(activeExercise))
+            : null,
+        onHearIt: () => unawaited(
+          _toggleExercisePreview(
+            activeExercise,
+            PatternLedPlaybackPresentation.hearIt,
+          ),
+        ),
+        onPlayAlong: _midiService.status == MidiInputStatus.connected
+            ? () => unawaited(
+                _toggleExercisePreview(
+                  activeExercise,
+                  PatternLedPlaybackPresentation.playAlong,
+                ),
+              )
+            : null,
+      ),
       body: DrumScreen(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
           children: <Widget>[
             _LessonHeader(
               lesson: lesson,
-              lessonProgress: lessonProgress,
               completedExercises: _completedExerciseCount(
                 lesson,
                 progressService,
               ),
               totalExercises: lesson.exercises.length,
+              midiService: _midiService,
+              ledController: _ledController,
+              onOpenDevices: widget.onOpenDevices,
               onPrint: () => _requestPrint(context),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 10),
             _ExerciseNavigator(
               lesson: lesson,
               selectedExerciseId: activeExercise.id,
@@ -136,63 +185,20 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
               practicingExerciseId: _activeExerciseId,
               onSelected: _selectExercise,
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 10),
             _ActiveExerciseCard(
               number: activeExerciseIndex + 1,
               totalExercises: lesson.exercises.length,
               exercise: activeExercise,
               primaryPreviewController: _activePreviewController,
-              progress: activeProgress,
               previewBpm: _previewBpm,
-              defaultBpm: _initialPreviewBpmFor(lesson),
-              minBpm: _minPreviewBpm,
-              maxBpm: _maxPreviewBpm,
-              onBpmDecrease: () => _changePreviewBpm(-_previewBpmStep),
-              onBpmIncrease: () => _changePreviewBpm(_previewBpmStep),
-              onBpmReset: _resetPreviewBpm,
               ledController: _ledController,
               ledPlaybackEnabled: _ledController.isConnected,
               ledPlaybackPresentation: _ledPlaybackPresentation,
               playAlongDrumEvents: _mappedDrumEvents,
               playAlongInputEnabled:
                   _midiService.status == MidiInputStatus.connected,
-              guidedPracticeState:
-                  _guidedPracticeExerciseId == activeExercise.id
-                  ? _guidedPracticeState
-                  : null,
-              active: _activeExerciseId == activeExercise.id,
-              activeElapsed: _activeElapsed,
-              guidedPracticeAvailable: _canStartGuidedPractice(activeExercise),
-              playAlongAvailable:
-                  _midiService.status == MidiInputStatus.connected,
-              onStartPractice: progressService == null
-                  ? null
-                  : () => _startPractice(activeExercise),
-              onCompletePractice: _activeExerciseId == activeExercise.id
-                  ? () => _completePractice(activeExercise)
-                  : null,
-              onStartGuidedPractice: _canStartGuidedPractice(activeExercise)
-                  ? () => unawaited(_startGuidedPractice(activeExercise))
-                  : null,
-              onStopGuidedPractice:
-                  _guidedPracticeExerciseId == activeExercise.id &&
-                      _guidedPracticeState.isActive
-                  ? _stopGuidedPractice
-                  : null,
-              onHearIt: () => unawaited(
-                _toggleExercisePreview(
-                  activeExercise,
-                  PatternLedPlaybackPresentation.hearIt,
-                ),
-              ),
-              onPlayAlong: _midiService.status == MidiInputStatus.connected
-                  ? () => unawaited(
-                      _toggleExercisePreview(
-                        activeExercise,
-                        PatternLedPlaybackPresentation.playAlong,
-                      ),
-                    )
-                  : null,
+              guidedPracticeState: activeGuidedState,
             ),
           ],
         ),
@@ -446,16 +452,20 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
 
 class _LessonHeader extends StatelessWidget {
   final Lesson lesson;
-  final LessonProgress? lessonProgress;
   final int completedExercises;
   final int totalExercises;
+  final MidiInputService midiService;
+  final SerialLedController ledController;
+  final VoidCallback? onOpenDevices;
   final VoidCallback onPrint;
 
   const _LessonHeader({
     required this.lesson,
-    required this.lessonProgress,
     required this.completedExercises,
     required this.totalExercises,
+    required this.midiService,
+    required this.ledController,
+    required this.onOpenDevices,
     required this.onPrint,
   });
 
@@ -465,214 +475,306 @@ class _LessonHeader extends StatelessWidget {
     final double completion = totalExercises == 0
         ? 0
         : completedExercises / totalExercises;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: DrumcabularyTheme.edgeBorder),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: <Color>[
-            DrumcabularyTheme.edgeSurfaceSecondary,
-            DrumcabularyTheme.edgeSurface,
-          ],
-        ),
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: DrumcabularyTheme.edgeShadow.withValues(alpha: 0.20),
-            blurRadius: 22,
-            offset: const Offset(0, 14),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Wrap(
-          spacing: 18,
-          runSpacing: 18,
-          alignment: WrapAlignment.spaceBetween,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: <Widget>[
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 720),
-              child: Column(
+    final int percent = (completion * 100).round().clamp(0, 100).toInt();
+    final _LessonHardwareStatus hardwareStatus = _LessonHardwareStatus.from(
+      midiService: midiService,
+      ledController: ledController,
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+            final Widget controls = Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              alignment: WrapAlignment.end,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: <Widget>[
+                _LessonDeviceStatusChip(
+                  status: hardwareStatus.midi,
+                  onPressed: onOpenDevices,
+                ),
+                _LessonDeviceStatusChip(
+                  status: hardwareStatus.led,
+                  onPressed: onOpenDevices,
+                ),
+                _LessonMoreActionsButton(onPrint: onPrint),
+              ],
+            );
+            final Widget back = Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () => Navigator.maybePop(context),
+                icon: const Icon(Icons.arrow_back_rounded),
+                label: const Text('Back'),
+              ),
+            );
+            if (constraints.maxWidth < 780) {
+              return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    '${_labelFor(lesson.level)} • ${_labelFor(lesson.skill)}'
-                        .toUpperCase(),
-                    style: textTheme.labelLarge?.copyWith(
-                      color: DrumcabularyTheme.edgeOrange,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.1,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    lesson.title,
-                    style: textTheme.headlineMedium?.copyWith(
-                      color: DrumcabularyTheme.edgeTextPrimary,
-                      fontWeight: FontWeight.w900,
-                      height: 1.02,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    lesson.overview,
-                    style: textTheme.bodyLarge?.copyWith(
-                      color: DrumcabularyTheme.edgeTextPrimary,
-                      height: 1.35,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    lesson.objective,
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: DrumcabularyTheme.edgeTextSecondary,
-                      height: 1.35,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: <Widget>[
-                      _MetadataPill(
-                        label: 'Lesson ${lesson.order}',
-                        accent: true,
-                      ),
-                      _MetadataPill(label: '${lesson.estimatedMinutes} min'),
-                      _MetadataPill(
-                        label: _statusLabel(
-                          lessonProgress?.status,
-                          active: false,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                children: <Widget>[back, const SizedBox(height: 8), controls],
+              );
+            }
+            return Row(
+              children: <Widget>[
+                Expanded(child: back),
+                Flexible(child: controls),
+              ],
+            );
+          },
+        ),
+        const SizedBox(height: 10),
+        Text(
+          '${_labelFor(lesson.level)} • ${_labelFor(lesson.skill)}'
+              .toUpperCase(),
+          style: textTheme.labelLarge?.copyWith(
+            color: DrumcabularyTheme.edgeOrange,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.1,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          lesson.title,
+          style: textTheme.headlineMedium?.copyWith(
+            color: DrumcabularyTheme.edgeTextPrimary,
+            fontWeight: FontWeight.w900,
+            height: 1.02,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          lesson.overview,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: textTheme.bodyLarge?.copyWith(
+            color: DrumcabularyTheme.edgeTextSecondary,
+            height: 1.32,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: <Widget>[
+            Text(
+              '$completedExercises of $totalExercises exercises complete',
+              style: textTheme.labelLarge?.copyWith(
+                color: DrumcabularyTheme.edgeTextPrimary,
+                fontWeight: FontWeight.w800,
               ),
             ),
-            _LessonProgressSummary(
-              completedExercises: completedExercises,
-              totalExercises: totalExercises,
-              completion: completion,
-              onPrint: onPrint,
+            const SizedBox(width: 12),
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(999),
+                child: LinearProgressIndicator(
+                  value: completion.clamp(0.0, 1.0).toDouble(),
+                  minHeight: 6,
+                  backgroundColor: DrumcabularyTheme.edgeSurfaceSecondary,
+                  valueColor: const AlwaysStoppedAnimation<Color>(
+                    DrumcabularyTheme.edgeOrange,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              '$percent%',
+              style: textTheme.labelLarge?.copyWith(
+                color: DrumcabularyTheme.edgeOrange,
+                fontWeight: FontWeight.w900,
+              ),
             ),
           ],
         ),
-      ),
+      ],
     );
   }
 }
 
-class _LessonProgressSummary extends StatelessWidget {
-  final int completedExercises;
-  final int totalExercises;
-  final double completion;
+class _LessonMoreActionsButton extends StatelessWidget {
   final VoidCallback onPrint;
 
-  const _LessonProgressSummary({
-    required this.completedExercises,
-    required this.totalExercises,
-    required this.completion,
-    required this.onPrint,
-  });
+  const _LessonMoreActionsButton({required this.onPrint});
 
   @override
   Widget build(BuildContext context) {
-    final TextTheme textTheme = Theme.of(context).textTheme;
-    final int percent = (completion * 100).round().clamp(0, 100).toInt();
-    final List<Widget> children = <Widget>[
-      PopupMenuButton<_LessonAction>(
-        tooltip: 'More Actions',
-        onSelected: (_LessonAction action) {
-          switch (action) {
-            case _LessonAction.print:
-              onPrint();
-          }
-        },
-        itemBuilder: (BuildContext context) {
-          return const <PopupMenuEntry<_LessonAction>>[
-            PopupMenuItem<_LessonAction>(
-              value: _LessonAction.print,
-              child: Row(
-                children: <Widget>[
-                  Icon(Icons.print_outlined),
-                  SizedBox(width: 10),
-                  Text('Print Lesson'),
-                ],
-              ),
-            ),
-          ];
-        },
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: DrumcabularyTheme.edgeSurface,
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: DrumcabularyTheme.edgeBorder),
-          ),
-          child: const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+    return PopupMenuButton<_LessonAction>(
+      tooltip: 'More Actions',
+      onSelected: (_LessonAction action) {
+        switch (action) {
+          case _LessonAction.print:
+            onPrint();
+        }
+      },
+      itemBuilder: (BuildContext context) {
+        return const <PopupMenuEntry<_LessonAction>>[
+          PopupMenuItem<_LessonAction>(
+            value: _LessonAction.print,
             child: Row(
-              mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                Text('More Actions'),
-                SizedBox(width: 6),
-                Icon(Icons.more_vert_rounded, size: 18),
+                Icon(Icons.print_outlined),
+                SizedBox(width: 10),
+                Text('Print Lesson'),
               ],
             ),
           ),
+        ];
+      },
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: DrumcabularyTheme.edgeSurface,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: DrumcabularyTheme.edgeBorder),
         ),
-      ),
-      const SizedBox(height: 18),
-      Text(
-        'Your Progress',
-        style: textTheme.labelLarge?.copyWith(
-          color: DrumcabularyTheme.edgeTextSecondary,
-          fontWeight: FontWeight.w900,
-        ),
-      ),
-      const SizedBox(height: 6),
-      Text(
-        '$completedExercises of $totalExercises exercises',
-        style: textTheme.bodyMedium?.copyWith(
-          color: DrumcabularyTheme.edgeTextPrimary,
-          fontWeight: FontWeight.w800,
-        ),
-      ),
-      const SizedBox(height: 10),
-      ClipRRect(
-        borderRadius: BorderRadius.circular(999),
-        child: LinearProgressIndicator(
-          value: completion.clamp(0.0, 1.0).toDouble(),
-          minHeight: 8,
-          backgroundColor: DrumcabularyTheme.edgeBackground,
-          valueColor: const AlwaysStoppedAnimation<Color>(
-            DrumcabularyTheme.edgeOrange,
+        child: const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Text('More Actions'),
+              SizedBox(width: 6),
+              Icon(Icons.more_vert_rounded, size: 18),
+            ],
           ),
         ),
-      ),
-      const SizedBox(height: 6),
-      Text(
-        '$percent%',
-        style: textTheme.labelMedium?.copyWith(
-          color: DrumcabularyTheme.edgeOrange,
-          fontWeight: FontWeight.w900,
-        ),
-      ),
-    ];
-    return SizedBox(
-      width: 230,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: children,
       ),
     );
   }
 }
 
 enum _LessonAction { print }
+
+class _LessonHardwareStatus {
+  final _LessonDeviceStatus midi;
+  final _LessonDeviceStatus led;
+
+  const _LessonHardwareStatus({required this.midi, required this.led});
+
+  factory _LessonHardwareStatus.from({
+    required MidiInputService midiService,
+    required SerialLedController ledController,
+  }) {
+    return _LessonHardwareStatus(
+      midi: _LessonDeviceStatus(
+        icon: Icons.graphic_eq_rounded,
+        title: midiService.selectedDevice?.name ?? 'MIDI Kit',
+        subtitle: _midiInputStatusLabel(midiService.status),
+        connected: midiService.status == MidiInputStatus.connected,
+      ),
+      led: _LessonDeviceStatus(
+        icon: Icons.radio_button_checked_rounded,
+        title: 'LED Controller',
+        subtitle: _serialLedConnectionLabel(ledController.status),
+        connected: ledController.status == SerialLedConnectionStatus.connected,
+      ),
+    );
+  }
+}
+
+class _LessonDeviceStatus {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool connected;
+
+  const _LessonDeviceStatus({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.connected,
+  });
+}
+
+class _LessonDeviceStatusChip extends StatelessWidget {
+  final _LessonDeviceStatus status;
+  final VoidCallback? onPressed;
+
+  const _LessonDeviceStatusChip({
+    required this.status,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final BorderRadius borderRadius = BorderRadius.circular(14);
+    return Material(
+      color: Colors.transparent,
+      child: Ink(
+        decoration: BoxDecoration(
+          color: DrumcabularyTheme.edgeSurface,
+          borderRadius: borderRadius,
+          border: Border.all(color: DrumcabularyTheme.edgeBorder),
+        ),
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: borderRadius,
+          hoverColor: DrumcabularyTheme.edgeOrange.withValues(alpha: 0.10),
+          focusColor: DrumcabularyTheme.edgeOrange.withValues(alpha: 0.14),
+          splashColor: DrumcabularyTheme.edgeOrange.withValues(alpha: 0.18),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Icon(
+                  status.icon,
+                  color: DrumcabularyTheme.edgeTextPrimary,
+                  size: 20,
+                ),
+                const SizedBox(width: 9),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 160),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Text(
+                        status.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: DrumcabularyTheme.edgeTextPrimary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: status.connected
+                                  ? const Color(0xFF52D273)
+                                  : const Color(0xFFFFC857),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const SizedBox(width: 8, height: 8),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            status.subtitle,
+                            style: Theme.of(context).textTheme.labelMedium
+                                ?.copyWith(
+                                  color: status.connected
+                                      ? const Color(0xFF52D273)
+                                      : DrumcabularyTheme.edgeTextSecondary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class _ExerciseNavigator extends StatelessWidget {
   final Lesson lesson;
@@ -844,69 +946,31 @@ class _ActiveExerciseCard extends StatelessWidget {
   final int totalExercises;
   final LessonExercise exercise;
   final DrumSheetNotationController? primaryPreviewController;
-  final ExerciseProgress? progress;
   final int previewBpm;
-  final int defaultBpm;
-  final int minBpm;
-  final int maxBpm;
-  final VoidCallback onBpmDecrease;
-  final VoidCallback onBpmIncrease;
-  final VoidCallback onBpmReset;
   final SerialLedController ledController;
   final bool ledPlaybackEnabled;
   final PatternLedPlaybackPresentation ledPlaybackPresentation;
   final Stream<DrumInputEvent> playAlongDrumEvents;
   final bool playAlongInputEnabled;
   final GuidedPracticeState? guidedPracticeState;
-  final bool active;
-  final Duration activeElapsed;
-  final bool guidedPracticeAvailable;
-  final bool playAlongAvailable;
-  final VoidCallback? onStartPractice;
-  final VoidCallback? onCompletePractice;
-  final VoidCallback? onStartGuidedPractice;
-  final VoidCallback? onStopGuidedPractice;
-  final VoidCallback onHearIt;
-  final VoidCallback? onPlayAlong;
 
   const _ActiveExerciseCard({
     required this.number,
     required this.totalExercises,
     required this.exercise,
     required this.primaryPreviewController,
-    required this.progress,
     required this.previewBpm,
-    required this.defaultBpm,
-    required this.minBpm,
-    required this.maxBpm,
-    required this.onBpmDecrease,
-    required this.onBpmIncrease,
-    required this.onBpmReset,
     required this.ledController,
     required this.ledPlaybackEnabled,
     required this.ledPlaybackPresentation,
     required this.playAlongDrumEvents,
     required this.playAlongInputEnabled,
     required this.guidedPracticeState,
-    required this.active,
-    required this.activeElapsed,
-    required this.guidedPracticeAvailable,
-    required this.playAlongAvailable,
-    required this.onStartPractice,
-    required this.onCompletePractice,
-    required this.onStartGuidedPractice,
-    required this.onStopGuidedPractice,
-    required this.onHearIt,
-    required this.onPlayAlong,
   });
 
   @override
   Widget build(BuildContext context) {
     final TextTheme textTheme = Theme.of(context).textTheme;
-    final ExerciseProgress? progress = this.progress;
-    final int practicedSeconds =
-        (progress?.practicedSeconds ?? 0) +
-        (active ? activeElapsed.inSeconds : 0);
     return DecoratedBox(
       decoration: BoxDecoration(
         color: DrumcabularyTheme.edgeSurface,
@@ -923,63 +987,35 @@ class _ActiveExerciseCard extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        'EXERCISE $number OF $totalExercises',
-                        style: textTheme.labelMedium?.copyWith(
-                          color: DrumcabularyTheme.edgeOrange,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1,
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        exercise.title,
-                        style: textTheme.titleLarge?.copyWith(
-                          color: DrumcabularyTheme.edgeTextPrimary,
-                          fontWeight: FontWeight.w900,
-                          height: 1.08,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 10),
-                _MetadataPill(
-                  label: _statusLabel(progress?.status, active: active),
-                  accent:
-                      active ||
-                      progress?.status == LessonProgressStatus.completed ||
-                      progress?.status == LessonProgressStatus.inProgress,
-                ),
-              ],
+            Text(
+              'EXERCISE $number OF $totalExercises',
+              style: textTheme.labelMedium?.copyWith(
+                color: DrumcabularyTheme.edgeOrange,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1,
+              ),
             ),
-            const SizedBox(height: 14),
-            _ExerciseTeachingPanels(
-              exercise: exercise,
-              previewBpm: previewBpm,
-              defaultBpm: defaultBpm,
-              minBpm: minBpm,
-              maxBpm: maxBpm,
-              onBpmDecrease: onBpmDecrease,
-              onBpmIncrease: onBpmIncrease,
-              onBpmReset: onBpmReset,
+            const SizedBox(height: 4),
+            Text(
+              exercise.title,
+              style: textTheme.titleLarge?.copyWith(
+                color: DrumcabularyTheme.edgeTextPrimary,
+                fontWeight: FontWeight.w900,
+                height: 1.08,
+              ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 10),
+            _ExerciseTeachingPanels(exercise: exercise),
+            const SizedBox(height: 10),
             for (
               int index = 0;
               index < exercise.notation.sections.length;
               index += 1
             ) ...[
-              if (index > 0) const SizedBox(height: 12),
+              if (index > 0) const SizedBox(height: 10),
               if (exercise.notation.sections.length > 1 &&
                   exercise.notation.sections[index].title != null) ...<Widget>[
                 Text(
@@ -1007,26 +1043,10 @@ class _ActiveExerciseCard extends StatelessWidget {
                 controller: index == 0 ? primaryPreviewController : null,
               ),
             ],
-            const SizedBox(height: 14),
             if (guidedPracticeState != null) ...<Widget>[
-              _GuidedPracticeStatusLine(state: guidedPracticeState!),
               const SizedBox(height: 10),
+              _GuidedPracticeStatusLine(state: guidedPracticeState!),
             ],
-            _PracticeModeGrid(
-              active: active,
-              practicedLabel: active
-                  ? _durationLabel(activeElapsed)
-                  : _durationLabel(Duration(seconds: practicedSeconds)),
-              guidedPracticeActive: guidedPracticeState?.isActive == true,
-              guidedPracticeAvailable: guidedPracticeAvailable,
-              playAlongAvailable: playAlongAvailable,
-              onStartPractice: active ? onCompletePractice : onStartPractice,
-              onStartGuidedPractice: guidedPracticeState?.isActive == true
-                  ? onStopGuidedPractice
-                  : onStartGuidedPractice,
-              onHearIt: onHearIt,
-              onPlayAlong: onPlayAlong,
-            ),
           ],
         ),
       ),
@@ -1036,24 +1056,8 @@ class _ActiveExerciseCard extends StatelessWidget {
 
 class _ExerciseTeachingPanels extends StatelessWidget {
   final LessonExercise exercise;
-  final int previewBpm;
-  final int defaultBpm;
-  final int minBpm;
-  final int maxBpm;
-  final VoidCallback onBpmDecrease;
-  final VoidCallback onBpmIncrease;
-  final VoidCallback onBpmReset;
 
-  const _ExerciseTeachingPanels({
-    required this.exercise,
-    required this.previewBpm,
-    required this.defaultBpm,
-    required this.minBpm,
-    required this.maxBpm,
-    required this.onBpmDecrease,
-    required this.onBpmIncrease,
-    required this.onBpmReset,
-  });
+  const _ExerciseTeachingPanels({required this.exercise});
 
   @override
   Widget build(BuildContext context) {
@@ -1073,16 +1077,6 @@ class _ExerciseTeachingPanels extends StatelessWidget {
       text: exercise.success == null
           ? exercise.how
           : '${exercise.how}\n\nTarget: ${exercise.success}',
-      trailing: _BpmInlineControl(
-        bpm: previewBpm,
-        defaultBpm: defaultBpm,
-        minBpm: minBpm,
-        maxBpm: maxBpm,
-        tempo: exercise.tempo,
-        onDecrease: onBpmDecrease,
-        onIncrease: onBpmIncrease,
-        onReset: onBpmReset,
-      ),
     );
 
     return LayoutBuilder(
@@ -1117,13 +1111,11 @@ class _TeachingInfoPanel extends StatelessWidget {
   final IconData icon;
   final String label;
   final String text;
-  final Widget? trailing;
 
   const _TeachingInfoPanel({
     required this.icon,
     required this.label,
     required this.text,
-    this.trailing,
   });
 
   @override
@@ -1161,10 +1153,6 @@ class _TeachingInfoPanel extends StatelessWidget {
                 height: 1.35,
               ),
             ),
-            if (trailing != null) ...<Widget>[
-              const SizedBox(height: 12),
-              trailing!,
-            ],
           ],
         ),
       ),
@@ -1208,6 +1196,7 @@ class _BpmInlineControl extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Text(
@@ -1249,6 +1238,111 @@ class _BpmInlineControl extends StatelessWidget {
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LessonPracticeFooter extends StatelessWidget {
+  final int bpm;
+  final int defaultBpm;
+  final int minBpm;
+  final int maxBpm;
+  final TempoTarget? tempo;
+  final VoidCallback onBpmDecrease;
+  final VoidCallback onBpmIncrease;
+  final VoidCallback onBpmReset;
+  final bool active;
+  final String practicedLabel;
+  final bool guidedPracticeActive;
+  final bool guidedPracticeAvailable;
+  final bool playAlongAvailable;
+  final VoidCallback? onStartPractice;
+  final VoidCallback? onStartGuidedPractice;
+  final VoidCallback onHearIt;
+  final VoidCallback? onPlayAlong;
+
+  const _LessonPracticeFooter({
+    required this.bpm,
+    required this.defaultBpm,
+    required this.minBpm,
+    required this.maxBpm,
+    required this.tempo,
+    required this.onBpmDecrease,
+    required this.onBpmIncrease,
+    required this.onBpmReset,
+    required this.active,
+    required this.practicedLabel,
+    required this.guidedPracticeActive,
+    required this.guidedPracticeAvailable,
+    required this.playAlongAvailable,
+    required this.onStartPractice,
+    required this.onStartGuidedPractice,
+    required this.onHearIt,
+    required this.onPlayAlong,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          color: DrumcabularyTheme.edgeBackground,
+          border: Border(top: BorderSide(color: DrumcabularyTheme.edgeBorder)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+          child: LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints constraints) {
+              final Widget bpmControl = _BpmInlineControl(
+                bpm: bpm,
+                defaultBpm: defaultBpm,
+                minBpm: minBpm,
+                maxBpm: maxBpm,
+                tempo: tempo,
+                onDecrease: onBpmDecrease,
+                onIncrease: onBpmIncrease,
+                onReset: onBpmReset,
+              );
+              final Widget modes = _PracticeModeGrid(
+                active: active,
+                practicedLabel: practicedLabel,
+                guidedPracticeActive: guidedPracticeActive,
+                guidedPracticeAvailable: guidedPracticeAvailable,
+                playAlongAvailable: playAlongAvailable,
+                onStartPractice: onStartPractice,
+                onStartGuidedPractice: onStartGuidedPractice,
+                onHearIt: onHearIt,
+                onPlayAlong: onPlayAlong,
+              );
+
+              if (constraints.maxWidth < 820) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    bpmControl,
+                    const SizedBox(height: 10),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: SizedBox(width: 760, child: modes),
+                    ),
+                  ],
+                );
+              }
+
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  SizedBox(width: 250, child: bpmControl),
+                  const SizedBox(width: 12),
+                  Expanded(child: modes),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
@@ -1327,8 +1421,8 @@ class _PracticeModeGrid extends StatelessWidget {
               icon: active ? Icons.check_rounded : Icons.timer_outlined,
               title: 'Practice It',
               description: active
-                  ? 'Mark this exercise complete when you are done.'
-                  : 'Play at your own tempo with the metronome.',
+                  ? 'Mark this exercise complete.'
+                  : 'Play at your own tempo.',
               detail: practicedLabel,
               accent: true,
               onPressed: onStartPractice,
@@ -1340,8 +1434,8 @@ class _PracticeModeGrid extends StatelessWidget {
                   : Icons.lightbulb_outline_rounded,
               title: 'Guided Practice',
               description: guidedPracticeActive
-                  ? 'Stop the step-by-step LED practice session.'
-                  : 'Follow the exercise one event at a time.',
+                  ? 'Stop the guided session.'
+                  : 'Step through one event at a time.',
               detail: guidedPracticeActive
                   ? 'Running'
                   : guidedPracticeAvailable
@@ -1353,7 +1447,7 @@ class _PracticeModeGrid extends StatelessWidget {
               width: width,
               icon: Icons.hearing_rounded,
               title: 'Hear It',
-              description: 'Listen to the exercise at the selected tempo.',
+              description: 'Listen at the selected tempo.',
               detail: 'Uses current BPM',
               onPressed: onHearIt,
             ),
@@ -1361,7 +1455,7 @@ class _PracticeModeGrid extends StatelessWidget {
               width: width,
               icon: Icons.play_circle_outline_rounded,
               title: 'Play Along',
-              description: 'Play with the exercise while MIDI listens.',
+              description: 'Play while MIDI listens.',
               detail: playAlongAvailable ? 'MIDI ready' : 'Connect MIDI input',
               onPressed: onPlayAlong,
             ),
@@ -1412,29 +1506,41 @@ class _PracticeModeCard extends StatelessWidget {
             border: Border.all(color: borderColor),
           ),
           child: Padding(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(10),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Icon(
-                  icon,
-                  color: enabled
-                      ? DrumcabularyTheme.edgeOrange
-                      : DrumcabularyTheme.edgeTextMuted,
+                Row(
+                  children: <Widget>[
+                    Icon(
+                      icon,
+                      size: 21,
+                      color: enabled
+                          ? DrumcabularyTheme.edgeOrange
+                          : DrumcabularyTheme.edgeTextMuted,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: textTheme.titleSmall?.copyWith(
+                          color: enabled
+                              ? DrumcabularyTheme.edgeTextPrimary
+                              : DrumcabularyTheme.edgeTextMuted,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  title,
-                  style: textTheme.titleSmall?.copyWith(
-                    color: enabled
-                        ? DrumcabularyTheme.edgeTextPrimary
-                        : DrumcabularyTheme.edgeTextMuted,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 7),
                 Text(
                   description,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: textTheme.bodySmall?.copyWith(
                     color: enabled
                         ? DrumcabularyTheme.edgeTextSecondary
@@ -1442,7 +1548,7 @@ class _PracticeModeCard extends StatelessWidget {
                     height: 1.3,
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 Text(
                   detail,
                   style: textTheme.labelMedium?.copyWith(
@@ -1544,7 +1650,7 @@ class _NotationPreview extends StatelessWidget {
         border: Border.all(color: const Color(0xFFD9D2C6)),
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+        padding: const EdgeInsets.fromLTRB(6, 0, 6, 4),
         child: Theme(
           data: notationTheme,
           child: DrumSheetNotationDisplay(
@@ -1559,6 +1665,7 @@ class _NotationPreview extends StatelessWidget {
             minNoteWidth: 54,
             showSticking: shouldShowStickingForNotationSection(section),
             audioPreviewEnabled: true,
+            showAudioPreviewControl: false,
             audioPreviewBpm: previewBpm,
             ledController: ledController,
             ledPlaybackEnabled: ledPlaybackEnabled,
@@ -1571,6 +1678,9 @@ class _NotationPreview extends StatelessWidget {
               alpha: 0.62,
             ),
             selectedColor: DrumcabularyTheme.edgeOrange,
+            staffY: 4,
+            staffHeight: 112,
+            systemGapY: 122,
             controller: controller,
           ),
         ),
@@ -1628,6 +1738,27 @@ String _statusLabel(LessonProgressStatus? status, {required bool active}) {
     LessonProgressStatus.inProgress => 'In Progress',
     LessonProgressStatus.completed => 'Complete',
     _ => 'Not Started',
+  };
+}
+
+String _midiInputStatusLabel(MidiInputStatus status) {
+  return switch (status) {
+    MidiInputStatus.connected => 'Connected',
+    MidiInputStatus.scanning => 'Scanning',
+    MidiInputStatus.connecting => 'Connecting',
+    MidiInputStatus.noDevicesFound ||
+    MidiInputStatus.disconnected => 'Not Connected',
+    MidiInputStatus.connectionError => 'Connection Error',
+  };
+}
+
+String _serialLedConnectionLabel(SerialLedConnectionStatus status) {
+  return switch (status) {
+    SerialLedConnectionStatus.connected => 'Connected',
+    SerialLedConnectionStatus.connecting => 'Connecting',
+    SerialLedConnectionStatus.disconnected => 'Not Connected',
+    SerialLedConnectionStatus.connectionError => 'Connection Error',
+    SerialLedConnectionStatus.deviceRemoved => 'Device Removed',
   };
 }
 

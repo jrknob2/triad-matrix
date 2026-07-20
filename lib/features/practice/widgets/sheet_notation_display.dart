@@ -575,6 +575,10 @@ class DrumSheetNotationDisplay extends StatefulWidget {
   final double minNoteWidth;
   final bool compactLayout;
   final bool preserveMeasures;
+  final bool showAudioPreviewControl;
+  final double? staffY;
+  final double? staffHeight;
+  final double? systemGapY;
   final bool darkTheme;
   final Color? backgroundColor;
   final bool audioPreviewEnabled;
@@ -605,6 +609,10 @@ class DrumSheetNotationDisplay extends StatefulWidget {
     this.minNoteWidth = defaultMinNoteWidth,
     this.compactLayout = false,
     this.preserveMeasures = true,
+    this.showAudioPreviewControl = true,
+    this.staffY,
+    this.staffHeight,
+    this.systemGapY,
     this.darkTheme = false,
     this.backgroundColor,
     this.audioPreviewEnabled = false,
@@ -865,7 +873,9 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
   }
 
   Widget _buildAudioPreviewShell(BuildContext context, Widget notation) {
-    if (!widget.audioPreviewEnabled) return notation;
+    if (!widget.audioPreviewEnabled || !widget.showAudioPreviewControl) {
+      return notation;
+    }
     final bool canPreview =
         widget.audioPreviewBpm > 0 &&
         widget.document.flattenedNotes.any(
@@ -1163,6 +1173,9 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
         ),
         if (widget.backgroundColor != null)
           'backgroundColor': _cssColor(widget.backgroundColor!),
+        if (widget.staffY != null) 'staffY': widget.staffY,
+        if (widget.staffHeight != null) 'staffHeight': widget.staffHeight,
+        if (widget.systemGapY != null) 'systemGapY': widget.systemGapY,
         if (widget.compactLayout) ...<String, Object?>{
           'staffY': 34,
           'staffHeight': 124,
@@ -1183,10 +1196,12 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
       return widget.compactLayout ? 112 : 140;
     }
     final int systems = math.max(1, widget.document.measures.length);
-    if (widget.compactLayout) {
-      return 158 + math.max(0, systems - 1) * 108;
-    }
-    return 10 + 126 + math.max(0, systems - 1) * 140;
+    final double staffY = widget.staffY ?? (widget.compactLayout ? 34 : 10);
+    final double staffHeight =
+        widget.staffHeight ?? (widget.compactLayout ? 124 : 126);
+    final double systemGapY =
+        widget.systemGapY ?? (widget.compactLayout ? 108 : 140);
+    return staffY + staffHeight + math.max(0, systems - 1) * systemGapY;
   }
 }
 

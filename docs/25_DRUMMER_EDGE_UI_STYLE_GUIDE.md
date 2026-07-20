@@ -40,8 +40,8 @@ high-contrast, drummer-focused interface.
 - Screen padding: 16 px on iPhone-sized layouts.
 - Card padding: 16-20 px depending on density.
 - Exercise card internal gaps: 8-16 px.
-- Add enough bottom inset for normal scroll comfort; Lesson Detail has no
-  sticky practice footer.
+- Lesson Detail uses a fixed practice footer, so scrollable content should stay
+  compact and avoid duplicating footer actions.
 
 ## Cards
 
@@ -69,15 +69,18 @@ high-contrast, drummer-focused interface.
 
 ## Lesson Headers
 
-- App bar remains dark with centered lesson title.
+- Lesson Detail does not need a second app-bar title when the lesson title is
+  already prominent in the header.
 - Header content includes:
+  - back navigation
+  - MIDI and LED status chips when supported
   - orange breadcrumb, for example `BEGINNER • RUDIMENTS`
   - large bold lesson title
-  - overview/objective copy
-  - lesson number and duration chips
+  - short overview copy
+  - compact completion summary
   - restrained More Actions menu for Print Lesson
-- Optional decorative treatment can use a subtle dark gradient, but not custom
-  artwork unless it is already available.
+- Do not add separate lesson number, duration, or status pills unless they
+  answer a concrete user question that is not already answered elsewhere.
 
 ## Exercise Cards
 
@@ -87,15 +90,16 @@ high-contrast, drummer-focused interface.
 - Goal, Focus, and Tip replace Why / What / How for student-facing labels.
 - On wide layouts, Goal, Focus, and Tip align in one row directly above
   notation. On narrow layouts they stack.
-- Tempo guidance and interactive BPM controls live beneath Tip.
-- Hear It appears as one of the four practice-mode cards beneath notation.
+- Tempo guidance and interactive BPM controls live in the fixed practice footer,
+  not inside Tip.
 - Practice It and Complete Exercise behavior must remain unchanged.
 
 ## Lesson Detail Practice Controls
 
-- Lesson Detail does not use a sticky footer.
-- The four practice-mode cards beneath notation are the primary actions:
-  Practice It, Guided Practice, Hear It, and Play Along.
+- Lesson Detail uses a fixed footer for the primary practice controls:
+  BPM, Practice It, Guided Practice, Hear It, and Play Along.
+- The scrollable active exercise card must not duplicate these controls or add a
+  sheet-local Hear It label/control.
 - More Actions is restrained and contains only secondary lesson actions such as
   Print Lesson.
 

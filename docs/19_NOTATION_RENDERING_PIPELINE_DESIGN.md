@@ -33,7 +33,7 @@ Supported rendering goals:
 - render the same exercise notation into printable/exportable PDF content
 - provide a lightweight "Hear It" preview from rendered examples
 - allow Lesson Detail to control Hear It and Play Along preview BPM from the
-  active exercise Tip panel
+  fixed practice footer
 - preserve authored grouping spaces as visual phrasing aids
 - preserve computed measures for display and print
 - render one or more YAML-authored sections inside a single exercise
@@ -178,6 +178,9 @@ Each section creates a `DrumSheetNotationDisplay` with:
 - `preserveMeasures: false` so longer active patterns can wrap vertically
 - `minNoteWidth: 54`
 - `audioPreviewEnabled: true`
+- `showAudioPreviewControl: false`, because Lesson Detail's footer owns Hear It
+- tighter staff layout overrides so the notation sheet does not carry excessive
+  top and bottom padding
 
 Raw notation strings are not shown as the student-facing display. Rendering
 failures should remain visible; the app should not silently replace failed sheet
@@ -388,8 +391,8 @@ Audio preview builds a playback plan from `DrumSheetNotationDocument`.
 
 Important behavior:
 
-- Lesson Detail owns an inline BPM control in the active exercise Tip panel and
-  passes that value to each active `DrumSheetNotationDisplay`.
+- Lesson Detail owns BPM controls in the fixed practice footer and passes that
+  value to each active `DrumSheetNotationDisplay`.
 - Changing BPM while a notation preview is running stops the active preview so
   the next Hear It action starts at the selected tempo.
 - notes in a simultaneous bracket share the same scheduled offset

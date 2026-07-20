@@ -158,6 +158,7 @@ Rules:
 Lesson Detail -> Hear It
 Lesson Detail -> Practice It
 Lesson Detail -> Guided Practice
+Lesson Detail -> Play Along
 Lesson Detail -> Print Lesson
 ```
 
@@ -168,8 +169,9 @@ It owns:
 - lesson explanation
 - one active exercise at a time
 - exercise step navigation
+- MIDI and LED status chips that link to hardware setup where supported
 - Goal, Focus, and Tip for the active exercise
-- inline BPM controls attached to the active exercise Tip
+- a fixed lesson practice footer with BPM controls
 - rendered notation
 - Hear It playback
 - Practice It handoff
@@ -182,11 +184,14 @@ Rules:
 
 - Lesson Detail must not render every exercise as a fully expanded section.
 - The corrected hierarchy is Lesson Header, Exercise Navigator, Active Exercise
-  Header, Goal | Focus | Tip + BPM controls, wrapped notation, then Practice It
-  | Guided Practice | Hear It | Play Along.
+  Header, Goal | Focus | Tip, wrapped notation, then a fixed footer containing
+  BPM controls and Practice It | Guided Practice | Hear It | Play Along.
 - The top exercise navigator is the exercise selection surface. Do not duplicate
   collapsed exercise rows below the active card.
-- There is no sticky lesson footer. BPM controls live beneath Tip.
+- BPM controls do not live inside Tip. The footer owns tempo because Hear It and
+  Play Along both consume it.
+- The notation sheet must not repeat a Hear It header/control when the footer
+  already owns Hear It.
 - More Actions contains only secondary lesson actions such as Print Lesson.
 
 It must not own:
