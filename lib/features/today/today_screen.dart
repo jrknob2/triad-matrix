@@ -128,6 +128,27 @@ class ExploreLessonsScreen extends StatefulWidget {
 
 class _ExploreLessonsScreenState extends State<ExploreLessonsScreen> {
   late Future<_TeachingFlowData> _dataFuture = _loadData();
+  late final TextEditingController _searchController;
+  String _query = '';
+  bool _showMoreFilters = false;
+  _ExploreSort _sort = _ExploreSort.relevance;
+  final Map<_ExploreFilterGroupKey, Set<String>> _selectedFilters =
+      <_ExploreFilterGroupKey, Set<String>>{
+        for (final _ExploreFilterGroupKey key in _ExploreFilterGroupKey.values)
+          key: <String>{},
+      };
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   Future<_TeachingFlowData> _loadData() async {
     final LessonContentLibrary library = await LessonPlanLoader.loadContent();
@@ -161,10 +182,62 @@ class _ExploreLessonsScreenState extends State<ExploreLessonsScreen> {
               if (data == null) {
                 return const Center(child: CircularProgressIndicator());
               }
-              return _LevelListView(data: data, onProgressChanged: _refresh);
+              return _ExploreSearchView(
+                data: data,
+                searchController: _searchController,
+                query: _query,
+                selectedFilters: _selectedFilters,
+                showMoreFilters: _showMoreFilters,
+                sort: _sort,
+                onQueryChanged: _setQuery,
+                onFilterToggled: _toggleFilter,
+                onMoreFiltersToggled: _toggleMoreFilters,
+                onSortChanged: _setSort,
+                onClearAll: _clearAll,
+                onProgressChanged: _refresh,
+              );
             },
       ),
     );
+  }
+
+  void _setQuery(String value) {
+    setState(() {
+      _query = value;
+    });
+  }
+
+  void _toggleFilter(_ExploreFilterGroupKey key, String value) {
+    setState(() {
+      final Set<String> values = _selectedFilters[key]!;
+      if (!values.add(value)) {
+        values.remove(value);
+      }
+    });
+  }
+
+  void _toggleMoreFilters() {
+    setState(() {
+      _showMoreFilters = !_showMoreFilters;
+    });
+  }
+
+  void _setSort(_ExploreSort? sort) {
+    if (sort == null) return;
+    setState(() {
+      _sort = sort;
+    });
+  }
+
+  void _clearAll() {
+    setState(() {
+      _query = '';
+      _searchController.clear();
+      for (final Set<String> values in _selectedFilters.values) {
+        values.clear();
+      }
+      _sort = _ExploreSort.relevance;
+    });
   }
 }
 
@@ -1108,19 +1181,158 @@ class _RecentActivityRow extends StatelessWidget {
   }
 }
 
-class _LevelListView extends StatelessWidget {
+enum _ExploreFilterGroupKey {
+  skills,
+  difficulty,
+  genre,
+  timeSignature,
+  rudiments,
+  tempoRange,
+  equipment,
+  feel,
+  subdivision,
+  handFocus,
+  footFocus,
+}
+
+enum _ExploreSort {
+  relevance('Relevance'),
+  alphabetical('Alphabetical'),
+  newest('Newest'),
+  shortest('Shortest'),
+  longest('Longest');
+
+  final String label;
+
+  const _ExploreSort(this.label);
+}
+
+class _ExploreSearchView extends StatelessWidget {
   final _TeachingFlowData data;
+  final TextEditingController searchController;
+  final String query;
+  final Map<_ExploreFilterGroupKey, Set<String>> selectedFilters;
+  final bool showMoreFilters;
+  final _ExploreSort sort;
+  final ValueChanged<String> onQueryChanged;
+  final void Function(_ExploreFilterGroupKey key, String value) onFilterToggled;
+  final VoidCallback onMoreFiltersToggled;
+  final ValueChanged<_ExploreSort?> onSortChanged;
+  final VoidCallback onClearAll;
   final VoidCallback onProgressChanged;
 
-  const _LevelListView({required this.data, required this.onProgressChanged});
+  const _ExploreSearchView({
+    required this.data,
+    required this.searchController,
+    required this.query,
+    required this.selectedFilters,
+    required this.showMoreFilters,
+    required this.sort,
+    required this.onQueryChanged,
+    required this.onFilterToggled,
+    required this.onMoreFiltersToggled,
+    required this.onSortChanged,
+    required this.onClearAll,
+    required this.onProgressChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final List<_ExploreLessonItem> items = _exploreLessonItems(data);
+    final List<_ExploreLessonItem> results =
+        <_ExploreLessonItem>[
+          for (final _ExploreLessonItem item in items)
+            if (item.matches(query: query, selectedFilters: selectedFilters))
+              item,
+        ]..sort(
+          (_ExploreLessonItem a, _ExploreLessonItem b) =>
+              _compareExploreItems(a, b, sort, query, selectedFilters),
+        );
+    final bool hasActiveSearch = _hasActiveExploreSearch(
+      query,
+      selectedFilters,
+    );
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
       children: <Widget>[
+        _ExploreHeader(
+          searchController: searchController,
+          query: query,
+          onQueryChanged: onQueryChanged,
+        ),
+        const SizedBox(height: 22),
+        _ExploreFilters(
+          items: items,
+          selectedFilters: selectedFilters,
+          showMoreFilters: showMoreFilters,
+          hasActiveSearch: hasActiveSearch,
+          onFilterToggled: onFilterToggled,
+          onMoreFiltersToggled: onMoreFiltersToggled,
+          onClearAll: onClearAll,
+        ),
+        const SizedBox(height: 22),
+        _ExploreResultsHeader(
+          count: results.length,
+          sort: sort,
+          onSortChanged: onSortChanged,
+        ),
+        const SizedBox(height: 12),
+        if (results.isEmpty)
+          _ExploreEmptyState(
+            hasActiveSearch: hasActiveSearch,
+            onClear: onClearAll,
+          )
+        else
+          for (final _ExploreLessonItem item in results) ...<Widget>[
+            _ExploreLessonCard(
+              item: item,
+              onOpen: () => _openLesson(context, item),
+            ),
+            const SizedBox(height: 10),
+          ],
+      ],
+    );
+  }
+
+  Future<void> _openLesson(
+    BuildContext context,
+    _ExploreLessonItem item,
+  ) async {
+    await data.progressService.openLesson(item.lesson.id);
+    if (!context.mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (BuildContext context) {
+          return LessonDetailScreen(
+            lesson: item.lesson,
+            progressService: data.progressService,
+          );
+        },
+      ),
+    );
+    onProgressChanged();
+  }
+}
+
+class _ExploreHeader extends StatelessWidget {
+  final TextEditingController searchController;
+  final String query;
+  final ValueChanged<String> onQueryChanged;
+
+  const _ExploreHeader({
+    required this.searchController,
+    required this.query,
+    required this.onQueryChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
         Text(
-          'Choose Level',
+          'What are you working on today?',
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
             color: DrumcabularyTheme.edgeTextPrimary,
             fontWeight: FontWeight.w900,
@@ -1129,403 +1341,1272 @@ class _LevelListView extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          'Start where the lessons match your playing today.',
+          'Search lessons and exercises or filter by what matters to you.',
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
             color: DrumcabularyTheme.edgeTextSecondary,
             height: 1.35,
           ),
         ),
         const SizedBox(height: 18),
-        for (final ContentLevel level in data.library.index.levels) ...[
-          _LevelRow(
-            level: level,
-            summary: data.progressService.summaryForLevel(
-              level,
-              data.library.lessonsForLevel(level.id),
-            ),
-            onOpen: () => _openLevel(context, level),
+        TextField(
+          controller: searchController,
+          onChanged: onQueryChanged,
+          textInputAction: TextInputAction.search,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: DrumcabularyTheme.edgeTextPrimary,
+            fontWeight: FontWeight.w800,
           ),
-          const SizedBox(height: 12),
+          decoration: InputDecoration(
+            hintText: 'Search lessons, exercises, keywords...',
+            hintStyle: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: DrumcabularyTheme.edgeTextMuted,
+              fontWeight: FontWeight.w700,
+            ),
+            prefixIcon: const Icon(
+              Icons.search_rounded,
+              color: DrumcabularyTheme.edgeTextSecondary,
+            ),
+            suffixIcon: query.trim().isEmpty
+                ? null
+                : IconButton(
+                    tooltip: 'Clear search',
+                    onPressed: () {
+                      searchController.clear();
+                      onQueryChanged('');
+                    },
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+            filled: true,
+            fillColor: DrumcabularyTheme.edgeSurface,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 18,
+              vertical: 18,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: DrumcabularyTheme.edgeBorder),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(
+                color: DrumcabularyTheme.edgeOrange,
+                width: 1.4,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ExploreFilters extends StatelessWidget {
+  final List<_ExploreLessonItem> items;
+  final Map<_ExploreFilterGroupKey, Set<String>> selectedFilters;
+  final bool showMoreFilters;
+  final bool hasActiveSearch;
+  final void Function(_ExploreFilterGroupKey key, String value) onFilterToggled;
+  final VoidCallback onMoreFiltersToggled;
+  final VoidCallback onClearAll;
+
+  const _ExploreFilters({
+    required this.items,
+    required this.selectedFilters,
+    required this.showMoreFilters,
+    required this.hasActiveSearch,
+    required this.onFilterToggled,
+    required this.onMoreFiltersToggled,
+    required this.onClearAll,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final List<_ExploreFilterGroup> primaryGroups = _primaryExploreGroups(
+      items,
+    );
+    final List<_ExploreFilterGroup> moreGroups = _moreExploreGroups(items);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            Text(
+              'Filters',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: DrumcabularyTheme.edgeTextPrimary,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const Spacer(),
+            if (hasActiveSearch)
+              TextButton.icon(
+                onPressed: onClearAll,
+                icon: const Icon(Icons.refresh_rounded, size: 18),
+                label: const Text('Clear all'),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        for (final _ExploreFilterGroup group in primaryGroups)
+          _ExploreFilterGroupView(
+            group: group,
+            selectedValues: selectedFilters[group.key] ?? const <String>{},
+            onToggled: (String value) => onFilterToggled(group.key, value),
+          ),
+        const SizedBox(height: 4),
+        _MoreFiltersToggle(
+          expanded: showMoreFilters,
+          onPressed: onMoreFiltersToggled,
+        ),
+        if (showMoreFilters) ...<Widget>[
+          const SizedBox(height: 8),
+          for (final _ExploreFilterGroup group in moreGroups)
+            _ExploreFilterGroupView(
+              group: group,
+              selectedValues: selectedFilters[group.key] ?? const <String>{},
+              onToggled: (String value) => onFilterToggled(group.key, value),
+            ),
         ],
       ],
     );
   }
+}
 
-  Future<void> _openLevel(BuildContext context, ContentLevel level) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (BuildContext context) {
-          return _SkillListScreen(
-            data: data,
-            level: level,
-            onProgressChanged: onProgressChanged,
+class _ExploreFilterGroupView extends StatelessWidget {
+  final _ExploreFilterGroup group;
+  final Set<String> selectedValues;
+  final ValueChanged<String> onToggled;
+
+  const _ExploreFilterGroupView({
+    required this.group,
+    required this.selectedValues,
+    required this.onToggled,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (group.values.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints constraints) {
+          final Widget label = Padding(
+            padding: const EdgeInsets.only(top: 7),
+            child: Text(
+              group.label,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: DrumcabularyTheme.edgeTextPrimary,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          );
+          final Widget chips = Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: <Widget>[
+              for (final String value in group.values)
+                DrumSelectablePill(
+                  selected: selectedValues.contains(value),
+                  onPressed: () => onToggled(value),
+                  label: Text(value),
+                ),
+            ],
+          );
+
+          if (constraints.maxWidth < 620) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[label, const SizedBox(height: 8), chips],
+            );
+          }
+
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              SizedBox(width: 140, child: label),
+              Expanded(child: chips),
+            ],
           );
         },
       ),
     );
-    onProgressChanged();
   }
 }
 
-class _LevelRow extends StatelessWidget {
-  final ContentLevel level;
-  final LevelProgressSummary summary;
+class _MoreFiltersToggle extends StatelessWidget {
+  final bool expanded;
+  final VoidCallback onPressed;
+
+  const _MoreFiltersToggle({required this.expanded, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        const Expanded(child: Divider()),
+        TextButton(
+          onPressed: onPressed,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              const Text('More Filters'),
+              const SizedBox(width: 4),
+              Icon(
+                expanded
+                    ? Icons.keyboard_arrow_up_rounded
+                    : Icons.keyboard_arrow_down_rounded,
+                size: 20,
+              ),
+            ],
+          ),
+        ),
+        const Expanded(child: Divider()),
+      ],
+    );
+  }
+}
+
+class _ExploreResultsHeader extends StatelessWidget {
+  final int count;
+  final _ExploreSort sort;
+  final ValueChanged<_ExploreSort?> onSortChanged;
+
+  const _ExploreResultsHeader({
+    required this.count,
+    required this.sort,
+    required this.onSortChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final String noun = count == 1 ? 'Lesson' : 'Lessons';
+    return Wrap(
+      spacing: 14,
+      runSpacing: 12,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      alignment: WrapAlignment.spaceBetween,
+      children: <Widget>[
+        Text(
+          '$count $noun Found',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            color: DrumcabularyTheme.edgeTextPrimary,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Text(
+              'Sort By',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: DrumcabularyTheme.edgeTextSecondary,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(width: 8),
+            _ExploreSortDropdown(sort: sort, onChanged: onSortChanged),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _ExploreSortDropdown extends StatelessWidget {
+  final _ExploreSort sort;
+  final ValueChanged<_ExploreSort?> onChanged;
+
+  const _ExploreSortDropdown({required this.sort, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: DrumcabularyTheme.edgeSurface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: DrumcabularyTheme.edgeBorder),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<_ExploreSort>(
+            value: sort,
+            dropdownColor: DrumcabularyTheme.edgeSurfaceSecondary,
+            iconEnabledColor: DrumcabularyTheme.edgeTextSecondary,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: DrumcabularyTheme.edgeTextPrimary,
+              fontWeight: FontWeight.w800,
+            ),
+            items: <DropdownMenuItem<_ExploreSort>>[
+              for (final _ExploreSort option in _ExploreSort.values)
+                DropdownMenuItem<_ExploreSort>(
+                  value: option,
+                  child: Text(option.label),
+                ),
+            ],
+            onChanged: onChanged,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ExploreLessonCard extends StatelessWidget {
+  final _ExploreLessonItem item;
   final VoidCallback onOpen;
 
-  const _LevelRow({
-    required this.level,
-    required this.summary,
-    required this.onOpen,
-  });
+  const _ExploreLessonCard({required this.item, required this.onOpen});
 
   @override
   Widget build(BuildContext context) {
     return _NavPanel(
       onTap: onOpen,
-      child: Row(
-        children: <Widget>[
-          Expanded(
-            child: Column(
+      child: LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints constraints) {
+          final bool compact = constraints.maxWidth < 680;
+          final Widget thumbnail = _ExploreLessonThumbnail(item: item);
+          final Widget content = _ExploreLessonCardContent(item: item);
+          final Widget meta = _ExploreLessonCardMeta(item: item);
+
+          if (compact) {
+            return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Flexible(
-                      child: Text(
-                        level.title,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: DrumcabularyTheme.edgeTextPrimary,
-                          fontWeight: FontWeight.w900,
-                          height: 1.1,
-                        ),
-                      ),
-                    ),
-                    if (summary.showsCompletionIndicator) ...<Widget>[
-                      const SizedBox(width: 8),
-                      const Icon(
-                        Icons.check_circle,
-                        color: DrumcabularyTheme.edgeOrange,
-                        size: 20,
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: <Widget>[
-                    _Pill(label: _durationLabel(summary.practicedSeconds)),
-                    _Pill(
-                      label:
-                          '${summary.completedLessons}/${summary.totalLessons} complete',
+                    thumbnail,
+                    const SizedBox(width: 14),
+                    Expanded(child: content),
+                    const SizedBox(width: 8),
+                    const Icon(
+                      Icons.bookmark_border_rounded,
+                      color: DrumcabularyTheme.edgeTextSecondary,
                     ),
                   ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          const Icon(
-            Icons.chevron_right_rounded,
-            color: DrumcabularyTheme.edgeOrange,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SkillListScreen extends StatelessWidget {
-  final _TeachingFlowData data;
-  final ContentLevel level;
-  final VoidCallback onProgressChanged;
-
-  const _SkillListScreen({
-    required this.data,
-    required this.level,
-    required this.onProgressChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final List<String> skills = data.library.skillsForLevel(level.id);
-    return Scaffold(
-      appBar: AppBar(title: Text(level.title)),
-      body: DrumScreen(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
-          children: <Widget>[
-            Text(
-              'Choose Skill',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                color: DrumcabularyTheme.edgeTextPrimary,
-                fontWeight: FontWeight.w900,
-                height: 1.05,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Pick the area you want to work on.',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: DrumcabularyTheme.edgeTextSecondary,
-                height: 1.35,
-              ),
-            ),
-            const SizedBox(height: 18),
-            if (skills.isEmpty)
-              const DrumPanel(
-                padding: EdgeInsets.all(18),
-                child: Text('No lessons have been added for this level yet.'),
-              )
-            else
-              for (final String skill in skills) ...[
-                _SkillRow(
-                  skill: skill,
-                  summary: data.progressService.summaryForSkill(
-                    id: '${level.id}:$skill',
-                    lessons: data.library.lessonsForSkill(
-                      levelId: level.id,
-                      skill: skill,
-                    ),
-                  ),
-                  onOpen: () => _openSkill(context, skill),
                 ),
                 const SizedBox(height: 12),
+                meta,
               ],
-          ],
+            );
+          }
+
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: <Widget>[
+              thumbnail,
+              const SizedBox(width: 16),
+              Expanded(child: content),
+              const SizedBox(width: 16),
+              SizedBox(width: 168, child: meta),
+              const SizedBox(width: 10),
+              const Icon(
+                Icons.bookmark_border_rounded,
+                color: DrumcabularyTheme.edgeTextSecondary,
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _ExploreLessonThumbnail extends StatelessWidget {
+  final _ExploreLessonItem item;
+
+  const _ExploreLessonThumbnail({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 96,
+      height: 72,
+      decoration: BoxDecoration(
+        color: DrumcabularyTheme.edgeBackground,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: DrumcabularyTheme.edgeOrange.withValues(alpha: 0.32),
+        ),
+      ),
+      child: Center(
+        child: Icon(
+          _exploreIconFor(item),
+          color: DrumcabularyTheme.edgeOrange,
+          size: 34,
         ),
       ),
     );
   }
+}
 
-  Future<void> _openSkill(BuildContext context, String skill) async {
-    final List<Lesson> lessons = data.library.lessonsForSkill(
-      levelId: level.id,
-      skill: skill,
-    );
-    if (lessons.length == 1) {
-      await _openLesson(context, lessons.single);
-      return;
-    }
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (BuildContext context) {
-          return _SkillLessonsScreen(
-            data: data,
-            level: level,
-            skill: skill,
-            lessons: lessons,
-            onProgressChanged: onProgressChanged,
-          );
-        },
-      ),
-    );
-    onProgressChanged();
-  }
+class _ExploreLessonCardContent extends StatelessWidget {
+  final _ExploreLessonItem item;
 
-  Future<void> _openLesson(BuildContext context, Lesson lesson) async {
-    await data.progressService.openLesson(lesson.id);
-    if (!context.mounted) return;
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (BuildContext context) {
-          return LessonDetailScreen(
-            lesson: lesson,
-            progressService: data.progressService,
-          );
-        },
-      ),
+  const _ExploreLessonCardContent({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          item.lesson.title,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            color: DrumcabularyTheme.edgeTextPrimary,
+            fontWeight: FontWeight.w900,
+            height: 1.08,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          item.lesson.overview,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: DrumcabularyTheme.edgeTextSecondary,
+            height: 1.32,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 7,
+          runSpacing: 7,
+          children: <Widget>[
+            for (final String chip in item.visibleChips.take(5))
+              _ExploreMetadataPill(label: chip),
+          ],
+        ),
+      ],
     );
-    onProgressChanged();
   }
 }
 
-class _SkillRow extends StatelessWidget {
-  final String skill;
-  final LevelProgressSummary summary;
-  final VoidCallback onOpen;
+class _ExploreLessonCardMeta extends StatelessWidget {
+  final _ExploreLessonItem item;
 
-  const _SkillRow({
-    required this.skill,
-    required this.summary,
-    required this.onOpen,
+  const _ExploreLessonCardMeta({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 12,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: <Widget>[
+        _ExploreDifficultyBadge(difficulty: item.difficulty),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            const Icon(
+              Icons.schedule_rounded,
+              color: DrumcabularyTheme.edgeTextSecondary,
+              size: 18,
+            ),
+            const SizedBox(width: 5),
+            Text(
+              '${item.lesson.estimatedMinutes} min',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: DrumcabularyTheme.edgeTextSecondary,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+        if (item.progress.status != LessonProgressStatus.notStarted)
+          _ExploreMetadataPill(label: _statusLabel(item.progress.status)),
+      ],
+    );
+  }
+}
+
+class _ExploreDifficultyBadge extends StatelessWidget {
+  final String difficulty;
+
+  const _ExploreDifficultyBadge({required this.difficulty});
+
+  @override
+  Widget build(BuildContext context) {
+    final int activeBars = switch (difficulty.toLowerCase()) {
+      'advanced' => 3,
+      'intermediate' => 2,
+      _ => 1,
+    };
+    final Color color = switch (difficulty.toLowerCase()) {
+      'advanced' => const Color(0xFFFF4F6D),
+      'intermediate' => DrumcabularyTheme.edgeOrange,
+      _ => const Color(0xFF52D273),
+    };
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List<Widget>.generate(3, (int index) {
+            return Padding(
+              padding: const EdgeInsets.only(right: 3),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: index < activeBars
+                      ? color
+                      : DrumcabularyTheme.edgeBorder,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: const SizedBox(width: 7, height: 14),
+              ),
+            );
+          }),
+        ),
+        const SizedBox(width: 7),
+        Text(
+          difficulty,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: color,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ExploreMetadataPill extends StatelessWidget {
+  final String label;
+
+  const _ExploreMetadataPill({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: DrumcabularyTheme.edgeSurfaceSecondary,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: DrumcabularyTheme.edgeBorder),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+        child: Text(
+          label,
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+            color: DrumcabularyTheme.edgeTextPrimary,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ExploreEmptyState extends StatelessWidget {
+  final bool hasActiveSearch;
+  final VoidCallback onClear;
+
+  const _ExploreEmptyState({
+    required this.hasActiveSearch,
+    required this.onClear,
   });
 
   @override
   Widget build(BuildContext context) {
-    return _NavPanel(
-      onTap: onOpen,
-      child: Row(
+    return DrumPanel(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  _labelFor(skill),
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: DrumcabularyTheme.edgeTextPrimary,
-                    fontWeight: FontWeight.w900,
-                    height: 1.1,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: <Widget>[
-                    _Pill(label: _durationLabel(summary.practicedSeconds)),
-                    _Pill(
-                      label:
-                          '${summary.completedLessons}/${summary.totalLessons} complete',
-                    ),
-                  ],
-                ),
-              ],
+          Text(
+            'No lessons found',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: DrumcabularyTheme.edgeTextPrimary,
+              fontWeight: FontWeight.w900,
             ),
           ),
-          const SizedBox(width: 12),
-          const Icon(
-            Icons.chevron_right_rounded,
-            color: DrumcabularyTheme.edgeOrange,
+          const SizedBox(height: 8),
+          Text(
+            hasActiveSearch
+                ? 'Try removing a filter or searching for a different term.'
+                : 'No lessons are available yet.',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: DrumcabularyTheme.edgeTextSecondary,
+            ),
           ),
+          if (hasActiveSearch) ...<Widget>[
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: onClear,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Clear filters'),
+            ),
+          ],
         ],
       ),
     );
   }
 }
 
-class _SkillLessonsScreen extends StatelessWidget {
-  final _TeachingFlowData data;
-  final ContentLevel level;
-  final String skill;
-  final List<Lesson> lessons;
-  final VoidCallback onProgressChanged;
+class _ExploreFilterGroup {
+  final _ExploreFilterGroupKey key;
+  final String label;
+  final List<String> values;
 
-  const _SkillLessonsScreen({
-    required this.data,
-    required this.level,
-    required this.skill,
-    required this.lessons,
-    required this.onProgressChanged,
+  const _ExploreFilterGroup({
+    required this.key,
+    required this.label,
+    required this.values,
   });
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(_labelFor(skill))),
-      body: DrumScreen(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
-          children: <Widget>[
-            Text(
-              'Choose Lesson',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                color: DrumcabularyTheme.edgeTextPrimary,
-                fontWeight: FontWeight.w900,
-                height: 1.05,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              level.title,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: DrumcabularyTheme.edgeTextSecondary,
-                height: 1.35,
-              ),
-            ),
-            const SizedBox(height: 18),
-            for (final Lesson lesson in lessons) ...[
-              _LessonRow(
-                lesson: lesson,
-                progress: data.progressService.progressForLesson(lesson.id),
-                onOpen: () => _openLesson(context, lesson),
-              ),
-              const SizedBox(height: 12),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _openLesson(BuildContext context, Lesson lesson) async {
-    await data.progressService.openLesson(lesson.id);
-    if (!context.mounted) return;
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (BuildContext context) {
-          return LessonDetailScreen(
-            lesson: lesson,
-            progressService: data.progressService,
-          );
-        },
-      ),
-    );
-    onProgressChanged();
-  }
 }
 
-class _LessonRow extends StatelessWidget {
+class _ExploreLessonItem {
   final Lesson lesson;
   final LessonProgress progress;
-  final VoidCallback onOpen;
+  final int contentOrder;
+  final String difficulty;
+  final Set<String> skills;
+  final Set<String> genres;
+  final Set<String> timeSignatures;
+  final Set<String> rudiments;
+  final Set<String> tempoRanges;
+  final Set<String> equipment;
+  final Set<String> feel;
+  final Set<String> subdivisions;
+  final Set<String> handFocus;
+  final Set<String> footFocus;
+  final String searchText;
 
-  const _LessonRow({
+  const _ExploreLessonItem({
     required this.lesson,
     required this.progress,
-    required this.onOpen,
+    required this.contentOrder,
+    required this.difficulty,
+    required this.skills,
+    required this.genres,
+    required this.timeSignatures,
+    required this.rudiments,
+    required this.tempoRanges,
+    required this.equipment,
+    required this.feel,
+    required this.subdivisions,
+    required this.handFocus,
+    required this.footFocus,
+    required this.searchText,
   });
 
-  @override
-  Widget build(BuildContext context) {
-    return _NavPanel(
-      onTap: onOpen,
-      child: Row(
-        children: <Widget>[
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  lesson.title,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: DrumcabularyTheme.edgeTextPrimary,
-                    fontWeight: FontWeight.w900,
-                    height: 1.1,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  lesson.overview,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: DrumcabularyTheme.edgeTextSecondary,
-                    height: 1.3,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: <Widget>[
-                    _Pill(label: 'Lesson ${lesson.order}'),
-                    _Pill(label: '${lesson.estimatedMinutes} min'),
-                    _Pill(label: _statusLabel(progress.status)),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          const Icon(
-            Icons.chevron_right_rounded,
-            color: DrumcabularyTheme.edgeOrange,
-          ),
-        ],
+  factory _ExploreLessonItem.fromLesson({
+    required Lesson lesson,
+    required LessonProgress progress,
+    required int contentOrder,
+  }) {
+    final String text = _lessonText(lesson).toLowerCase();
+    final Set<String> voices = _notationVoiceTokens(lesson).toSet();
+    final Set<String> strokes = _notationStrokeSequences(lesson).toSet();
+    final Set<String> skills = _inferSkills(lesson, text);
+    final Set<String> genres = _inferGenres(text);
+    final Set<String> timeSignatures = <String>{
+      for (final LessonExercise exercise in lesson.exercises)
+        for (final ExerciseNotationSection section
+            in exercise.notation.sections)
+          section.timeSignature,
+    };
+    final Set<String> rudiments = _inferRudiments(text);
+    final Set<String> tempoRanges = _inferTempoRanges(lesson);
+    final Set<String> equipment = _inferEquipment(voices);
+    final Set<String> feel = _inferFeel(lesson, text);
+    final Set<String> subdivisions = _inferSubdivisions(lesson);
+    final Set<String> handFocus = _inferHandFocus(strokes, text);
+    final Set<String> footFocus = _inferFootFocus(voices, text);
+    final Set<String> searchTerms = <String>{
+      ...skills,
+      _labelFor(lesson.level),
+      ...genres,
+      ...timeSignatures,
+      ...rudiments,
+      ...tempoRanges,
+      ...equipment,
+      ...feel,
+      ...subdivisions,
+      ...handFocus,
+      ...footFocus,
+    };
+
+    return _ExploreLessonItem(
+      lesson: lesson,
+      progress: progress,
+      contentOrder: contentOrder,
+      difficulty: _labelFor(lesson.level),
+      skills: skills,
+      genres: genres,
+      timeSignatures: timeSignatures.isEmpty
+          ? const <String>{'4/4'}
+          : timeSignatures,
+      rudiments: rudiments,
+      tempoRanges: tempoRanges,
+      equipment: equipment,
+      feel: feel,
+      subdivisions: subdivisions,
+      handFocus: handFocus,
+      footFocus: footFocus,
+      searchText: '${_lessonText(lesson)} ${searchTerms.join(' ')}'
+          .toLowerCase(),
+    );
+  }
+
+  List<String> get visibleChips {
+    final List<String> chips = <String>[];
+    void addAll(Iterable<String> values) {
+      for (final String value in values) {
+        if (!chips.contains(value)) chips.add(value);
+      }
+    }
+
+    addAll(skills);
+    addAll(genres);
+    addAll(timeSignatures);
+    return chips;
+  }
+
+  Set<String> valuesFor(_ExploreFilterGroupKey key) {
+    return switch (key) {
+      _ExploreFilterGroupKey.skills => skills,
+      _ExploreFilterGroupKey.difficulty => <String>{difficulty},
+      _ExploreFilterGroupKey.genre => genres,
+      _ExploreFilterGroupKey.timeSignature => timeSignatures,
+      _ExploreFilterGroupKey.rudiments => rudiments,
+      _ExploreFilterGroupKey.tempoRange => tempoRanges,
+      _ExploreFilterGroupKey.equipment => equipment,
+      _ExploreFilterGroupKey.feel => feel,
+      _ExploreFilterGroupKey.subdivision => subdivisions,
+      _ExploreFilterGroupKey.handFocus => handFocus,
+      _ExploreFilterGroupKey.footFocus => footFocus,
+    };
+  }
+
+  bool matches({
+    required String query,
+    required Map<_ExploreFilterGroupKey, Set<String>> selectedFilters,
+  }) {
+    final List<String> queryTerms = query
+        .trim()
+        .toLowerCase()
+        .split(RegExp(r'\s+'))
+        .where((String term) => term.isNotEmpty)
+        .toList(growable: false);
+    if (!queryTerms.every(searchText.contains)) return false;
+
+    for (final MapEntry<_ExploreFilterGroupKey, Set<String>> entry
+        in selectedFilters.entries) {
+      if (entry.value.isEmpty) continue;
+      final Set<String> itemValues = valuesFor(entry.key);
+      if (!entry.value.any(itemValues.contains)) return false;
+    }
+    return true;
+  }
+
+  int relevanceScore({
+    required String query,
+    required Map<_ExploreFilterGroupKey, Set<String>> selectedFilters,
+  }) {
+    int score = 0;
+    final String normalizedQuery = query.trim().toLowerCase();
+    if (normalizedQuery.isNotEmpty) {
+      if (lesson.title.toLowerCase().contains(normalizedQuery)) score += 80;
+      if (lesson.overview.toLowerCase().contains(normalizedQuery)) score += 32;
+      for (final String term
+          in normalizedQuery
+              .split(RegExp(r'\s+'))
+              .where((String term) => term.isNotEmpty)) {
+        if (lesson.title.toLowerCase().contains(term)) score += 18;
+        if (searchText.contains(term)) score += 4;
+      }
+    }
+
+    for (final MapEntry<_ExploreFilterGroupKey, Set<String>> entry
+        in selectedFilters.entries) {
+      final Set<String> itemValues = valuesFor(entry.key);
+      for (final String value in entry.value) {
+        if (itemValues.contains(value)) score += 10;
+      }
+    }
+    if (progress.status == LessonProgressStatus.inProgress) score += 2;
+    return score;
+  }
+}
+
+List<_ExploreLessonItem> _exploreLessonItems(_TeachingFlowData data) {
+  final List<Lesson> lessons = _orderedLessons(data.library);
+  final List<_ExploreLessonItem> items = <_ExploreLessonItem>[];
+  for (int index = 0; index < lessons.length; index += 1) {
+    final Lesson lesson = lessons[index];
+    items.add(
+      _ExploreLessonItem.fromLesson(
+        lesson: lesson,
+        progress: data.progressService.progressForLesson(lesson.id),
+        contentOrder: index,
       ),
     );
   }
+  return items;
+}
+
+List<_ExploreFilterGroup> _primaryExploreGroups(
+  List<_ExploreLessonItem> items,
+) {
+  return <_ExploreFilterGroup>[
+    _ExploreFilterGroup(
+      key: _ExploreFilterGroupKey.skills,
+      label: 'Skills',
+      values: _filterValues(
+        preferred: const <String>[
+          'Grooves',
+          'Dynamics',
+          'Independence',
+          'Timing',
+          'Reading',
+          'Linear',
+          'Coordination',
+          'Chops',
+          'Fills',
+        ],
+        actual: _actualFilterValues(items, _ExploreFilterGroupKey.skills),
+      ),
+    ),
+    _ExploreFilterGroup(
+      key: _ExploreFilterGroupKey.difficulty,
+      label: 'Difficulty',
+      values: _filterValues(
+        preferred: const <String>['Beginner', 'Intermediate', 'Advanced'],
+        actual: _actualFilterValues(items, _ExploreFilterGroupKey.difficulty),
+      ),
+    ),
+    _ExploreFilterGroup(
+      key: _ExploreFilterGroupKey.genre,
+      label: 'Genre',
+      values: _filterValues(
+        preferred: const <String>[
+          'Rock',
+          'Blues',
+          'Jazz',
+          'Funk',
+          'Latin',
+          'Country',
+          'Pop',
+          'Metal',
+          'Reggae',
+          'Other',
+        ],
+        actual: _actualFilterValues(items, _ExploreFilterGroupKey.genre),
+      ),
+    ),
+    _ExploreFilterGroup(
+      key: _ExploreFilterGroupKey.timeSignature,
+      label: 'Time Signature',
+      values: _filterValues(
+        preferred: const <String>['4/4', '3/4', '6/8', '5/4', '7/8', 'Other'],
+        actual: _actualFilterValues(
+          items,
+          _ExploreFilterGroupKey.timeSignature,
+        ),
+      ),
+    ),
+  ];
+}
+
+List<_ExploreFilterGroup> _moreExploreGroups(List<_ExploreLessonItem> items) {
+  return <_ExploreFilterGroup>[
+    _ExploreFilterGroup(
+      key: _ExploreFilterGroupKey.rudiments,
+      label: 'Rudiments',
+      values: _filterValues(
+        preferred: const <String>[
+          'Single Stroke Roll',
+          'Double Stroke Roll',
+          'Six Stroke Roll',
+          'Paradiddle',
+        ],
+        actual: _actualFilterValues(items, _ExploreFilterGroupKey.rudiments),
+      ),
+    ),
+    _ExploreFilterGroup(
+      key: _ExploreFilterGroupKey.tempoRange,
+      label: 'Tempo Range',
+      values: _filterValues(
+        preferred: const <String>['Slow', 'Moderate', 'Fast'],
+        actual: _actualFilterValues(items, _ExploreFilterGroupKey.tempoRange),
+      ),
+    ),
+    _ExploreFilterGroup(
+      key: _ExploreFilterGroupKey.equipment,
+      label: 'Equipment',
+      values: _filterValues(
+        preferred: const <String>[
+          'Snare',
+          'Kick',
+          'Hi-Hat',
+          'Open Hi-Hat',
+          'Toms',
+          'Cymbals',
+        ],
+        actual: _actualFilterValues(items, _ExploreFilterGroupKey.equipment),
+      ),
+    ),
+    _ExploreFilterGroup(
+      key: _ExploreFilterGroupKey.feel,
+      label: 'Feel',
+      values: _filterValues(
+        preferred: const <String>['Straight', 'Triplet', 'Swing', 'Shuffle'],
+        actual: _actualFilterValues(items, _ExploreFilterGroupKey.feel),
+      ),
+    ),
+    _ExploreFilterGroup(
+      key: _ExploreFilterGroupKey.subdivision,
+      label: 'Subdivision',
+      values: _filterValues(
+        preferred: const <String>[
+          'Eighth',
+          'Triplet',
+          'Sixteenth',
+          'Sixteenth Triplet',
+        ],
+        actual: _actualFilterValues(items, _ExploreFilterGroupKey.subdivision),
+      ),
+    ),
+    _ExploreFilterGroup(
+      key: _ExploreFilterGroupKey.handFocus,
+      label: 'Hand Focus',
+      values: _filterValues(
+        preferred: const <String>[
+          'Left Hand',
+          'Right Hand',
+          'Ghost Notes',
+          'Accents',
+        ],
+        actual: _actualFilterValues(items, _ExploreFilterGroupKey.handFocus),
+      ),
+    ),
+    _ExploreFilterGroup(
+      key: _ExploreFilterGroupKey.footFocus,
+      label: 'Foot Focus',
+      values: _filterValues(
+        preferred: const <String>['Kick', 'Hi-Hat Pedal'],
+        actual: _actualFilterValues(items, _ExploreFilterGroupKey.footFocus),
+      ),
+    ),
+  ];
+}
+
+Iterable<String> _actualFilterValues(
+  List<_ExploreLessonItem> items,
+  _ExploreFilterGroupKey key,
+) {
+  return <String>{
+    for (final _ExploreLessonItem item in items) ...item.valuesFor(key),
+  };
+}
+
+List<String> _filterValues({
+  required List<String> preferred,
+  required Iterable<String> actual,
+}) {
+  final List<String> values = <String>[];
+  void add(String value) {
+    final String normalized = value.trim();
+    if (normalized.isNotEmpty && !values.contains(normalized)) {
+      values.add(normalized);
+    }
+  }
+
+  for (final String value in preferred) {
+    add(value);
+  }
+  final List<String> extras = actual.toSet().toList(growable: false)..sort();
+  for (final String value in extras) {
+    add(value);
+  }
+  return values;
+}
+
+bool _hasActiveExploreSearch(
+  String query,
+  Map<_ExploreFilterGroupKey, Set<String>> selectedFilters,
+) {
+  return query.trim().isNotEmpty ||
+      selectedFilters.values.any((Set<String> values) => values.isNotEmpty);
+}
+
+int _compareExploreItems(
+  _ExploreLessonItem a,
+  _ExploreLessonItem b,
+  _ExploreSort sort,
+  String query,
+  Map<_ExploreFilterGroupKey, Set<String>> selectedFilters,
+) {
+  final int primary = switch (sort) {
+    _ExploreSort.relevance =>
+      b
+          .relevanceScore(query: query, selectedFilters: selectedFilters)
+          .compareTo(
+            a.relevanceScore(query: query, selectedFilters: selectedFilters),
+          ),
+    _ExploreSort.alphabetical => a.lesson.title.compareTo(b.lesson.title),
+    _ExploreSort.newest => b.contentOrder.compareTo(a.contentOrder),
+    _ExploreSort.shortest => a.lesson.estimatedMinutes.compareTo(
+      b.lesson.estimatedMinutes,
+    ),
+    _ExploreSort.longest => b.lesson.estimatedMinutes.compareTo(
+      a.lesson.estimatedMinutes,
+    ),
+  };
+  if (primary != 0) return primary;
+  return a.contentOrder.compareTo(b.contentOrder);
+}
+
+String _lessonText(Lesson lesson) {
+  final List<String> parts = <String>[
+    lesson.title,
+    lesson.level,
+    lesson.skill,
+    lesson.overview,
+    lesson.objective,
+  ];
+  for (final LessonExercise exercise in lesson.exercises) {
+    parts.addAll(<String>[
+      exercise.title,
+      exercise.why,
+      exercise.what,
+      exercise.how,
+      if (exercise.success != null) exercise.success!,
+      if (exercise.tempo != null)
+        '${exercise.tempo!.start} ${exercise.tempo!.target}',
+    ]);
+    for (final ExerciseNotationSection section in exercise.notation.sections) {
+      parts.addAll(<String>[
+        if (section.title != null) section.title!,
+        section.pattern,
+        section.timeSignature,
+        if (section.subdivision != null) section.subdivision!,
+        if (section.sticking != null) section.sticking!,
+      ]);
+    }
+  }
+  return parts.join(' ');
+}
+
+Iterable<String> _notationVoiceTokens(Lesson lesson) sync* {
+  for (final LessonExercise exercise in lesson.exercises) {
+    for (final ExerciseNotationSection section in exercise.notation.sections) {
+      for (final RegExpMatch event in RegExp(
+        r'\[([^\]]+)\]',
+      ).allMatches(section.pattern)) {
+        final String body = event.group(1)?.trim() ?? '';
+        if (body.isEmpty) continue;
+        for (final String spec in body.split(RegExp(r'\s+'))) {
+          final String voice = spec.split(':').first.trim();
+          if (voice.isNotEmpty) yield voice;
+        }
+      }
+    }
+  }
+}
+
+Iterable<String> _notationStrokeSequences(Lesson lesson) sync* {
+  for (final LessonExercise exercise in lesson.exercises) {
+    for (final ExerciseNotationSection section in exercise.notation.sections) {
+      for (final RegExpMatch event in RegExp(
+        r'\[([^\]]+)\]',
+      ).allMatches(section.pattern)) {
+        final String body = event.group(1)?.trim() ?? '';
+        if (body.isEmpty) continue;
+        for (final String spec in body.split(RegExp(r'\s+'))) {
+          final int separator = spec.indexOf(':');
+          if (separator >= 0 && separator < spec.length - 1) {
+            yield spec.substring(separator + 1);
+          }
+        }
+      }
+    }
+  }
+}
+
+Set<String> _inferSkills(Lesson lesson, String text) {
+  final Set<String> skills = <String>{_labelFor(lesson.skill)};
+  if (_containsAny(text, const <String>['groove', 'beat', 'backbeat'])) {
+    skills.add('Grooves');
+  }
+  if (_containsAny(text, const <String>['fill', 'resolution'])) {
+    skills.add('Fills');
+  }
+  if (_containsAny(text, const <String>['rudiment', 'roll', 'paradiddle'])) {
+    skills.add('Rudiments');
+  }
+  if (_containsAny(text, const <String>['accent', 'ghost', 'dynamic'])) {
+    skills.add('Dynamics');
+  }
+  if (text.contains('independence')) {
+    skills.add('Independence');
+  }
+  if (_containsAny(text, const <String>['coordination', 'limb'])) {
+    skills.add('Coordination');
+  }
+  if (_containsAny(text, const <String>['timing', 'time', 'pulse', 'tempo'])) {
+    skills.add('Timing');
+  }
+  if (_containsAny(text, const <String>['reading', 'notation', 'vocabulary'])) {
+    skills.add('Reading');
+  }
+  if (text.contains('linear')) {
+    skills.add('Linear');
+  }
+  if (_containsAny(text, const <String>['chop', 'triplet vocabulary'])) {
+    skills.add('Chops');
+  }
+  if (lesson.skill == 'vocabulary') {
+    skills.addAll(const <String>['Chops', 'Reading']);
+  }
+  return skills;
+}
+
+Set<String> _inferGenres(String text) {
+  final Set<String> genres = <String>{};
+  if (_containsAny(text, const <String>['rock', 'money beat', 'backbeat'])) {
+    genres.add('Rock');
+  }
+  if (text.contains('blues')) genres.add('Blues');
+  if (text.contains('jazz')) genres.add('Jazz');
+  if (text.contains('funk')) genres.add('Funk');
+  if (text.contains('latin')) genres.add('Latin');
+  if (text.contains('country')) genres.add('Country');
+  if (text.contains('pop')) genres.add('Pop');
+  if (text.contains('metal')) genres.add('Metal');
+  if (text.contains('reggae')) genres.add('Reggae');
+  if (genres.isEmpty) genres.add('Other');
+  return genres;
+}
+
+Set<String> _inferRudiments(String text) {
+  final Set<String> rudiments = <String>{};
+  if (text.contains('single stroke')) rudiments.add('Single Stroke Roll');
+  if (text.contains('double stroke')) rudiments.add('Double Stroke Roll');
+  if (text.contains('six stroke')) rudiments.add('Six Stroke Roll');
+  if (text.contains('paradiddle')) rudiments.add('Paradiddle');
+  return rudiments;
+}
+
+Set<String> _inferTempoRanges(Lesson lesson) {
+  final Set<String> ranges = <String>{};
+  for (final LessonExercise exercise in lesson.exercises) {
+    final TempoTarget? tempo = exercise.tempo;
+    if (tempo == null) continue;
+    if (tempo.target <= 70) {
+      ranges.add('Slow');
+    } else if (tempo.target <= 110) {
+      ranges.add('Moderate');
+    } else {
+      ranges.add('Fast');
+    }
+  }
+  return ranges;
+}
+
+Set<String> _inferEquipment(Set<String> voices) {
+  final Set<String> equipment = <String>{};
+  if (voices.contains('S')) equipment.add('Snare');
+  if (voices.contains('K')) equipment.add('Kick');
+  if (voices.contains('HH')) equipment.add('Hi-Hat');
+  if (voices.contains('OHH')) {
+    equipment.addAll(const <String>['Hi-Hat', 'Open Hi-Hat']);
+  }
+  if (voices.any(const <String>{'T1', 'T2', 'FT'}.contains)) {
+    equipment.add('Toms');
+  }
+  if (voices.any(const <String>{'CR', 'RD'}.contains)) {
+    equipment.add('Cymbals');
+  }
+  return equipment;
+}
+
+Set<String> _inferFeel(Lesson lesson, String text) {
+  final Set<String> feel = <String>{};
+  if (_containsAny(text, const <String>['swing', 'swung'])) {
+    feel.add('Swing');
+  }
+  if (text.contains('shuffle')) feel.add('Shuffle');
+  if (_inferSubdivisions(lesson).contains('Triplet') ||
+      _inferSubdivisions(lesson).contains('Sixteenth Triplet')) {
+    feel.add('Triplet');
+  }
+  if (feel.isEmpty) feel.add('Straight');
+  return feel;
+}
+
+Set<String> _inferSubdivisions(Lesson lesson) {
+  final Set<String> subdivisions = <String>{};
+  for (final LessonExercise exercise in lesson.exercises) {
+    for (final ExerciseNotationSection section in exercise.notation.sections) {
+      final String? subdivision = section.subdivision;
+      if (subdivision == null || subdivision.trim().isEmpty) continue;
+      subdivisions.add(_subdivisionLabel(subdivision));
+    }
+  }
+  return subdivisions;
+}
+
+Set<String> _inferHandFocus(Set<String> strokes, String text) {
+  final Set<String> focus = <String>{};
+  if (strokes.any((String stroke) => stroke.contains('L'))) {
+    focus.add('Left Hand');
+  }
+  if (strokes.any((String stroke) => stroke.contains('R'))) {
+    focus.add('Right Hand');
+  }
+  if (strokes.any((String stroke) => stroke.contains('(')) ||
+      text.contains('ghost')) {
+    focus.add('Ghost Notes');
+  }
+  if (strokes.any((String stroke) => stroke.contains('^')) ||
+      text.contains('accent')) {
+    focus.add('Accents');
+  }
+  return focus;
+}
+
+Set<String> _inferFootFocus(Set<String> voices, String text) {
+  final Set<String> focus = <String>{};
+  if (voices.contains('K')) focus.add('Kick');
+  if (text.contains('pedal')) focus.add('Hi-Hat Pedal');
+  return focus;
+}
+
+String _subdivisionLabel(String value) {
+  final String normalized = value.toLowerCase();
+  if (normalized.contains('16') && normalized.contains('triplet')) {
+    return 'Sixteenth Triplet';
+  }
+  if (normalized.contains('triplet')) return 'Triplet';
+  if (normalized == '16' || normalized.contains('sixteenth')) {
+    return 'Sixteenth';
+  }
+  if (normalized == '8' || normalized.contains('eighth')) {
+    return 'Eighth';
+  }
+  return _labelFor(value);
+}
+
+bool _containsAny(String text, List<String> terms) {
+  return terms.any(text.contains);
+}
+
+IconData _exploreIconFor(_ExploreLessonItem item) {
+  if (item.skills.contains('Rudiments')) return Icons.graphic_eq_rounded;
+  if (item.skills.contains('Fills')) return Icons.auto_awesome_motion_rounded;
+  if (item.skills.contains('Dynamics')) return Icons.tune_rounded;
+  if (item.skills.contains('Independence')) return Icons.account_tree_rounded;
+  if (item.skills.contains('Timing')) return Icons.timer_rounded;
+  if (item.skills.contains('Reading')) return Icons.menu_book_rounded;
+  if (item.skills.contains('Linear')) return Icons.linear_scale_rounded;
+  if (item.skills.contains('Chops')) return Icons.local_fire_department_rounded;
+  return Icons.music_note_rounded;
 }
 
 class _NavPanel extends StatelessWidget {
@@ -1544,33 +2625,6 @@ class _NavPanel extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(8),
           child: Padding(padding: const EdgeInsets.all(16), child: child),
-        ),
-      ),
-    );
-  }
-}
-
-class _Pill extends StatelessWidget {
-  final String label;
-
-  const _Pill({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: DrumcabularyTheme.edgeSurfaceSecondary,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: DrumcabularyTheme.edgeBorder),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        child: Text(
-          label,
-          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-            color: DrumcabularyTheme.edgeTextPrimary,
-            fontWeight: FontWeight.w900,
-          ),
         ),
       ),
     );
@@ -1614,14 +2668,6 @@ String _statusLabel(LessonProgressStatus status) {
     LessonProgressStatus.completed => 'Complete',
     LessonProgressStatus.notStarted => 'Not Started',
   };
-}
-
-String _durationLabel(int seconds) {
-  if (seconds <= 0) return '0m practiced';
-  final int hours = seconds ~/ 3600;
-  final int minutes = (seconds % 3600) ~/ 60;
-  if (hours > 0) return '${hours}h ${minutes}m practiced';
-  return '${minutes}m practiced';
 }
 
 String _durationValue(int seconds) {

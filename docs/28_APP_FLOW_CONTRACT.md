@@ -54,9 +54,9 @@ AppShell
       -> Activity
       -> Up Next
   -> Explore
-      -> Choose Level
-      -> Choose Skill
-      -> Choose Lesson
+      -> Search lessons and exercises
+      -> Filter by metadata
+      -> Sort results
       -> Lesson Detail
   -> Practice Insights
   -> Author
@@ -121,22 +121,28 @@ Not allowed as primary first-screen content:
 - empty charts
 - zero-value analytics
 
-### Flow B: Choose Lesson
+### Flow B: Find Lesson
 
 ```text
-Explore -> Choose Level -> Choose Skill -> Choose Lesson or open single lesson directly
+Explore -> Search and filter -> Lesson Detail
 ```
 
-The lesson browsing path should stay linear and low-decision.
+Explore is a fast metadata-driven search surface, not a file browser, lesson
+hierarchy, folder tree, or recommendation dashboard.
 
 Rules:
 
-- Level answers "where am I in the curriculum?"
-- Skill answers "what kind of vocabulary do I want?"
-- Lesson answers "which specific lesson do I want now?"
-- A skill with one lesson may open that lesson directly.
-- A skill with multiple lessons should show an ordered lesson list.
-- Lesson categories belong in Explore, not on Home.
+- Search must match lesson titles, exercise titles, descriptions, keywords,
+  notation text, and metadata labels.
+- Primary filters are Skills, Difficulty, Genre, and Time Signature.
+- More Filters may expose scalable metadata groups such as Rudiments, Tempo
+  Range, Equipment, Feel, Subdivision, Hand Focus, and Foot Focus.
+- Multiple chips may be active at once. Filters intersect across groups.
+- Results are lightweight lesson cards with title, short description, metadata
+  chips, duration, difficulty, and a save/favorite affordance.
+- Sorting stays simple: Relevance, Alphabetical, Newest, Shortest, and Longest.
+- Explore must not add nested browse-by flows, tree controls, learning paths,
+  or recommendation systems.
 
 ### Flow C: Read, Hear, And Practice Lesson
 
