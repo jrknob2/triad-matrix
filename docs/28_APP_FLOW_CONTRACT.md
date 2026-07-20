@@ -60,6 +60,9 @@ AppShell
       -> Choose Lesson
       -> Lesson Detail
   -> Practice Insights
+  -> Author
+      -> Pattern Library
+      -> Pattern Editor
   -> Settings
       -> Hardware & MIDI
       -> temporary MIDI Capture panel

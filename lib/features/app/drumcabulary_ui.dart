@@ -211,7 +211,7 @@ class DrumSectionTitle extends StatelessWidget {
       text,
       style: Theme.of(context).textTheme.titleLarge?.copyWith(
         color: color,
-        fontWeight: FontWeight.w900,
+        fontWeight: FontWeight.w800,
         letterSpacing: 0,
       ),
     );
@@ -230,7 +230,7 @@ class DrumEyebrow extends StatelessWidget {
       text,
       style: Theme.of(context).textTheme.labelLarge?.copyWith(
         color: color ?? DrumcabularyTheme.edgeOrange,
-        fontWeight: FontWeight.w900,
+        fontWeight: FontWeight.w800,
         letterSpacing: 1.1,
       ),
     );

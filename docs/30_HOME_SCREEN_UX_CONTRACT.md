@@ -85,7 +85,7 @@ Primary navigation:
 - Home
 - Explore
 - Insights
-- Author *(creator mode only)*
+- Author
 - Settings
 
 Hardware is **not** primary navigation.
@@ -106,11 +106,8 @@ If disconnected:
 
 🟡 Roland TD-17 Not Connected
 
-A secondary action:
-
-**View Devices**
-
-opens the Devices & Connections screen.
+The MIDI and LED status badges are interactive. Selecting either badge opens the
+Devices & Connections screen.
 
 Device management never occurs directly from Home.
 

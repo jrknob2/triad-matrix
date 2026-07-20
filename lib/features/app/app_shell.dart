@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../../core/practice/practice_domain_v1.dart';
 import '../../state/app_controller.dart';
+import '../library/pattern_screen.dart';
+import '../matrix/matrix_screen.dart';
+import '../practice/practice_session_screen.dart';
 import '../progress/practice_insights_screen.dart';
 import '../settings/app_settings_screen.dart';
 import '../settings/hardware_midi_settings_screen.dart';
+import '../toolkit/toolkit_screen.dart';
 import '../today/today_screen.dart';
 import 'startup_splash_screen.dart';
 
@@ -58,12 +63,20 @@ class _AppShellState extends State<AppShell> {
       0 => TodayScreen(
         onOpenExplore: () => _selectDestination(1),
         onOpenInsights: () => _selectDestination(2),
-        onOpenSettings: () => _selectDestination(3),
+        onOpenSettings: () => _selectDestination(4),
         onOpenDevices: _openDevices,
       ),
       1 => const ExploreLessonsScreen(),
       2 => const PracticeInsightsScreen(),
-      3 => AppSettingsScreen(controller: controller),
+      3 => FocusScreen(
+        controller: controller,
+        onOpenItem: (String itemId) => _openPattern(controller, itemId),
+        onPracticeItemInMode: (String itemId, PracticeModeV1 mode) =>
+            _practiceItemInMode(controller, itemId, mode),
+        onCreateNewItem: () => _createNewPattern(controller),
+        onOpenMatrix: () => _openMatrix(controller),
+      ),
+      4 => AppSettingsScreen(controller: controller),
       _ => const SizedBox.shrink(),
     };
   }
@@ -72,6 +85,62 @@ class _AppShellState extends State<AppShell> {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (BuildContext context) => const HardwareMidiSettingsScreen(),
+      ),
+    );
+  }
+
+  void _openPattern(AppController controller, String itemId) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (BuildContext context) =>
+            PatternScreen(controller: controller, itemId: itemId),
+      ),
+    );
+  }
+
+  void _createNewPattern(AppController controller) {
+    final String itemId = controller.createBlankDraftPracticeItem();
+    _openPattern(controller, itemId);
+  }
+
+  void _practiceItemInMode(
+    AppController controller,
+    String itemId,
+    PracticeModeV1 mode,
+  ) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (BuildContext context) => PracticeSessionScreen(
+          controller: controller,
+          setup: controller.buildSessionForItem(itemId, practiceMode: mode),
+        ),
+      ),
+    );
+  }
+
+  void _openMatrix(AppController controller) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (BuildContext context) => MatrixScreen(
+          controller: controller,
+          request: null,
+          onOpenItem: (String itemId) => _openPattern(controller, itemId),
+          onPreviewSelection:
+              (List<String> itemIds, PracticeModeV1 practiceMode) {
+                if (itemIds.isEmpty) return;
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (BuildContext context) => PracticeSessionScreen(
+                      controller: controller,
+                      setup: controller.buildMatrixPreviewSession(
+                        itemIds,
+                        practiceMode: practiceMode,
+                      ),
+                    ),
+                  ),
+                );
+              },
+        ),
       ),
     );
   }
@@ -106,6 +175,11 @@ class _DrumAppNavigationShell extends StatelessWidget {
           label: 'Insights',
         ),
         NavigationDestination(
+          icon: Icon(Icons.edit_outlined),
+          selectedIcon: Icon(Icons.edit_rounded),
+          label: 'Author',
+        ),
+        NavigationDestination(
           icon: Icon(Icons.settings_outlined),
           selectedIcon: Icon(Icons.settings_rounded),
           label: 'Settings',
@@ -128,6 +202,11 @@ class _DrumAppNavigationShell extends StatelessWidget {
           icon: Icon(Icons.bar_chart_outlined),
           selectedIcon: Icon(Icons.bar_chart_rounded),
           label: Text('Insights'),
+        ),
+        NavigationRailDestination(
+          icon: Icon(Icons.edit_outlined),
+          selectedIcon: Icon(Icons.edit_rounded),
+          label: Text('Author'),
         ),
         NavigationRailDestination(
           icon: Icon(Icons.settings_outlined),
@@ -180,23 +259,13 @@ class _BrandMark extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: <Widget>[
-        DecoratedBox(
-          decoration: BoxDecoration(
-            color: Theme.of(
-              context,
-            ).colorScheme.primary.withValues(alpha: 0.16),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Theme.of(context).colorScheme.primary),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            child: Text(
-              'DC',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: Theme.of(context).colorScheme.primary,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: Image.asset(
+            'assets/icons/app_icon_splash.png',
+            width: 78,
+            height: 78,
+            fit: BoxFit.contain,
           ),
         ),
         const SizedBox(height: 8),
@@ -204,7 +273,7 @@ class _BrandMark extends StatelessWidget {
           'DRUMCABULARY',
           style: Theme.of(
             context,
-          ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w900),
+          ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w800),
         ),
       ],
     );

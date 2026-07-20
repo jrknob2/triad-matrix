@@ -349,13 +349,8 @@ class _HomeHeader extends StatelessWidget {
           runSpacing: 10,
           alignment: WrapAlignment.end,
           children: <Widget>[
-            _DeviceStatusChip(status: status.midi),
-            _DeviceStatusChip(status: status.led),
-            OutlinedButton.icon(
-              onPressed: onOpenDevices,
-              icon: const Icon(Icons.chevron_right_rounded),
-              label: const Text('View Devices'),
-            ),
+            _DeviceStatusChip(status: status.midi, onPressed: onOpenDevices),
+            _DeviceStatusChip(status: status.led, onPressed: onOpenDevices),
           ],
         );
         if (constraints.maxWidth < 760) {
@@ -379,69 +374,81 @@ class _HomeHeader extends StatelessWidget {
 
 class _DeviceStatusChip extends StatelessWidget {
   final _DeviceStatus status;
+  final VoidCallback? onPressed;
 
-  const _DeviceStatusChip({required this.status});
+  const _DeviceStatusChip({required this.status, required this.onPressed});
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: DrumcabularyTheme.edgeSurface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: DrumcabularyTheme.edgeBorder),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Icon(status.icon, color: DrumcabularyTheme.edgeTextPrimary),
-            const SizedBox(width: 10),
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 180),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  Text(
-                    status.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: DrumcabularyTheme.edgeTextPrimary,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
+    final BorderRadius borderRadius = BorderRadius.circular(14);
+    return Material(
+      color: Colors.transparent,
+      child: Ink(
+        decoration: BoxDecoration(
+          color: DrumcabularyTheme.edgeSurface,
+          borderRadius: borderRadius,
+          border: Border.all(color: DrumcabularyTheme.edgeBorder),
+        ),
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: borderRadius,
+          hoverColor: DrumcabularyTheme.edgeOrange.withValues(alpha: 0.10),
+          focusColor: DrumcabularyTheme.edgeOrange.withValues(alpha: 0.14),
+          splashColor: DrumcabularyTheme.edgeOrange.withValues(alpha: 0.18),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Icon(status.icon, color: DrumcabularyTheme.edgeTextPrimary),
+                const SizedBox(width: 10),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 180),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
-                      DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: status.connected
-                              ? const Color(0xFF52D273)
-                              : const Color(0xFFFFC857),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const SizedBox(width: 8, height: 8),
-                      ),
-                      const SizedBox(width: 6),
                       Text(
-                        status.subtitle,
-                        style: Theme.of(context).textTheme.labelMedium
-                            ?.copyWith(
+                        status.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: DrumcabularyTheme.edgeTextPrimary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          DecoratedBox(
+                            decoration: BoxDecoration(
                               color: status.connected
                                   ? const Color(0xFF52D273)
-                                  : DrumcabularyTheme.edgeTextSecondary,
-                              fontWeight: FontWeight.w800,
+                                  : const Color(0xFFFFC857),
+                              shape: BoxShape.circle,
                             ),
+                            child: const SizedBox(width: 8, height: 8),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            status.subtitle,
+                            style: Theme.of(context).textTheme.labelMedium
+                                ?.copyWith(
+                                  color: status.connected
+                                      ? const Color(0xFF52D273)
+                                      : DrumcabularyTheme.edgeTextSecondary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -471,7 +478,7 @@ class _FirstRunPanel extends StatelessWidget {
             'Welcome to Drumcabulary',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               color: DrumcabularyTheme.edgeTextPrimary,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w700,
               height: 1.1,
             ),
           ),
@@ -628,7 +635,7 @@ class _LessonTargetDetails extends StatelessWidget {
                 target.lesson.title,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   color: DrumcabularyTheme.edgeTextPrimary,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w800,
                   height: 1.1,
                 ),
               ),
@@ -687,7 +694,7 @@ class _ExerciseChecklistRow extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: DrumcabularyTheme.edgeTextPrimary,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ),
@@ -695,18 +702,23 @@ class _ExerciseChecklistRow extends StatelessWidget {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: List<Widget>.generate(5, (int index) {
-            final bool filled = item.status == LessonProgressStatus.completed
-                ? true
-                : item.status == LessonProgressStatus.inProgress && index < 3;
+            final bool completed =
+                item.status == LessonProgressStatus.completed;
+            final bool current = item.status == LessonProgressStatus.inProgress;
             return Padding(
               padding: const EdgeInsets.only(left: 3),
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: filled
+                  color: completed
                       ? DrumcabularyTheme.edgeOrange
-                      : DrumcabularyTheme.edgeSurfaceSecondary,
+                      : DrumcabularyTheme.edgeSurface,
                   borderRadius: BorderRadius.circular(3),
-                  border: Border.all(color: DrumcabularyTheme.edgeBorder),
+                  border: Border.all(
+                    color: completed || current
+                        ? DrumcabularyTheme.edgeOrange
+                        : DrumcabularyTheme.edgeBorder,
+                    width: current ? 1.4 : 1,
+                  ),
                 ),
                 child: const SizedBox(width: 12, height: 12),
               ),
@@ -741,14 +753,23 @@ class _ProgressSummaryPanel extends StatelessWidget {
         children: <Widget>[
           Row(
             children: <Widget>[
-              const Expanded(child: SizedBox.shrink()),
+              Expanded(
+                child: Text(
+                  'Progress',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: DrumcabularyTheme.edgeTextPrimary,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ),
               TextButton(
                 onPressed: onOpenInsights,
                 child: const Text('View My Insights'),
               ),
             ],
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 12),
           LayoutBuilder(
             builder: (BuildContext context, BoxConstraints constraints) {
               final bool compact = constraints.maxWidth < 560;
@@ -823,7 +844,7 @@ class _MetricBlock extends StatelessWidget {
             value,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               color: DrumcabularyTheme.edgeTextPrimary,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w800,
             ),
           ),
           const SizedBox(height: 4),
@@ -831,7 +852,7 @@ class _MetricBlock extends StatelessWidget {
             label,
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
               color: DrumcabularyTheme.edgeTextSecondary,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w700,
             ),
           ),
           if (sublabel != null) ...<Widget>[
@@ -840,7 +861,7 @@ class _MetricBlock extends StatelessWidget {
               sublabel!,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                 color: DrumcabularyTheme.edgeTextSecondary,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ],
@@ -880,7 +901,7 @@ class _UpNextPanel extends StatelessWidget {
                         style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(
                               color: DrumcabularyTheme.edgeTextPrimary,
-                              fontWeight: FontWeight.w900,
+                              fontWeight: FontWeight.w800,
                             ),
                       ),
                       const SizedBox(height: 5),
@@ -961,47 +982,84 @@ class _RecentActivityRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: <Widget>[
-          Icon(
+      child: LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints constraints) {
+          final Widget icon = Icon(
             item.completed ? Icons.check_circle_outline : Icons.play_circle,
             size: 18,
             color: item.completed
                 ? DrumcabularyTheme.edgeOrange
                 : DrumcabularyTheme.edgeTextSecondary,
-          ),
-          const SizedBox(width: 10),
-          SizedBox(
-            width: 82,
-            child: Text(
-              item.actionLabel,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: item.completed
-                    ? const Color(0xFF52D273)
-                    : DrumcabularyTheme.edgeOrange,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              item.title,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: DrumcabularyTheme.edgeTextPrimary,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            _relativeDay(item.date),
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: DrumcabularyTheme.edgeTextSecondary,
+          );
+          final Widget action = Text(
+            item.actionLabel,
+            maxLines: 1,
+            softWrap: false,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: item.completed
+                  ? const Color(0xFF52D273)
+                  : DrumcabularyTheme.edgeOrange,
               fontWeight: FontWeight.w800,
             ),
-          ),
-        ],
+          );
+          final Widget title = Text(
+            item.title,
+            maxLines: constraints.maxWidth < 440 ? 2 : 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: DrumcabularyTheme.edgeTextPrimary,
+              fontWeight: FontWeight.w700,
+              height: 1.25,
+            ),
+          );
+          final Widget date = Text(
+            _relativeDay(item.date),
+            maxLines: 1,
+            softWrap: false,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: DrumcabularyTheme.edgeTextSecondary,
+              fontWeight: FontWeight.w700,
+            ),
+          );
+
+          if (constraints.maxWidth < 440) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    icon,
+                    const SizedBox(width: 10),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(minWidth: 82),
+                      child: action,
+                    ),
+                    const Spacer(),
+                    date,
+                  ],
+                ),
+                const SizedBox(height: 5),
+                Padding(padding: const EdgeInsets.only(left: 28), child: title),
+              ],
+            );
+          }
+
+          return Row(
+            children: <Widget>[
+              icon,
+              const SizedBox(width: 10),
+              ConstrainedBox(
+                constraints: const BoxConstraints(minWidth: 86, maxWidth: 106),
+                child: action,
+              ),
+              const SizedBox(width: 10),
+              Expanded(child: title),
+              const SizedBox(width: 8),
+              Align(alignment: Alignment.centerRight, child: date),
+            ],
+          );
+        },
       ),
     );
   }
