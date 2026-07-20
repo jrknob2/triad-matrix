@@ -229,6 +229,8 @@ Current behavior:
 - uses the shared MIDI input service
 - requires the MIDI device to be connected first
 - records mapped MIDI hits
+- flashes the shared LED controller for each recorded live hit when the LED
+  controller is connected
 - ignores Note Off and velocity-zero Note On events
 - emits voice-first notation such as `[HH K]`, `[OHH]`, and `[S]`
 - writes generated notation into an editable text field

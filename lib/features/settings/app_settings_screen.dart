@@ -9,6 +9,7 @@ import '../../features/app/drumcabulary_theme.dart';
 import '../../features/app/unsaved_changes_dialog.dart';
 import '../../features/hardware/hardware_capabilities.dart';
 import '../../features/midi/drum_kit_mapper.dart';
+import '../../features/midi/midi_led_forwarder.dart';
 import '../../features/midi/midi_input_models.dart';
 import '../../features/midi/midi_input_service.dart';
 import '../../features/midi/midi_pattern_capture.dart';
@@ -31,6 +32,10 @@ class AppSettingsScreen extends StatefulWidget {
 class _AppSettingsScreenState extends State<AppSettingsScreen> {
   late UserProfileV1 _draft;
   late final MidiInputService _midiService = SharedMidiInputService.instance;
+  late final MidiLedForwarder _captureLedForwarder = MidiLedForwarder(
+    controller: SharedSerialLedController.instance,
+    enabled: true,
+  );
   MidiPatternCaptureController? _captureController;
   StreamSubscription<RawMidiEvent>? _midiCaptureSubscription;
   final StreamController<DrumInputEvent> _mappedMidiEvents =
@@ -314,6 +319,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
       _mappedMidiEvents.add(drum);
     }
     if (captureController == null || !captureController.isRecording) return;
+    _captureLedForwarder.handle(MidiDiagnosticEvent(raw: raw, drum: drum));
     captureController.captureMappedEvent(raw: raw, drum: drum);
   }
 
