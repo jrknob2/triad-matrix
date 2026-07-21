@@ -2,8 +2,12 @@
 
 ## Purpose
 
-This document defines the active screen/content/flow contract for the MVP
-teaching flow.
+This document defines screen content guardrails and retains older MVP flow notes
+for historical context.
+
+Current navigation and app-flow ownership live in
+`docs/28_APP_FLOW_CONTRACT.md`. If the flow sections in this document conflict
+with `docs/28_APP_FLOW_CONTRACT.md`, use `docs/28_APP_FLOW_CONTRACT.md`.
 
 For current app-wide navigation ownership, including Settings, Hardware & MIDI,
 temporary MIDI Capture placement, Pattern Editor direction, and developer
@@ -11,8 +15,9 @@ diagnostics, use:
 
 - [28_APP_FLOW_CONTRACT.md](/Users/terryknoblock/Development/flutter-projects/drumcabulary/docs/28_APP_FLOW_CONTRACT.md)
 
-If a control or block cannot be justified by a defined MVP flow in this
-document, it should not be reachable in the active teaching UI.
+If a control or block cannot be justified by the current flow contract in
+`docs/28_APP_FLOW_CONTRACT.md`, it should not be reachable in the active
+student UI.
 
 Communication rules for student-facing text are defined in:
 
@@ -22,38 +27,43 @@ The lesson YAML/data contract is defined in:
 
 - [20_LESSON_YAML_DATA_ARCHITECTURE.md](/Users/terryknoblock/Development/flutter-projects/drumcabulary/docs/20_LESSON_YAML_DATA_ARCHITECTURE.md)
 
-## Current MVP Rule
+Lesson and exercise metadata semantics are defined in:
 
-The current product is a simple drum teaching MVP.
+- [29_LESSON_METADATA_CONTRACT.md](/Users/terryknoblock/Development/flutter-projects/drumcabulary/docs/29_LESSON_METADATA_CONTRACT.md)
+
+## Current Product Rule
+
+The current product is a simple drum teaching and practice app.
 
 Active teaching flow:
 
 ```text
-Choose Level -> Choose Skill -> Lesson Detail -> Progressive Exercises
+Home -> Explore -> Lesson Detail -> Progressive Exercises
 ```
 
 Active app-owned screens:
 
-1. Level list
-2. Skill list for selected level
-3. Lesson list when a skill has multiple lessons
-4. Lesson Detail
+1. Home
+2. Explore
+3. Lesson Detail
+4. Practice Insights
+5. Author
+6. Settings
 
-Deferred screens and systems:
+Flow-level ownership for these screens is defined in
+`docs/28_APP_FLOW_CONTRACT.md`.
+
+Deprecated or developer-only normal-navigation surfaces:
 
 - Matrix
-- full Practice system
-- Library
-- detailed Progress
+- full standalone Practice system
 - Practice Item editor
 - Session Summary
-- Settings
 - Startup Splash
-- live practice sessions
 - assessment
 - detailed progress analytics
 - recommendations
-- user notation authoring
+- raw MIDI diagnostics
 
 ## Core Rule
 
@@ -73,17 +83,27 @@ No active screen should contain:
 - raw notation strings where rendered sheet notation is expected
 - patterns as the primary student-facing concept
 
+Metadata rules:
+
+- Content Metadata, System Metadata, and User Metadata must not be mixed.
+- Explore and search consume effective lesson/exercise metadata.
+- Lesson Detail should show only metadata that helps the current exercise or
+  lesson task; it should not dump every metadata category.
+- User progress state such as Status, Favorite, Best BPM, and Last Practiced
+  must never be stored as content metadata.
+
 Developer and hardware diagnostic access:
 
 - MIDI Input Diagnostic is a developer-facing hardware tool, not a student
   teaching flow.
-- Every navigable app screen must keep MIDI Input Diagnostic reachable through a
-  consistent toolbar/header action, except the diagnostic screen itself.
+- Developer diagnostics may be reachable through a developer/debug route, but
+  raw MIDI diagnostics must not appear as normal student cards.
 
 ## Notation Rules
 
 - lesson YAML stores authored Drumcabulary notation strings inside exercise notation
-- users do not author or edit notation strings in MVP
+- Lesson Detail does not expose editable notation strings. Authoring surfaces
+  may expose source notation where explicitly defined by the app-flow contract.
 - lesson content may use explicit voice override notation when an example depends on specific kit voices
 - notation metadata may include `subdivision`, `time_signature`, and `repeat_count`
 - omitted time signatures default to `4/4`
@@ -104,7 +124,11 @@ Developer and hardware diagnostic access:
 - raw notation strings must not silently replace failed sheet rendering in app or PDF output
 - PDF/export output should use the same notation rendering contract as on-screen lesson detail
 
-## Flow A: Choose Level
+## Historical Flow A: Choose Level
+
+The following Level/Skill flow sections are retained as historical MVP context.
+Current discovery is metadata-driven Explore, defined in
+`docs/28_APP_FLOW_CONTRACT.md` and `docs/29_LESSON_METADATA_CONTRACT.md`.
 
 1. User opens the app.
 2. App opens directly to the level list.
@@ -137,7 +161,7 @@ Forbidden content:
 - assessment state
 - personalized recommendations
 
-## Flow B: Choose Skill
+## Historical Flow B: Choose Skill
 
 1. User taps a level.
 2. Skill list opens for that level.
@@ -167,7 +191,7 @@ Forbidden content:
 - recommendations
 - skill taxonomy editor
 
-## Flow C: Choose Lesson
+## Historical Flow C: Choose Lesson
 
 1. User taps a skill.
 2. If the skill has one lesson, the app may open the lesson directly.
@@ -219,7 +243,7 @@ Owning screen:
 Required content:
 
 - lesson title
-- level and skill
+- useful metadata chips where they help the current lesson task
 - overview
 - objective
 - MIDI and LED hardware status chips where supported
@@ -275,7 +299,7 @@ Forbidden content:
 - scoring data
 - recommendation copy
 
-## Level List Contract
+## Historical Level List Contract
 
 Level list answers:
 
@@ -297,7 +321,7 @@ Level list must not show:
 - settings controls
 - detailed analytics
 
-## Skill List Contract
+## Historical Skill List Contract
 
 Skill list answers:
 

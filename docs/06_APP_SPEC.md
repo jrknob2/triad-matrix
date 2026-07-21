@@ -2,9 +2,18 @@
 
 ## Purpose
 
-This document defines the current MVP app architecture.
+This document describes the early MVP app architecture and remains useful
+historical context.
 
-The current MVP replaces the previous five-tab practice product with a single lesson-plan surface. Historical Practice, Matrix, Library, Progress, Working On, and assessment concepts are deferred until the lesson product is stable.
+Current app flow and metadata ownership have evolved. For navigation and screen
+ownership, use `docs/28_APP_FLOW_CONTRACT.md`. For lesson/exercise metadata,
+use `docs/29_LESSON_METADATA_CONTRACT.md`. If this file conflicts with those
+contracts, treat those newer contracts as authoritative.
+
+The current product has since restored Home, Explore, Author, Settings,
+hardware setup, playback, Guided Practice, Play Along, and MIDI capture in the
+normal architecture. Use the newer flow and metadata contracts before relying on
+the older MVP constraints below.
 
 ---
 

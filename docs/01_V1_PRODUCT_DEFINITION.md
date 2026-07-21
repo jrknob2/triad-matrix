@@ -1,5 +1,11 @@
 # 01 - V1 Product Definition
 
+> Historical baseline: this file describes the early print-first V1 reset.
+> Current navigation and screen ownership are defined by
+> `docs/28_APP_FLOW_CONTRACT.md`. Current lesson/exercise metadata semantics are
+> defined by `docs/29_LESSON_METADATA_CONTRACT.md`. If this file conflicts with
+> those newer contracts, treat the newer contracts as authoritative.
+
 ## V1 Goal
 
 Ship a focused lesson-plan app that helps a drummer read, print, and work through curated Drumcabulary vocabulary.

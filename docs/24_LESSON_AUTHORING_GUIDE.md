@@ -6,6 +6,10 @@ This document defines the standard process for creating new Drumcabulary lessons
 
 It bridges the gap between the educational philosophy and the lesson YAML format.
 
+Lesson and exercise metadata categories are defined by:
+
+- `docs/29_LESSON_METADATA_CONTRACT.md`
+
 This document should be followed **before** writing YAML.
 
 The goal is to ensure that every lesson teaches consistently, progresses naturally, and feels like it belongs in Drumcabulary.
@@ -22,6 +26,10 @@ Choose Curriculum Position
 ↓
 
 Define Learning Objective
+
+↓
+
+Assign Lesson Metadata
 
 ↓
 
@@ -101,7 +109,44 @@ Objectives should be specific and achievable.
 
 ---
 
-# Step 3 — Choose An Instructional Pattern
+# Step 3 — Assign Lesson Metadata
+
+Assign the metadata that lets students find and understand the lesson later.
+
+Required lesson metadata:
+
+- Identity
+- Fundamentals
+- Musical Vocabulary
+- Difficulty
+
+Common optional metadata:
+
+- Musical Context
+- Objectives
+- Musical Environment
+- Equipment
+- BPM Recommendation
+
+Rules:
+
+- Fundamentals describe how the drummer develops, such as timing, dynamics, and
+  coordination.
+- Musical Vocabulary describes what the drummer learns to play, such as grooves,
+  fills, rudiments, or linear playing.
+- Musical Context describes where the vocabulary is commonly applied, such as
+  rock, funk, jazz, or Latin.
+- Difficulty describes the lesson, not the student.
+- Objectives describe teaching intent and should not become the primary Explore
+  filter set.
+- Do not duplicate inherited exercise metadata unless an exercise adds or
+  overrides something meaningful.
+- Never store completion, favorite, last practiced, best BPM, or other user
+  progress data in content metadata.
+
+---
+
+# Step 4 — Choose An Instructional Pattern
 
 Select the instructional pattern that best matches the lesson.
 
@@ -120,7 +165,7 @@ The instructional pattern determines the overall teaching flow.
 
 ---
 
-# Step 4 — Design Progressive Exercises
+# Step 5 — Design Progressive Exercises
 
 Exercises are the heart of every lesson.
 
@@ -164,7 +209,7 @@ Notice that every exercise builds naturally upon the previous one.
 
 ---
 
-# Step 5 — Complete Each Exercise
+# Step 6 — Complete Each Exercise
 
 Every exercise should answer four questions.
 
@@ -216,9 +261,13 @@ Examples:
 - hear it
 - practice it
 
+If an exercise differs from the lesson's metadata, add only the exercise-level
+metadata needed for search, filtering, or Insights. Exercises inherit lesson
+metadata by default.
+
 ---
 
-# Step 6 — Musical Application
+# Step 7 — Musical Application
 
 Whenever practical, every lesson should end with musical application.
 
@@ -266,7 +315,7 @@ Students should always understand how today's lesson becomes tomorrow's music.
 
 ---
 
-# Step 7 — Tempo
+# Step 8 — Tempo
 
 Tempo exists to encourage success.
 
@@ -294,7 +343,7 @@ Tempo should always support learning.
 
 ---
 
-# Step 8 — Review
+# Step 9 — Review
 
 Before authoring YAML, ask:
 
@@ -302,6 +351,9 @@ Before authoring YAML, ask:
 - Does every exercise build upon the previous one?
 - Is each exercise introducing only one new challenge?
 - Is there a musical application?
+- Does the lesson include required metadata from the metadata contract?
+- Does any exercise metadata add useful specificity without duplicating the
+  lesson?
 - Would a student naturally know what to do next?
 
 If not, revise the lesson before writing notation.
@@ -326,7 +378,9 @@ Every completed lesson should satisfy the following.
 
 - [ ] One primary objective
 - [ ] Appropriate curriculum level
-- [ ] Appropriate skill
+- [ ] Appropriate curriculum skill or bucket
+- [ ] Required lesson metadata is present
+- [ ] Exercise metadata only adds useful specificity or overrides
 - [ ] Clear prerequisites
 - [ ] Progressive exercises
 - [ ] Musical application

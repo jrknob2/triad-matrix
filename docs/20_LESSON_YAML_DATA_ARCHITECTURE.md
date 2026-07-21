@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document is the source of truth for MVP lesson content, authored YAML
+This document is the source of truth for lesson content storage, authored YAML
 structure, local progress data, and loader validation.
 
 The active teaching architecture is:
@@ -16,12 +16,19 @@ is owned by:
 
 - `docs/18_NOTATION_LANGUAGE_CONTRACT.md`
 
+This document does not redefine lesson metadata semantics. Lesson and exercise
+metadata classes, categories, inheritance, and search/filter meaning are owned
+by:
+
+- `docs/29_LESSON_METADATA_CONTRACT.md`
+
 This document does not redefine rendering internals. Rendering is owned by:
 
 - `docs/19_NOTATION_RENDERING_PIPELINE_DESIGN.md`
 
-If another document describes Coach lesson YAML differently, treat this document
-as authoritative and update the competing document.
+If another document describes Coach lesson YAML storage differently, treat this
+document as authoritative. If another document describes metadata meaning
+differently, treat `docs/29_LESSON_METADATA_CONTRACT.md` as authoritative.
 
 ## Product Boundary
 
@@ -37,6 +44,8 @@ Supported now:
 - progressive exercises inside each lesson
 - exercise-owned notation blocks
 - sectioned exercise notation when one exercise needs multiple timing contexts
+- content metadata on lessons and optional exercise-level metadata
+- metadata-driven Explore/search after the metadata migration
 - optional authored sticking labels
 - existing notation preview audio and playhead
 - print/export of lesson detail content
@@ -51,7 +60,6 @@ Not supported now:
 - recommendations
 - remote content loading
 - user-authored lesson editing
-- complex filtering
 - progress fields inside YAML
 
 Content YAML defines what exists. Local progress records what the user has done.
@@ -124,7 +132,8 @@ Adding a lesson should not require Dart code changes.
 2. Add the file path to the correct level in `assets/content/index.yaml`.
 3. Keep the lesson `level` equal to the parent level in the index.
 4. Keep the lesson `skill` non-empty.
-5. Keep each exercise notation pattern valid under the existing notation
+5. Define required lesson metadata from `docs/29_LESSON_METADATA_CONTRACT.md`.
+6. Keep each exercise notation pattern valid under the existing notation
    grammar.
 
 ## Data Flow
@@ -206,6 +215,29 @@ lesson:
   estimated_minutes: 25
   overview: Learn the foundational 4/4 rock groove by adding one limb at a time.
   objective: Build the money beat gradually from hi-hat only to full groove.
+  metadata:
+    fundamentals:
+      - timing
+      - coordination
+    musical_vocabulary:
+      - grooves
+    musical_context:
+      - rock
+    difficulty: beginner
+    objectives:
+      - consistency
+    musical_environment:
+      time_signatures:
+        - "4/4"
+      feels:
+        - straight
+      subdivisions:
+        - eighth_note
+    equipment:
+      - full_kit
+    bpm_recommendation:
+      start: 60
+      target: 90
 
   exercises:
     - id: hh-only
@@ -232,13 +264,48 @@ Fields:
 | `lesson.level` | `Lesson.level` | yes | string | Must match parent index level. |
 | `lesson.skill` | `Lesson.skill` | yes | string | Skill bucket such as `grooves`, `timing`, or `vocabulary`. |
 | `lesson.order` | `Lesson.order` | yes | positive integer | Ordering within level/skill. |
-| `lesson.estimated_minutes` | `Lesson.estimatedMinutes` | yes | positive integer | Guidance only. |
+| `lesson.estimated_minutes` | `Lesson.estimatedMinutes` | yes | positive integer | Temporary authored fallback for generated System Metadata duration. |
 | `lesson.overview` | `Lesson.overview` | yes | string | High-level lesson context. |
 | `lesson.objective` | `Lesson.objective` | yes | string | What the lesson builds. |
+| `lesson.metadata` | target metadata model | yes after migration | map | Content Metadata defined by `docs/29_LESSON_METADATA_CONTRACT.md`. |
 | `lesson.exercises` | `Lesson.exercises` | yes | list | Progressive student-facing exercises. |
 
 Do not present patterns as the primary student-facing concept. Patterns are
 implementation details inside exercise notation.
+
+`lesson.level` and `lesson.skill` remain structural compatibility fields for
+content loading and current curriculum placement. They are not the long-term
+Explore filter model. Explore should consume effective metadata from
+`lesson.metadata` plus exercise metadata and user/system metadata.
+
+## Lesson Metadata YAML
+
+The target metadata object follows the semantic contract in
+`docs/29_LESSON_METADATA_CONTRACT.md`.
+
+Required lesson metadata after migration:
+
+- `fundamentals`
+- `musical_vocabulary`
+- `difficulty`
+
+Recommended lesson metadata:
+
+- `musical_context`
+- `objectives`
+- `musical_environment`
+- `equipment`
+- `bpm_recommendation`
+
+Rules:
+
+- Use stable machine-friendly value IDs such as `timing`, `grooves`, and
+  `beginner`; render labels in the UI.
+- Do not store user progress, favorite state, best BPM, or last practiced data
+  in content YAML.
+- Do not encode application behavior into metadata values.
+- `estimated_minutes` is System Metadata. It remains authored only until the app
+  has a generated duration model.
 
 ## Exercise YAML
 
@@ -250,6 +317,11 @@ Exercises are the main authored teaching unit inside a lesson.
   why: The kick completes the basic money beat.
   what: Add kick on beats 1 and 3 while keeping snare on 2 and 4.
   how: Listen for an even hi-hat line over solid kick and snare placement.
+  metadata:
+    musical_vocabulary:
+      - grooves
+    objectives:
+      - coordination
   tempo:
     start: 60
     target: 100
@@ -270,12 +342,21 @@ Fields:
 | `what` | `LessonExercise.what` | yes | string | What the student plays. |
 | `how` | `LessonExercise.how` | yes | string | How to approach it. |
 | `success` | `LessonExercise.success` | no | string | Optional success target displayed when authored. |
+| `metadata` | target metadata model | no | map | Exercise-specific Content Metadata additions or single-value overrides. |
 | `tempo.start` | `TempoTarget.start` | no | positive integer | Practice guidance. |
 | `tempo.target` | `TempoTarget.target` | no | positive integer | Must be `>= start`. |
 | `notation` | `ExerciseNotation` | yes | map | Single notation block or sectioned notation. |
 
 Exercises should build gradually. A beginner groove lesson should add one limb
 or one concept at a time before combining them.
+
+Exercise metadata inherits from the lesson by default:
+
+- Multi-value metadata fields are unioned.
+- Single-value metadata fields inherit unless the exercise provides a value.
+- Exercise `tempo` maps to exercise BPM recommendation.
+- Exercise teaching fields (`why`, `what`, `how`, `success`) are searchable
+  teaching copy, not metadata categories.
 
 ## Exercise Notation
 
@@ -393,6 +474,8 @@ Validation includes:
 - lesson skill is present
 - positive lesson `order`
 - positive `estimated_minutes`
+- required lesson metadata exists after the metadata migration
+- metadata values are stable IDs rather than display-only labels where practical
 - unique exercise IDs within each lesson
 - positive tempo values
 - tempo target `>=` tempo start
@@ -404,21 +487,24 @@ Unknown YAML keys are not rejected unless the loader style changes broadly.
 
 ## UI Contract
 
-The content model supports this MVP screen flow:
+The content model still supports structural curriculum placement by level and
+skill for storage/loading compatibility:
 
 ```text
 Choose Level -> Choose Skill -> Choose Lesson -> Lesson Detail
 ```
 
-If a selected skill has one lesson, the UI may open that lesson directly.
-If it has multiple lessons, show an ordered lesson list.
+Current student-facing discovery is metadata-driven Explore, defined by
+`docs/28_APP_FLOW_CONTRACT.md` and `docs/29_LESSON_METADATA_CONTRACT.md`.
+Level and skill may inform curriculum placement but are not the long-term
+Explore filter model.
 
 Lesson Detail should show:
 
 - title
 - overview
 - objective
-- estimated minutes
+- compact progress and metadata only when it helps the current task
 - progressive exercise cards
 - each exercise's Why, What, and How
 - rendered notation
@@ -426,7 +512,8 @@ Lesson Detail should show:
 - Practice It / Complete Exercise
 - Print
 
-Lesson Detail should not show a separate pattern browser.
+Lesson Detail should not show a separate pattern browser or dump every metadata
+field. Explore and Insights are the metadata-heavy surfaces.
 
 ## Migration Notes
 
@@ -460,6 +547,8 @@ Important migration changes:
 - patterns are no longer top-level student-facing content
 - exercise notation owns the pattern text
 - sectioned notation belongs to an exercise
+- metadata moves into lesson/exercise `metadata` objects instead of relying on
+  `skill`, `level`, or ad hoc tags as the discovery model
 - progress moved to local state only
 
 ## Intentional Limitations
@@ -471,5 +560,4 @@ Important migration changes:
 - No recommendations.
 - No AI coach.
 - No user notation editing in Coach.
-- No BPM adjustment controls yet.
 - No complex progress analytics.

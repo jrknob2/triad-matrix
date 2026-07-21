@@ -1,8 +1,14 @@
 # 11 - Screen State And Mock Scenarios
 
+> Historical scenario pack: this file describes the early lesson-plan MVP mock
+> states. Current app flow is defined by `docs/28_APP_FLOW_CONTRACT.md`, Home
+> behavior by `docs/30_HOME_SCREEN_UX_CONTRACT.md`, and lesson/exercise metadata
+> by `docs/29_LESSON_METADATA_CONTRACT.md`.
+
 ## Purpose
 
-This document defines the active MVP scenarios for design, QA, and implementation.
+This document captures early MVP scenarios for historical design, QA, and
+implementation context.
 
 The current MVP does not require mock practice history, progress graphs, Working On state, assessment data, or recommendation scenarios.
 

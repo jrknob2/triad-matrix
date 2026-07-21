@@ -1,4 +1,8 @@
-# Drumcabulary Metadata Contract v1.0
+# 29 - Lesson Metadata Contract
+
+**Version:** 1.0
+**Status:** Target Contract For Next Implementation Pass
+**Last Updated:** July 2026
 
 ## Purpose
 
@@ -13,6 +17,48 @@ Provide a stable metadata architecture for Lessons and Exercises that supports:
 - Future AI features
 
 The architecture must be extensible without schema changes.
+
+This document owns the meaning of lesson and exercise metadata. It does not own
+notation grammar, rendering, navigation, or persistence implementation details.
+
+## Authority Map
+
+| Concern | Authority |
+| --- | --- |
+| Metadata classes, categories, inheritance, and search/filter semantics | this document |
+| YAML storage shape and loader validation | `docs/20_LESSON_YAML_DATA_ARCHITECTURE.md` |
+| Lesson authoring workflow | `docs/24_LESSON_AUTHORING_GUIDE.md` |
+| Explore and app-flow ownership | `docs/28_APP_FLOW_CONTRACT.md` |
+| Screen content rules | `docs/12_SCREEN_CONTENT_CONTRACTS_AND_APP_FLOWS.md` |
+| Notation syntax and notation-level timing metadata | `docs/18_NOTATION_LANGUAGE_CONTRACT.md` |
+
+If another document uses `skill`, `genre`, `tags`, or `estimated_minutes` as
+general-purpose lesson metadata, reconcile it to this contract.
+
+## Naming Rules
+
+Student-facing labels may be title case:
+
+```text
+Timing
+Grooves
+Rock
+Beginner
+4/4
+```
+
+Stored metadata values should use stable machine-friendly IDs where practical:
+
+```text
+timing
+grooves
+rock
+beginner
+4/4
+```
+
+The UI may render those IDs as human-readable labels. Do not make UI label text
+the only stable identity for a metadata value.
 
 ---
 
@@ -51,6 +97,40 @@ Examples:
 
 # Content Metadata
 
+Content Metadata is authored and bundled with lesson content. It is independent
+of a particular student's progress.
+
+Canonical YAML storage is a `metadata` object on the lesson or exercise. The
+exact YAML shape is owned by `docs/20_LESSON_YAML_DATA_ARCHITECTURE.md`, but the
+semantic fields are:
+
+```yaml
+metadata:
+  fundamentals:
+    - timing
+    - coordination
+  musical_vocabulary:
+    - grooves
+    - fills
+  musical_context:
+    - rock
+  difficulty: beginner
+  objectives:
+    - consistency
+  musical_environment:
+    time_signatures:
+      - "4/4"
+    feels:
+      - straight
+    subdivisions:
+      - eighth_note
+  equipment:
+    - full_kit
+  bpm_recommendation:
+    start: 60
+    target: 90
+```
+
 ## Identity
 
 | Field | Multi |
@@ -58,6 +138,9 @@ Examples:
 | Title | No |
 | Subtitle | No |
 | Summary | No |
+
+Identity may be stored as top-level lesson fields for readability. It is still
+Content Metadata semantically.
 
 ---
 
@@ -123,7 +206,7 @@ Examples:
 - Pop
 - Fusion
 
-A lesson may belong to multiple genres.
+A lesson may belong to multiple musical contexts.
 
 ---
 
@@ -232,6 +315,31 @@ This is instructional guidance.
 
 It is **not** the student's selected BPM.
 
+If the current YAML still stores `tempo.start` / `tempo.target` on exercises,
+those values map to the same instructional concept at exercise scope.
+
+---
+
+# Current Field Migration
+
+Existing lesson YAML contains some fields that predate this contract. During the
+next implementation pass, migrate or map them as follows.
+
+| Existing field | Metadata v1 role |
+| --- | --- |
+| `lesson.title` | Identity title |
+| `lesson.overview` | Identity summary until `summary` exists |
+| `lesson.objective` | Teaching copy; may inform `objectives` but is not itself a filter list |
+| `lesson.level` | Curriculum placement; may seed `difficulty` during migration |
+| `lesson.skill` | Legacy curriculum bucket; may seed `musical_vocabulary` during migration |
+| `lesson.estimated_minutes` | System Metadata fallback until duration is generated |
+| `exercise.why` / `what` / `how` | Teaching copy, not metadata categories |
+| `exercise.tempo.start` / `target` | Exercise BPM recommendation |
+| notation `subdivision` / `time_signature` / `repeat_count` | Notation-level timing/display metadata; may feed generated Musical Environment |
+
+Do not treat legacy `skill` as the long-term Explore filter model. Explore
+should use effective metadata instead.
+
 ---
 
 # Exercise Metadata
@@ -241,32 +349,40 @@ Exercises inherit Lesson metadata by default.
 Exercises may:
 
 - Add metadata
-- Override inherited metadata where appropriate
+- Override inherited single-value metadata where appropriate
 
 Example:
 
 ### Lesson
 
 ```yaml
-Fundamentals:
-  - Timing
-  - Dynamics
-
-Musical Vocabulary:
-  - Grooves
+metadata:
+  fundamentals:
+    - timing
+    - dynamics
+  musical_vocabulary:
+    - grooves
 ```
 
 ### Exercise
 
 ```yaml
-Musical Vocabulary:
-  - Fills
-
-Objectives:
-  - Speed
+metadata:
+  musical_vocabulary:
+    - fills
+  objectives:
+    - speed
 ```
 
-The effective metadata is the union unless explicitly overridden.
+Effective metadata rules:
+
+- Multi-value fields union lesson values and exercise values.
+- Single-value fields inherit from the lesson unless the exercise provides a
+  value.
+- Explicit removal of inherited multi-value metadata is deferred until there is
+  a real authoring need.
+- Effective metadata is what Explore, Search, Lesson Detail chips, and Insights
+  should consume.
 
 ---
 
@@ -412,4 +528,3 @@ These are intentionally outside the scope of v1.0.
 - Community Tags
 - Multiple Authors
 - Lesson Collections
-

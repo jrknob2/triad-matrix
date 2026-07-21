@@ -2,14 +2,23 @@
 
 ## Purpose
 
-This document defines the active MVP screen contracts.
+This document describes the early MVP screen contracts and remains useful
+historical context.
 
-The current MVP has two app-owned screens:
+Current app flow and metadata ownership have evolved. For current navigation,
+Home, Explore, Lesson Detail, Settings, and Author flow ownership, use
+`docs/28_APP_FLOW_CONTRACT.md`. For lesson/exercise metadata, use
+`docs/29_LESSON_METADATA_CONTRACT.md`. If this file conflicts with those newer
+contracts, treat those newer contracts as authoritative.
+
+The early MVP had two app-owned screens:
 
 1. `Lessons`
 2. `Lesson Detail`
 
-Practice, Matrix, Library, Progress, settings, session summary, and startup splash are deferred from active MVP navigation.
+That no longer describes the current normal app shell. Home, Explore, Author,
+Settings, hardware setup, Guided Practice, Play Along, and MIDI capture are now
+covered by newer contracts.
 
 Detailed content inventory and wording rules also live in:
 

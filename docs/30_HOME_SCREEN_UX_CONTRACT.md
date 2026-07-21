@@ -310,7 +310,7 @@ It never duplicates information from "Keep Practicing This."
 Contents:
 
 - lesson title
-- lesson category
+- one useful lesson label, usually primary Musical Vocabulary or Musical Context
 - brief description (optional)
 - Choose Something Else
 
@@ -478,10 +478,9 @@ Insights
 
 Explore
 
-- Categories
+- Metadata filters
 - Search
 - Favorites
-- Curriculum browser
 
 Devices
 

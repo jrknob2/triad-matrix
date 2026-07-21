@@ -52,6 +52,7 @@ Not currently supported:
 | Concern | Authority |
 | --- | --- |
 | Lesson YAML schema and data architecture | `docs/20_LESSON_YAML_DATA_ARCHITECTURE.md` |
+| Lesson/exercise metadata semantics | `docs/29_LESSON_METADATA_CONTRACT.md` |
 | Notation grammar and YAML authoring rules | `docs/18_NOTATION_LANGUAGE_CONTRACT.md` |
 | Rendering pipeline and display/export architecture | this document |
 | Screen content and flow | `docs/12_SCREEN_CONTENT_CONTRACTS_AND_APP_FLOWS.md` |

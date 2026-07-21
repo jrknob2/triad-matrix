@@ -58,6 +58,9 @@ mode.
 
 Pattern metadata belongs beside the notation string in YAML.
 
+This section describes notation-level timing/display metadata only. Lesson and
+exercise discovery metadata is owned by `docs/29_LESSON_METADATA_CONTRACT.md`.
+
 Supported metadata:
 
 - `subdivision`

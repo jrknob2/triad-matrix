@@ -1,5 +1,10 @@
 # 17 - MVP Reset Handoff
 
+> Historical handoff: this file captures the June 2026 MVP reset state. It is
+> not the current source of truth for app flow or metadata. Use
+> `docs/28_APP_FLOW_CONTRACT.md` for current navigation and flow, and
+> `docs/29_LESSON_METADATA_CONTRACT.md` for lesson/exercise metadata semantics.
+
 ## Purpose
 
 Use this document to brief a new chat or contributor on the current Drumcabulary MVP reset.
@@ -338,7 +343,7 @@ Key files:
 
 Current starter content has Beginner / Grooves / The Money Beat, Intermediate / Vocabulary / Triplet Vocabulary 1, and Intermediate / Grooves / Money Beat + Triplet Fills.
 
-Before changing UI or flow, classify the work against the active MVP contract. Prefer YAML content changes for lesson content. Do not show patterns as the main student-facing concept. Do not show raw notation strings to users where rendered notation is expected. Renderer failures should be visible. Audio preview is local to notation examples only; no full practice transport or scoring.
+Before changing UI or flow, classify the work against the then-current MVP contract. Prefer YAML content changes for lesson content. Do not show patterns as the main student-facing concept. Do not show raw notation strings to users where rendered notation is expected. Renderer failures should be visible. Audio preview is local to notation examples only; no full practice transport or scoring.
 
 When done, run the relevant focused tests and usually flutter analyze. For notation work also run npm run test:sheet-notation.
 ```

@@ -24,6 +24,7 @@ Read these as supporting context:
 - `docs/06_APP_SPEC.md`
 - `docs/25_DRUMMER_EDGE_UI_STYLE_GUIDE.md`
 - `docs/26_ART_DIRECTION_GUIDE.md`
+- `docs/29_LESSON_METADATA_CONTRACT.md`
 - `docs/30_HOME_SCREEN_UX_CONTRACT.md`
 
 Current warning: some older docs still describe Settings, Library, Practice,
@@ -132,22 +133,26 @@ hierarchy, folder tree, or recommendation dashboard.
 
 Rules:
 
-- Search must match lesson titles, exercise titles, descriptions, keywords,
-  notation text, and metadata labels.
+- Search must match lesson titles, exercise titles, subtitles, summaries,
+  teaching descriptions, and effective Content Metadata. Notation keywords and
+  author keywords are future search inputs.
 - The default Explore view keeps filters collapsed. Search, active filter
   badges, Add Filter, results count, sorting, and results are the permanent
   elements.
-- Add Filter expands an inline panel containing metadata groups such as Skills,
-  Difficulty, Genre, Status, Time Signature, Rudiments, Tempo Range, Equipment,
-  Feel, Subdivision, Hand Focus, and Foot Focus.
+- Add Filter expands an inline panel containing metadata groups defined by
+  `docs/29_LESSON_METADATA_CONTRACT.md`.
+- Primary MVP filters are Fundamentals, Musical Vocabulary, Musical Context,
+  Difficulty, Time Signature, and Status.
+- Secondary filters are Objectives, Equipment, Feel, and Subdivision.
 - Multiple chips may be active at once. Filters intersect across groups.
 - Active filters appear as removable badges directly under Search. Clear All is
   available only when filters are active.
-- Status is single-select. In Progress and Completed may be used alone. Not
-  Started is available only after search or another metadata filter narrows the
-  catalog.
+- Status is User Metadata and is single-select. In Progress and Completed may
+  be used alone. Not Started is available only after search or another metadata
+  filter narrows the catalog.
 - Results are lightweight lesson cards with title, short description, metadata
-  chips, duration, difficulty, and a save/favorite affordance.
+  chips, generated or fallback duration, difficulty, and a save/favorite
+  affordance.
 - Sorting stays simple: Relevance, Alphabetical, Newest, Shortest, and Longest.
 - Explore must not add nested browse-by flows, tree controls, learning paths,
   or recommendation systems.

@@ -58,6 +58,10 @@ A skill contains one or more lessons.
 
 Each lesson contains progressively structured exercises.
 
+Level and skill describe curriculum placement. They are not the full lesson
+metadata model and should not be used as the long-term Explore filter system.
+Lesson/exercise metadata is defined by `docs/29_LESSON_METADATA_CONTRACT.md`.
+
 ```
 Level
 
@@ -354,8 +358,10 @@ When adding new content, authors should ask:
 
 1. Which level does this belong in?
 2. Which skill does it develop?
-3. What prerequisite knowledge is required?
-4. What future lessons does it prepare the student for?
+3. Which Fundamentals, Musical Vocabulary, Musical Context, Difficulty, and
+   other metadata values describe it?
+4. What prerequisite knowledge is required?
+5. What future lessons does it prepare the student for?
 
 If these questions cannot be answered clearly, the lesson may not yet have a proper place in the curriculum.
 
