@@ -262,15 +262,16 @@ use a restrained text-button treatment and must not compete with Resume.
 
 Purpose:
 
-Show recent accomplishments.
+Show recent concrete exercise activity.
 
 Items describe actions.
 
+Not lesson-open events.
+
 Not simply lesson names.
 
-When an item describes exercise-level activity, it must include the parent
-lesson context. The activity should not leave the user guessing where an
-exercise belongs.
+Every item is scoped to an exercise and must include the parent lesson context.
+The activity should not leave the user guessing where an exercise belongs.
 
 Examples:
 
@@ -286,7 +287,8 @@ Today
 ```
 Practiced
 
-Triplet Vocabulary
+Groove First
+Six Stroke Roll
 
 Yesterday
 ```
@@ -294,7 +296,8 @@ Yesterday
 ```
 Practiced
 
-Groove First
+Hi-Hat Only
+The Money Beat
 
 2 days ago
 ```

@@ -1211,7 +1211,7 @@ class _ExploreSearchView extends StatelessWidget {
           query: query,
           onQueryChanged: onQueryChanged,
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 28),
         _ExploreFilters(
           items: items,
           query: query,
@@ -2857,24 +2857,6 @@ class _PracticeStats {
     final Set<String> masteredLessonIds = <String>{};
 
     for (final Lesson lesson in lessons) {
-      final LessonProgress lessonProgress = progressService.progressForLesson(
-        lesson.id,
-      );
-      final DateTime? lessonDate =
-          lessonProgress.completedAt ??
-          lessonProgress.lastOpenedAt ??
-          lessonProgress.startedAt;
-      if (lessonDate != null) {
-        activityDays.add(_dateOnly(lessonDate));
-        recent.add(
-          _RecentPracticeActivity(
-            date: lessonDate,
-            title: lesson.title,
-            lessonTitle: null,
-            completed: lessonProgress.status == LessonProgressStatus.completed,
-          ),
-        );
-      }
       for (final LessonExercise exercise in lesson.exercises) {
         final ExerciseProgress exerciseProgress = progressService
             .progressForExercise(lessonId: lesson.id, exerciseId: exercise.id);

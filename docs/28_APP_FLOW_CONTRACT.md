@@ -247,15 +247,15 @@ Settings owns:
 - default timer
 - click preference
 - sheet-music display preference
-- appearance mode
+- light/dark appearance mode
 - app accent color
 - app data reset
 - mock scenarios when enabled
 - desktop-only hardware setup entry
 
-Appearance mode and accent color apply immediately when changed and persist as
-profile settings. Other Settings controls may continue to use the existing Save
-Settings flow.
+Light/dark appearance mode and accent color apply immediately when changed and
+persist as profile settings. Other Settings controls may continue to use the
+existing Save Settings flow.
 
 Settings should not become:
 

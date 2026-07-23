@@ -28,7 +28,7 @@ class PracticeInsightsScreen extends StatelessWidget {
               height: 1.35,
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 28),
           DrumPanel(
             padding: const EdgeInsets.all(18),
             child: Column(

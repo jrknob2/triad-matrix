@@ -262,13 +262,18 @@ class IsarAppStateStore implements AppStateStore {
       ),
       darkPracticeSheetNotation:
           map['darkPracticeSheetNotation'] as bool? ?? false,
-      themeMode: AppThemeModeV1.values.byName(
-        map['themeMode'] as String? ?? UserProfileV1.initial.themeMode.name,
-      ),
+      themeMode: _appThemeModeFromName(map['themeMode'] as String?),
       accentColorValue:
           map['accentColorValue'] as int? ??
           UserProfileV1.initial.accentColorValue,
     );
+  }
+
+  AppThemeModeV1 _appThemeModeFromName(String? name) {
+    for (final AppThemeModeV1 mode in AppThemeModeV1.values) {
+      if (mode.name == name) return mode;
+    }
+    return UserProfileV1.initial.themeMode;
   }
 
   Map<String, dynamic> _practiceItemToMap(PracticeItemV1 item) {

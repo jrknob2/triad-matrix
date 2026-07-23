@@ -354,11 +354,6 @@ class _AppearanceSettingsCard extends StatelessWidget {
             SegmentedButton<AppThemeModeV1>(
               segments: const <ButtonSegment<AppThemeModeV1>>[
                 ButtonSegment<AppThemeModeV1>(
-                  value: AppThemeModeV1.system,
-                  icon: Icon(Icons.brightness_auto_rounded),
-                  label: Text('System'),
-                ),
-                ButtonSegment<AppThemeModeV1>(
                   value: AppThemeModeV1.light,
                   icon: Icon(Icons.light_mode_outlined),
                   label: Text('Light'),

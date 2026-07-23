@@ -126,9 +126,9 @@ user-selectable light/dark appearance and accent color.
 ## Implementation Notes
 
 - Centralize tokens in `DrumcabularyTheme`.
-- Theme mode and accent color are profile settings and must be persisted with
-  app data. They apply immediately when changed; they are not staged behind a
-  later Save action.
+- Light/dark appearance and accent color are profile settings and must be
+  persisted with app data. They apply immediately when changed; they are not
+  staged behind a later Save action.
 - Reuse shared components in `drumcabulary_ui.dart` instead of cloning surface
   styling in every screen.
 - Apply the style first to Lesson Detail, then minimally to Level, Skill, and

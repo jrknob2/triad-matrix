@@ -12,7 +12,7 @@ import 'package:flutter/foundation.dart';
 
 enum HandednessV1 { right, left }
 
-enum AppThemeModeV1 { system, light, dark }
+enum AppThemeModeV1 { light, dark }
 
 enum MaterialFamilyV1 { triad, fourNote, fiveNote, custom, combo, warmup }
 
