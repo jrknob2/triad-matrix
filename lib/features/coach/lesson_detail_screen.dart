@@ -119,48 +119,8 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
         _guidedPracticeExerciseId == activeExercise.id
         ? _guidedPracticeState
         : null;
+
     return Scaffold(
-      bottomNavigationBar: _LessonPracticeFooter(
-        bpm: _previewBpm,
-        defaultBpm: _initialPreviewBpmFor(lesson),
-        minBpm: _minPreviewBpm,
-        maxBpm: _maxPreviewBpm,
-        tempo: activeExercise.tempo,
-        onBpmDecrease: () => _changePreviewBpm(-_previewBpmStep),
-        onBpmIncrease: () => _changePreviewBpm(_previewBpmStep),
-        onBpmReset: _resetPreviewBpm,
-        active: active,
-        practicedLabel: active
-            ? _durationLabel(_activeElapsed)
-            : _durationLabel(Duration(seconds: practicedSeconds)),
-        guidedPracticeActive: activeGuidedState?.isActive == true,
-        guidedPracticeAvailable: _canStartGuidedPractice(activeExercise),
-        playAlongAvailable: _midiService.status == MidiInputStatus.connected,
-        onStartPractice: active
-            ? () => _completePractice(activeExercise)
-            : progressService == null
-            ? null
-            : () => _startPractice(activeExercise),
-        onStartGuidedPractice: activeGuidedState?.isActive == true
-            ? _stopGuidedPractice
-            : _canStartGuidedPractice(activeExercise)
-            ? () => unawaited(_startGuidedPractice(activeExercise))
-            : null,
-        onHearIt: () => unawaited(
-          _toggleExercisePreview(
-            activeExercise,
-            PatternLedPlaybackPresentation.hearIt,
-          ),
-        ),
-        onPlayAlong: _midiService.status == MidiInputStatus.connected
-            ? () => unawaited(
-                _toggleExercisePreview(
-                  activeExercise,
-                  PatternLedPlaybackPresentation.playAlong,
-                ),
-              )
-            : null,
-      ),
       body: DrumScreen(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
@@ -199,6 +159,49 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
               playAlongInputEnabled:
                   _midiService.status == MidiInputStatus.connected,
               guidedPracticeState: activeGuidedState,
+            ),
+            const SizedBox(height: 10),
+            _LessonPracticeFooter(
+              bpm: _previewBpm,
+              defaultBpm: _initialPreviewBpmFor(lesson),
+              minBpm: _minPreviewBpm,
+              maxBpm: _maxPreviewBpm,
+              tempo: activeExercise.tempo,
+              onBpmDecrease: () => _changePreviewBpm(-_previewBpmStep),
+              onBpmIncrease: () => _changePreviewBpm(_previewBpmStep),
+              onBpmReset: _resetPreviewBpm,
+              active: active,
+              practicedLabel: active
+                  ? _durationLabel(_activeElapsed)
+                  : _durationLabel(Duration(seconds: practicedSeconds)),
+              guidedPracticeActive: activeGuidedState?.isActive == true,
+              guidedPracticeAvailable: _canStartGuidedPractice(activeExercise),
+              playAlongAvailable:
+                  _midiService.status == MidiInputStatus.connected,
+              onStartPractice: active
+                  ? () => _completePractice(activeExercise)
+                  : progressService == null
+                  ? null
+                  : () => _startPractice(activeExercise),
+              onStartGuidedPractice: activeGuidedState?.isActive == true
+                  ? _stopGuidedPractice
+                  : _canStartGuidedPractice(activeExercise)
+                  ? () => unawaited(_startGuidedPractice(activeExercise))
+                  : null,
+              onHearIt: () => unawaited(
+                _toggleExercisePreview(
+                  activeExercise,
+                  PatternLedPlaybackPresentation.hearIt,
+                ),
+              ),
+              onPlayAlong: _midiService.status == MidiInputStatus.connected
+                  ? () => unawaited(
+                      _toggleExercisePreview(
+                        activeExercise,
+                        PatternLedPlaybackPresentation.playAlong,
+                      ),
+                    )
+                  : null,
             ),
           ],
         ),
@@ -1244,6 +1247,39 @@ class _BpmInlineControl extends StatelessWidget {
   }
 }
 
+class _SmallTempoButton extends StatelessWidget {
+  final String tooltip;
+  final IconData icon;
+  final VoidCallback? onPressed;
+
+  const _SmallTempoButton({
+    required this.tooltip,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox.square(
+      dimension: 34,
+      child: IconButton(
+        tooltip: tooltip,
+        onPressed: onPressed,
+        icon: Icon(icon, size: 18),
+        style: IconButton.styleFrom(
+          backgroundColor: DrumcabularyTheme.edgeSurface,
+          foregroundColor: DrumcabularyTheme.edgeTextPrimary,
+          disabledForegroundColor: DrumcabularyTheme.edgeTextMuted.withValues(
+            alpha: 0.45,
+          ),
+          side: const BorderSide(color: DrumcabularyTheme.edgeBorder),
+          padding: EdgeInsets.zero,
+        ),
+      ),
+    );
+  }
+}
+
 class _LessonPracticeFooter extends StatelessWidget {
   final int bpm;
   final int defaultBpm;
@@ -1285,97 +1321,69 @@ class _LessonPracticeFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: DecoratedBox(
-        decoration: const BoxDecoration(
-          color: DrumcabularyTheme.edgeBackground,
-          border: Border(top: BorderSide(color: DrumcabularyTheme.edgeBorder)),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-          child: LayoutBuilder(
-            builder: (BuildContext context, BoxConstraints constraints) {
-              final Widget bpmControl = _BpmInlineControl(
-                bpm: bpm,
-                defaultBpm: defaultBpm,
-                minBpm: minBpm,
-                maxBpm: maxBpm,
-                tempo: tempo,
-                onDecrease: onBpmDecrease,
-                onIncrease: onBpmIncrease,
-                onReset: onBpmReset,
-              );
-              final Widget modes = _PracticeModeGrid(
-                active: active,
-                practicedLabel: practicedLabel,
-                guidedPracticeActive: guidedPracticeActive,
-                guidedPracticeAvailable: guidedPracticeAvailable,
-                playAlongAvailable: playAlongAvailable,
-                onStartPractice: onStartPractice,
-                onStartGuidedPractice: onStartGuidedPractice,
-                onHearIt: onHearIt,
-                onPlayAlong: onPlayAlong,
-              );
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: DrumcabularyTheme.edgeBackground,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: DrumcabularyTheme.edgeBorder),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+            const double spacing = 10;
+            const double minimumPanelWidth = 175;
+            const double maximumPanelWidth = 230;
 
-              if (constraints.maxWidth < 820) {
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[
-                    bpmControl,
-                    const SizedBox(height: 10),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: SizedBox(width: 760, child: modes),
-                    ),
-                  ],
-                );
-              }
+            final double availablePanelWidth =
+                (constraints.maxWidth - (spacing * 4)) / 5;
 
-              return Row(
+            final double panelWidth =
+                availablePanelWidth < minimumPanelWidth
+                ? minimumPanelWidth
+                : availablePanelWidth > maximumPanelWidth
+                ? maximumPanelWidth
+                : availablePanelWidth;
+
+            final double panelHeight = panelWidth;
+
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  SizedBox(width: 250, child: bpmControl),
-                  const SizedBox(width: 12),
-                  Expanded(child: modes),
+                  SizedBox(
+                    width: panelWidth,
+                    height: panelHeight,
+                    child: _BpmInlineControl(
+                      bpm: bpm,
+                      defaultBpm: defaultBpm,
+                      minBpm: minBpm,
+                      maxBpm: maxBpm,
+                      tempo: tempo,
+                      onDecrease: onBpmDecrease,
+                      onIncrease: onBpmIncrease,
+                      onReset: onBpmReset,
+                    ),
+                  ),
+                  const SizedBox(width: spacing),
+                  _PracticeModeGrid(
+                    cardWidth: panelWidth,
+                    cardHeight: panelHeight,
+                    active: active,
+                    practicedLabel: practicedLabel,
+                    guidedPracticeActive: guidedPracticeActive,
+                    guidedPracticeAvailable: guidedPracticeAvailable,
+                    playAlongAvailable: playAlongAvailable,
+                    onStartPractice: onStartPractice,
+                    onStartGuidedPractice: onStartGuidedPractice,
+                    onHearIt: onHearIt,
+                    onPlayAlong: onPlayAlong,
+                  ),
                 ],
-              );
-            },
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SmallTempoButton extends StatelessWidget {
-  final String tooltip;
-  final IconData icon;
-  final VoidCallback? onPressed;
-
-  const _SmallTempoButton({
-    required this.tooltip,
-    required this.icon,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox.square(
-      dimension: 34,
-      child: IconButton(
-        tooltip: tooltip,
-        onPressed: onPressed,
-        icon: Icon(icon, size: 18),
-        style: IconButton.styleFrom(
-          backgroundColor: DrumcabularyTheme.edgeSurface,
-          foregroundColor: DrumcabularyTheme.edgeTextPrimary,
-          disabledForegroundColor: DrumcabularyTheme.edgeTextMuted.withValues(
-            alpha: 0.45,
-          ),
-          side: const BorderSide(color: DrumcabularyTheme.edgeBorder),
-          padding: EdgeInsets.zero,
+              ),
+            );
+          },
         ),
       ),
     );
@@ -1383,6 +1391,8 @@ class _SmallTempoButton extends StatelessWidget {
 }
 
 class _PracticeModeGrid extends StatelessWidget {
+  final double cardWidth;
+  final double cardHeight;
   final bool active;
   final String practicedLabel;
   final bool guidedPracticeActive;
@@ -1394,6 +1404,8 @@ class _PracticeModeGrid extends StatelessWidget {
   final VoidCallback? onPlayAlong;
 
   const _PracticeModeGrid({
+    required this.cardWidth,
+    required this.cardHeight,
     required this.active,
     required this.practicedLabel,
     required this.guidedPracticeActive,
@@ -1407,67 +1419,67 @@ class _PracticeModeGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-        final double width = constraints.maxWidth < 720
-            ? constraints.maxWidth
-            : (constraints.maxWidth - 30) / 4;
-        return Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: <Widget>[
-            _PracticeModeCard(
-              width: width,
-              icon: active ? Icons.check_rounded : Icons.timer_outlined,
-              title: 'Practice It',
-              description: active
-                  ? 'Mark this exercise complete.'
-                  : 'Play at your own tempo.',
-              detail: practicedLabel,
-              accent: true,
-              onPressed: onStartPractice,
-            ),
-            _PracticeModeCard(
-              width: width,
-              icon: guidedPracticeActive
-                  ? Icons.stop_rounded
-                  : Icons.lightbulb_outline_rounded,
-              title: 'Guided Practice',
-              description: guidedPracticeActive
-                  ? 'Stop the guided session.'
-                  : 'Step through one event at a time.',
-              detail: guidedPracticeActive
-                  ? 'Running'
-                  : guidedPracticeAvailable
-                  ? 'MIDI + LEDs ready'
-                  : 'Connect MIDI + LEDs',
-              onPressed: onStartGuidedPractice,
-            ),
-            _PracticeModeCard(
-              width: width,
-              icon: Icons.hearing_rounded,
-              title: 'Hear It',
-              description: 'Listen at the selected tempo.',
-              detail: 'Uses current BPM',
-              onPressed: onHearIt,
-            ),
-            _PracticeModeCard(
-              width: width,
-              icon: Icons.play_circle_outline_rounded,
-              title: 'Play Along',
-              description: 'Play while MIDI listens.',
-              detail: playAlongAvailable ? 'MIDI ready' : 'Connect MIDI input',
-              onPressed: onPlayAlong,
-            ),
-          ],
-        );
-      },
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        _PracticeModeCard(
+          width: cardWidth,
+          height: cardHeight,
+          icon: active ? Icons.check_rounded : Icons.timer_outlined,
+          title: 'Practice It',
+          description: active
+              ? 'Mark this exercise complete.'
+              : 'Play at your own tempo.',
+          detail: practicedLabel,
+          accent: true,
+          onPressed: onStartPractice,
+        ),
+        const SizedBox(width: 10),
+        _PracticeModeCard(
+          width: cardWidth,
+          height: cardHeight,
+          icon: guidedPracticeActive
+              ? Icons.stop_rounded
+              : Icons.lightbulb_outline_rounded,
+          title: 'Guided Practice',
+          description: guidedPracticeActive
+              ? 'Stop the guided session.'
+              : 'Step through one event at a time.',
+          detail: guidedPracticeActive
+              ? 'Running'
+              : guidedPracticeAvailable
+              ? 'MIDI + LEDs ready'
+              : 'Connect MIDI + LEDs',
+          onPressed: onStartGuidedPractice,
+        ),
+        const SizedBox(width: 10),
+        _PracticeModeCard(
+          width: cardWidth,
+          height: cardHeight,
+          icon: Icons.hearing_rounded,
+          title: 'Hear It',
+          description: 'Listen at the selected tempo.',
+          detail: 'Uses current BPM',
+          onPressed: onHearIt,
+        ),
+        const SizedBox(width: 10),
+        _PracticeModeCard(
+          width: cardWidth,
+          height: cardHeight,
+          icon: Icons.play_circle_outline_rounded,
+          title: 'Play Along',
+          description: 'Play while MIDI listens.',
+          detail: playAlongAvailable ? 'MIDI ready' : 'Connect MIDI input',
+          onPressed: onPlayAlong,
+        ),
+      ],
     );
   }
 }
 
 class _PracticeModeCard extends StatelessWidget {
   final double width;
+  final double height;
   final IconData icon;
   final String title;
   final String description;
@@ -1477,6 +1489,7 @@ class _PracticeModeCard extends StatelessWidget {
 
   const _PracticeModeCard({
     required this.width,
+    required this.height,
     required this.icon,
     required this.title,
     required this.description,
@@ -1489,76 +1502,84 @@ class _PracticeModeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final TextTheme textTheme = Theme.of(context).textTheme;
     final bool enabled = onPressed != null;
+
     final Color borderColor = accent && enabled
         ? DrumcabularyTheme.edgeOrange
         : DrumcabularyTheme.edgeBorder;
+
     return SizedBox(
       width: width,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(8),
-        onTap: onPressed,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: accent && enabled
-                ? DrumcabularyTheme.edgeOrange.withValues(alpha: 0.10)
-                : DrumcabularyTheme.edgeSurfaceSecondary,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: borderColor),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(10),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Row(
-                  children: <Widget>[
-                    Icon(
-                      icon,
-                      size: 21,
+      height: height,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: onPressed,
+          child: Ink(
+            decoration: BoxDecoration(
+              color: accent && enabled
+                  ? DrumcabularyTheme.edgeOrange.withValues(alpha: 0.10)
+                  : DrumcabularyTheme.edgeSurfaceSecondary,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: borderColor),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Row(
+                    children: <Widget>[
+                      Icon(
+                        icon,
+                        size: 22,
+                        color: enabled
+                            ? DrumcabularyTheme.edgeOrange
+                            : DrumcabularyTheme.edgeTextMuted,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: textTheme.titleSmall?.copyWith(
+                            color: enabled
+                                ? DrumcabularyTheme.edgeTextPrimary
+                                : DrumcabularyTheme.edgeTextMuted,
+                            fontWeight: FontWeight.w900,
+                            height: 1.1,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    description,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: textTheme.bodySmall?.copyWith(
+                      color: enabled
+                          ? DrumcabularyTheme.edgeTextSecondary
+                          : DrumcabularyTheme.edgeTextMuted,
+                      height: 1.35,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    detail,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: textTheme.labelMedium?.copyWith(
                       color: enabled
                           ? DrumcabularyTheme.edgeOrange
                           : DrumcabularyTheme.edgeTextMuted,
+                      fontWeight: FontWeight.w900,
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: textTheme.titleSmall?.copyWith(
-                          color: enabled
-                              ? DrumcabularyTheme.edgeTextPrimary
-                              : DrumcabularyTheme.edgeTextMuted,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 7),
-                Text(
-                  description,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: textTheme.bodySmall?.copyWith(
-                    color: enabled
-                        ? DrumcabularyTheme.edgeTextSecondary
-                        : DrumcabularyTheme.edgeTextMuted,
-                    height: 1.3,
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  detail,
-                  style: textTheme.labelMedium?.copyWith(
-                    color: enabled
-                        ? DrumcabularyTheme.edgeOrange
-                        : DrumcabularyTheme.edgeTextMuted,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -1566,7 +1587,6 @@ class _PracticeModeCard extends StatelessWidget {
     );
   }
 }
-
 Set<int> _guidedSelectionForSection(
   GuidedPracticeState? state,
   int sectionIndex,
