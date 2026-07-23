@@ -247,6 +247,8 @@ Settings owns:
 - default timer
 - click preference
 - sheet-music display preference
+- appearance mode
+- app accent color
 - app data reset
 - mock scenarios when enabled
 - desktop-only hardware setup entry
@@ -278,6 +280,8 @@ Rules:
   resize, or duplicate them as page-level headers
 - screens must reserve enough top/right space that these controls never cover
   primary content, cards, or page actions
+- screens with top full-width content should use the shared shell header spacing
+  constants instead of hand-tuned top padding
 - tapping either control opens a quick hardware connection modal
 - the quick modal contains only device selection, refresh, connect, disconnect,
   and concise connection state

@@ -62,7 +62,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
                               _labelForView(view),
                               style: TextStyle(
                                 color: _view == view ? Colors.white : null,
-                                fontWeight: FontWeight.w900,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
                             selected: _view == view,
@@ -238,7 +238,7 @@ class _OverviewView extends StatelessWidget {
                           Text(
                             '${status.count}',
                             style: Theme.of(context).textTheme.titleLarge
-                                ?.copyWith(fontWeight: FontWeight.w900),
+                                ?.copyWith(fontWeight: FontWeight.w700),
                           ),
                           const SizedBox(height: 2),
                           Text(status.label),
@@ -429,7 +429,7 @@ class _ByItemView extends StatelessWidget {
                         },
                         style: TextStyle(
                           color: scope == nextScope ? Colors.white : null,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                       selected: scope == nextScope,
@@ -953,7 +953,7 @@ class _MetricStrip extends StatelessWidget {
                   Text(
                     metric.value,
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -1082,7 +1082,7 @@ class _CoverageRow extends StatelessWidget {
           value,
           style: Theme.of(
             context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
         ),
       ],
     );
@@ -1160,7 +1160,7 @@ class _CoverageSnapshotRow extends StatelessWidget {
               '$count',
               style: Theme.of(
                 context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 2),
             Text(
@@ -1442,7 +1442,7 @@ class _GraphTitle extends StatelessWidget {
       text,
       style: Theme.of(
         context,
-      ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+      ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
     );
   }
 }
@@ -1711,7 +1711,7 @@ class _PassiveScopeLabel extends StatelessWidget {
       text,
       style: Theme.of(context).textTheme.labelMedium?.copyWith(
         color: DrumcabularyTheme.mutedInk,
-        fontWeight: FontWeight.w900,
+        fontWeight: FontWeight.w700,
       ),
     );
   }

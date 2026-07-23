@@ -412,7 +412,7 @@ class _HomeHeader extends StatelessWidget {
           _greeting(studentName),
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
             color: DrumcabularyTheme.edgeTextPrimary,
-            fontWeight: FontWeight.w900,
+            fontWeight: FontWeight.w700,
             height: 1.05,
           ),
         ),
@@ -480,7 +480,7 @@ class _FirstRunPanel extends StatelessWidget {
           ),
           if (onOpenDevices != null) ...<Widget>[
             const SizedBox(height: 14),
-            const Divider(height: 1, color: DrumcabularyTheme.edgeBorder),
+            Divider(height: 1, color: DrumcabularyTheme.edgeBorder),
             const SizedBox(height: 14),
             TextButton.icon(
               onPressed: onOpenDevices,
@@ -573,7 +573,7 @@ class _ContinuePracticePanel extends StatelessWidget {
             '${target!.completedExerciseCount} of ${target!.exerciseCount} complete',
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
               color: DrumcabularyTheme.edgeTextSecondary,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
@@ -599,8 +599,8 @@ class _LessonTargetDetails extends StatelessWidget {
               color: DrumcabularyTheme.edgeOrange.withValues(alpha: 0.36),
             ),
           ),
-          child: const Padding(
-            padding: EdgeInsets.all(14),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
             child: Icon(
               Icons.music_note_rounded,
               color: DrumcabularyTheme.edgeOrange,
@@ -617,7 +617,7 @@ class _LessonTargetDetails extends StatelessWidget {
                 target.lesson.title,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   color: DrumcabularyTheme.edgeTextPrimary,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w600,
                   height: 1.1,
                 ),
               ),
@@ -745,7 +745,7 @@ class _ProgressPanel extends StatelessWidget {
           _ProgressSummary(stats: stats),
           if (stats.recentActivity.isNotEmpty) ...<Widget>[
             const SizedBox(height: 14),
-            const Divider(color: DrumcabularyTheme.edgeBorder),
+            Divider(color: DrumcabularyTheme.edgeBorder),
             const SizedBox(height: 14),
             _RecentActivityList(activity: stats.recentActivity),
           ],
@@ -791,7 +791,7 @@ class _ProgressSummary extends StatelessWidget {
                   for (final Widget metric in metrics) ...<Widget>[
                     metric,
                     if (metric != metrics.last)
-                      const Divider(color: DrumcabularyTheme.edgeBorder),
+                      Divider(color: DrumcabularyTheme.edgeBorder),
                   ],
                 ],
               );
@@ -801,7 +801,7 @@ class _ProgressSummary extends StatelessWidget {
                 for (final Widget metric in metrics) ...<Widget>[
                   Expanded(child: metric),
                   if (metric != metrics.last)
-                    const SizedBox(
+                    SizedBox(
                       height: 54,
                       child: VerticalDivider(
                         color: DrumcabularyTheme.edgeBorder,
@@ -853,7 +853,7 @@ class _MetricBlock extends StatelessWidget {
             value,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               color: DrumcabularyTheme.edgeTextPrimary,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 4),
@@ -943,7 +943,7 @@ class _UpNextContentLink extends StatelessWidget {
                       target?.lesson.title ?? 'Explore lessons',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         color: DrumcabularyTheme.edgeTextPrimary,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                     const SizedBox(height: 5),
@@ -977,8 +977,8 @@ class _UpNextContentLink extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: DrumcabularyTheme.edgeBorder),
                 ),
-                child: const Padding(
-                  padding: EdgeInsets.all(8),
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
                   child: Icon(
                     Icons.chevron_right_rounded,
                     color: DrumcabularyTheme.edgeOrange,
@@ -1009,7 +1009,7 @@ class _RecentActivityList extends StatelessWidget {
         for (final _RecentPracticeActivity item in activity) ...<Widget>[
           _RecentActivityRow(item: item),
           if (item != activity.last)
-            const Divider(color: DrumcabularyTheme.edgeBorder),
+            Divider(color: DrumcabularyTheme.edgeBorder),
         ],
       ],
     );
@@ -1043,18 +1043,35 @@ class _RecentActivityRow extends StatelessWidget {
               color: item.completed
                   ? const Color(0xFF52D273)
                   : DrumcabularyTheme.edgeOrange,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w600,
             ),
           );
-          final Widget title = Text(
-            item.title,
-            maxLines: constraints.maxWidth < 440 ? 2 : 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: DrumcabularyTheme.edgeTextPrimary,
-              fontWeight: FontWeight.w700,
-              height: 1.25,
-            ),
+          final Widget title = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                item.title,
+                maxLines: constraints.maxWidth < 440 ? 2 : 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: DrumcabularyTheme.edgeTextPrimary,
+                  fontWeight: FontWeight.w600,
+                  height: 1.25,
+                ),
+              ),
+              if (item.lessonTitle != null) ...<Widget>[
+                const SizedBox(height: 2),
+                Text(
+                  item.lessonTitle!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: DrumcabularyTheme.edgeTextSecondary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ],
           );
           final Widget date = Text(
             _relativeDay(item.date),
@@ -1062,7 +1079,7 @@ class _RecentActivityRow extends StatelessWidget {
             softWrap: false,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
               color: DrumcabularyTheme.edgeTextSecondary,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
             ),
           );
 
@@ -1271,7 +1288,7 @@ class _ExploreHeader extends StatelessWidget {
           'What are you working on today?',
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
             color: DrumcabularyTheme.edgeTextPrimary,
-            fontWeight: FontWeight.w900,
+            fontWeight: FontWeight.w700,
             height: 1.05,
           ),
         ),
@@ -1290,7 +1307,7 @@ class _ExploreHeader extends StatelessWidget {
           textInputAction: TextInputAction.search,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
             color: DrumcabularyTheme.edgeTextPrimary,
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w600,
           ),
           decoration: InputDecoration(
             hintText: 'Search lessons or exercises',
@@ -1298,7 +1315,7 @@ class _ExploreHeader extends StatelessWidget {
               color: DrumcabularyTheme.edgeTextMuted,
               fontWeight: FontWeight.w700,
             ),
-            prefixIcon: const Icon(
+            prefixIcon: Icon(
               Icons.search_rounded,
               color: DrumcabularyTheme.edgeTextSecondary,
             ),
@@ -1320,11 +1337,11 @@ class _ExploreHeader extends StatelessWidget {
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: DrumcabularyTheme.edgeBorder),
+              borderSide: BorderSide(color: DrumcabularyTheme.edgeBorder),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(
+              borderSide: BorderSide(
                 color: DrumcabularyTheme.edgeOrange,
                 width: 1.4,
               ),
@@ -1436,13 +1453,13 @@ class _ExploreActiveFilterBadges extends StatelessWidget {
             visualDensity: VisualDensity.compact,
             backgroundColor: DrumcabularyTheme.edgeSurfaceSecondary,
             deleteIconColor: DrumcabularyTheme.edgeTextSecondary,
-            side: const BorderSide(color: DrumcabularyTheme.edgeOrange),
+            side: BorderSide(color: DrumcabularyTheme.edgeOrange),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(999),
             ),
             labelStyle: Theme.of(context).textTheme.labelMedium?.copyWith(
               color: DrumcabularyTheme.edgeTextPrimary,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
             ),
           ),
         );
@@ -1500,7 +1517,7 @@ class _ExploreFilterGroupView extends StatelessWidget {
               group.label,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 color: DrumcabularyTheme.edgeTextPrimary,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w600,
               ),
             ),
           );
@@ -1590,7 +1607,7 @@ class _ExploreResultsHeader extends StatelessWidget {
           '$count $noun Found',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
             color: DrumcabularyTheme.edgeTextPrimary,
-            fontWeight: FontWeight.w900,
+            fontWeight: FontWeight.w700,
           ),
         ),
         Row(
@@ -1600,7 +1617,7 @@ class _ExploreResultsHeader extends StatelessWidget {
               'Sort By',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: DrumcabularyTheme.edgeTextSecondary,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(width: 8),
@@ -1635,7 +1652,7 @@ class _ExploreSortDropdown extends StatelessWidget {
             iconEnabledColor: DrumcabularyTheme.edgeTextSecondary,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: DrumcabularyTheme.edgeTextPrimary,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w600,
             ),
             items: <DropdownMenuItem<_ExploreSort>>[
               for (final _ExploreSort option in _ExploreSort.values)
@@ -1680,7 +1697,7 @@ class _ExploreLessonCard extends StatelessWidget {
                     const SizedBox(width: 14),
                     Expanded(child: content),
                     const SizedBox(width: 8),
-                    const Icon(
+                    Icon(
                       Icons.bookmark_border_rounded,
                       color: DrumcabularyTheme.edgeTextSecondary,
                     ),
@@ -1701,7 +1718,7 @@ class _ExploreLessonCard extends StatelessWidget {
               const SizedBox(width: 16),
               SizedBox(width: 168, child: meta),
               const SizedBox(width: 10),
-              const Icon(
+              Icon(
                 Icons.bookmark_border_rounded,
                 color: DrumcabularyTheme.edgeTextSecondary,
               ),
@@ -1757,7 +1774,7 @@ class _ExploreLessonCardContent extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
             color: DrumcabularyTheme.edgeTextPrimary,
-            fontWeight: FontWeight.w900,
+            fontWeight: FontWeight.w700,
             height: 1.08,
           ),
         ),
@@ -1801,7 +1818,7 @@ class _ExploreLessonCardMeta extends StatelessWidget {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            const Icon(
+            Icon(
               Icons.schedule_rounded,
               color: DrumcabularyTheme.edgeTextSecondary,
               size: 18,
@@ -1811,7 +1828,7 @@ class _ExploreLessonCardMeta extends StatelessWidget {
               '${item.lesson.estimatedMinutes} min',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: DrumcabularyTheme.edgeTextSecondary,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ],
@@ -1865,7 +1882,7 @@ class _ExploreDifficultyBadge extends StatelessWidget {
           difficulty,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: color,
-            fontWeight: FontWeight.w900,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ],
@@ -1892,7 +1909,7 @@ class _ExploreMetadataPill extends StatelessWidget {
           label,
           style: Theme.of(context).textTheme.labelMedium?.copyWith(
             color: DrumcabularyTheme.edgeTextPrimary,
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ),
@@ -1922,7 +1939,7 @@ class _ExploreEmptyState extends StatelessWidget {
             'No lessons found',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               color: DrumcabularyTheme.edgeTextPrimary,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 8),
@@ -2853,6 +2870,7 @@ class _PracticeStats {
           _RecentPracticeActivity(
             date: lessonDate,
             title: lesson.title,
+            lessonTitle: null,
             completed: lessonProgress.status == LessonProgressStatus.completed,
           ),
         );
@@ -2877,6 +2895,7 @@ class _PracticeStats {
           _RecentPracticeActivity(
             date: exerciseDate,
             title: exercise.title,
+            lessonTitle: lesson.title,
             completed:
                 exerciseProgress.status == LessonProgressStatus.completed,
           ),
@@ -2902,11 +2921,13 @@ class _PracticeStats {
 class _RecentPracticeActivity {
   final DateTime date;
   final String title;
+  final String? lessonTitle;
   final bool completed;
 
   const _RecentPracticeActivity({
     required this.date,
     required this.title,
+    required this.lessonTitle,
     required this.completed,
   });
 

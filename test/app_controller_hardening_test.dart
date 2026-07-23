@@ -18,11 +18,21 @@ void main() {
       );
 
       expect(controller.profile.studentName, 'Terry');
+      expect(controller.profile.themeMode, AppThemeModeV1.dark);
+      expect(controller.profile.accentColorValue, 0xFFFF6A00);
 
-      controller.updateProfile(controller.profile.copyWith(defaultBpm: 100));
+      controller.updateProfile(
+        controller.profile.copyWith(
+          defaultBpm: 100,
+          themeMode: AppThemeModeV1.light,
+          accentColorValue: 0xFF2F80ED,
+        ),
+      );
       await controller.flushPersistence();
 
       expect(store.savedSnapshots.last.profile.studentName, 'Terry');
+      expect(store.savedSnapshots.last.profile.themeMode, AppThemeModeV1.light);
+      expect(store.savedSnapshots.last.profile.accentColorValue, 0xFF2F80ED);
     });
 
     test('serializes persistence and saves the latest snapshot', () async {

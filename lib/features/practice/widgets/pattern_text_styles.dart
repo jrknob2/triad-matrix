@@ -52,7 +52,7 @@ class PatternTextStyles {
   static TextStyle applyNotationFace(TextStyle style) {
     return style.copyWith(
       fontFamily: notationFontFamily,
-      fontWeight: style.fontWeight ?? FontWeight.w900,
+      fontWeight: style.fontWeight ?? FontWeight.w700,
       letterSpacing: 0,
     );
   }
@@ -66,7 +66,7 @@ class PatternTextStyles {
     return (source ?? TextStyle(fontSize: fallbackFontSize)).copyWith(
       color: color,
       fontFamily: notationFontFamily,
-      fontWeight: FontWeight.w900,
+      fontWeight: FontWeight.w700,
       letterSpacing: 0,
     );
   }

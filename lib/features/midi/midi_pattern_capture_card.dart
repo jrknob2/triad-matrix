@@ -180,7 +180,7 @@ class _MidiPatternCaptureCardState extends State<MidiPatternCaptureCard> {
             'MIDI Pattern Capture',
             style: Theme.of(
               context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 14),
           DrumActionRow(
@@ -215,7 +215,7 @@ class _MidiPatternCaptureCardState extends State<MidiPatternCaptureCard> {
             'Generated pattern string',
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
               color: DrumcabularyTheme.edgeOrange,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 6),
@@ -250,7 +250,7 @@ class _MidiPatternCaptureCardState extends State<MidiPatternCaptureCard> {
             'Rendered notation preview',
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
               color: DrumcabularyTheme.edgeOrange,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 6),
@@ -606,7 +606,7 @@ class _PracticeControls extends StatelessWidget {
           'Practice from capture',
           style: Theme.of(context).textTheme.labelLarge?.copyWith(
             color: DrumcabularyTheme.edgeOrange,
-            fontWeight: FontWeight.w900,
+            fontWeight: FontWeight.w700,
           ),
         ),
         const SizedBox(height: 8),

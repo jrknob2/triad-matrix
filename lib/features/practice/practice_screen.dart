@@ -688,7 +688,7 @@ class _PreviousSessionRow extends StatelessWidget {
                       Text(
                         '${formatShortDate(session.endedAt)} - ${formatDuration(session.duration)}',
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                       const SizedBox(height: 6),

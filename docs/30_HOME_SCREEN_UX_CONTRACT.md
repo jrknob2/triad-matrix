@@ -268,12 +268,17 @@ Items describe actions.
 
 Not simply lesson names.
 
+When an item describes exercise-level activity, it must include the parent
+lesson context. The activity should not leave the user guessing where an
+exercise belongs.
+
 Examples:
 
 ```
 Completed
 
-Money Beat + Triplet Fills
+Add Ghost Notes
+Six Stroke Roll
 
 Today
 ```

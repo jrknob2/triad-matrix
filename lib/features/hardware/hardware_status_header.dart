@@ -12,6 +12,11 @@ import '../settings/hardware_midi_settings_screen.dart';
 import 'hardware_capabilities.dart';
 
 class HardwareStatusHeaderOverlay extends StatefulWidget {
+  static const double defaultTop = 32;
+  static const double defaultRight = 16;
+  static const double contentTopInset = 104;
+  static const double appBarBodyTopInset = 40;
+
   final Widget child;
   final double top;
   final double right;
@@ -19,8 +24,8 @@ class HardwareStatusHeaderOverlay extends StatefulWidget {
   const HardwareStatusHeaderOverlay({
     super.key,
     required this.child,
-    this.top = 32,
-    this.right = 16,
+    this.top = defaultTop,
+    this.right = defaultRight,
   });
 
   @override
@@ -158,7 +163,7 @@ class _HardwareStatusButton extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.labelLarge?.copyWith(
                           color: DrumcabularyTheme.edgeTextPrimary,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -185,7 +190,7 @@ class _HardwareStatusButton extends StatelessWidget {
                                     color: status.connected
                                         ? const Color(0xFF52D273)
                                         : DrumcabularyTheme.edgeTextSecondary,
-                                    fontWeight: FontWeight.w700,
+                                    fontWeight: FontWeight.w600,
                                   ),
                             ),
                           ),

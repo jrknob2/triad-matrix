@@ -16,7 +16,7 @@ class PracticeInsightsScreen extends StatelessWidget {
             'Practice Insights',
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               color: DrumcabularyTheme.edgeTextPrimary,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
               height: 1.05,
             ),
           ),
@@ -41,13 +41,13 @@ class PracticeInsightsScreen extends StatelessWidget {
                   title: 'Practice time',
                   subtitle: 'Weekly and monthly practice totals.',
                 ),
-                const Divider(color: DrumcabularyTheme.edgeBorder),
+                Divider(color: DrumcabularyTheme.edgeBorder),
                 _InsightPlaceholderRow(
                   icon: Icons.check_circle_outline,
                   title: 'Exercises completed',
                   subtitle: 'Completed lessons and mastered exercises.',
                 ),
-                const Divider(color: DrumcabularyTheme.edgeBorder),
+                Divider(color: DrumcabularyTheme.edgeBorder),
                 _InsightPlaceholderRow(
                   icon: Icons.calendar_today_outlined,
                   title: 'Practice rhythm',
@@ -89,7 +89,7 @@ class _InsightPlaceholderRow extends StatelessWidget {
                   title,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     color: DrumcabularyTheme.edgeTextPrimary,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 4),

@@ -46,7 +46,7 @@ class SessionSetupControls extends StatelessWidget {
                       Text(
                         'BPM',
                         style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                       const Spacer(),
@@ -60,7 +60,7 @@ class SessionSetupControls extends StatelessWidget {
                       Text(
                         '$bpm',
                         style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w900),
+                            ?.copyWith(fontWeight: FontWeight.w700),
                       ),
                       IconButton(
                         visualDensity: VisualDensity.compact,

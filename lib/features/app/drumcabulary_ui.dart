@@ -12,20 +12,16 @@ class DrumScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool dark = Theme.of(context).brightness == Brightness.dark;
+    final Color topColor = dark
+        ? (warm ? const Color(0xFF121214) : const Color(0xFF101114))
+        : DrumcabularyTheme.edgeSurface;
     return DecoratedBox(
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: warm
-              ? const <Color>[
-                  Color(0xFF121214),
-                  DrumcabularyTheme.edgeBackground,
-                ]
-              : const <Color>[
-                  DrumcabularyTheme.edgeBackground,
-                  Color(0xFF101114),
-                ],
+          colors: <Color>[topColor, DrumcabularyTheme.edgeBackground],
         ),
       ),
       child: child,
@@ -211,7 +207,7 @@ class DrumSectionTitle extends StatelessWidget {
       text,
       style: Theme.of(context).textTheme.titleLarge?.copyWith(
         color: color,
-        fontWeight: FontWeight.w800,
+        fontWeight: FontWeight.w600,
         letterSpacing: 0,
       ),
     );
@@ -230,7 +226,7 @@ class DrumEyebrow extends StatelessWidget {
       text,
       style: Theme.of(context).textTheme.labelLarge?.copyWith(
         color: color ?? DrumcabularyTheme.edgeOrange,
-        fontWeight: FontWeight.w800,
+        fontWeight: FontWeight.w600,
         letterSpacing: 1.1,
       ),
     );
@@ -257,7 +253,7 @@ class DrumStatusPill extends StatelessWidget {
           label,
           style: Theme.of(context).textTheme.labelMedium?.copyWith(
             color: DrumcabularyTheme.edgeTextPrimary,
-            fontWeight: FontWeight.w900,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ),
@@ -285,7 +281,7 @@ class DrumSelectablePill extends StatelessWidget {
           color: selected
               ? DrumcabularyTheme.edgeTextPrimary
               : DrumcabularyTheme.edgeTextSecondary,
-          fontWeight: FontWeight.w900,
+          fontWeight: FontWeight.w700,
         ),
         child: label,
       ),
@@ -323,7 +319,7 @@ class DrumActionPill extends StatelessWidget {
     return ActionChip(
       label: DefaultTextStyle.merge(
         style: TextStyle(
-          fontWeight: FontWeight.w900,
+          fontWeight: FontWeight.w700,
           color: prominent
               ? DrumcabularyTheme.edgeTextPrimary
               : DrumcabularyTheme.edgeTextSecondary,
@@ -369,10 +365,10 @@ class DrumIndexedPill extends StatelessWidget {
         indexLabel,
         style: Theme.of(
           context,
-        ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w900),
+        ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700),
       ),
       label: DefaultTextStyle.merge(
-        style: const TextStyle(fontWeight: FontWeight.w900),
+        style: const TextStyle(fontWeight: FontWeight.w700),
         child: label,
       ),
       onPressed: onPressed,
@@ -387,13 +383,13 @@ class DrumIndexedPill extends StatelessWidget {
 
 class DrumTag extends StatelessWidget {
   final Widget child;
-  final Color backgroundColor;
+  final Color? backgroundColor;
   final Color? borderColor;
 
   const DrumTag({
     super.key,
     required this.child,
-    this.backgroundColor = DrumcabularyTheme.edgeSurfaceSecondary,
+    this.backgroundColor,
     this.borderColor,
   });
 
@@ -401,7 +397,7 @@ class DrumTag extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: backgroundColor,
+        color: backgroundColor ?? DrumcabularyTheme.edgeSurfaceSecondary,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: borderColor ?? DrumcabularyTheme.edgeBorder),
       ),

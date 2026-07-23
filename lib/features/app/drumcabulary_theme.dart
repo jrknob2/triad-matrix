@@ -29,21 +29,58 @@ class DrumcabularyTheme {
   static const Color creamText = Color(0xFFFFF4DC);
 
   // Drummer Edge visual direction
-  static const Color edgeBackground = Color(0xFF0B0B0D);
-  static const Color edgeSurface = Color(0xFF141416);
-  static const Color edgeSurfaceSecondary = Color(0xFF1F2023);
-  static const Color edgeBorder = Color(0xFF2C2D31);
-  static const Color edgeTextPrimary = Color(0xFFFFFFFF);
-  static const Color edgeTextSecondary = Color(0xFFB5B5B8);
-  static const Color edgeTextMuted = Color(0xFF8A8A8D);
-  static const Color edgeOrange = Color(0xFFFF6A00);
-  static const Color edgeOrangePressed = Color(0xFFFF8C42);
-  static const Color edgeShadow = Color(0x99000000);
+  static const Color defaultAccent = Color(0xFFFF6A00);
+  static const Color _edgeDarkBackground = Color(0xFF0B0B0D);
+  static const Color _edgeDarkSurface = Color(0xFF141416);
+  static const Color _edgeDarkSurfaceSecondary = Color(0xFF1F2023);
+  static const Color _edgeDarkBorder = Color(0xFF2C2D31);
+  static const Color _edgeDarkTextPrimary = Color(0xFFFFFFFF);
+  static const Color _edgeDarkTextSecondary = Color(0xFFB5B5B8);
+  static const Color _edgeDarkTextMuted = Color(0xFF8A8A8D);
+  static const Color _edgeLightBackground = Color(0xFFF7F3EA);
+  static const Color _edgeLightSurface = Color(0xFFFFFCF5);
+  static const Color _edgeLightSurfaceSecondary = Color(0xFFF0E6D8);
+  static const Color _edgeLightBorder = Color(0xFFD8C8B0);
+  static const Color _edgeLightTextPrimary = Color(0xFF18130F);
+  static const Color _edgeLightTextSecondary = Color(0xFF61584F);
+  static const Color _edgeLightTextMuted = Color(0xFF85796D);
+
+  static Color edgeBackground = _edgeDarkBackground;
+  static Color edgeSurface = _edgeDarkSurface;
+  static Color edgeSurfaceSecondary = _edgeDarkSurfaceSecondary;
+  static Color edgeBorder = _edgeDarkBorder;
+  static Color edgeTextPrimary = _edgeDarkTextPrimary;
+  static Color edgeTextSecondary = _edgeDarkTextSecondary;
+  static Color edgeTextMuted = _edgeDarkTextMuted;
+  static Color edgeOrange = defaultAccent;
+  static Color edgeOrangePressed = const Color(0xFFFF8C42);
+  static Color edgeShadow = const Color(0x99000000);
   static const Color edgeNotationPanel = Color(0xFFF7F3EA);
   static const Color edgeNotationInk = Color(0xFF0D0D0F);
 
+  static void configureRuntime({
+    required Brightness brightness,
+    required Color accentColor,
+  }) {
+    final bool dark = brightness == Brightness.dark;
+    edgeBackground = dark ? _edgeDarkBackground : _edgeLightBackground;
+    edgeSurface = dark ? _edgeDarkSurface : _edgeLightSurface;
+    edgeSurfaceSecondary = dark
+        ? _edgeDarkSurfaceSecondary
+        : _edgeLightSurfaceSecondary;
+    edgeBorder = dark ? _edgeDarkBorder : _edgeLightBorder;
+    edgeTextPrimary = dark ? _edgeDarkTextPrimary : _edgeLightTextPrimary;
+    edgeTextSecondary = dark ? _edgeDarkTextSecondary : _edgeLightTextSecondary;
+    edgeTextMuted = dark ? _edgeDarkTextMuted : _edgeLightTextMuted;
+    edgeOrange = accentColor;
+    edgeOrangePressed =
+        Color.lerp(accentColor, dark ? Colors.white : Colors.black, 0.18) ??
+        accentColor;
+    edgeShadow = dark ? const Color(0x99000000) : const Color(0x22000000);
+  }
+
   static ThemeData get drummerEdge {
-    const ColorScheme scheme = ColorScheme.dark(
+    final ColorScheme scheme = ColorScheme.dark(
       primary: edgeOrange,
       onPrimary: edgeTextPrimary,
       secondary: edgeOrangePressed,
@@ -67,7 +104,7 @@ class DrumcabularyTheme {
       colorScheme: scheme,
       scaffoldBackgroundColor: edgeBackground,
       textTheme: textTheme,
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         centerTitle: true,
         elevation: 0,
         scrolledUnderElevation: 0,
@@ -77,7 +114,7 @@ class DrumcabularyTheme {
         titleTextStyle: TextStyle(
           color: edgeTextPrimary,
           fontSize: 19,
-          fontWeight: FontWeight.w900,
+          fontWeight: FontWeight.w700,
           letterSpacing: 0,
         ),
       ),
@@ -87,7 +124,7 @@ class DrumcabularyTheme {
         shadowColor: edgeShadow,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
-          side: const BorderSide(color: edgeBorder),
+          side: BorderSide(color: edgeBorder),
         ),
         margin: EdgeInsets.zero,
       ),
@@ -96,17 +133,17 @@ class DrumcabularyTheme {
         selectedColor: edgeOrange,
         disabledColor: edgeSurface,
         checkmarkColor: edgeTextPrimary,
-        labelStyle: const TextStyle(
+        labelStyle: TextStyle(
           color: edgeTextPrimary,
-          fontWeight: FontWeight.w900,
+          fontWeight: FontWeight.w600,
           letterSpacing: 0,
         ),
-        secondaryLabelStyle: const TextStyle(
+        secondaryLabelStyle: TextStyle(
           color: edgeTextPrimary,
-          fontWeight: FontWeight.w900,
+          fontWeight: FontWeight.w600,
           letterSpacing: 0,
         ),
-        side: const BorderSide(color: edgeBorder),
+        side: BorderSide(color: edgeBorder),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       ),
@@ -117,7 +154,7 @@ class DrumcabularyTheme {
               foregroundColor: edgeTextPrimary,
               disabledBackgroundColor: edgeSurfaceSecondary,
               disabledForegroundColor: edgeTextMuted,
-              textStyle: const TextStyle(fontWeight: FontWeight.w900),
+              textStyle: const TextStyle(fontWeight: FontWeight.w700),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -140,8 +177,8 @@ class DrumcabularyTheme {
             OutlinedButton.styleFrom(
               foregroundColor: edgeTextPrimary,
               disabledForegroundColor: edgeTextMuted,
-              textStyle: const TextStyle(fontWeight: FontWeight.w900),
-              side: const BorderSide(color: edgeBorder, width: 1.2),
+              textStyle: const TextStyle(fontWeight: FontWeight.w700),
+              side: BorderSide(color: edgeBorder, width: 1.2),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -161,9 +198,9 @@ class DrumcabularyTheme {
                 if (states.contains(WidgetState.pressed) ||
                     states.contains(WidgetState.hovered) ||
                     states.contains(WidgetState.focused)) {
-                  return const BorderSide(color: edgeOrange, width: 1.2);
+                  return BorderSide(color: edgeOrange, width: 1.2);
                 }
-                return const BorderSide(color: edgeBorder, width: 1.2);
+                return BorderSide(color: edgeBorder, width: 1.2);
               }),
             ),
       ),
@@ -185,9 +222,9 @@ class DrumcabularyTheme {
                 ? edgeOrange
                 : edgeSurface;
           }),
-          side: WidgetStateProperty.all(const BorderSide(color: edgeBorder)),
+          side: WidgetStateProperty.all(BorderSide(color: edgeBorder)),
           textStyle: WidgetStateProperty.all(
-            const TextStyle(fontWeight: FontWeight.w900),
+            const TextStyle(fontWeight: FontWeight.w700),
           ),
         ),
       ),
@@ -198,8 +235,8 @@ class DrumcabularyTheme {
           return TextStyle(
             fontSize: 12,
             fontWeight: states.contains(WidgetState.selected)
-                ? FontWeight.w900
-                : FontWeight.w700,
+                ? FontWeight.w700
+                : FontWeight.w600,
             color: states.contains(WidgetState.selected)
                 ? edgeTextPrimary
                 : edgeTextSecondary,
@@ -219,8 +256,8 @@ class DrumcabularyTheme {
         thumbColor: edgeOrange,
         overlayColor: edgeOrange.withValues(alpha: 0.16),
       ),
-      dividerTheme: const DividerThemeData(color: edgeBorder),
-      snackBarTheme: const SnackBarThemeData(
+      dividerTheme: DividerThemeData(color: edgeBorder),
+      snackBarTheme: SnackBarThemeData(
         backgroundColor: edgeSurfaceSecondary,
         contentTextStyle: TextStyle(color: edgeTextPrimary),
       ),
@@ -230,10 +267,10 @@ class DrumcabularyTheme {
   static ThemeData get light {
     final ColorScheme scheme =
         ColorScheme.fromSeed(
-          seedColor: orange,
+          seedColor: edgeOrange,
           brightness: Brightness.light,
         ).copyWith(
-          primary: orange,
+          primary: edgeOrange,
           onPrimary: surface,
           secondary: gold,
           secondaryContainer: ink,
@@ -263,8 +300,8 @@ class DrumcabularyTheme {
         titleTextStyle: TextStyle(
           color: ink,
           fontSize: 19,
-          fontWeight: FontWeight.w800,
-          letterSpacing: -0.2,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0,
         ),
       ),
       cardTheme: CardThemeData(
@@ -284,13 +321,13 @@ class DrumcabularyTheme {
         checkmarkColor: surface,
         labelStyle: const TextStyle(
           color: ink,
-          fontWeight: FontWeight.w800,
-          letterSpacing: -0.1,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0,
         ),
         secondaryLabelStyle: const TextStyle(
           color: surface,
-          fontWeight: FontWeight.w800,
-          letterSpacing: -0.1,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0,
         ),
         side: const BorderSide(color: line),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
@@ -298,9 +335,9 @@ class DrumcabularyTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: ink,
+          backgroundColor: edgeOrange,
           foregroundColor: surface,
-          textStyle: const TextStyle(fontWeight: FontWeight.w900),
+          textStyle: const TextStyle(fontWeight: FontWeight.w700),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(18),
           ),
@@ -311,8 +348,8 @@ class DrumcabularyTheme {
         style:
             OutlinedButton.styleFrom(
               foregroundColor: ink,
-              textStyle: const TextStyle(fontWeight: FontWeight.w900),
-              side: const BorderSide(color: ink, width: 1.5),
+              textStyle: const TextStyle(fontWeight: FontWeight.w700),
+              side: BorderSide(color: edgeOrange, width: 1.5),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(18),
               ),
@@ -324,7 +361,7 @@ class DrumcabularyTheme {
                 }
                 if (states.contains(WidgetState.hovered) ||
                     states.contains(WidgetState.focused)) {
-                  return orange.withValues(alpha: 0.12);
+                  return edgeOrange.withValues(alpha: 0.12);
                 }
                 return null;
               }),
@@ -336,11 +373,11 @@ class DrumcabularyTheme {
             return states.contains(WidgetState.selected) ? surface : ink;
           }),
           backgroundColor: WidgetStateProperty.resolveWith((states) {
-            return states.contains(WidgetState.selected) ? ink : surface;
+            return states.contains(WidgetState.selected) ? edgeOrange : surface;
           }),
           side: WidgetStateProperty.all(const BorderSide(color: line)),
           textStyle: WidgetStateProperty.all(
-            const TextStyle(fontWeight: FontWeight.w900),
+            const TextStyle(fontWeight: FontWeight.w700),
           ),
         ),
       ),
@@ -351,22 +388,24 @@ class DrumcabularyTheme {
           return TextStyle(
             fontSize: 12,
             fontWeight: states.contains(WidgetState.selected)
-                ? FontWeight.w900
-                : FontWeight.w700,
+                ? FontWeight.w700
+                : FontWeight.w600,
             color: ink,
           );
         }),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           return IconThemeData(
-            color: states.contains(WidgetState.selected) ? ink : mutedInk,
+            color: states.contains(WidgetState.selected)
+                ? edgeOrange
+                : mutedInk,
           );
         }),
       ),
       sliderTheme: SliderThemeData(
-        activeTrackColor: ink,
+        activeTrackColor: edgeOrange,
         inactiveTrackColor: line,
-        thumbColor: orange,
-        overlayColor: orange.withValues(alpha: 0.16),
+        thumbColor: edgeOrange,
+        overlayColor: edgeOrange.withValues(alpha: 0.16),
       ),
       dividerTheme: const DividerThemeData(color: line),
     );

@@ -1114,7 +1114,7 @@ class _PatternInputLegend extends StatelessWidget {
   Widget build(BuildContext context) {
     final TextStyle? titleStyle = Theme.of(
       context,
-    ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900);
+    ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700);
     final TextStyle? bodyStyle = Theme.of(context).textTheme.bodyMedium;
     return SizedBox(
       width: 360,
@@ -1210,7 +1210,7 @@ class _LegendEntry extends StatelessWidget {
         children: <InlineSpan>[
           TextSpan(
             text: '$token: ',
-            style: baseStyle.copyWith(fontWeight: FontWeight.w900),
+            style: baseStyle.copyWith(fontWeight: FontWeight.w700),
           ),
           TextSpan(text: text),
         ],

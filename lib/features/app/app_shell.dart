@@ -13,17 +13,17 @@ import '../settings/app_settings_screen.dart';
 import '../settings/hardware_midi_settings_screen.dart';
 import '../toolkit/toolkit_screen.dart';
 import '../today/today_screen.dart';
-import 'startup_splash_screen.dart';
 
 class AppShell extends StatefulWidget {
-  const AppShell({super.key});
+  final AppController controller;
+
+  const AppShell({super.key, required this.controller});
 
   @override
   State<AppShell> createState() => _AppShellState();
 }
 
 class _AppShellState extends State<AppShell> {
-  late final Future<AppController> _controllerFuture = AppController.create();
   int _selectedIndex = 0;
 
   void _selectDestination(int index) {
@@ -34,30 +34,10 @@ class _AppShellState extends State<AppShell> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<AppController>(
-      future: _controllerFuture,
-      builder: (BuildContext context, AsyncSnapshot<AppController> snapshot) {
-        if (snapshot.hasError) {
-          return Scaffold(
-            appBar: AppBar(title: const Text('Coach')),
-            body: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text('Could not load app settings: ${snapshot.error}'),
-              ),
-            ),
-          );
-        }
-        final AppController? controller = snapshot.data;
-        if (controller == null) {
-          return const StartupSplashScreen();
-        }
-        return _DrumAppNavigationShell(
-          selectedIndex: _selectedIndex,
-          onDestinationSelected: _selectDestination,
-          body: _destinationFor(controller),
-        );
-      },
+    return _DrumAppNavigationShell(
+      selectedIndex: _selectedIndex,
+      onDestinationSelected: _selectDestination,
+      body: _destinationFor(widget.controller),
     );
   }
 
@@ -316,7 +296,7 @@ class _BrandMark extends StatelessWidget {
           'DRUMCABULARY',
           style: Theme.of(
             context,
-          ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w800),
+          ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600),
         ),
       ],
     );

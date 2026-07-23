@@ -372,7 +372,7 @@ class _MatrixScreenState extends State<MatrixScreen> {
       label,
       style: TextStyle(
         color: selected ? Colors.white : null,
-        fontWeight: FontWeight.w900,
+        fontWeight: FontWeight.w700,
       ),
     );
   }
@@ -752,7 +752,7 @@ class _MatrixScopeLine extends StatelessWidget {
       text,
       style: Theme.of(context).textTheme.bodySmall?.copyWith(
         color: DrumcabularyTheme.mutedInk,
-        fontWeight: FontWeight.w800,
+        fontWeight: FontWeight.w600,
       ),
     );
   }
@@ -918,7 +918,7 @@ class _ProgressLegendCard extends StatelessWidget {
                   Text(
                     item.label,
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],

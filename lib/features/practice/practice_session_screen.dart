@@ -268,7 +268,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                     isWarmup ? 'Warmup Session' : 'Practice Session',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
@@ -339,7 +339,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       textStyle: Theme.of(
         context,
-      ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w900),
+      ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
     );
     return DrumPanel(
       tone: DrumPanelTone.dark,
@@ -404,7 +404,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                                   ?.copyWith(
                                     fontFamily: 'Courier',
                                     color: DrumcabularyTheme.creamText,
-                                    fontWeight: FontWeight.w900,
+                                    fontWeight: FontWeight.w700,
                                   ),
                             ),
                             if (_showsEarnedReps) ...<Widget>[
@@ -418,7 +418,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                                 style: Theme.of(context).textTheme.titleMedium
                                     ?.copyWith(
                                       color: DrumcabularyTheme.pulseHover,
-                                      fontWeight: FontWeight.w900,
+                                      fontWeight: FontWeight.w700,
                                     ),
                               ),
                             ],
@@ -566,7 +566,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontFamily: 'Courier',
                       color: DrumcabularyTheme.creamText,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                   if (_showsEarnedReps) ...<Widget>[
@@ -579,7 +579,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                       transport.statusText!,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         color: DrumcabularyTheme.pulseHover,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ],
@@ -743,7 +743,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                             Text(
                               '$_bpm',
                               style: Theme.of(context).textTheme.titleLarge
-                                  ?.copyWith(fontWeight: FontWeight.w800),
+                                  ?.copyWith(fontWeight: FontWeight.w600),
                             ),
                           ],
                         ),
@@ -1506,7 +1506,7 @@ class _EarnedRepsDisplay extends StatelessWidget {
               '$reps Reps Earned',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 color: DrumcabularyTheme.creamText,
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ],
@@ -1612,7 +1612,7 @@ class _BeatPulseState extends State<_BeatPulse> {
                     '${widget.bpm}',
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       color: DrumcabularyTheme.creamText,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w700,
                       letterSpacing: -0.8,
                     ),
                   ),
@@ -1620,7 +1620,7 @@ class _BeatPulseState extends State<_BeatPulse> {
                     widget.enabled ? 'BPM' : 'PULSE OFF',
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
                       color: DrumcabularyTheme.creamText,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w700,
                       letterSpacing: 1.2,
                     ),
                   ),
@@ -2118,7 +2118,7 @@ class _SessionStepper extends StatelessWidget {
               '${currentIndex + 1} / $itemCount',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 color: textColor,
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),

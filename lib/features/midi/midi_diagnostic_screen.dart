@@ -116,14 +116,14 @@ class _MidiDiagnosticScreenState extends State<MidiDiagnosticScreen> {
                 'Runtime: ${defaultTargetPlatform.name}',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: DrumcabularyTheme.edgeTextSecondary,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
                 'USB MIDI input path',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w700,
                   letterSpacing: 0,
                 ),
               ),
@@ -226,7 +226,7 @@ class _DiscoveryPanel extends StatelessWidget {
             'Discovery',
             style: Theme.of(
               context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
           Text(
@@ -261,7 +261,7 @@ class _DiscoveryPanel extends StatelessWidget {
               'Plugin log',
               style: Theme.of(context).textTheme.labelLarge?.copyWith(
                 color: DrumcabularyTheme.edgeOrange,
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w700,
               ),
             ),
             const SizedBox(height: 4),
@@ -321,7 +321,7 @@ class _ConnectionPanel extends StatelessWidget {
                   'Devices',
                   style: Theme.of(
                     context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
                 ),
               ),
               _StatusPill(status: service.status),
@@ -398,7 +398,7 @@ class _ConnectionPanel extends StatelessWidget {
               'If this is the iOS simulator, use the macOS app for the USB MIDI test. The simulator may show network MIDI sessions without exposing the Mac USB kit.',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Theme.of(context).colorScheme.error,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w600,
                 height: 1.3,
               ),
             ),
@@ -409,7 +409,7 @@ class _ConnectionPanel extends StatelessWidget {
               'This selected endpoint is a CoreMIDI network session, not a USB drum module.',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Theme.of(context).colorScheme.error,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w600,
                 height: 1.3,
               ),
             ),
@@ -516,7 +516,7 @@ class _EndpointDetails extends StatelessWidget {
               'Selected endpoint',
               style: Theme.of(context).textTheme.labelLarge?.copyWith(
                 color: DrumcabularyTheme.edgeOrange,
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w700,
               ),
             ),
             const SizedBox(height: 6),
@@ -579,7 +579,7 @@ class _LatestEventPanel extends StatelessWidget {
             'Latest event',
             style: Theme.of(
               context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 10),
           Text(
@@ -616,7 +616,7 @@ class _LatestEventPanel extends StatelessWidget {
               'Setup changes',
               style: Theme.of(context).textTheme.labelLarge?.copyWith(
                 color: DrumcabularyTheme.edgeOrange,
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w700,
               ),
             ),
             const SizedBox(height: 4),
@@ -691,7 +691,7 @@ class _LedControllerPanel extends StatelessWidget {
                   'LED Controller',
                   style: Theme.of(
                     context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
                 ),
               ),
               _SerialLedStatusPill(status: controller.status),
@@ -792,7 +792,7 @@ class _LedControllerPanel extends StatelessWidget {
               'Forward MIDI Hits',
               style: Theme.of(
                 context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
             ),
             subtitle: Text(
               'Sends one voice command per mapped Note On hit.',
@@ -1011,7 +1011,7 @@ class _MidiPatternCaptureCardState extends State<MidiPatternCaptureCard> {
             'MIDI Pattern Capture',
             style: Theme.of(
               context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 14),
           DrumActionRow(
@@ -1044,7 +1044,7 @@ class _MidiPatternCaptureCardState extends State<MidiPatternCaptureCard> {
             'Generated pattern string',
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
               color: DrumcabularyTheme.edgeOrange,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 6),
@@ -1079,7 +1079,7 @@ class _MidiPatternCaptureCardState extends State<MidiPatternCaptureCard> {
             'Rendered notation preview',
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
               color: DrumcabularyTheme.edgeOrange,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 6),
@@ -1152,7 +1152,7 @@ class _EventLogPanel extends StatelessWidget {
                   'Event log',
                   style: Theme.of(
                     context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
                 ),
               ),
               TextButton.icon(
@@ -1242,7 +1242,7 @@ class _NoteMapPanel extends StatelessWidget {
             'Note map',
             style: Theme.of(
               context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
           Text(

@@ -191,7 +191,7 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                                 Text(
                                   'Save BPM',
                                   style: Theme.of(context).textTheme.titleSmall
-                                      ?.copyWith(fontWeight: FontWeight.w900),
+                                      ?.copyWith(fontWeight: FontWeight.w700),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
@@ -235,7 +235,7 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
                                 Text(
                                   'Keep Earned Reps',
                                   style: Theme.of(context).textTheme.titleSmall
-                                      ?.copyWith(fontWeight: FontWeight.w900),
+                                      ?.copyWith(fontWeight: FontWeight.w700),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
@@ -634,7 +634,7 @@ class _SummaryMetric extends StatelessWidget {
             '$label: ',
             style: Theme.of(
               context,
-            ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w900),
+            ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
           Flexible(
             child: Text(value, style: Theme.of(context).textTheme.bodyMedium),
@@ -664,7 +664,7 @@ class _RecommendationPanel extends StatelessWidget {
               recommendation.title,
               style: Theme.of(
                 context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 6),
             Text(
@@ -702,7 +702,7 @@ class _AssessmentChoiceGroup<T> extends StatelessWidget {
           title,
           style: Theme.of(
             context,
-          ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w900),
+          ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 8),
         Wrap(
@@ -747,7 +747,7 @@ class _SummaryStepper extends StatelessWidget {
               '${currentIndex + 1} / $itemCount',
               style: Theme.of(
                 context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
             ),
           ),
         ),

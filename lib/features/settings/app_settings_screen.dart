@@ -8,6 +8,7 @@ import '../../features/app/app_runtime_flags.dart';
 import '../../features/app/drumcabulary_theme.dart';
 import '../../features/app/unsaved_changes_dialog.dart';
 import '../../features/hardware/hardware_capabilities.dart';
+import '../../features/hardware/hardware_status_header.dart';
 import '../../state/app_controller.dart';
 import 'hardware_midi_settings_screen.dart';
 
@@ -45,7 +46,12 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
       child: Scaffold(
         appBar: AppBar(title: const Text('Settings')),
         body: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 104, 16, 16),
+          padding: const EdgeInsets.fromLTRB(
+            16,
+            HardwareStatusHeaderOverlay.appBarBodyTopInset,
+            16,
+            16,
+          ),
           children: <Widget>[
             if (HardwareCapabilities.supportsDesktopHardware) ...<Widget>[
               Card(
@@ -63,6 +69,13 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
               ),
               const SizedBox(height: 12),
             ],
+            _AppearanceSettingsCard(
+              draft: _draft,
+              onChanged: (UserProfileV1 next) {
+                setState(() => _draft = next);
+              },
+            ),
+            const SizedBox(height: 12),
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -78,7 +91,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                         Text(
                           '${_draft.defaultBpm}',
                           style: Theme.of(context).textTheme.titleLarge
-                              ?.copyWith(fontWeight: FontWeight.w800),
+                              ?.copyWith(fontWeight: FontWeight.w600),
                         ),
                       ],
                     ),
@@ -285,7 +298,9 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
         _draft.defaultBpm != current.defaultBpm ||
         _draft.defaultTimerPreset != current.defaultTimerPreset ||
         _draft.clickEnabledByDefault != current.clickEnabledByDefault ||
-        _draft.darkPracticeSheetNotation != current.darkPracticeSheetNotation;
+        _draft.darkPracticeSheetNotation != current.darkPracticeSheetNotation ||
+        _draft.themeMode != current.themeMode ||
+        _draft.accentColorValue != current.accentColorValue;
   }
 
   void _saveDraft() {
@@ -310,3 +325,135 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
     };
   }
 }
+
+class _AppearanceSettingsCard extends StatelessWidget {
+  final UserProfileV1 draft;
+  final ValueChanged<UserProfileV1> onChanged;
+
+  const _AppearanceSettingsCard({required this.draft, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text('Appearance', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 12),
+            SegmentedButton<AppThemeModeV1>(
+              segments: const <ButtonSegment<AppThemeModeV1>>[
+                ButtonSegment<AppThemeModeV1>(
+                  value: AppThemeModeV1.system,
+                  icon: Icon(Icons.brightness_auto_rounded),
+                  label: Text('System'),
+                ),
+                ButtonSegment<AppThemeModeV1>(
+                  value: AppThemeModeV1.light,
+                  icon: Icon(Icons.light_mode_outlined),
+                  label: Text('Light'),
+                ),
+                ButtonSegment<AppThemeModeV1>(
+                  value: AppThemeModeV1.dark,
+                  icon: Icon(Icons.dark_mode_outlined),
+                  label: Text('Dark'),
+                ),
+              ],
+              selected: <AppThemeModeV1>{draft.themeMode},
+              onSelectionChanged: (Set<AppThemeModeV1> selection) {
+                onChanged(draft.copyWith(themeMode: selection.single));
+              },
+            ),
+            const SizedBox(height: 16),
+            Text('Accent Color', style: Theme.of(context).textTheme.labelLarge),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: <Widget>[
+                for (final _AccentColorOption option in _accentColorOptions)
+                  _AccentColorSwatch(
+                    option: option,
+                    selected: draft.accentColorValue == option.color.toARGB32(),
+                    onSelected: () {
+                      onChanged(
+                        draft.copyWith(
+                          accentColorValue: option.color.toARGB32(),
+                        ),
+                      );
+                    },
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AccentColorSwatch extends StatelessWidget {
+  final _AccentColorOption option;
+  final bool selected;
+  final VoidCallback onSelected;
+
+  const _AccentColorSwatch({
+    required this.option,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: option.label,
+      child: InkResponse(
+        onTap: onSelected,
+        radius: 24,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: option.color,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: selected
+                  ? DrumcabularyTheme.edgeTextPrimary
+                  : DrumcabularyTheme.edgeBorder,
+              width: selected ? 3 : 1.2,
+            ),
+            boxShadow: selected
+                ? <BoxShadow>[
+                    BoxShadow(
+                      color: option.color.withValues(alpha: 0.34),
+                      blurRadius: 14,
+                    ),
+                  ]
+                : null,
+          ),
+          child: selected
+              ? const Icon(Icons.check_rounded, color: Colors.white)
+              : null,
+        ),
+      ),
+    );
+  }
+}
+
+class _AccentColorOption {
+  final String label;
+  final Color color;
+
+  const _AccentColorOption(this.label, this.color);
+}
+
+const List<_AccentColorOption> _accentColorOptions = <_AccentColorOption>[
+  _AccentColorOption('Burnt Orange', DrumcabularyTheme.defaultAccent),
+  _AccentColorOption('Electric Blue', Color(0xFF2F80ED)),
+  _AccentColorOption('Stage Purple', Color(0xFF9B5CFF)),
+  _AccentColorOption('Signal Green', Color(0xFF2EB67D)),
+  _AccentColorOption('Hot Pink', Color(0xFFFF4F87)),
+  _AccentColorOption('Gold', Color(0xFFE0A800)),
+];

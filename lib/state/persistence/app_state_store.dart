@@ -242,6 +242,8 @@ class IsarAppStateStore implements AppStateStore {
       'clickEnabledByDefault': profile.clickEnabledByDefault,
       'accentVoice': profile.accentVoice.name,
       'darkPracticeSheetNotation': profile.darkPracticeSheetNotation,
+      'themeMode': profile.themeMode.name,
+      'accentColorValue': profile.accentColorValue,
     };
   }
 
@@ -260,6 +262,12 @@ class IsarAppStateStore implements AppStateStore {
       ),
       darkPracticeSheetNotation:
           map['darkPracticeSheetNotation'] as bool? ?? false,
+      themeMode: AppThemeModeV1.values.byName(
+        map['themeMode'] as String? ?? UserProfileV1.initial.themeMode.name,
+      ),
+      accentColorValue:
+          map['accentColorValue'] as int? ??
+          UserProfileV1.initial.accentColorValue,
     );
   }
 

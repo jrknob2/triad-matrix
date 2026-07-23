@@ -1,15 +1,16 @@
 # Drummer Edge UI Style Guide
 
 Drummer Edge is Drumcabulary's MVP visual direction for the Level -> Skill ->
-Lesson teaching flow. It replaces the washed-out cream/card look with a dark,
-high-contrast, drummer-focused interface.
+Lesson teaching flow. It uses a high-contrast, drummer-focused interface with
+user-selectable light/dark appearance and accent color.
 
 ## Design Goals
 
-- Dark, focused, and high contrast.
+- Focused and high contrast in both dark and light appearance.
 - Confident and modern without feeling cartoonish.
 - Rock/drummer inspired, but still premium and readable.
-- Orange is an accent for action, tempo, and progress, not a page fill.
+- Burnt orange is the default accent for action, tempo, and progress, not a
+  page fill. The accent is user configurable.
 - Teaching content remains the priority; notation legibility wins over styling.
 
 ## Color Palette
@@ -23,14 +24,16 @@ high-contrast, drummer-focused interface.
 | Primary text | `#FFFFFF` |
 | Secondary text | `#B5B5B8` |
 | Muted text | `#8A8A8D` |
-| Accent orange | `#FF6A00` |
-| Accent orange pressed | `#FF8C42` |
-| Success/progress | `#FF6A00` unless a status requires another color |
+| Default accent | `#FF6A00` |
+| Accent pressed/hover | derived from selected accent |
+| Success/progress | selected accent unless a status requires another color |
 
 ## Typography
 
 - Use the existing app font stack where possible.
-- Large lesson titles use heavy weights and tight line height.
+- Large lesson titles use confident, readable weights and tight line height.
+- Avoid ultra-heavy weights. Prefer `w600`/`w700` for emphasis instead of
+  `w800`/`w900`.
 - Breadcrumbs, section labels, and compact metadata labels use uppercase.
 - Body copy stays readable, with no stylized treatment that slows reading.
 - Avoid thin low-contrast gray text.
@@ -123,6 +126,8 @@ high-contrast, drummer-focused interface.
 ## Implementation Notes
 
 - Centralize tokens in `DrumcabularyTheme`.
+- Theme mode and accent color are profile settings and must be persisted with
+  app data.
 - Reuse shared components in `drumcabulary_ui.dart` instead of cloning surface
   styling in every screen.
 - Apply the style first to Lesson Detail, then minimally to Level, Skill, and

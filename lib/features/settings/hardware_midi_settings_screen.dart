@@ -69,7 +69,7 @@ class _HardwareConnectionDialogState extends State<HardwareConnectionDialog> {
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18),
-        side: const BorderSide(color: DrumcabularyTheme.edgeBorder),
+        side: BorderSide(color: DrumcabularyTheme.edgeBorder),
       ),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 620),
@@ -86,7 +86,7 @@ class _HardwareConnectionDialogState extends State<HardwareConnectionDialog> {
                       'Devices',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         color: DrumcabularyTheme.edgeTextPrimary,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
@@ -619,7 +619,7 @@ class _LedOrientationSettings extends StatelessWidget {
           'LED Orientation',
           style: textTheme.labelLarge?.copyWith(
             color: DrumcabularyTheme.edgeTextPrimary,
-            fontWeight: FontWeight.w900,
+            fontWeight: FontWeight.w700,
           ),
         ),
         const SizedBox(height: 8),

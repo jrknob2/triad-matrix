@@ -12,6 +12,8 @@ import 'package:flutter/foundation.dart';
 
 enum HandednessV1 { right, left }
 
+enum AppThemeModeV1 { system, light, dark }
+
 enum MaterialFamilyV1 { triad, fourNote, fiveNote, custom, combo, warmup }
 
 enum PracticeItemSourceV1 { builtIn, userDefined, generated }
@@ -151,6 +153,8 @@ class UserProfileV1 {
   final bool clickEnabledByDefault;
   final AccentVoiceV1 accentVoice;
   final bool darkPracticeSheetNotation;
+  final AppThemeModeV1 themeMode;
+  final int accentColorValue;
 
   const UserProfileV1({
     required this.studentName,
@@ -160,6 +164,8 @@ class UserProfileV1 {
     required this.clickEnabledByDefault,
     required this.accentVoice,
     required this.darkPracticeSheetNotation,
+    required this.themeMode,
+    required this.accentColorValue,
   });
 
   UserProfileV1 copyWith({
@@ -170,6 +176,8 @@ class UserProfileV1 {
     bool? clickEnabledByDefault,
     AccentVoiceV1? accentVoice,
     bool? darkPracticeSheetNotation,
+    AppThemeModeV1? themeMode,
+    int? accentColorValue,
   }) {
     return UserProfileV1(
       studentName: studentName ?? this.studentName,
@@ -181,6 +189,8 @@ class UserProfileV1 {
       accentVoice: accentVoice ?? this.accentVoice,
       darkPracticeSheetNotation:
           darkPracticeSheetNotation ?? this.darkPracticeSheetNotation,
+      themeMode: themeMode ?? this.themeMode,
+      accentColorValue: accentColorValue ?? this.accentColorValue,
     );
   }
 
@@ -192,6 +202,8 @@ class UserProfileV1 {
     clickEnabledByDefault: true,
     accentVoice: AccentVoiceV1.snare,
     darkPracticeSheetNotation: false,
+    themeMode: AppThemeModeV1.dark,
+    accentColorValue: 0xFFFF6A00,
   );
 }
 

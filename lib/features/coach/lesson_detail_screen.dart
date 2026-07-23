@@ -123,7 +123,12 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
       body: DrumScreen(
         child: HardwareStatusHeaderOverlay(
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 104, 16, 16),
+            padding: const EdgeInsets.fromLTRB(
+              16,
+              HardwareStatusHeaderOverlay.contentTopInset,
+              16,
+              16,
+            ),
             children: <Widget>[
               _LessonHeader(
                 lesson: lesson,
@@ -513,7 +518,7 @@ class _LessonHeader extends StatelessWidget {
               .toUpperCase(),
           style: textTheme.labelLarge?.copyWith(
             color: DrumcabularyTheme.edgeOrange,
-            fontWeight: FontWeight.w900,
+            fontWeight: FontWeight.w700,
             letterSpacing: 1.1,
           ),
         ),
@@ -522,7 +527,7 @@ class _LessonHeader extends StatelessWidget {
           lesson.title,
           style: textTheme.headlineMedium?.copyWith(
             color: DrumcabularyTheme.edgeTextPrimary,
-            fontWeight: FontWeight.w900,
+            fontWeight: FontWeight.w700,
             height: 1.02,
           ),
         ),
@@ -543,7 +548,7 @@ class _LessonHeader extends StatelessWidget {
               '$completedExercises of $totalExercises exercises complete',
               style: textTheme.labelLarge?.copyWith(
                 color: DrumcabularyTheme.edgeTextPrimary,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(width: 12),
@@ -554,7 +559,7 @@ class _LessonHeader extends StatelessWidget {
                   value: completion.clamp(0.0, 1.0).toDouble(),
                   minHeight: 6,
                   backgroundColor: DrumcabularyTheme.edgeSurfaceSecondary,
-                  valueColor: const AlwaysStoppedAnimation<Color>(
+                  valueColor: AlwaysStoppedAnimation<Color>(
                     DrumcabularyTheme.edgeOrange,
                   ),
                 ),
@@ -565,7 +570,7 @@ class _LessonHeader extends StatelessWidget {
               '$percent%',
               style: textTheme.labelLarge?.copyWith(
                 color: DrumcabularyTheme.edgeOrange,
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ],
@@ -739,7 +744,7 @@ class _ExerciseStep extends StatelessWidget {
                     dimension: 38,
                     child: Center(
                       child: complete
-                          ? const Icon(
+                          ? Icon(
                               Icons.check_rounded,
                               size: 20,
                               color: DrumcabularyTheme.edgeTextPrimary,
@@ -748,7 +753,7 @@ class _ExerciseStep extends StatelessWidget {
                               '$number',
                               style: textTheme.labelLarge?.copyWith(
                                 color: DrumcabularyTheme.edgeTextPrimary,
-                                fontWeight: FontWeight.w900,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
                     ),
@@ -765,7 +770,7 @@ class _ExerciseStep extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: textTheme.titleSmall?.copyWith(
                           color: DrumcabularyTheme.edgeTextPrimary,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w700,
                           height: 1.15,
                         ),
                       ),
@@ -778,7 +783,7 @@ class _ExerciseStep extends StatelessWidget {
                               : selected || practicing
                               ? DrumcabularyTheme.edgeOrange
                               : DrumcabularyTheme.edgeTextSecondary,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ],
@@ -846,7 +851,7 @@ class _ActiveExerciseCard extends StatelessWidget {
               'EXERCISE $number OF $totalExercises',
               style: textTheme.labelMedium?.copyWith(
                 color: DrumcabularyTheme.edgeOrange,
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w700,
                 letterSpacing: 1,
               ),
             ),
@@ -855,7 +860,7 @@ class _ActiveExerciseCard extends StatelessWidget {
               exercise.title,
               style: textTheme.titleLarge?.copyWith(
                 color: DrumcabularyTheme.edgeTextPrimary,
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w700,
                 height: 1.08,
               ),
             ),
@@ -874,7 +879,7 @@ class _ActiveExerciseCard extends StatelessWidget {
                   exercise.notation.sections[index].title!,
                   style: textTheme.labelMedium?.copyWith(
                     color: DrumcabularyTheme.edgeTextSecondary,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                     letterSpacing: 0.4,
                   ),
                 ),
@@ -992,7 +997,7 @@ class _TeachingInfoPanel extends StatelessWidget {
                   label,
                   style: textTheme.titleSmall?.copyWith(
                     color: DrumcabularyTheme.edgeTextPrimary,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ],
@@ -1055,7 +1060,7 @@ class _BpmInlineControl extends StatelessWidget {
               guidance,
               style: textTheme.labelMedium?.copyWith(
                 color: DrumcabularyTheme.edgeTextSecondary,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: 8),
@@ -1072,7 +1077,7 @@ class _BpmInlineControl extends StatelessWidget {
                     textAlign: TextAlign.center,
                     style: textTheme.titleMedium?.copyWith(
                       color: DrumcabularyTheme.edgeOrange,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
@@ -1121,7 +1126,7 @@ class _SmallTempoButton extends StatelessWidget {
           disabledForegroundColor: DrumcabularyTheme.edgeTextMuted.withValues(
             alpha: 0.45,
           ),
-          side: const BorderSide(color: DrumcabularyTheme.edgeBorder),
+          side: BorderSide(color: DrumcabularyTheme.edgeBorder),
           padding: EdgeInsets.zero,
         ),
       ),
@@ -1395,7 +1400,7 @@ class _PracticeModeCard extends StatelessWidget {
                             color: enabled
                                 ? DrumcabularyTheme.edgeTextPrimary
                                 : DrumcabularyTheme.edgeTextMuted,
-                            fontWeight: FontWeight.w900,
+                            fontWeight: FontWeight.w700,
                             height: 1.1,
                           ),
                         ),
@@ -1423,7 +1428,7 @@ class _PracticeModeCard extends StatelessWidget {
                       color: enabled
                           ? DrumcabularyTheme.edgeOrange
                           : DrumcabularyTheme.edgeTextMuted,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ],
@@ -1593,7 +1598,7 @@ class _MetadataPill extends StatelessWidget {
                 : outlinedAccent
                 ? DrumcabularyTheme.edgeOrange
                 : DrumcabularyTheme.edgeTextPrimary,
-            fontWeight: FontWeight.w900,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ),

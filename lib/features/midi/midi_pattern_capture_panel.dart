@@ -47,7 +47,7 @@ class MidiPatternCapturePanel extends StatelessWidget {
                   color: connected
                       ? DrumcabularyTheme.edgeOrange
                       : DrumcabularyTheme.edgeTextSecondary,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],
