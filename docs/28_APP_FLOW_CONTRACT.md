@@ -305,6 +305,8 @@ Current behavior:
 
 - visible only on desktop-capable platforms
 - uses the shared MIDI input service
+- shows concise MIDI and LED connection chips that link to the shared Hardware
+  & MIDI settings screen
 - requires the MIDI device to be connected first
 - records mapped MIDI hits
 - flashes the shared LED controller for each recorded live hit when the LED

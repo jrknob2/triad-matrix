@@ -11,6 +11,20 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('AppController hardening', () {
+    test('initial profile stores the seeded student name', () async {
+      final FakeAppStateStore store = FakeAppStateStore();
+      final AppController controller = await AppController.createForTesting(
+        store,
+      );
+
+      expect(controller.profile.studentName, 'Terry');
+
+      controller.updateProfile(controller.profile.copyWith(defaultBpm: 100));
+      await controller.flushPersistence();
+
+      expect(store.savedSnapshots.last.profile.studentName, 'Terry');
+    });
+
     test('serializes persistence and saves the latest snapshot', () async {
       final Completer<void> firstSaveGate = Completer<void>();
       final FakeAppStateStore store = FakeAppStateStore(

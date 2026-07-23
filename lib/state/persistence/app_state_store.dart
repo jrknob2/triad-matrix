@@ -235,6 +235,7 @@ class IsarAppStateStore implements AppStateStore {
 
   Map<String, dynamic> _userProfileToMap(UserProfileV1 profile) {
     return <String, dynamic>{
+      'studentName': profile.studentName,
       'handedness': profile.handedness.name,
       'defaultBpm': profile.defaultBpm,
       'defaultTimerPreset': profile.defaultTimerPreset.name,
@@ -246,6 +247,8 @@ class IsarAppStateStore implements AppStateStore {
 
   UserProfileV1 _userProfileFromMap(Map<String, dynamic> map) {
     return UserProfileV1(
+      studentName:
+          map['studentName'] as String? ?? UserProfileV1.initial.studentName,
       handedness: HandednessV1.values.byName(map['handedness'] as String),
       defaultBpm: map['defaultBpm'] as int,
       defaultTimerPreset: TimerPresetV1.values.byName(

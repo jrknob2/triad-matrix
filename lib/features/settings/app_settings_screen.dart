@@ -281,7 +281,8 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
 
   bool get _hasUnsavedChanges {
     final UserProfileV1 current = widget.controller.profile;
-    return _draft.defaultBpm != current.defaultBpm ||
+    return _draft.studentName != current.studentName ||
+        _draft.defaultBpm != current.defaultBpm ||
         _draft.defaultTimerPreset != current.defaultTimerPreset ||
         _draft.clickEnabledByDefault != current.clickEnabledByDefault ||
         _draft.darkPracticeSheetNotation != current.darkPracticeSheetNotation;

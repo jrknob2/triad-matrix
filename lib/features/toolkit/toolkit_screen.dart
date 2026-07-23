@@ -24,6 +24,7 @@ class FocusScreen extends StatefulWidget {
   final void Function(String, PracticeModeV1) onPracticeItemInMode;
   final VoidCallback onCreateNewItem;
   final VoidCallback onOpenMatrix;
+  final VoidCallback onOpenDevices;
 
   const FocusScreen({
     super.key,
@@ -32,6 +33,7 @@ class FocusScreen extends StatefulWidget {
     required this.onPracticeItemInMode,
     required this.onCreateNewItem,
     required this.onOpenMatrix,
+    required this.onOpenDevices,
   });
 
   @override
@@ -110,6 +112,7 @@ class _FocusScreenState extends State<FocusScreen> {
                   ledController: SharedSerialLedController.instance,
                   playbackBpm: widget.controller.profile.defaultBpm,
                   onCreateExercise: _openExerciseDraftFromCapture,
+                  onOpenDevices: widget.onOpenDevices,
                 ),
                 const SizedBox(height: 14),
               ],

@@ -144,6 +144,7 @@ enum AppMockScenarioV1 {
 
 @immutable
 class UserProfileV1 {
+  final String studentName;
   final HandednessV1 handedness;
   final int defaultBpm;
   final TimerPresetV1 defaultTimerPreset;
@@ -152,6 +153,7 @@ class UserProfileV1 {
   final bool darkPracticeSheetNotation;
 
   const UserProfileV1({
+    required this.studentName,
     required this.handedness,
     required this.defaultBpm,
     required this.defaultTimerPreset,
@@ -161,6 +163,7 @@ class UserProfileV1 {
   });
 
   UserProfileV1 copyWith({
+    String? studentName,
     HandednessV1? handedness,
     int? defaultBpm,
     TimerPresetV1? defaultTimerPreset,
@@ -169,6 +172,7 @@ class UserProfileV1 {
     bool? darkPracticeSheetNotation,
   }) {
     return UserProfileV1(
+      studentName: studentName ?? this.studentName,
       handedness: handedness ?? this.handedness,
       defaultBpm: defaultBpm ?? this.defaultBpm,
       defaultTimerPreset: defaultTimerPreset ?? this.defaultTimerPreset,
@@ -181,6 +185,7 @@ class UserProfileV1 {
   }
 
   static const UserProfileV1 initial = UserProfileV1(
+    studentName: 'Terry',
     handedness: HandednessV1.right,
     defaultBpm: 92,
     defaultTimerPreset: TimerPresetV1.minutes10,

@@ -516,6 +516,31 @@ void main() {
       expect(find.text('Connect MIDI input'), findsOneWidget);
     });
 
+    testWidgets('device status chips open shared Hardware and MIDI settings', (
+      WidgetTester tester,
+    ) async {
+      final MidiPatternCaptureController controller =
+          MidiPatternCaptureController();
+      int openDevicesCount = 0;
+
+      await _pumpCaptureCard(
+        tester,
+        controller,
+        midiStatus: MidiInputStatus.connected,
+        onOpenDevices: () => openDevicesCount += 1,
+      );
+
+      expect(find.text('MIDI connected'), findsOneWidget);
+      expect(find.text('LED controller'), findsOneWidget);
+
+      await tester.tap(find.text('MIDI connected'));
+      await tester.pump();
+      await tester.tap(find.text('LED controller'));
+      await tester.pump();
+
+      expect(openDevicesCount, 2);
+    });
+
     testWidgets('pattern string is not editable while recording', (
       WidgetTester tester,
     ) async {
@@ -823,6 +848,7 @@ Future<void> _pumpCaptureCard(
   MidiPatternCaptureController controller, {
   MidiInputStatus? midiStatus,
   ValueChanged<String>? onCreateExercise,
+  VoidCallback? onOpenDevices,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
@@ -833,6 +859,7 @@ Future<void> _pumpCaptureCard(
               controller: controller,
               midiStatus: midiStatus,
               onCreateExercise: onCreateExercise,
+              onOpenDevices: onOpenDevices,
             ),
           ],
         ),

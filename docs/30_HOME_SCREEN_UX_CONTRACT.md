@@ -125,10 +125,13 @@ Provide context and readiness.
 Example:
 
 ```
-Good Evening, Terry
+Good Evening Terry
 
 Ready when you are.
 ```
+
+The name comes from the persisted app profile. Until first-light capture and
+Settings editing exist, the seeded profile name is Terry.
 
 ---
 

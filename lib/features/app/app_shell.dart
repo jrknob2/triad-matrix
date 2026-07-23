@@ -61,6 +61,7 @@ class _AppShellState extends State<AppShell> {
   Widget _destinationFor(AppController controller) {
     return switch (_selectedIndex) {
       0 => TodayScreen(
+        controller: controller,
         onOpenExplore: () => _selectDestination(1),
         onOpenInsights: () => _selectDestination(2),
         onOpenSettings: () => _selectDestination(4),
@@ -75,6 +76,7 @@ class _AppShellState extends State<AppShell> {
             _practiceItemInMode(controller, itemId, mode),
         onCreateNewItem: () => _createNewPattern(controller),
         onOpenMatrix: () => _openMatrix(controller),
+        onOpenDevices: _openDevices,
       ),
       4 => AppSettingsScreen(controller: controller),
       _ => const SizedBox.shrink(),

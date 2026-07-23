@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../state/app_controller.dart';
 import '../app/drumcabulary_theme.dart';
 import '../app/drumcabulary_ui.dart';
 import '../coach/lesson_detail_screen.dart';
@@ -16,6 +17,7 @@ import '../midi/shared_midi_input_service.dart';
 import '../midi/shared_serial_led_controller.dart';
 
 class TodayScreen extends StatefulWidget {
+  final AppController controller;
   final VoidCallback? onOpenExplore;
   final VoidCallback? onOpenInsights;
   final VoidCallback? onOpenSettings;
@@ -23,6 +25,7 @@ class TodayScreen extends StatefulWidget {
 
   const TodayScreen({
     super.key,
+    required this.controller,
     this.onOpenExplore,
     this.onOpenInsights,
     this.onOpenSettings,
@@ -96,6 +99,7 @@ class _TodayScreenState extends State<TodayScreen> {
               }
               return _HomeView(
                 data: data,
+                studentName: widget.controller.profile.studentName,
                 hardwareStatus: _hardwareStatus,
                 onProgressChanged: _refresh,
                 onOpenExplore: widget.onOpenExplore,
@@ -279,6 +283,7 @@ class _TeachingFlowData {
 
 class _HomeView extends StatelessWidget {
   final _TeachingFlowData data;
+  final String studentName;
   final _HomeHardwareStatus? hardwareStatus;
   final VoidCallback onProgressChanged;
   final VoidCallback? onOpenExplore;
@@ -288,6 +293,7 @@ class _HomeView extends StatelessWidget {
 
   const _HomeView({
     required this.data,
+    required this.studentName,
     required this.hardwareStatus,
     required this.onProgressChanged,
     required this.onOpenExplore,
@@ -314,6 +320,7 @@ class _HomeView extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
       children: <Widget>[
         _HomeHeader(
+          studentName: studentName,
           hardwareStatus: hardwareStatus,
           onOpenDevices: onOpenDevices,
         ),
@@ -404,10 +411,12 @@ class _HomeView extends StatelessWidget {
 }
 
 class _HomeHeader extends StatelessWidget {
+  final String studentName;
   final _HomeHardwareStatus? hardwareStatus;
   final VoidCallback? onOpenDevices;
 
   const _HomeHeader({
+    required this.studentName,
     required this.hardwareStatus,
     required this.onOpenDevices,
   });
@@ -418,7 +427,7 @@ class _HomeHeader extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Text(
-          _greeting(),
+          _greeting(studentName),
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
             color: DrumcabularyTheme.edgeTextPrimary,
             fontWeight: FontWeight.w900,
@@ -2819,11 +2828,15 @@ String _durationValue(int seconds) {
   return '${minutes}m';
 }
 
-String _greeting() {
+String _greeting(String studentName) {
   final int hour = DateTime.now().hour;
-  if (hour < 12) return 'Good Morning';
-  if (hour < 18) return 'Good Afternoon';
-  return 'Good Evening';
+  final String period = hour < 12
+      ? 'Good Morning'
+      : hour < 18
+      ? 'Good Afternoon'
+      : 'Good Evening';
+  final String name = studentName.trim();
+  return name.isEmpty ? period : '$period $name';
 }
 
 String _relativeDay(DateTime date) {
