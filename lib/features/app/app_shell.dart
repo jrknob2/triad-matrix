@@ -71,8 +71,7 @@ class _AppShellState extends State<AppShell> {
       2 => const _ShellDestination(
         header: _ShellHeaderContent(
           title: 'Practice Insights',
-          subtitle:
-              'A focused view of practice time, consistency, and completed exercises.',
+          subtitle: 'Practice time, consistency, and progress.',
         ),
         body: PracticeInsightsScreen(),
       ),
@@ -324,7 +323,7 @@ class _ShellHeader extends StatelessWidget {
           children: <Widget>[
             Text(
               content.title,
-              maxLines: 2,
+              maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                 color: DrumcabularyTheme.edgeTextPrimary,
@@ -336,7 +335,7 @@ class _ShellHeader extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 content.subtitle,
-                maxLines: 2,
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                   color: DrumcabularyTheme.edgeTextSecondary,

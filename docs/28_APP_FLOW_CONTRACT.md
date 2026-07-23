@@ -281,6 +281,10 @@ Rules:
   every root navigation destination
 - show the current root destination title and subtitle on the left side of the
   same header row
+- keep root header copy concise; subtitles should be short guidance phrases,
+  not sentence-length descriptions
+- render root header titles and subtitles as one line with ellipsis overflow so
+  long copy never pushes screen content down during navigation
 - the root destination body starts below the header; the header is not an
   overlay on top of a scroll view
 - align the controls to the same right content edge as screen content
