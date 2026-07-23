@@ -1,9 +1,20 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../core/practice/practice_domain_v1.dart';
 import '../../features/app/app_formatters.dart';
 import '../../features/app/drumcabulary_theme.dart';
 import '../../features/app/drumcabulary_ui.dart';
+import '../../features/hardware/hardware_capabilities.dart';
+import '../../features/midi/drum_kit_mapper.dart';
+import '../../features/midi/midi_input_models.dart';
+import '../../features/midi/midi_input_service.dart';
+import '../../features/midi/midi_led_forwarder.dart';
+import '../../features/midi/midi_pattern_capture.dart';
+import '../../features/midi/midi_pattern_capture_card.dart';
+import '../../features/midi/shared_midi_input_service.dart';
+import '../../features/midi/shared_serial_led_controller.dart';
 import '../../state/app_controller.dart';
 import '../practice/widgets/practice_item_summary_block.dart';
 
@@ -29,17 +40,42 @@ class FocusScreen extends StatefulWidget {
 
 class _FocusScreenState extends State<FocusScreen> {
   late final TextEditingController _searchController;
+  late final MidiPatternCaptureController _captureController;
   String _searchQuery = '';
   int _visibleItemCount = 5;
+  MidiInputService? _midiService;
+  StreamSubscription<RawMidiEvent>? _midiCaptureSubscription;
+  final StreamController<DrumInputEvent> _mappedMidiEvents =
+      StreamController<DrumInputEvent>.broadcast(sync: true);
+  final DrumKitMapper _drumKitMapper = const DrumKitMapper();
+  late final MidiLedForwarder _captureLedForwarder = MidiLedForwarder(
+    controller: SharedSerialLedController.instance,
+    enabled: true,
+  );
 
   @override
   void initState() {
     super.initState();
     _searchController = TextEditingController();
+    _captureController = MidiPatternCaptureController()
+      ..addListener(_handleCaptureChanged);
+    if (HardwareCapabilities.supportsPatternMidiCapture) {
+      final MidiInputService service = SharedMidiInputService.instance;
+      _midiService = service;
+      service.addListener(_handleMidiServiceChanged);
+      unawaited(service.start());
+      _midiCaptureSubscription = service.events.listen(_handleMidiCaptureEvent);
+    }
   }
 
   @override
   void dispose() {
+    _midiCaptureSubscription?.cancel();
+    _midiService?.removeListener(_handleMidiServiceChanged);
+    _mappedMidiEvents.close();
+    _captureController
+      ..removeListener(_handleCaptureChanged)
+      ..dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -64,6 +100,19 @@ class _FocusScreenState extends State<FocusScreen> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
             children: <Widget>[
+              if (HardwareCapabilities.supportsPatternMidiCapture) ...[
+                MidiPatternCaptureCard(
+                  controller: _captureController,
+                  midiStatus: _midiService?.status,
+                  drumEvents: _mappedMidiEvents.stream,
+                  playAlongInputEnabled:
+                      _midiService?.status == MidiInputStatus.connected,
+                  ledController: SharedSerialLedController.instance,
+                  playbackBpm: widget.controller.profile.defaultBpm,
+                  onCreateExercise: _openExerciseDraftFromCapture,
+                ),
+                const SizedBox(height: 14),
+              ],
               Row(
                 children: <Widget>[
                   Expanded(
@@ -144,6 +193,47 @@ class _FocusScreenState extends State<FocusScreen> {
       return widget.controller.compareItemsByNeed(a, b);
     }
     return a.name.compareTo(b.name);
+  }
+
+  void _handleCaptureChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _handleMidiServiceChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _handleMidiCaptureEvent(RawMidiEvent raw) {
+    if (raw.messageType != MidiMessageType.noteOn || raw.velocity <= 0) {
+      return;
+    }
+    final DrumInputEvent drum = _drumKitMapper.map(raw);
+    if (drum.voice == DrumVoice.unknown) {
+      return;
+    }
+    if (!_mappedMidiEvents.isClosed) {
+      _mappedMidiEvents.add(drum);
+    }
+    if (!_captureController.isRecording) return;
+    _captureLedForwarder.handle(MidiDiagnosticEvent(raw: raw, drum: drum));
+    _captureController.captureMappedEvent(raw: raw, drum: drum);
+  }
+
+  void _openExerciseDraftFromCapture(String pattern) {
+    try {
+      final String itemId = widget.controller.createExerciseDraftFromNotation(
+        pattern: pattern,
+      );
+      widget.onOpenItem(itemId);
+    } on FormatException catch (error) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
+    } on ArgumentError catch (error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message ?? 'Invalid pattern.')),
+      );
+    }
   }
 
   Future<void> _confirmRemovePattern(PracticeItemV1 item) async {

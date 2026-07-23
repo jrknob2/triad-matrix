@@ -8,16 +8,7 @@ import '../../features/app/app_runtime_flags.dart';
 import '../../features/app/drumcabulary_theme.dart';
 import '../../features/app/unsaved_changes_dialog.dart';
 import '../../features/hardware/hardware_capabilities.dart';
-import '../../features/midi/drum_kit_mapper.dart';
-import '../../features/midi/midi_led_forwarder.dart';
-import '../../features/midi/midi_input_models.dart';
-import '../../features/midi/midi_input_service.dart';
-import '../../features/midi/midi_pattern_capture.dart';
-import '../../features/midi/midi_pattern_capture_card.dart';
-import '../../features/midi/shared_midi_input_service.dart';
-import '../../features/midi/shared_serial_led_controller.dart';
 import '../../state/app_controller.dart';
-import '../library/pattern_screen.dart';
 import 'hardware_midi_settings_screen.dart';
 
 class AppSettingsScreen extends StatefulWidget {
@@ -31,43 +22,11 @@ class AppSettingsScreen extends StatefulWidget {
 
 class _AppSettingsScreenState extends State<AppSettingsScreen> {
   late UserProfileV1 _draft;
-  late final MidiInputService _midiService = SharedMidiInputService.instance;
-  late final MidiLedForwarder _captureLedForwarder = MidiLedForwarder(
-    controller: SharedSerialLedController.instance,
-    enabled: true,
-  );
-  MidiPatternCaptureController? _captureController;
-  StreamSubscription<RawMidiEvent>? _midiCaptureSubscription;
-  final StreamController<DrumInputEvent> _mappedMidiEvents =
-      StreamController<DrumInputEvent>.broadcast(sync: true);
-  final DrumKitMapper _drumKitMapper = const DrumKitMapper();
 
   @override
   void initState() {
     super.initState();
     _draft = widget.controller.profile;
-    if (HardwareCapabilities.supportsPatternMidiCapture) {
-      _captureController = MidiPatternCaptureController()
-        ..addListener(_handleCaptureChanged);
-      _midiService.addListener(_handleMidiServiceChanged);
-      unawaited(_midiService.start());
-      _midiCaptureSubscription = _midiService.events.listen(
-        _handleMidiCaptureEvent,
-      );
-    }
-  }
-
-  @override
-  void dispose() {
-    _midiCaptureSubscription?.cancel();
-    if (HardwareCapabilities.supportsPatternMidiCapture) {
-      _midiService.removeListener(_handleMidiServiceChanged);
-    }
-    _mappedMidiEvents.close();
-    _captureController
-      ?..removeListener(_handleCaptureChanged)
-      ..dispose();
-    super.dispose();
   }
 
   @override
@@ -279,70 +238,10 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                 ),
               ),
             ],
-            if (HardwareCapabilities.supportsPatternMidiCapture &&
-                _captureController != null) ...<Widget>[
-              const SizedBox(height: 24),
-              MidiPatternCaptureCard(
-                controller: _captureController!,
-                drumEvents: _mappedMidiEvents.stream,
-                playAlongInputEnabled:
-                    _midiService.status == MidiInputStatus.connected,
-                ledController: SharedSerialLedController.instance,
-                playbackBpm: _draft.defaultBpm,
-                onCreateExercise: _openExerciseDraftFromCapture,
-              ),
-            ],
           ],
         ),
       ),
     );
-  }
-
-  void _handleCaptureChanged() {
-    if (mounted) setState(() {});
-  }
-
-  void _handleMidiServiceChanged() {
-    if (mounted) setState(() {});
-  }
-
-  void _handleMidiCaptureEvent(RawMidiEvent raw) {
-    final MidiPatternCaptureController? captureController = _captureController;
-    if (raw.messageType != MidiMessageType.noteOn || raw.velocity <= 0) {
-      return;
-    }
-    final DrumInputEvent drum = _drumKitMapper.map(raw);
-    if (drum.voice == DrumVoice.unknown) {
-      return;
-    }
-    if (!_mappedMidiEvents.isClosed) {
-      _mappedMidiEvents.add(drum);
-    }
-    if (captureController == null || !captureController.isRecording) return;
-    _captureLedForwarder.handle(MidiDiagnosticEvent(raw: raw, drum: drum));
-    captureController.captureMappedEvent(raw: raw, drum: drum);
-  }
-
-  void _openExerciseDraftFromCapture(String pattern) {
-    try {
-      final String itemId = widget.controller.createExerciseDraftFromNotation(
-        pattern: pattern,
-      );
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) =>
-              PatternScreen(controller: widget.controller, itemId: itemId),
-        ),
-      );
-    } on FormatException catch (error) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.message)));
-    } on ArgumentError catch (error) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message ?? 'Invalid pattern.')),
-      );
-    }
   }
 
   Future<void> _confirmClearAppData(BuildContext context) async {

@@ -61,11 +61,12 @@ AppShell
       -> Lesson Detail
   -> Practice Insights
   -> Author
+      -> MIDI Capture
+      -> Create Exercise draft
       -> Pattern Library
       -> Pattern Editor
   -> Settings
       -> Hardware & MIDI
-      -> temporary MIDI Capture panel
 ```
 
 The root shell uses responsive top-level navigation:
@@ -249,7 +250,6 @@ Settings owns:
 - app data reset
 - mock scenarios when enabled
 - desktop-only hardware setup entry
-- temporary MIDI Capture panel while authoring flow is being refined
 
 Settings should not become:
 
@@ -257,6 +257,7 @@ Settings should not become:
 - a normal practice launcher
 - a raw diagnostic dashboard
 - a long-term MIDI capture workspace
+- a MIDI capture workspace
 
 ## Hardware & MIDI Flow
 
@@ -286,18 +287,19 @@ It must not show normal-user raw diagnostic cards:
 
 Those belong behind a developer diagnostic route or debug-only mode.
 
-## Temporary MIDI Capture Flow
+## Author MIDI Capture Foundation Flow
 
-Current temporary placement:
+Current placement:
 
 ```text
-Settings -> MIDI Capture panel at the end
+Author -> MIDI Capture card
 ```
 
 Purpose:
 
-- recover and verify the working capture path while the Pattern Editor flow is
-  being redesigned
+- establish the first piece of the exercise-authoring foundation flow
+- record mapped MIDI hits into editable voice-first notation
+- create an Exercise draft from captured notation
 
 Current behavior:
 
@@ -324,12 +326,12 @@ Current behavior:
 - does not infer hand sticking from MIDI velocity
 - estimates BPM from grouped onset intervals
 
-The temporary capture panel must not create its own playback or guided-practice
+The Author capture card must not create its own playback or guided-practice
 timeline. Hear It, Play Along, and Guided Practice are entry points into the
 same playback, MIDI, notation-selection, and LED services used elsewhere.
 
-This is not the final product location. The intended future home is Exercise
-Authoring.
+This is now part of Author. It is still a foundation flow, not the final full
+lesson-authoring suite.
 
 ## Exercise Authoring Flow - First Implementation
 
@@ -355,7 +357,7 @@ Current compatibility decision:
 Temporary capture-to-exercise flow:
 
 ```text
-Settings -> MIDI Capture
+Author -> MIDI Capture
 MIDI Capture -> Generate notation
 MIDI Capture -> Create Exercise draft
 Exercise Editor -> review/edit notation and metadata
@@ -429,9 +431,10 @@ When reintroducing any of these, update this flow contract first.
 
 ## Known Flow Gaps
 
-1. Pattern authoring exists in code but has no normal entry point.
-2. MIDI Capture is temporarily in Settings instead of its intended authoring
-   flow.
+1. Pattern/Exercise editing is reachable from Author, but the broader lesson
+   authoring flow is still incomplete.
+2. MIDI Capture is now the first Author foundation flow, but the broader
+   Exercise Authoring flow still needs refinement.
 3. Settings is reachable from the root app shell, but child screens need a clear
    rule for whether global settings should remain visible from nested routes.
 4. Raw MIDI diagnostics need an intentional developer-only access rule.

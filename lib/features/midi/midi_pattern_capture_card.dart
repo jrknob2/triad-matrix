@@ -16,6 +16,7 @@ import 'midi_pattern_capture.dart';
 
 class MidiPatternCaptureCard extends StatefulWidget {
   final MidiPatternCaptureController controller;
+  final MidiInputStatus? midiStatus;
   final Stream<DrumInputEvent>? drumEvents;
   final bool playAlongInputEnabled;
   final SerialLedController? ledController;
@@ -25,6 +26,7 @@ class MidiPatternCaptureCard extends StatefulWidget {
   const MidiPatternCaptureCard({
     super.key,
     required this.controller,
+    this.midiStatus,
     this.drumEvents,
     this.playAlongInputEnabled = false,
     this.ledController,
@@ -184,7 +186,9 @@ class _MidiPatternCaptureCardState extends State<MidiPatternCaptureCard> {
           DrumActionRow(
             children: <Widget>[
               FilledButton.icon(
-                onPressed: widget.controller.record,
+                onPressed: !widget.controller.isRecording && _canRecordFromMidi
+                    ? widget.controller.record
+                    : null,
                 icon: const Icon(Icons.fiber_manual_record_rounded),
                 label: const Text('Record'),
               ),
@@ -200,10 +204,17 @@ class _MidiPatternCaptureCardState extends State<MidiPatternCaptureCard> {
           const SizedBox(height: 10),
           Align(
             alignment: Alignment.centerLeft,
-            child: Chip(
-              label: Text(
-                'Estimated BPM ${_tempoEstimateLabel(widget.controller.tempoEstimate)}',
-              ),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: <Widget>[
+                Chip(label: Text(_midiStatusLabel(widget.midiStatus))),
+                Chip(
+                  label: Text(
+                    'Estimated BPM ${_tempoEstimateLabel(widget.controller.tempoEstimate)}',
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 14),
@@ -296,6 +307,11 @@ class _MidiPatternCaptureCardState extends State<MidiPatternCaptureCard> {
           (DrumSheetNotationNote note) => !note.rest,
         ) ??
         false;
+  }
+
+  bool get _canRecordFromMidi {
+    final MidiInputStatus? status = widget.midiStatus;
+    return status == null || status == MidiInputStatus.connected;
   }
 
   void _createExerciseFromCurrentPattern() {
@@ -671,4 +687,16 @@ class _PracticeControls extends StatelessWidget {
 String _tempoEstimateLabel(MidiTempoEstimate? estimate) {
   if (estimate == null) return '--';
   return '${estimate.roundedBpm}';
+}
+
+String _midiStatusLabel(MidiInputStatus? status) {
+  return switch (status) {
+    MidiInputStatus.connected => 'MIDI connected',
+    MidiInputStatus.connecting => 'MIDI connecting',
+    MidiInputStatus.scanning => 'MIDI scanning',
+    MidiInputStatus.noDevicesFound => 'No MIDI devices',
+    MidiInputStatus.connectionError => 'MIDI connection error',
+    MidiInputStatus.disconnected => 'Connect MIDI input',
+    null => 'MIDI input',
+  };
 }

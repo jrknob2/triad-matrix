@@ -497,6 +497,25 @@ void main() {
       expect(find.text('Estimated BPM --'), findsOneWidget);
     });
 
+    testWidgets('recording is disabled when MIDI is disconnected', (
+      WidgetTester tester,
+    ) async {
+      final MidiPatternCaptureController controller =
+          MidiPatternCaptureController();
+
+      await _pumpCaptureCard(
+        tester,
+        controller,
+        midiStatus: MidiInputStatus.disconnected,
+      );
+
+      final FilledButton recordButton = tester.widget<FilledButton>(
+        find.widgetWithText(FilledButton, 'Record'),
+      );
+      expect(recordButton.onPressed, isNull);
+      expect(find.text('Connect MIDI input'), findsOneWidget);
+    });
+
     testWidgets('pattern string is not editable while recording', (
       WidgetTester tester,
     ) async {
@@ -802,6 +821,7 @@ MidiPatternCaptureController _controllerWithStoppedPattern(String pattern) {
 Future<void> _pumpCaptureCard(
   WidgetTester tester,
   MidiPatternCaptureController controller, {
+  MidiInputStatus? midiStatus,
   ValueChanged<String>? onCreateExercise,
 }) async {
   await tester.pumpWidget(
@@ -811,6 +831,7 @@ Future<void> _pumpCaptureCard(
           children: <Widget>[
             MidiPatternCaptureCard(
               controller: controller,
+              midiStatus: midiStatus,
               onCreateExercise: onCreateExercise,
             ),
           ],

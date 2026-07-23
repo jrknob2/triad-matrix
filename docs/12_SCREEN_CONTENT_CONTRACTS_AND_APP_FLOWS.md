@@ -10,7 +10,7 @@ Current navigation and app-flow ownership live in
 with `docs/28_APP_FLOW_CONTRACT.md`, use `docs/28_APP_FLOW_CONTRACT.md`.
 
 For current app-wide navigation ownership, including Settings, Hardware & MIDI,
-temporary MIDI Capture placement, Pattern Editor direction, and developer
+Author MIDI Capture placement, Pattern Editor direction, and developer
 diagnostics, use:
 
 - [28_APP_FLOW_CONTRACT.md](/Users/terryknoblock/Development/flutter-projects/drumcabulary/docs/28_APP_FLOW_CONTRACT.md)
