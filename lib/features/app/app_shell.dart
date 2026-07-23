@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 
 import '../../core/practice/practice_domain_v1.dart';
 import '../../state/app_controller.dart';
+import 'drumcabulary_theme.dart';
+import '../hardware/hardware_capabilities.dart';
 import '../hardware/hardware_status_header.dart';
 import '../library/pattern_screen.dart';
 import '../matrix/matrix_screen.dart';
@@ -34,34 +36,71 @@ class _AppShellState extends State<AppShell> {
 
   @override
   Widget build(BuildContext context) {
+    final _ShellDestination destination = _destinationFor(widget.controller);
     return _DrumAppNavigationShell(
       selectedIndex: _selectedIndex,
       onDestinationSelected: _selectDestination,
-      body: _destinationFor(widget.controller),
+      header: destination.header,
+      body: destination.body,
     );
   }
 
-  Widget _destinationFor(AppController controller) {
+  _ShellDestination _destinationFor(AppController controller) {
     return switch (_selectedIndex) {
-      0 => TodayScreen(
-        controller: controller,
-        onOpenExplore: () => _selectDestination(1),
-        onOpenInsights: () => _selectDestination(2),
-        onOpenSettings: () => _selectDestination(4),
-        onOpenDevices: _openDevices,
+      0 => _ShellDestination(
+        header: _ShellHeaderContent(
+          title: _greeting(controller.profile.studentName),
+          subtitle: 'Ready when you are.',
+        ),
+        body: TodayScreen(
+          controller: controller,
+          onOpenExplore: () => _selectDestination(1),
+          onOpenInsights: () => _selectDestination(2),
+          onOpenSettings: () => _selectDestination(4),
+          onOpenDevices: _openDevices,
+        ),
       ),
-      1 => const ExploreLessonsScreen(),
-      2 => const PracticeInsightsScreen(),
-      3 => FocusScreen(
-        controller: controller,
-        onOpenItem: (String itemId) => _openPattern(controller, itemId),
-        onPracticeItemInMode: (String itemId, PracticeModeV1 mode) =>
-            _practiceItemInMode(controller, itemId, mode),
-        onCreateNewItem: () => _createNewPattern(controller),
-        onOpenMatrix: () => _openMatrix(controller),
+      1 => const _ShellDestination(
+        header: _ShellHeaderContent(
+          title: 'What are you working on today?',
+          subtitle:
+              'Search lessons and exercises or filter by what matters to you.',
+        ),
+        body: ExploreLessonsScreen(),
       ),
-      4 => AppSettingsScreen(controller: controller),
-      _ => const SizedBox.shrink(),
+      2 => const _ShellDestination(
+        header: _ShellHeaderContent(
+          title: 'Practice Insights',
+          subtitle:
+              'A focused view of practice time, consistency, and completed exercises.',
+        ),
+        body: PracticeInsightsScreen(),
+      ),
+      3 => _ShellDestination(
+        header: const _ShellHeaderContent(
+          title: 'Author',
+          subtitle: 'Capture MIDI patterns and manage practice material.',
+        ),
+        body: FocusScreen(
+          controller: controller,
+          onOpenItem: (String itemId) => _openPattern(controller, itemId),
+          onPracticeItemInMode: (String itemId, PracticeModeV1 mode) =>
+              _practiceItemInMode(controller, itemId, mode),
+          onCreateNewItem: () => _createNewPattern(controller),
+          onOpenMatrix: () => _openMatrix(controller),
+        ),
+      ),
+      4 => _ShellDestination(
+        header: const _ShellHeaderContent(
+          title: 'Settings',
+          subtitle: 'Preferences, appearance, and hardware setup.',
+        ),
+        body: AppSettingsScreen(controller: controller),
+      ),
+      _ => const _ShellDestination(
+        header: _ShellHeaderContent(title: '', subtitle: ''),
+        body: SizedBox.shrink(),
+      ),
     };
   }
 
@@ -126,14 +165,30 @@ class _AppShellState extends State<AppShell> {
   }
 }
 
+class _ShellDestination {
+  final _ShellHeaderContent header;
+  final Widget body;
+
+  const _ShellDestination({required this.header, required this.body});
+}
+
+class _ShellHeaderContent {
+  final String title;
+  final String subtitle;
+
+  const _ShellHeaderContent({required this.title, required this.subtitle});
+}
+
 class _DrumAppNavigationShell extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onDestinationSelected;
+  final _ShellHeaderContent header;
   final Widget body;
 
   const _DrumAppNavigationShell({
     required this.selectedIndex,
     required this.onDestinationSelected,
+    required this.header,
     required this.body,
   });
 
@@ -214,13 +269,15 @@ class _DrumAppNavigationShell extends StatelessWidget {
                   destinations: _railDestinations,
                 ),
                 const VerticalDivider(width: 1),
-                Expanded(child: _ShellContentFrame(child: body)),
+                Expanded(
+                  child: _ShellContentFrame(header: header, child: body),
+                ),
               ],
             ),
           );
         }
         return Scaffold(
-          body: _ShellContentFrame(child: body),
+          body: _ShellContentFrame(header: header, child: body),
           bottomNavigationBar: NavigationBar(
             selectedIndex: selectedIndex,
             onDestinationSelected: onDestinationSelected,
@@ -233,14 +290,116 @@ class _DrumAppNavigationShell extends StatelessWidget {
 }
 
 class _ShellContentFrame extends StatelessWidget {
+  final _ShellHeaderContent header;
   final Widget child;
 
-  const _ShellContentFrame({required this.child});
+  const _ShellContentFrame({required this.header, required this.child});
 
   @override
   Widget build(BuildContext context) {
-    return HardwareStatusHeaderOverlay(child: child);
+    return ColoredBox(
+      color: DrumcabularyTheme.edgeBackground,
+      child: Column(
+        children: <Widget>[
+          SafeArea(bottom: false, child: _ShellHeader(content: header)),
+          Expanded(child: child),
+        ],
+      ),
+    );
   }
+}
+
+class _ShellHeader extends StatelessWidget {
+  final _ShellHeaderContent content;
+
+  const _ShellHeader({required this.content});
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final Widget titleBlock = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Text(
+              content.title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                color: DrumcabularyTheme.edgeTextPrimary,
+                fontWeight: FontWeight.w700,
+                height: 1.05,
+              ),
+            ),
+            if (content.subtitle.isNotEmpty) ...<Widget>[
+              const SizedBox(height: 8),
+              Text(
+                content.subtitle,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: DrumcabularyTheme.edgeTextSecondary,
+                  height: 1.35,
+                ),
+              ),
+            ],
+          ],
+        );
+
+        final Widget? hardwareControls =
+            HardwareCapabilities.supportsDesktopHardware
+            ? const HardwareStatusHeaderControls()
+            : null;
+        final bool compact = constraints.maxWidth < 720;
+
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
+          child: compact
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    titleBlock,
+                    if (hardwareControls != null) ...<Widget>[
+                      const SizedBox(height: 14),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: hardwareControls,
+                      ),
+                    ],
+                  ],
+                )
+              : Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: <Widget>[
+                    Expanded(child: titleBlock),
+                    if (hardwareControls != null) ...<Widget>[
+                      const SizedBox(width: 24),
+                      Flexible(
+                        flex: 0,
+                        child: Align(
+                          alignment: Alignment.centerRight,
+                          child: hardwareControls,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+        );
+      },
+    );
+  }
+}
+
+String _greeting(String studentName) {
+  final int hour = DateTime.now().hour;
+  final String period = hour < 12
+      ? 'Good Morning'
+      : hour < 18
+      ? 'Good Afternoon'
+      : 'Good Evening';
+  final String name = studentName.trim();
+  return name.isEmpty ? period : '$period $name';
 }
 
 class _BrandMark extends StatelessWidget {

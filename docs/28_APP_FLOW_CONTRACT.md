@@ -265,29 +265,31 @@ Settings should not become:
 - a long-term MIDI capture workspace
 - a MIDI capture workspace
 
-## Shell Hardware Header
+## Shell Header
 
 On desktop-capable builds, the app shell owns the persistent hardware status
-controls.
+controls and the root destination title area.
 
 ```text
-Root shell header -> MIDI Kit
-Root shell header -> LED Controller
+Root shell header left  -> screen title + subtitle
+Root shell header right -> MIDI Kit + LED Controller
 ```
 
 Rules:
 
 - show MIDI Kit and LED Controller status in the same top-right location on
   every root navigation destination
+- show the current root destination title and subtitle on the left side of the
+  same header row
+- the root destination body starts below the header; the header is not an
+  overlay on top of a scroll view
 - align the controls to the same right content edge as screen content
 - keep the controls visually stable; individual screens must not reposition,
   resize, or duplicate them as page-level headers
-- screens must reserve enough top/right space that these controls never cover
-  primary content, cards, or page actions
-- screens with top full-width content should use the shared shell header spacing
-  constants instead of hand-tuned top padding
-- the reserved top spacing must leave one normal card gap below the hardware
-  controls before the next full-width card or section begins
+- root screens must not draw duplicate title/subtitle content inside their
+  scrollable body
+- the shell header owns one normal card gap between the header row and the
+  scrollable body
 - tapping either control opens a quick hardware connection modal
 - the quick modal contains only device selection, refresh, connect, disconnect,
   and concise connection state

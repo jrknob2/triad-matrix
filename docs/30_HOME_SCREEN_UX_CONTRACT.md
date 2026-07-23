@@ -116,7 +116,7 @@ Device management never occurs directly from Home.
 
 ---
 
-## Greeting
+## Shell Header Greeting
 
 Purpose:
 
@@ -132,6 +132,10 @@ Ready when you are.
 
 The name comes from the persisted app profile. Until first-light capture and
 Settings editing exist, the seeded profile name is Terry.
+
+This greeting is rendered by the shared shell header, not inside the Home
+scrolling body. The Home body begins with the first content card below that
+header.
 
 ---
 

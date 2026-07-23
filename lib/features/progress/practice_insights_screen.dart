@@ -10,25 +10,8 @@ class PracticeInsightsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return DrumScreen(
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
         children: <Widget>[
-          Text(
-            'Practice Insights',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              color: DrumcabularyTheme.edgeTextPrimary,
-              fontWeight: FontWeight.w700,
-              height: 1.05,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'A focused view of practice time, consistency, and completed exercises is coming soon.',
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: DrumcabularyTheme.edgeTextSecondary,
-              height: 1.35,
-            ),
-          ),
-          const SizedBox(height: 28),
           DrumPanel(
             padding: const EdgeInsets.all(18),
             child: Column(

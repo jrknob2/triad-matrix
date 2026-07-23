@@ -98,7 +98,7 @@ class _FocusScreenState extends State<FocusScreen> {
 
         return DrumScreen(
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
             children: <Widget>[
               if (HardwareCapabilities.supportsPatternMidiCapture) ...[
                 MidiPatternCaptureCard(

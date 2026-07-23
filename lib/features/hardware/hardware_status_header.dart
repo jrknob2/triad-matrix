@@ -38,6 +38,33 @@ class HardwareStatusHeaderOverlay extends StatefulWidget {
 
 class _HardwareStatusHeaderOverlayState
     extends State<HardwareStatusHeaderOverlay> {
+  @override
+  Widget build(BuildContext context) {
+    if (!HardwareCapabilities.supportsDesktopHardware) return widget.child;
+
+    return Stack(
+      children: <Widget>[
+        widget.child,
+        Positioned(
+          top: widget.top,
+          right: widget.right,
+          child: const HardwareStatusHeaderControls(),
+        ),
+      ],
+    );
+  }
+}
+
+class HardwareStatusHeaderControls extends StatefulWidget {
+  const HardwareStatusHeaderControls({super.key});
+
+  @override
+  State<HardwareStatusHeaderControls> createState() =>
+      _HardwareStatusHeaderControlsState();
+}
+
+class _HardwareStatusHeaderControlsState
+    extends State<HardwareStatusHeaderControls> {
   MidiInputService? _midiService;
   SerialLedController? _ledController;
 
@@ -68,24 +95,16 @@ class _HardwareStatusHeaderOverlayState
   Widget build(BuildContext context) {
     final MidiInputService? midiService = _midiService;
     final SerialLedController? ledController = _ledController;
-    if (midiService == null || ledController == null) return widget.child;
+    if (midiService == null || ledController == null) {
+      return const SizedBox.shrink();
+    }
 
-    return Stack(
-      children: <Widget>[
-        widget.child,
-        Positioned(
-          top: widget.top,
-          right: widget.right,
-          child: _HardwareStatusHeaderRow(
-            status: _HardwareStatus.from(
-              midiService: midiService,
-              ledController: ledController,
-            ),
-            onOpenDevices: () =>
-                unawaited(showHardwareConnectionDialog(context)),
-          ),
-        ),
-      ],
+    return _HardwareStatusHeaderRow(
+      status: _HardwareStatus.from(
+        midiService: midiService,
+        ledController: ledController,
+      ),
+      onOpenDevices: () => unawaited(showHardwareConnectionDialog(context)),
     );
   }
 }

@@ -98,7 +98,6 @@ class _TodayScreenState extends State<TodayScreen> {
               }
               return _HomeView(
                 data: data,
-                studentName: widget.controller.profile.studentName,
                 hardwareStatus: _hardwareStatus,
                 onProgressChanged: _refresh,
                 onOpenExplore: widget.onOpenExplore,
@@ -276,7 +275,6 @@ class _TeachingFlowData {
 
 class _HomeView extends StatelessWidget {
   final _TeachingFlowData data;
-  final String studentName;
   final _HomeHardwareStatus? hardwareStatus;
   final VoidCallback onProgressChanged;
   final VoidCallback? onOpenExplore;
@@ -286,7 +284,6 @@ class _HomeView extends StatelessWidget {
 
   const _HomeView({
     required this.data,
-    required this.studentName,
     required this.hardwareStatus,
     required this.onProgressChanged,
     required this.onOpenExplore,
@@ -310,10 +307,8 @@ class _HomeView extends StatelessWidget {
     final bool firstRun = !stats.hasPracticeHistory;
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
       children: <Widget>[
-        _HomeHeader(studentName: studentName),
-        const SizedBox(height: 28),
         if (firstRun)
           _FirstRunPanel(
             onOpenExplore: onOpenExplore,
@@ -395,39 +390,6 @@ class _HomeView extends StatelessWidget {
       }
     }
     return null;
-  }
-}
-
-class _HomeHeader extends StatelessWidget {
-  final String studentName;
-
-  const _HomeHeader({required this.studentName});
-
-  @override
-  Widget build(BuildContext context) {
-    final Widget greeting = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(
-          _greeting(studentName),
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            color: DrumcabularyTheme.edgeTextPrimary,
-            fontWeight: FontWeight.w700,
-            height: 1.05,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Ready when you are.',
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-            color: DrumcabularyTheme.edgeTextSecondary,
-            height: 1.35,
-          ),
-        ),
-      ],
-    );
-
-    return greeting;
   }
 }
 
@@ -1204,14 +1166,14 @@ class _ExploreSearchView extends StatelessWidget {
     final bool hasActiveFilters = _hasActiveExploreFilters(selectedFilters);
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
       children: <Widget>[
-        _ExploreHeader(
+        _ExploreSearchField(
           searchController: searchController,
           query: query,
           onQueryChanged: onQueryChanged,
         ),
-        const SizedBox(height: 28),
+        const SizedBox(height: 16),
         _ExploreFilters(
           items: items,
           query: query,
@@ -1268,12 +1230,12 @@ class _ExploreSearchView extends StatelessWidget {
   }
 }
 
-class _ExploreHeader extends StatelessWidget {
+class _ExploreSearchField extends StatelessWidget {
   final TextEditingController searchController;
   final String query;
   final ValueChanged<String> onQueryChanged;
 
-  const _ExploreHeader({
+  const _ExploreSearchField({
     required this.searchController,
     required this.query,
     required this.onQueryChanged,
@@ -1281,74 +1243,52 @@ class _ExploreHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(
-          'What are you working on today?',
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            color: DrumcabularyTheme.edgeTextPrimary,
-            fontWeight: FontWeight.w700,
-            height: 1.05,
-          ),
+    return TextField(
+      controller: searchController,
+      onChanged: onQueryChanged,
+      textInputAction: TextInputAction.search,
+      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+        color: DrumcabularyTheme.edgeTextPrimary,
+        fontWeight: FontWeight.w600,
+      ),
+      decoration: InputDecoration(
+        hintText: 'Search lessons or exercises',
+        hintStyle: Theme.of(context).textTheme.titleMedium?.copyWith(
+          color: DrumcabularyTheme.edgeTextMuted,
+          fontWeight: FontWeight.w700,
         ),
-        const SizedBox(height: 8),
-        Text(
-          'Search lessons and exercises or filter by what matters to you.',
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-            color: DrumcabularyTheme.edgeTextSecondary,
-            height: 1.35,
-          ),
+        prefixIcon: Icon(
+          Icons.search_rounded,
+          color: DrumcabularyTheme.edgeTextSecondary,
         ),
-        const SizedBox(height: 18),
-        TextField(
-          controller: searchController,
-          onChanged: onQueryChanged,
-          textInputAction: TextInputAction.search,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: DrumcabularyTheme.edgeTextPrimary,
-            fontWeight: FontWeight.w600,
-          ),
-          decoration: InputDecoration(
-            hintText: 'Search lessons or exercises',
-            hintStyle: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: DrumcabularyTheme.edgeTextMuted,
-              fontWeight: FontWeight.w700,
-            ),
-            prefixIcon: Icon(
-              Icons.search_rounded,
-              color: DrumcabularyTheme.edgeTextSecondary,
-            ),
-            suffixIcon: query.trim().isEmpty
-                ? null
-                : IconButton(
-                    tooltip: 'Clear search',
-                    onPressed: () {
-                      searchController.clear();
-                      onQueryChanged('');
-                    },
-                    icon: const Icon(Icons.close_rounded),
-                  ),
-            filled: true,
-            fillColor: DrumcabularyTheme.edgeSurface,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 18,
-              vertical: 18,
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: DrumcabularyTheme.edgeBorder),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(
-                color: DrumcabularyTheme.edgeOrange,
-                width: 1.4,
+        suffixIcon: query.trim().isEmpty
+            ? null
+            : IconButton(
+                tooltip: 'Clear search',
+                onPressed: () {
+                  searchController.clear();
+                  onQueryChanged('');
+                },
+                icon: const Icon(Icons.close_rounded),
               ),
-            ),
+        filled: true,
+        fillColor: DrumcabularyTheme.edgeSurface,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 18,
+          vertical: 18,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: DrumcabularyTheme.edgeBorder),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(
+            color: DrumcabularyTheme.edgeOrange,
+            width: 1.4,
           ),
         ),
-      ],
+      ),
     );
   }
 }
@@ -2673,7 +2613,7 @@ class _LessonLoadError extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
       children: <Widget>[
         DrumPanel(
           padding: const EdgeInsets.all(18),
@@ -2710,17 +2650,6 @@ String _durationValue(int seconds) {
   final int minutes = (seconds % 3600) ~/ 60;
   if (hours > 0) return minutes == 0 ? '${hours}h' : '${hours}h ${minutes}m';
   return '${minutes}m';
-}
-
-String _greeting(String studentName) {
-  final int hour = DateTime.now().hour;
-  final String period = hour < 12
-      ? 'Good Morning'
-      : hour < 18
-      ? 'Good Afternoon'
-      : 'Good Evening';
-  final String name = studentName.trim();
-  return name.isEmpty ? period : '$period $name';
 }
 
 String _relativeDay(DateTime date) {
