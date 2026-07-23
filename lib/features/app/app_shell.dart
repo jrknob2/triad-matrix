@@ -56,7 +56,6 @@ class _AppShellState extends State<AppShell> {
           selectedIndex: _selectedIndex,
           onDestinationSelected: _selectDestination,
           body: _destinationFor(controller),
-          onOpenDevices: _openDevices,
         );
       },
     );
@@ -80,7 +79,6 @@ class _AppShellState extends State<AppShell> {
             _practiceItemInMode(controller, itemId, mode),
         onCreateNewItem: () => _createNewPattern(controller),
         onOpenMatrix: () => _openMatrix(controller),
-        onOpenDevices: _openDevices,
       ),
       4 => AppSettingsScreen(controller: controller),
       _ => const SizedBox.shrink(),
@@ -152,13 +150,11 @@ class _DrumAppNavigationShell extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onDestinationSelected;
   final Widget body;
-  final VoidCallback onOpenDevices;
 
   const _DrumAppNavigationShell({
     required this.selectedIndex,
     required this.onDestinationSelected,
     required this.body,
-    required this.onOpenDevices,
   });
 
   static const List<NavigationDestination> _bottomDestinations =

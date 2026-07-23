@@ -45,7 +45,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
       child: Scaffold(
         appBar: AppBar(title: const Text('Settings')),
         body: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 104, 16, 16),
           children: <Widget>[
             if (HardwareCapabilities.supportsDesktopHardware) ...<Widget>[
               Card(

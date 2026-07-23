@@ -276,6 +276,8 @@ Rules:
 - align the controls to the same right content edge as screen content
 - keep the controls visually stable; individual screens must not reposition,
   resize, or duplicate them as page-level headers
+- screens must reserve enough top/right space that these controls never cover
+  primary content, cards, or page actions
 - tapping either control opens a quick hardware connection modal
 - the quick modal contains only device selection, refresh, connect, disconnect,
   and concise connection state
@@ -337,6 +339,8 @@ Current behavior:
 - emits voice-first notation such as `[HH K]`, `[OHH]`, and `[S]`
 - writes generated notation into an editable text field
 - renders the edited/generated notation with the shared notation preview
+- does not show local MIDI or LED device status buttons; the shell hardware
+  header is the single normal device-management entry point
 - can Hear It from the current valid notation using the existing playback engine
 - can Play Along from the same playback engine, using LED lead cues when the
   shared LED controller is connected

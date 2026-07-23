@@ -513,32 +513,24 @@ void main() {
         find.widgetWithText(FilledButton, 'Record'),
       );
       expect(recordButton.onPressed, isNull);
-      expect(find.text('Connect MIDI input'), findsOneWidget);
+      expect(find.text('Connect MIDI input'), findsNothing);
     });
 
-    testWidgets('device status chips open shared device connections', (
+    testWidgets('device status chips are not duplicated in capture', (
       WidgetTester tester,
     ) async {
       final MidiPatternCaptureController controller =
           MidiPatternCaptureController();
-      int openDevicesCount = 0;
 
       await _pumpCaptureCard(
         tester,
         controller,
         midiStatus: MidiInputStatus.connected,
-        onOpenDevices: () => openDevicesCount += 1,
       );
 
-      expect(find.text('MIDI connected'), findsOneWidget);
-      expect(find.text('LED controller'), findsOneWidget);
-
-      await tester.tap(find.text('MIDI connected'));
-      await tester.pump();
-      await tester.tap(find.text('LED controller'));
-      await tester.pump();
-
-      expect(openDevicesCount, 2);
+      expect(find.text('MIDI connected'), findsNothing);
+      expect(find.text('LED controller'), findsNothing);
+      expect(find.text('Estimated BPM --'), findsOneWidget);
     });
 
     testWidgets('pattern string is not editable while recording', (
@@ -848,7 +840,6 @@ Future<void> _pumpCaptureCard(
   MidiPatternCaptureController controller, {
   MidiInputStatus? midiStatus,
   ValueChanged<String>? onCreateExercise,
-  VoidCallback? onOpenDevices,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
@@ -859,7 +850,6 @@ Future<void> _pumpCaptureCard(
               controller: controller,
               midiStatus: midiStatus,
               onCreateExercise: onCreateExercise,
-              onOpenDevices: onOpenDevices,
             ),
           ],
         ),

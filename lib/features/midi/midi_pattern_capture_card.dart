@@ -22,7 +22,6 @@ class MidiPatternCaptureCard extends StatefulWidget {
   final SerialLedController? ledController;
   final int playbackBpm;
   final ValueChanged<String>? onCreateExercise;
-  final VoidCallback? onOpenDevices;
 
   const MidiPatternCaptureCard({
     super.key,
@@ -33,7 +32,6 @@ class MidiPatternCaptureCard extends StatefulWidget {
     this.ledController,
     this.playbackBpm = 92,
     this.onCreateExercise,
-    this.onOpenDevices,
   });
 
   @override
@@ -206,29 +204,10 @@ class _MidiPatternCaptureCardState extends State<MidiPatternCaptureCard> {
           const SizedBox(height: 10),
           Align(
             alignment: Alignment.centerLeft,
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: <Widget>[
-                _CaptureStatusChip(
-                  icon: Icons.graphic_eq_rounded,
-                  label: _midiStatusLabel(widget.midiStatus),
-                  connected: widget.midiStatus == MidiInputStatus.connected,
-                  onPressed: widget.onOpenDevices,
-                ),
-                if (widget.onOpenDevices != null)
-                  _CaptureStatusChip(
-                    icon: Icons.radio_button_checked_rounded,
-                    label: _ledStatusLabel(widget.ledController),
-                    connected: widget.ledController?.isConnected == true,
-                    onPressed: widget.onOpenDevices,
-                  ),
-                Chip(
-                  label: Text(
-                    'Estimated BPM ${_tempoEstimateLabel(widget.controller.tempoEstimate)}',
-                  ),
-                ),
-              ],
+            child: Chip(
+              label: Text(
+                'Estimated BPM ${_tempoEstimateLabel(widget.controller.tempoEstimate)}',
+              ),
             ),
           ),
           const SizedBox(height: 14),
@@ -699,73 +678,7 @@ class _PracticeControls extends StatelessWidget {
   }
 }
 
-class _CaptureStatusChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool connected;
-  final VoidCallback? onPressed;
-
-  const _CaptureStatusChip({
-    required this.icon,
-    required this.label,
-    required this.connected,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final Color dotColor = connected
-        ? const Color(0xFF52D273)
-        : const Color(0xFFFFC857);
-    final Widget chipLabel = Row(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        Icon(icon, size: 16, color: DrumcabularyTheme.edgeTextSecondary),
-        const SizedBox(width: 6),
-        DecoratedBox(
-          decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle),
-          child: const SizedBox(width: 7, height: 7),
-        ),
-        const SizedBox(width: 6),
-        Text(label),
-      ],
-    );
-
-    if (onPressed == null) {
-      return Chip(label: chipLabel);
-    }
-    return ActionChip(
-      label: chipLabel,
-      onPressed: onPressed,
-      tooltip: 'Open device connections',
-    );
-  }
-}
-
 String _tempoEstimateLabel(MidiTempoEstimate? estimate) {
   if (estimate == null) return '--';
   return '${estimate.roundedBpm}';
-}
-
-String _midiStatusLabel(MidiInputStatus? status) {
-  return switch (status) {
-    MidiInputStatus.connected => 'MIDI connected',
-    MidiInputStatus.connecting => 'MIDI connecting',
-    MidiInputStatus.scanning => 'MIDI scanning',
-    MidiInputStatus.noDevicesFound => 'No MIDI devices',
-    MidiInputStatus.connectionError => 'MIDI connection error',
-    MidiInputStatus.disconnected => 'Connect MIDI input',
-    null => 'MIDI input',
-  };
-}
-
-String _ledStatusLabel(SerialLedController? controller) {
-  return switch (controller?.status) {
-    SerialLedConnectionStatus.connected => 'LED connected',
-    SerialLedConnectionStatus.connecting => 'LED connecting',
-    SerialLedConnectionStatus.connectionError => 'LED connection error',
-    SerialLedConnectionStatus.deviceRemoved => 'LED device removed',
-    SerialLedConnectionStatus.disconnected => 'Connect LED controller',
-    null => 'LED controller',
-  };
 }
