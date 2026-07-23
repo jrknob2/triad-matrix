@@ -313,7 +313,7 @@ class _HomeView extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
       children: <Widget>[
         _HomeHeader(studentName: studentName),
-        const SizedBox(height: 18),
+        const SizedBox(height: 28),
         if (firstRun)
           _FirstRunPanel(
             onOpenExplore: onOpenExplore,

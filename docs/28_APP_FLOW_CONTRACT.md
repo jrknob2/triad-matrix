@@ -253,6 +253,10 @@ Settings owns:
 - mock scenarios when enabled
 - desktop-only hardware setup entry
 
+Appearance mode and accent color apply immediately when changed and persist as
+profile settings. Other Settings controls may continue to use the existing Save
+Settings flow.
+
 Settings should not become:
 
 - a pattern library
@@ -282,6 +286,8 @@ Rules:
   primary content, cards, or page actions
 - screens with top full-width content should use the shared shell header spacing
   constants instead of hand-tuned top padding
+- the reserved top spacing must leave one normal card gap below the hardware
+  controls before the next full-width card or section begins
 - tapping either control opens a quick hardware connection modal
 - the quick modal contains only device selection, refresh, connect, disconnect,
   and concise connection state

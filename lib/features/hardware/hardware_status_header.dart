@@ -14,8 +14,11 @@ import 'hardware_capabilities.dart';
 class HardwareStatusHeaderOverlay extends StatefulWidget {
   static const double defaultTop = 32;
   static const double defaultRight = 16;
-  static const double contentTopInset = 104;
-  static const double appBarBodyTopInset = 40;
+  static const double cardGap = 16;
+  static const double statusButtonHeight = 64;
+  static const double contentTopInset =
+      defaultTop + statusButtonHeight + cardGap;
+  static const double appBarBodyTopInset = contentTopInset - kToolbarHeight;
 
   final Widget child;
   final double top;

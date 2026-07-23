@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../../core/practice/practice_domain_v1.dart';
+import '../../app/drumcabulary_theme.dart';
 import '../../midi/led_controller_protocol.dart';
 import '../../midi/midi_input_models.dart';
 import '../../midi/serial_led_controller.dart';
@@ -1148,7 +1149,8 @@ class _DrumSheetNotationDisplayState extends State<DrumSheetNotationDisplay>
     final DrumSheetNotationSelection selection =
         widget.selection ??
         DrumSheetNotationSelection.editing(widget.selectedIndexes);
-    final Color selectedColor = widget.selectedColor ?? const Color(0xFFFF6A00);
+    final Color selectedColor =
+        widget.selectedColor ?? DrumcabularyTheme.edgeOrange;
     return <String, Object?>{
       'document': _documentJson(widget.document),
       'selection': <String, Object?>{

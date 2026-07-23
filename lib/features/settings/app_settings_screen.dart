@@ -71,9 +71,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
             ],
             _AppearanceSettingsCard(
               draft: _draft,
-              onChanged: (UserProfileV1 next) {
-                setState(() => _draft = next);
-              },
+              onChanged: _applyAppearanceChange,
             ),
             const SizedBox(height: 12),
             Card(
@@ -305,6 +303,17 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
 
   void _saveDraft() {
     widget.controller.updateProfile(_draft);
+  }
+
+  void _applyAppearanceChange(UserProfileV1 nextDraft) {
+    final UserProfileV1 current = widget.controller.profile;
+    widget.controller.updateProfile(
+      current.copyWith(
+        themeMode: nextDraft.themeMode,
+        accentColorValue: nextDraft.accentColorValue,
+      ),
+    );
+    setState(() => _draft = nextDraft);
   }
 
   Future<bool> _handleUnsavedExit() async {

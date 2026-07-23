@@ -417,7 +417,8 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                                 transport.statusText!,
                                 style: Theme.of(context).textTheme.titleMedium
                                     ?.copyWith(
-                                      color: DrumcabularyTheme.pulseHover,
+                                      color:
+                                          DrumcabularyTheme.edgeOrangePressed,
                                       fontWeight: FontWeight.w700,
                                     ),
                               ),
@@ -578,7 +579,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen> {
                     Text(
                       transport.statusText!,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: DrumcabularyTheme.pulseHover,
+                        color: DrumcabularyTheme.edgeOrangePressed,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -1487,9 +1488,12 @@ class _EarnedRepsDisplay extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: DrumcabularyTheme.pulsePrimary,
+        color: DrumcabularyTheme.edgeOrange,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: DrumcabularyTheme.pulseHover, width: 1.0),
+        border: Border.all(
+          color: DrumcabularyTheme.edgeOrangePressed,
+          width: 1.0,
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
@@ -1585,7 +1589,7 @@ class _BeatPulseState extends State<_BeatPulse> {
             _PulseGaugeRing(
               diameter: pulseDiameter,
               color: active
-                  ? DrumcabularyTheme.pulsePrimary
+                  ? DrumcabularyTheme.edgeOrange
                   : DrumcabularyTheme.tickNeutral,
               width: active ? 5.5 : 4.0,
             ),
@@ -1599,7 +1603,7 @@ class _BeatPulseState extends State<_BeatPulse> {
               shape: BoxShape.circle,
               border: Border.all(
                 color: active
-                    ? DrumcabularyTheme.pulsePrimary.withValues(alpha: 0.86)
+                    ? DrumcabularyTheme.edgeOrange.withValues(alpha: 0.86)
                     : ringBase.withValues(alpha: 0.5),
                 width: active ? 1.9 : 1.1,
               ),
