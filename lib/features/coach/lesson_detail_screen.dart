@@ -6,6 +6,7 @@ import '../app/drumcabulary_theme.dart';
 import '../app/drumcabulary_ui.dart';
 import '../guided_practice/guided_practice_controller.dart';
 import '../guided_practice/guided_practice_sequence_builder.dart';
+import '../hardware/hardware_status_header.dart';
 import '../midi/drum_kit_mapper.dart';
 import '../midi/midi_input_models.dart';
 import '../midi/midi_input_service.dart';
@@ -22,13 +23,11 @@ import 'lesson_progress.dart';
 class LessonDetailScreen extends StatefulWidget {
   final Lesson lesson;
   final LessonProgressService? progressService;
-  final VoidCallback? onOpenDevices;
 
   const LessonDetailScreen({
     super.key,
     required this.lesson,
     this.progressService,
-    this.onOpenDevices,
   });
 
   @override
@@ -122,88 +121,89 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
 
     return Scaffold(
       body: DrumScreen(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-          children: <Widget>[
-            _LessonHeader(
-              lesson: lesson,
-              completedExercises: _completedExerciseCount(
-                lesson,
-                progressService,
-              ),
-              totalExercises: lesson.exercises.length,
-              midiService: _midiService,
-              ledController: _ledController,
-              onOpenDevices: widget.onOpenDevices,
-              onPrint: () => _requestPrint(context),
-            ),
-            const SizedBox(height: 10),
-            _ExerciseNavigator(
-              lesson: lesson,
-              selectedExerciseId: activeExercise.id,
-              progressService: progressService,
-              practicingExerciseId: _activeExerciseId,
-              onSelected: _selectExercise,
-            ),
-            const SizedBox(height: 10),
-            _ActiveExerciseCard(
-              number: activeExerciseIndex + 1,
-              totalExercises: lesson.exercises.length,
-              exercise: activeExercise,
-              primaryPreviewController: _activePreviewController,
-              previewBpm: _previewBpm,
-              ledController: _ledController,
-              ledPlaybackEnabled: _ledController.isConnected,
-              ledPlaybackPresentation: _ledPlaybackPresentation,
-              playAlongDrumEvents: _mappedDrumEvents,
-              playAlongInputEnabled:
-                  _midiService.status == MidiInputStatus.connected,
-              guidedPracticeState: activeGuidedState,
-            ),
-            const SizedBox(height: 10),
-            _LessonPracticeFooter(
-              bpm: _previewBpm,
-              defaultBpm: _initialPreviewBpmFor(lesson),
-              minBpm: _minPreviewBpm,
-              maxBpm: _maxPreviewBpm,
-              tempo: activeExercise.tempo,
-              onBpmDecrease: () => _changePreviewBpm(-_previewBpmStep),
-              onBpmIncrease: () => _changePreviewBpm(_previewBpmStep),
-              onBpmReset: _resetPreviewBpm,
-              active: active,
-              practicedLabel: active
-                  ? _durationLabel(_activeElapsed)
-                  : _durationLabel(Duration(seconds: practicedSeconds)),
-              guidedPracticeActive: activeGuidedState?.isActive == true,
-              guidedPracticeAvailable: _canStartGuidedPractice(activeExercise),
-              playAlongAvailable:
-                  _midiService.status == MidiInputStatus.connected,
-              onStartPractice: active
-                  ? () => _completePractice(activeExercise)
-                  : progressService == null
-                  ? null
-                  : () => _startPractice(activeExercise),
-              onStartGuidedPractice: activeGuidedState?.isActive == true
-                  ? _stopGuidedPractice
-                  : _canStartGuidedPractice(activeExercise)
-                  ? () => unawaited(_startGuidedPractice(activeExercise))
-                  : null,
-              onHearIt: () => unawaited(
-                _toggleExercisePreview(
-                  activeExercise,
-                  PatternLedPlaybackPresentation.hearIt,
+        child: HardwareStatusHeaderOverlay(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 104, 16, 16),
+            children: <Widget>[
+              _LessonHeader(
+                lesson: lesson,
+                completedExercises: _completedExerciseCount(
+                  lesson,
+                  progressService,
                 ),
+                totalExercises: lesson.exercises.length,
+                onPrint: () => _requestPrint(context),
               ),
-              onPlayAlong: _midiService.status == MidiInputStatus.connected
-                  ? () => unawaited(
-                      _toggleExercisePreview(
-                        activeExercise,
-                        PatternLedPlaybackPresentation.playAlong,
-                      ),
-                    )
-                  : null,
-            ),
-          ],
+              const SizedBox(height: 10),
+              _ExerciseNavigator(
+                lesson: lesson,
+                selectedExerciseId: activeExercise.id,
+                progressService: progressService,
+                practicingExerciseId: _activeExerciseId,
+                onSelected: _selectExercise,
+              ),
+              const SizedBox(height: 10),
+              _ActiveExerciseCard(
+                number: activeExerciseIndex + 1,
+                totalExercises: lesson.exercises.length,
+                exercise: activeExercise,
+                primaryPreviewController: _activePreviewController,
+                previewBpm: _previewBpm,
+                ledController: _ledController,
+                ledPlaybackEnabled: _ledController.isConnected,
+                ledPlaybackPresentation: _ledPlaybackPresentation,
+                playAlongDrumEvents: _mappedDrumEvents,
+                playAlongInputEnabled:
+                    _midiService.status == MidiInputStatus.connected,
+                guidedPracticeState: activeGuidedState,
+              ),
+              const SizedBox(height: 10),
+              _LessonPracticeFooter(
+                bpm: _previewBpm,
+                defaultBpm: _initialPreviewBpmFor(lesson),
+                minBpm: _minPreviewBpm,
+                maxBpm: _maxPreviewBpm,
+                tempo: activeExercise.tempo,
+                onBpmDecrease: () => _changePreviewBpm(-_previewBpmStep),
+                onBpmIncrease: () => _changePreviewBpm(_previewBpmStep),
+                onBpmReset: _resetPreviewBpm,
+                active: active,
+                practicedLabel: active
+                    ? _durationLabel(_activeElapsed)
+                    : _durationLabel(Duration(seconds: practicedSeconds)),
+                guidedPracticeActive: activeGuidedState?.isActive == true,
+                guidedPracticeAvailable: _canStartGuidedPractice(
+                  activeExercise,
+                ),
+                playAlongAvailable:
+                    _midiService.status == MidiInputStatus.connected,
+                onStartPractice: active
+                    ? () => _completePractice(activeExercise)
+                    : progressService == null
+                    ? null
+                    : () => _startPractice(activeExercise),
+                onStartGuidedPractice: activeGuidedState?.isActive == true
+                    ? _stopGuidedPractice
+                    : _canStartGuidedPractice(activeExercise)
+                    ? () => unawaited(_startGuidedPractice(activeExercise))
+                    : null,
+                onHearIt: () => unawaited(
+                  _toggleExercisePreview(
+                    activeExercise,
+                    PatternLedPlaybackPresentation.hearIt,
+                  ),
+                ),
+                onPlayAlong: _midiService.status == MidiInputStatus.connected
+                    ? () => unawaited(
+                        _toggleExercisePreview(
+                          activeExercise,
+                          PatternLedPlaybackPresentation.playAlong,
+                        ),
+                      )
+                    : null,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -457,18 +457,12 @@ class _LessonHeader extends StatelessWidget {
   final Lesson lesson;
   final int completedExercises;
   final int totalExercises;
-  final MidiInputService midiService;
-  final SerialLedController ledController;
-  final VoidCallback? onOpenDevices;
   final VoidCallback onPrint;
 
   const _LessonHeader({
     required this.lesson,
     required this.completedExercises,
     required this.totalExercises,
-    required this.midiService,
-    required this.ledController,
-    required this.onOpenDevices,
     required this.onPrint,
   });
 
@@ -479,10 +473,6 @@ class _LessonHeader extends StatelessWidget {
         ? 0
         : completedExercises / totalExercises;
     final int percent = (completion * 100).round().clamp(0, 100).toInt();
-    final _LessonHardwareStatus hardwareStatus = _LessonHardwareStatus.from(
-      midiService: midiService,
-      ledController: ledController,
-    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
@@ -493,17 +483,7 @@ class _LessonHeader extends StatelessWidget {
               runSpacing: 10,
               alignment: WrapAlignment.end,
               crossAxisAlignment: WrapCrossAlignment.center,
-              children: <Widget>[
-                _LessonDeviceStatusChip(
-                  status: hardwareStatus.midi,
-                  onPressed: onOpenDevices,
-                ),
-                _LessonDeviceStatusChip(
-                  status: hardwareStatus.led,
-                  onPressed: onOpenDevices,
-                ),
-                _LessonMoreActionsButton(onPrint: onPrint),
-              ],
+              children: <Widget>[_LessonMoreActionsButton(onPrint: onPrint)],
             );
             final Widget back = Align(
               alignment: Alignment.centerLeft,
@@ -647,137 +627,6 @@ class _LessonMoreActionsButton extends StatelessWidget {
 }
 
 enum _LessonAction { print }
-
-class _LessonHardwareStatus {
-  final _LessonDeviceStatus midi;
-  final _LessonDeviceStatus led;
-
-  const _LessonHardwareStatus({required this.midi, required this.led});
-
-  factory _LessonHardwareStatus.from({
-    required MidiInputService midiService,
-    required SerialLedController ledController,
-  }) {
-    return _LessonHardwareStatus(
-      midi: _LessonDeviceStatus(
-        icon: Icons.graphic_eq_rounded,
-        title: midiService.selectedDevice?.name ?? 'MIDI Kit',
-        subtitle: _midiInputStatusLabel(midiService.status),
-        connected: midiService.status == MidiInputStatus.connected,
-      ),
-      led: _LessonDeviceStatus(
-        icon: Icons.radio_button_checked_rounded,
-        title: 'LED Controller',
-        subtitle: _serialLedConnectionLabel(ledController.status),
-        connected: ledController.status == SerialLedConnectionStatus.connected,
-      ),
-    );
-  }
-}
-
-class _LessonDeviceStatus {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final bool connected;
-
-  const _LessonDeviceStatus({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.connected,
-  });
-}
-
-class _LessonDeviceStatusChip extends StatelessWidget {
-  final _LessonDeviceStatus status;
-  final VoidCallback? onPressed;
-
-  const _LessonDeviceStatusChip({
-    required this.status,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final BorderRadius borderRadius = BorderRadius.circular(14);
-    return Material(
-      color: Colors.transparent,
-      child: Ink(
-        decoration: BoxDecoration(
-          color: DrumcabularyTheme.edgeSurface,
-          borderRadius: borderRadius,
-          border: Border.all(color: DrumcabularyTheme.edgeBorder),
-        ),
-        child: InkWell(
-          onTap: onPressed,
-          borderRadius: borderRadius,
-          hoverColor: DrumcabularyTheme.edgeOrange.withValues(alpha: 0.10),
-          focusColor: DrumcabularyTheme.edgeOrange.withValues(alpha: 0.14),
-          splashColor: DrumcabularyTheme.edgeOrange.withValues(alpha: 0.18),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                Icon(
-                  status.icon,
-                  color: DrumcabularyTheme.edgeTextPrimary,
-                  size: 20,
-                ),
-                const SizedBox(width: 9),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 160),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      Text(
-                        status.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: DrumcabularyTheme.edgeTextPrimary,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          DecoratedBox(
-                            decoration: BoxDecoration(
-                              color: status.connected
-                                  ? const Color(0xFF52D273)
-                                  : const Color(0xFFFFC857),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const SizedBox(width: 8, height: 8),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            status.subtitle,
-                            style: Theme.of(context).textTheme.labelMedium
-                                ?.copyWith(
-                                  color: status.connected
-                                      ? const Color(0xFF52D273)
-                                      : DrumcabularyTheme.edgeTextSecondary,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 class _ExerciseNavigator extends StatelessWidget {
   final Lesson lesson;
@@ -1338,8 +1187,7 @@ class _LessonPracticeFooter extends StatelessWidget {
             final double availablePanelWidth =
                 (constraints.maxWidth - (spacing * 4)) / 5;
 
-            final double panelWidth =
-                availablePanelWidth < minimumPanelWidth
+            final double panelWidth = availablePanelWidth < minimumPanelWidth
                 ? minimumPanelWidth
                 : availablePanelWidth > maximumPanelWidth
                 ? maximumPanelWidth
@@ -1587,6 +1435,7 @@ class _PracticeModeCard extends StatelessWidget {
     );
   }
 }
+
 Set<int> _guidedSelectionForSection(
   GuidedPracticeState? state,
   int sectionIndex,
@@ -1758,27 +1607,6 @@ String _statusLabel(LessonProgressStatus? status, {required bool active}) {
     LessonProgressStatus.inProgress => 'In Progress',
     LessonProgressStatus.completed => 'Complete',
     _ => 'Not Started',
-  };
-}
-
-String _midiInputStatusLabel(MidiInputStatus status) {
-  return switch (status) {
-    MidiInputStatus.connected => 'Connected',
-    MidiInputStatus.scanning => 'Scanning',
-    MidiInputStatus.connecting => 'Connecting',
-    MidiInputStatus.noDevicesFound ||
-    MidiInputStatus.disconnected => 'Not Connected',
-    MidiInputStatus.connectionError => 'Connection Error',
-  };
-}
-
-String _serialLedConnectionLabel(SerialLedConnectionStatus status) {
-  return switch (status) {
-    SerialLedConnectionStatus.connected => 'Connected',
-    SerialLedConnectionStatus.connecting => 'Connecting',
-    SerialLedConnectionStatus.disconnected => 'Not Connected',
-    SerialLedConnectionStatus.connectionError => 'Connection Error',
-    SerialLedConnectionStatus.deviceRemoved => 'Device Removed',
   };
 }
 

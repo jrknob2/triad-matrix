@@ -106,7 +106,7 @@ If disconnected:
 🟡 Roland TD-17 Not Connected
 
 The MIDI and LED status badges are interactive. Selecting either badge opens the
-Devices & Connections screen.
+quick device connection modal.
 
 Device management never occurs directly from Home.
 

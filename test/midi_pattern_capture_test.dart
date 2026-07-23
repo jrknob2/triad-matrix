@@ -516,7 +516,7 @@ void main() {
       expect(find.text('Connect MIDI input'), findsOneWidget);
     });
 
-    testWidgets('device status chips open shared Hardware and MIDI settings', (
+    testWidgets('device status chips open shared device connections', (
       WidgetTester tester,
     ) async {
       final MidiPatternCaptureController controller =

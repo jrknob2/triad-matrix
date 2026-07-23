@@ -443,7 +443,17 @@
       }
 
       function postHeight() {
-        const height = Math.ceil(document.documentElement.scrollHeight);
+        const svg = notation.querySelector('svg');
+        const svgHeight = Number(svg?.viewBox?.baseVal?.height) ||
+          Number(svg?.getAttribute('height'));
+        const contentHeight = Number.isFinite(svgHeight) && svgHeight > 0
+          ? svgHeight
+          : notation.firstElementChild?.getBoundingClientRect?.().height;
+        const height = Math.ceil(
+          Number.isFinite(contentHeight) && contentHeight > 0
+            ? contentHeight
+            : notation.scrollHeight,
+        );
         globalThis.SheetHeight?.postMessage(String(height));
         return height;
       }

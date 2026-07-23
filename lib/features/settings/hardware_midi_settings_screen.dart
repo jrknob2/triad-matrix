@@ -22,6 +22,121 @@ class HardwareMidiSettingsScreen extends StatefulWidget {
       _HardwareMidiSettingsScreenState();
 }
 
+Future<void> showHardwareConnectionDialog(BuildContext context) {
+  return showDialog<void>(
+    context: context,
+    builder: (BuildContext context) => const HardwareConnectionDialog(),
+  );
+}
+
+class HardwareConnectionDialog extends StatefulWidget {
+  const HardwareConnectionDialog({super.key});
+
+  @override
+  State<HardwareConnectionDialog> createState() =>
+      _HardwareConnectionDialogState();
+}
+
+class _HardwareConnectionDialogState extends State<HardwareConnectionDialog> {
+  late final MidiInputService _midiService = SharedMidiInputService.instance;
+  late final SerialLedController _ledController =
+      SharedSerialLedController.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    _midiService.addListener(_handleHardwareChanged);
+    _ledController.addListener(_handleHardwareChanged);
+    unawaited(_midiService.start());
+    unawaited(_ledController.refreshPorts());
+  }
+
+  @override
+  void dispose() {
+    _midiService.removeListener(_handleHardwareChanged);
+    _ledController.removeListener(_handleHardwareChanged);
+    super.dispose();
+  }
+
+  void _handleHardwareChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: DrumcabularyTheme.edgeSurface,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: const BorderSide(color: DrumcabularyTheme.edgeBorder),
+      ),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 620),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Text(
+                      'Devices',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: DrumcabularyTheme.edgeTextPrimary,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Close',
+                    onPressed: () => Navigator.of(context).maybePop(),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              _QuickMidiInputPanel(
+                service: _midiService,
+                onRefresh: () => unawaited(_midiService.scanDevices()),
+                onSelect: _selectMidiDevice,
+                onConnect: _connectSelectedMidiDevice,
+                onDisconnect: () => unawaited(_midiService.disconnect()),
+              ),
+              const SizedBox(height: 12),
+              _QuickLedControllerPanel(
+                controller: _ledController,
+                onRefresh: () => unawaited(_ledController.refreshPorts()),
+                onSelect: _ledController.selectPort,
+                onConnect: () => unawaited(_ledController.connect()),
+                onDisconnect: () => unawaited(_ledController.disconnect()),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _selectMidiDevice(String? id) {
+    if (id == null) return;
+    for (final MidiInputDevice device in _midiService.devices) {
+      if (device.id == id) {
+        unawaited(_midiService.connectToDevice(device));
+        return;
+      }
+    }
+  }
+
+  void _connectSelectedMidiDevice() {
+    final MidiInputDevice? device = _midiService.selectedDevice;
+    if (device == null) return;
+    unawaited(_midiService.connectToDevice(device));
+  }
+}
+
 class _HardwareMidiSettingsScreenState
     extends State<HardwareMidiSettingsScreen> {
   static const Duration _testInputTimeout = Duration(seconds: 5);
@@ -169,6 +284,158 @@ class _HardwareMidiSettingsScreenState
     await Future<void>.delayed(const Duration(milliseconds: 700));
     _ledController.sendCommand(ledClearCommand);
     if (mounted) setState(() => _testingLeds = false);
+  }
+}
+
+class _QuickMidiInputPanel extends StatelessWidget {
+  final MidiInputService service;
+  final VoidCallback onRefresh;
+  final ValueChanged<String?> onSelect;
+  final VoidCallback onConnect;
+  final VoidCallback onDisconnect;
+
+  const _QuickMidiInputPanel({
+    required this.service,
+    required this.onRefresh,
+    required this.onSelect,
+    required this.onConnect,
+    required this.onDisconnect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bool connected = service.status == MidiInputStatus.connected;
+    final String? selectedDeviceId = _selectedMidiDeviceId(service);
+    return DrumPanel(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          const DrumSectionTitle(text: 'MIDI Kit'),
+          const SizedBox(height: 10),
+          DropdownButtonFormField<String>(
+            key: ValueKey<String?>(
+              'quick-midi-${selectedDeviceId ?? 'none'}-${service.devices.length}',
+            ),
+            initialValue: selectedDeviceId,
+            decoration: const InputDecoration(
+              labelText: 'Device',
+              border: OutlineInputBorder(),
+            ),
+            items: service.devices
+                .map(
+                  (MidiInputDevice device) => DropdownMenuItem<String>(
+                    value: device.id,
+                    child: Text(device.name),
+                  ),
+                )
+                .toList(growable: false),
+            onChanged: connected ? null : onSelect,
+          ),
+          const SizedBox(height: 10),
+          _StatusText(
+            label: _midiStatusLabel(service.status),
+            error: service.lastError,
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: <Widget>[
+              OutlinedButton.icon(
+                onPressed: onRefresh,
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Refresh'),
+              ),
+              FilledButton(
+                onPressed: connected || service.selectedDevice != null
+                    ? connected
+                          ? onDisconnect
+                          : onConnect
+                    : null,
+                child: Text(connected ? 'Disconnect' : 'Connect'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuickLedControllerPanel extends StatelessWidget {
+  final SerialLedController controller;
+  final VoidCallback onRefresh;
+  final ValueChanged<String?> onSelect;
+  final VoidCallback onConnect;
+  final VoidCallback onDisconnect;
+
+  const _QuickLedControllerPanel({
+    required this.controller,
+    required this.onRefresh,
+    required this.onSelect,
+    required this.onConnect,
+    required this.onDisconnect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bool connected = controller.isConnected;
+    final String? selectedPortPath = _selectedLedPortPath(controller);
+    return DrumPanel(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          const DrumSectionTitle(text: 'LED Controller'),
+          const SizedBox(height: 10),
+          DropdownButtonFormField<String>(
+            key: ValueKey<String?>(
+              'quick-led-${selectedPortPath ?? 'none'}-${controller.ports.length}',
+            ),
+            initialValue: selectedPortPath,
+            decoration: const InputDecoration(
+              labelText: 'Serial Device',
+              border: OutlineInputBorder(),
+            ),
+            items: controller.ports
+                .map(
+                  (SerialLedPort port) => DropdownMenuItem<String>(
+                    value: port.path,
+                    child: Text(port.displayName),
+                  ),
+                )
+                .toList(growable: false),
+            onChanged: connected ? null : onSelect,
+          ),
+          const SizedBox(height: 10),
+          _StatusText(
+            label: _serialStatusLabel(controller.status),
+            error: controller.controllerSettingsError ?? controller.lastError,
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: <Widget>[
+              OutlinedButton.icon(
+                onPressed: onRefresh,
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Refresh'),
+              ),
+              FilledButton(
+                onPressed: connected || controller.selectedPort != null
+                    ? connected
+                          ? onDisconnect
+                          : onConnect
+                    : null,
+                child: Text(connected ? 'Disconnect' : 'Connect'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -464,6 +731,24 @@ String _serialStatusLabel(SerialLedConnectionStatus status) {
     SerialLedConnectionStatus.connectionError => 'Connection error',
     SerialLedConnectionStatus.deviceRemoved => 'Device removed',
   };
+}
+
+String? _selectedMidiDeviceId(MidiInputService service) {
+  final String? selectedId = service.selectedDevice?.id;
+  if (selectedId == null) return null;
+  return service.devices.any(
+        (MidiInputDevice device) => device.id == selectedId,
+      )
+      ? selectedId
+      : null;
+}
+
+String? _selectedLedPortPath(SerialLedController controller) {
+  final String? selectedPath = controller.selectedPort?.path;
+  if (selectedPath == null) return null;
+  return controller.ports.any((SerialLedPort port) => port.path == selectedPath)
+      ? selectedPath
+      : null;
 }
 
 String _voiceLabel(DrumVoice voice) {

@@ -569,6 +569,7 @@ class _CapturedPatternPreview extends StatelessWidget {
           selection: selection,
           selectable: false,
           compactLayout: true,
+          preserveMeasures: false,
           minNoteWidth: 34,
           showSticking: false,
           audioPreviewBpm: playbackBpm,
@@ -736,7 +737,7 @@ class _CaptureStatusChip extends StatelessWidget {
     return ActionChip(
       label: chipLabel,
       onPressed: onPressed,
-      tooltip: 'Open Hardware & MIDI settings',
+      tooltip: 'Open device connections',
     );
   }
 }

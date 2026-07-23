@@ -259,6 +259,30 @@ Settings should not become:
 - a long-term MIDI capture workspace
 - a MIDI capture workspace
 
+## Shell Hardware Header
+
+On desktop-capable builds, the app shell owns the persistent hardware status
+controls.
+
+```text
+Root shell header -> MIDI Kit
+Root shell header -> LED Controller
+```
+
+Rules:
+
+- show MIDI Kit and LED Controller status in the same top-right location on
+  every root navigation destination
+- align the controls to the same right content edge as screen content
+- keep the controls visually stable; individual screens must not reposition,
+  resize, or duplicate them as page-level headers
+- tapping either control opens a quick hardware connection modal
+- the quick modal contains only device selection, refresh, connect, disconnect,
+  and concise connection state
+- the quick modal does not contain tests, orientation settings, raw diagnostics,
+  or capture controls
+- Settings continues to own the full Hardware & MIDI screen
+
 ## Hardware & MIDI Flow
 
 Hardware setup is desktop-only.
@@ -305,8 +329,6 @@ Current behavior:
 
 - visible only on desktop-capable platforms
 - uses the shared MIDI input service
-- shows concise MIDI and LED connection chips that link to the shared Hardware
-  & MIDI settings screen
 - requires the MIDI device to be connected first
 - records mapped MIDI hits
 - flashes the shared LED controller for each recorded live hit when the LED

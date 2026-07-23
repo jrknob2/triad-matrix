@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../core/practice/practice_domain_v1.dart';
 import '../../state/app_controller.dart';
+import '../hardware/hardware_status_header.dart';
 import '../library/pattern_screen.dart';
 import '../matrix/matrix_screen.dart';
 import '../practice/practice_session_screen.dart';
@@ -53,6 +56,7 @@ class _AppShellState extends State<AppShell> {
           selectedIndex: _selectedIndex,
           onDestinationSelected: _selectDestination,
           body: _destinationFor(controller),
+          onOpenDevices: _openDevices,
         );
       },
     );
@@ -67,7 +71,7 @@ class _AppShellState extends State<AppShell> {
         onOpenSettings: () => _selectDestination(4),
         onOpenDevices: _openDevices,
       ),
-      1 => ExploreLessonsScreen(onOpenDevices: _openDevices),
+      1 => const ExploreLessonsScreen(),
       2 => const PracticeInsightsScreen(),
       3 => FocusScreen(
         controller: controller,
@@ -84,11 +88,7 @@ class _AppShellState extends State<AppShell> {
   }
 
   void _openDevices() {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (BuildContext context) => const HardwareMidiSettingsScreen(),
-      ),
-    );
+    unawaited(showHardwareConnectionDialog(context));
   }
 
   void _openPattern(AppController controller, String itemId) {
@@ -152,11 +152,13 @@ class _DrumAppNavigationShell extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onDestinationSelected;
   final Widget body;
+  final VoidCallback onOpenDevices;
 
   const _DrumAppNavigationShell({
     required this.selectedIndex,
     required this.onDestinationSelected,
     required this.body,
+    required this.onOpenDevices,
   });
 
   static const List<NavigationDestination> _bottomDestinations =
@@ -236,13 +238,13 @@ class _DrumAppNavigationShell extends StatelessWidget {
                   destinations: _railDestinations,
                 ),
                 const VerticalDivider(width: 1),
-                Expanded(child: body),
+                Expanded(child: _ShellContentFrame(child: body)),
               ],
             ),
           );
         }
         return Scaffold(
-          body: body,
+          body: _ShellContentFrame(child: body),
           bottomNavigationBar: NavigationBar(
             selectedIndex: selectedIndex,
             onDestinationSelected: onDestinationSelected,
@@ -251,6 +253,17 @@ class _DrumAppNavigationShell extends StatelessWidget {
         );
       },
     );
+  }
+}
+
+class _ShellContentFrame extends StatelessWidget {
+  final Widget child;
+
+  const _ShellContentFrame({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return HardwareStatusHeaderOverlay(child: child);
   }
 }
 

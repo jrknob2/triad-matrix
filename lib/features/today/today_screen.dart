@@ -10,7 +10,6 @@ import '../coach/lesson_plan.dart';
 import '../coach/lesson_plan_loader.dart';
 import '../coach/lesson_progress.dart';
 import '../hardware/hardware_capabilities.dart';
-import '../midi/midi_input_models.dart';
 import '../midi/midi_input_service.dart';
 import '../midi/serial_led_controller.dart';
 import '../midi/shared_midi_input_service.dart';
@@ -116,17 +115,12 @@ class _TodayScreenState extends State<TodayScreen> {
     final MidiInputService? midiService = _midiService;
     final SerialLedController? ledController = _ledController;
     if (midiService == null || ledController == null) return null;
-    return _HomeHardwareStatus.from(
-      midiService: midiService,
-      ledController: ledController,
-    );
+    return const _HomeHardwareStatus();
   }
 }
 
 class ExploreLessonsScreen extends StatefulWidget {
-  final VoidCallback? onOpenDevices;
-
-  const ExploreLessonsScreen({super.key, this.onOpenDevices});
+  const ExploreLessonsScreen({super.key});
 
   @override
   State<ExploreLessonsScreen> createState() => _ExploreLessonsScreenState();
@@ -202,7 +196,6 @@ class _ExploreLessonsScreenState extends State<ExploreLessonsScreen> {
                 onSortChanged: _setSort,
                 onClearFilters: _clearFilters,
                 onProgressChanged: _refresh,
-                onOpenDevices: widget.onOpenDevices,
               );
             },
       ),
@@ -319,11 +312,7 @@ class _HomeView extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
       children: <Widget>[
-        _HomeHeader(
-          studentName: studentName,
-          hardwareStatus: hardwareStatus,
-          onOpenDevices: onOpenDevices,
-        ),
+        _HomeHeader(studentName: studentName),
         const SizedBox(height: 18),
         if (firstRun)
           _FirstRunPanel(
@@ -365,7 +354,6 @@ class _HomeView extends StatelessWidget {
           return LessonDetailScreen(
             lesson: lesson,
             progressService: data.progressService,
-            onOpenDevices: onOpenDevices,
           );
         },
       ),
@@ -412,14 +400,8 @@ class _HomeView extends StatelessWidget {
 
 class _HomeHeader extends StatelessWidget {
   final String studentName;
-  final _HomeHardwareStatus? hardwareStatus;
-  final VoidCallback? onOpenDevices;
 
-  const _HomeHeader({
-    required this.studentName,
-    required this.hardwareStatus,
-    required this.onOpenDevices,
-  });
+  const _HomeHeader({required this.studentName});
 
   @override
   Widget build(BuildContext context) {
@@ -445,119 +427,7 @@ class _HomeHeader extends StatelessWidget {
       ],
     );
 
-    final _HomeHardwareStatus? status = hardwareStatus;
-    if (status == null) return greeting;
-
-    return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-        final Widget devices = Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          alignment: WrapAlignment.end,
-          children: <Widget>[
-            _DeviceStatusChip(status: status.midi, onPressed: onOpenDevices),
-            _DeviceStatusChip(status: status.led, onPressed: onOpenDevices),
-          ],
-        );
-        if (constraints.maxWidth < 760) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[greeting, const SizedBox(height: 14), devices],
-          );
-        }
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Expanded(child: greeting),
-            const SizedBox(width: 18),
-            Flexible(child: devices),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _DeviceStatusChip extends StatelessWidget {
-  final _DeviceStatus status;
-  final VoidCallback? onPressed;
-
-  const _DeviceStatusChip({required this.status, required this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    final BorderRadius borderRadius = BorderRadius.circular(14);
-    return Material(
-      color: Colors.transparent,
-      child: Ink(
-        decoration: BoxDecoration(
-          color: DrumcabularyTheme.edgeSurface,
-          borderRadius: borderRadius,
-          border: Border.all(color: DrumcabularyTheme.edgeBorder),
-        ),
-        child: InkWell(
-          onTap: onPressed,
-          borderRadius: borderRadius,
-          hoverColor: DrumcabularyTheme.edgeOrange.withValues(alpha: 0.10),
-          focusColor: DrumcabularyTheme.edgeOrange.withValues(alpha: 0.14),
-          splashColor: DrumcabularyTheme.edgeOrange.withValues(alpha: 0.18),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                Icon(status.icon, color: DrumcabularyTheme.edgeTextPrimary),
-                const SizedBox(width: 10),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 180),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      Text(
-                        status.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: DrumcabularyTheme.edgeTextPrimary,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          DecoratedBox(
-                            decoration: BoxDecoration(
-                              color: status.connected
-                                  ? const Color(0xFF52D273)
-                                  : const Color(0xFFFFC857),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const SizedBox(width: 8, height: 8),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            status.subtitle,
-                            style: Theme.of(context).textTheme.labelMedium
-                                ?.copyWith(
-                                  color: status.connected
-                                      ? const Color(0xFF52D273)
-                                      : DrumcabularyTheme.edgeTextSecondary,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+    return greeting;
   }
 }
 
@@ -1281,7 +1151,6 @@ class _ExploreSearchView extends StatelessWidget {
   final ValueChanged<_ExploreSort?> onSortChanged;
   final VoidCallback onClearFilters;
   final VoidCallback onProgressChanged;
-  final VoidCallback? onOpenDevices;
 
   const _ExploreSearchView({
     required this.data,
@@ -1297,7 +1166,6 @@ class _ExploreSearchView extends StatelessWidget {
     required this.onSortChanged,
     required this.onClearFilters,
     required this.onProgressChanged,
-    required this.onOpenDevices,
   });
 
   @override
@@ -1375,7 +1243,6 @@ class _ExploreSearchView extends StatelessWidget {
           return LessonDetailScreen(
             lesson: item.lesson,
             progressService: data.progressService,
-            onOpenDevices: onOpenDevices,
           );
         },
       ),
@@ -2871,65 +2738,7 @@ List<Lesson> _orderedLessons(LessonContentLibrary library) {
 }
 
 class _HomeHardwareStatus {
-  final _DeviceStatus midi;
-  final _DeviceStatus led;
-
-  const _HomeHardwareStatus({required this.midi, required this.led});
-
-  factory _HomeHardwareStatus.from({
-    required MidiInputService midiService,
-    required SerialLedController ledController,
-  }) {
-    return _HomeHardwareStatus(
-      midi: _DeviceStatus(
-        icon: Icons.graphic_eq_rounded,
-        title: midiService.selectedDevice?.name ?? 'MIDI Kit',
-        subtitle: _midiStatusLabel(midiService.status),
-        connected: midiService.status == MidiInputStatus.connected,
-      ),
-      led: _DeviceStatus(
-        icon: Icons.radio_button_checked_rounded,
-        title: 'LED Controller',
-        subtitle: _serialStatusLabel(ledController.status),
-        connected: ledController.status == SerialLedConnectionStatus.connected,
-      ),
-    );
-  }
-}
-
-class _DeviceStatus {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final bool connected;
-
-  const _DeviceStatus({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.connected,
-  });
-}
-
-String _midiStatusLabel(MidiInputStatus status) {
-  return switch (status) {
-    MidiInputStatus.connected => 'Connected',
-    MidiInputStatus.scanning => 'Scanning',
-    MidiInputStatus.connecting => 'Connecting',
-    MidiInputStatus.noDevicesFound ||
-    MidiInputStatus.disconnected => 'Not Connected',
-    MidiInputStatus.connectionError => 'Connection Error',
-  };
-}
-
-String _serialStatusLabel(SerialLedConnectionStatus status) {
-  return switch (status) {
-    SerialLedConnectionStatus.connected => 'Connected',
-    SerialLedConnectionStatus.connecting => 'Connecting',
-    SerialLedConnectionStatus.disconnected => 'Not Connected',
-    SerialLedConnectionStatus.connectionError => 'Connection Error',
-    SerialLedConnectionStatus.deviceRemoved => 'Device Removed',
-  };
+  const _HomeHardwareStatus();
 }
 
 class _HomeLessonTarget {
