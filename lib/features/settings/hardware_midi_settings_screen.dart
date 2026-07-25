@@ -41,14 +41,18 @@ class _HardwareConnectionDialogState extends State<HardwareConnectionDialog> {
   late final MidiInputService _midiService = SharedMidiInputService.instance;
   late final SerialLedController _ledController =
       SharedSerialLedController.instance;
+  bool _hardwareUpdateScheduled = false;
 
   @override
   void initState() {
     super.initState();
     _midiService.addListener(_handleHardwareChanged);
     _ledController.addListener(_handleHardwareChanged);
-    unawaited(_midiService.start());
-    unawaited(_ledController.refreshPorts());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(_midiService.start());
+      unawaited(_ledController.refreshPorts());
+    });
   }
 
   @override
@@ -59,7 +63,12 @@ class _HardwareConnectionDialogState extends State<HardwareConnectionDialog> {
   }
 
   void _handleHardwareChanged() {
-    if (mounted) setState(() {});
+    if (!mounted || _hardwareUpdateScheduled) return;
+    _hardwareUpdateScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _hardwareUpdateScheduled = false;
+      if (mounted) setState(() {});
+    });
   }
 
   @override
@@ -150,17 +159,21 @@ class _HardwareMidiSettingsScreenState
   String? _testInputMessage;
   bool _testingInput = false;
   bool _testingLeds = false;
+  bool _hardwareUpdateScheduled = false;
 
   @override
   void initState() {
     super.initState();
     _midiService.addListener(_handleHardwareChanged);
     _ledController.addListener(_handleHardwareChanged);
-    unawaited(_midiService.start());
-    unawaited(_ledController.refreshPorts());
-    if (_ledController.isConnected) {
-      _ledController.requestOrientations();
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(_midiService.start());
+      unawaited(_ledController.refreshPorts());
+      if (_ledController.isConnected) {
+        _ledController.requestOrientations();
+      }
+    });
   }
 
   @override
@@ -172,7 +185,12 @@ class _HardwareMidiSettingsScreenState
   }
 
   void _handleHardwareChanged() {
-    if (mounted) setState(() {});
+    if (!mounted || _hardwareUpdateScheduled) return;
+    _hardwareUpdateScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _hardwareUpdateScheduled = false;
+      if (mounted) setState(() {});
+    });
   }
 
   @override

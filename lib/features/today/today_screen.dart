@@ -39,6 +39,7 @@ class _TodayScreenState extends State<TodayScreen> {
   late Future<_TeachingFlowData> _dataFuture = _loadData();
   MidiInputService? _midiService;
   SerialLedController? _ledController;
+  bool _hardwareUpdateScheduled = false;
 
   @override
   void initState() {
@@ -78,8 +79,12 @@ class _TodayScreenState extends State<TodayScreen> {
   }
 
   void _handleHardwareChanged() {
-    if (!mounted) return;
-    setState(() {});
+    if (!mounted || _hardwareUpdateScheduled) return;
+    _hardwareUpdateScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _hardwareUpdateScheduled = false;
+      if (mounted) setState(() {});
+    });
   }
 
   @override

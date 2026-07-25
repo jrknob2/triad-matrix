@@ -67,6 +67,7 @@ class _HardwareStatusHeaderControlsState
     extends State<HardwareStatusHeaderControls> {
   MidiInputService? _midiService;
   SerialLedController? _ledController;
+  bool _hardwareUpdateScheduled = false;
 
   @override
   void initState() {
@@ -76,8 +77,13 @@ class _HardwareStatusHeaderControlsState
       ..addListener(_handleHardwareChanged);
     _ledController = SharedSerialLedController.instance
       ..addListener(_handleHardwareChanged);
-    unawaited(_midiService!.start());
-    unawaited(_ledController!.refreshPorts());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final MidiInputService? midiService = _midiService;
+      final SerialLedController? ledController = _ledController;
+      if (midiService != null) unawaited(midiService.start());
+      if (ledController != null) unawaited(ledController.refreshPorts());
+    });
   }
 
   @override
@@ -88,7 +94,12 @@ class _HardwareStatusHeaderControlsState
   }
 
   void _handleHardwareChanged() {
-    if (mounted) setState(() {});
+    if (!mounted || _hardwareUpdateScheduled) return;
+    _hardwareUpdateScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _hardwareUpdateScheduled = false;
+      if (mounted) setState(() {});
+    });
   }
 
   @override
