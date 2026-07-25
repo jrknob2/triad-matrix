@@ -1,5 +1,5 @@
+import 'package:drumcabulary/features/progress/curriculum_progress_lens_aggregator.dart';
 import 'package:drumcabulary/features/progress/practice_insights_screen.dart';
-import 'package:drumcabulary/features/progress/skill_progress_lens_aggregator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -7,7 +7,7 @@ void main() {
   testWidgets('PracticeRadarChart selects a tapped spoke', (
     WidgetTester tester,
   ) async {
-    String? selectedSkillId;
+    String? selectedNodeId;
 
     await tester.pumpWidget(
       MaterialApp(
@@ -17,10 +17,10 @@ void main() {
             width: 360,
             height: 360,
             child: PracticeRadarChart(
-              values: _practiceValues,
-              selectedSkillId: 'timing',
-              onSkillSelected: (String skillId) {
-                selectedSkillId = skillId;
+              values: _rootPracticeValues,
+              selectedNodeId: 'timing',
+              onNodeSelected: (String nodeId) {
+                selectedNodeId = nodeId;
               },
             ),
           ),
@@ -31,64 +31,69 @@ void main() {
     final Offset center = tester.getCenter(find.byType(PracticeRadarChart));
     await tester.tapAt(center + const Offset(0, -120));
 
-    expect(selectedSkillId, 'timing');
+    expect(selectedNodeId, 'timing');
   });
 
-  testWidgets('PracticeRadarChart handles one-skill edge state', (
+  testWidgets('PracticeRadarChart handles one-node edge state', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: PracticeRadarChart(
-          values: _practiceValues.take(1).toList(growable: false),
-          selectedSkillId: 'timing',
-          onSkillSelected: (_) {},
+          values: _rootPracticeValues.take(1).toList(growable: false),
+          selectedNodeId: 'timing',
+          onNodeSelected: (_) {},
         ),
       ),
     );
 
-    expect(find.text('One skill tracked'), findsOneWidget);
+    expect(find.text('One node tracked'), findsOneWidget);
     expect(find.text('Timing'), findsOneWidget);
   });
 
-  testWidgets('PracticeRadarChart handles two-skill edge state', (
+  testWidgets('PracticeRadarChart handles two-node edge state', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: PracticeRadarChart(
-          values: _practiceValues.take(2).toList(growable: false),
-          selectedSkillId: 'timing',
-          onSkillSelected: (_) {},
+          values: _rootPracticeValues.take(2).toList(growable: false),
+          selectedNodeId: 'timing',
+          onNodeSelected: (_) {},
         ),
       ),
     );
 
-    expect(find.text('Two skills tracked'), findsOneWidget);
+    expect(find.text('Two nodes tracked'), findsOneWidget);
   });
 
   testWidgets('PracticeInsightsScreen shows no-data state', (
     WidgetTester tester,
   ) async {
+    _useLargeSurface(tester);
     await tester.pumpWidget(
       MaterialApp(
         home: PracticeInsightsScreen(
-          snapshotLoader: (PracticeInsightsLens lens) async =>
-              SkillProgressLensSnapshot(
-                lens: lens,
-                values: const <SkillProgressLensValue>[],
-              ),
+          snapshotLoader:
+              (PracticeInsightsLens lens, List<String> nodePath) async =>
+                  CurriculumProgressLensSnapshot(
+                    lens: lens,
+                    currentNode: _rootNode,
+                    breadcrumbs: _rootBreadcrumbs,
+                    values: const <CurriculumProgressLensValue>[],
+                  ),
         ),
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('No curriculum skills yet'), findsOneWidget);
+    expect(find.text('No curriculum nodes yet'), findsOneWidget);
   });
 
   testWidgets('PracticeInsightsScreen starts on Practice Time lens', (
     WidgetTester tester,
   ) async {
+    _useLargeSurface(tester);
     await tester.pumpWidget(
       MaterialApp(
         home: PracticeInsightsScreen(snapshotLoader: _snapshotForLens),
@@ -96,6 +101,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(find.text('Curriculum'), findsWidgets);
     expect(find.text('Practice Time'), findsOneWidget);
     expect(find.text('Practice Portrait'), findsOneWidget);
     expect(
@@ -108,6 +114,7 @@ void main() {
   testWidgets(
     'sub-minute nonzero practice time displays as less than one minute',
     (WidgetTester tester) async {
+      _useLargeSurface(tester);
       await tester.pumpWidget(
         MaterialApp(
           home: PracticeInsightsScreen(snapshotLoader: _snapshotForLens),
@@ -123,6 +130,7 @@ void main() {
   testWidgets('switching to Exercises Completed updates coordinated content', (
     WidgetTester tester,
   ) async {
+    _useLargeSurface(tester);
     await tester.pumpWidget(
       MaterialApp(
         home: PracticeInsightsScreen(snapshotLoader: _snapshotForLens),
@@ -136,7 +144,7 @@ void main() {
     expect(find.text('Completion Portrait'), findsOneWidget);
     expect(
       find.text(
-        'Shows how completed exercises are distributed across your skills.',
+        'Shows how completed exercises are distributed across the curriculum.',
       ),
       findsOneWidget,
     );
@@ -144,9 +152,85 @@ void main() {
     expect(find.text('2 of 3'), findsWidgets);
   });
 
-  testWidgets('selected skill is preserved across lens changes', (
+  testWidgets('selected node is preserved across lens changes', (
     WidgetTester tester,
   ) async {
+    _useLargeSurface(tester);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PracticeInsightsScreen(snapshotLoader: _snapshotForLens),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Grooves').last);
+    await tester.tap(find.text('Grooves').last);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Exercises Completed'));
+    await tester.tap(find.text('Exercises Completed'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('2 of 3'), findsWidgets);
+  });
+
+  testWidgets('drill-in shows second-level radar and breadcrumbs', (
+    WidgetTester tester,
+  ) async {
+    _useLargeSurface(tester);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PracticeInsightsScreen(
+          snapshotLoader: _snapshotForLens,
+          onOpenSkill: (_) {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Grooves').last);
+    await tester.tap(find.text('Grooves').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Open Category'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Curriculum'), findsWidgets);
+    expect(find.text('Grooves'), findsWidgets);
+    expect(find.text('Core Grooves'), findsWidgets);
+    expect(find.text('Rock Grooves'), findsWidgets);
+    expect(find.text('View Lessons'), findsOneWidget);
+  });
+
+  testWidgets('breadcrumb return preserves the selected lens', (
+    WidgetTester tester,
+  ) async {
+    _useLargeSurface(tester);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PracticeInsightsScreen(snapshotLoader: _snapshotForLens),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Exercises Completed'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Grooves').last);
+    await tester.tap(find.text('Grooves').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Open Category'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Curriculum').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Curriculum').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Completion Portrait'), findsOneWidget);
+    expect(find.text('Timing'), findsWidgets);
+  });
+
+  testWidgets('second-level View Lessons opens the existing lesson flow', (
+    WidgetTester tester,
+  ) async {
+    _useLargeSurface(tester);
     String? openedSkillId;
 
     await tester.pumpWidget(
@@ -162,15 +246,11 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.ensureVisible(find.text('Grooves').last);
-    await tester.pumpAndSettle();
     await tester.tap(find.text('Grooves').last);
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Exercises Completed'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Exercises Completed'));
+    await tester.tap(find.text('Open Category'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('View Lessons'));
-    await tester.pumpAndSettle();
     await tester.tap(find.text('View Lessons'));
 
     expect(openedSkillId, 'grooves');
@@ -179,21 +259,27 @@ void main() {
   testWidgets('completion lens shows all-zero empty state safely', (
     WidgetTester tester,
   ) async {
+    _useLargeSurface(tester);
     await tester.pumpWidget(
       MaterialApp(
         home: PracticeInsightsScreen(
-          snapshotLoader: (PracticeInsightsLens lens) async {
-            if (lens == PracticeInsightsLens.practiceTime) {
-              return SkillProgressLensSnapshot(
-                lens: lens,
-                values: _practiceValues,
-              );
-            }
-            return SkillProgressLensSnapshot(
-              lens: lens,
-              values: _zeroCompletionValues,
-            );
-          },
+          snapshotLoader:
+              (PracticeInsightsLens lens, List<String> nodePath) async {
+                if (lens == PracticeInsightsLens.practiceTime) {
+                  return _snapshot(
+                    lens: lens,
+                    currentNode: _rootNode,
+                    breadcrumbs: _rootBreadcrumbs,
+                    values: _rootPracticeValues,
+                  );
+                }
+                return _snapshot(
+                  lens: lens,
+                  currentNode: _rootNode,
+                  breadcrumbs: _rootBreadcrumbs,
+                  values: _zeroCompletionValues,
+                );
+              },
         ),
       ),
     );
@@ -210,121 +296,166 @@ void main() {
       findsOneWidget,
     );
   });
-
-  testWidgets('PracticeInsightsScreen opens selected skill in lesson flow', (
-    WidgetTester tester,
-  ) async {
-    String? openedSkillId;
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: PracticeInsightsScreen(
-          snapshotLoader: _snapshotForLens,
-          onOpenSkill: (String skillId) {
-            openedSkillId = skillId;
-          },
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.ensureVisible(find.text('View Lessons'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('View Lessons'));
-
-    expect(openedSkillId, 'timing');
-  });
 }
 
-Future<SkillProgressLensSnapshot> _snapshotForLens(
+void _useLargeSurface(WidgetTester tester) {
+  tester.view.devicePixelRatio = 1;
+  tester.view.physicalSize = const Size(1100, 1100);
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+}
+
+Future<CurriculumProgressLensSnapshot> _snapshotForLens(
   PracticeInsightsLens lens,
+  List<String> nodePath,
 ) async {
-  return SkillProgressLensSnapshot(
+  final bool inGrooves = nodePath.isNotEmpty && nodePath.first == 'grooves';
+  return _snapshot(
     lens: lens,
-    values: switch (lens) {
-      PracticeInsightsLens.practiceTime => _practiceValues,
-      PracticeInsightsLens.exercisesCompleted => _completionValues,
+    currentNode: inGrooves ? _groovesNode : _rootNode,
+    breadcrumbs: inGrooves ? _groovesBreadcrumbs : _rootBreadcrumbs,
+    values: switch ((lens, inGrooves)) {
+      (PracticeInsightsLens.practiceTime, false) => _rootPracticeValues,
+      (PracticeInsightsLens.exercisesCompleted, false) => _rootCompletionValues,
+      (PracticeInsightsLens.practiceTime, true) => _groovesPracticeValues,
+      (PracticeInsightsLens.exercisesCompleted, true) =>
+        _groovesCompletionValues,
     },
   );
 }
 
-const List<SkillProgressLensValue> _practiceValues = <SkillProgressLensValue>[
-  SkillProgressLensValue(
-    skillId: 'timing',
-    label: 'Timing',
-    practicedSeconds: 3600,
-    normalizedValue: 1,
-    practicedExerciseCount: 3,
-    practicedLessonCount: 2,
-    completedExerciseCount: 1,
-    totalExerciseCount: 4,
-    completedLessonCount: 1,
-  ),
-  SkillProgressLensValue(
-    skillId: 'grooves',
-    label: 'Grooves',
-    practicedSeconds: 20,
-    normalizedValue: 20 / 3600,
-    practicedExerciseCount: 1,
-    practicedLessonCount: 1,
-    completedExerciseCount: 2,
-    totalExerciseCount: 3,
-    completedLessonCount: 1,
-  ),
-  SkillProgressLensValue(
-    skillId: 'rudiments',
-    label: 'Rudiments',
-    practicedSeconds: 0,
-    normalizedValue: 0,
-    practicedExerciseCount: 0,
-    practicedLessonCount: 0,
-    completedExerciseCount: 0,
-    totalExerciseCount: 2,
-    completedLessonCount: 0,
+CurriculumProgressLensSnapshot _snapshot({
+  required PracticeInsightsLens lens,
+  required CurriculumNode currentNode,
+  required List<CurriculumBreadcrumb> breadcrumbs,
+  required List<CurriculumProgressLensValue> values,
+}) {
+  return CurriculumProgressLensSnapshot(
+    lens: lens,
+    currentNode: currentNode,
+    breadcrumbs: breadcrumbs,
+    values: values,
+  );
+}
+
+const CurriculumNode _rootNode = CurriculumNode(
+  id: CurriculumRadarTreeBuilder.rootId,
+  title: 'Curriculum',
+);
+
+const CurriculumNode _groovesNode = CurriculumNode(
+  id: 'grooves',
+  title: 'Grooves',
+);
+
+const List<CurriculumBreadcrumb> _rootBreadcrumbs = <CurriculumBreadcrumb>[
+  CurriculumBreadcrumb(
+    id: CurriculumRadarTreeBuilder.rootId,
+    title: 'Curriculum',
   ),
 ];
 
-const List<SkillProgressLensValue> _completionValues = <SkillProgressLensValue>[
-  SkillProgressLensValue(
-    skillId: 'timing',
-    label: 'Timing',
-    practicedSeconds: 3600,
-    normalizedValue: 0.25,
-    practicedExerciseCount: 3,
-    practicedLessonCount: 2,
-    completedExerciseCount: 1,
-    totalExerciseCount: 4,
-    completedLessonCount: 1,
+const List<CurriculumBreadcrumb> _groovesBreadcrumbs = <CurriculumBreadcrumb>[
+  CurriculumBreadcrumb(
+    id: CurriculumRadarTreeBuilder.rootId,
+    title: 'Curriculum',
   ),
-  SkillProgressLensValue(
-    skillId: 'grooves',
-    label: 'Grooves',
-    practicedSeconds: 20,
-    normalizedValue: 2 / 3,
-    practicedExerciseCount: 1,
-    practicedLessonCount: 1,
-    completedExerciseCount: 2,
-    totalExerciseCount: 3,
-    completedLessonCount: 1,
-  ),
-  SkillProgressLensValue(
-    skillId: 'rudiments',
-    label: 'Rudiments',
-    practicedSeconds: 0,
-    normalizedValue: 0,
-    practicedExerciseCount: 0,
-    practicedLessonCount: 0,
-    completedExerciseCount: 0,
-    totalExerciseCount: 2,
-    completedLessonCount: 0,
-  ),
+  CurriculumBreadcrumb(id: 'grooves', title: 'Grooves'),
 ];
 
-const List<SkillProgressLensValue> _zeroCompletionValues =
-    <SkillProgressLensValue>[
-      SkillProgressLensValue(
-        skillId: 'timing',
+const List<CurriculumProgressLensValue> _rootPracticeValues =
+    <CurriculumProgressLensValue>[
+      CurriculumProgressLensValue(
+        nodeId: 'timing',
         label: 'Timing',
+        lessonFilterId: 'timing',
+        hasChildren: true,
+        practicedSeconds: 3600,
+        normalizedValue: 1,
+        practicedExerciseCount: 3,
+        practicedLessonCount: 2,
+        completedExerciseCount: 1,
+        totalExerciseCount: 4,
+        completedLessonCount: 1,
+      ),
+      CurriculumProgressLensValue(
+        nodeId: 'grooves',
+        label: 'Grooves',
+        lessonFilterId: 'grooves',
+        hasChildren: true,
+        practicedSeconds: 20,
+        normalizedValue: 20 / 3600,
+        practicedExerciseCount: 1,
+        practicedLessonCount: 1,
+        completedExerciseCount: 2,
+        totalExerciseCount: 3,
+        completedLessonCount: 1,
+      ),
+      CurriculumProgressLensValue(
+        nodeId: 'rudiments',
+        label: 'Rudiments',
+        lessonFilterId: 'rudiments',
+        hasChildren: true,
+        practicedSeconds: 0,
+        normalizedValue: 0,
+        practicedExerciseCount: 0,
+        practicedLessonCount: 0,
+        completedExerciseCount: 0,
+        totalExerciseCount: 2,
+        completedLessonCount: 0,
+      ),
+    ];
+
+const List<CurriculumProgressLensValue> _rootCompletionValues =
+    <CurriculumProgressLensValue>[
+      CurriculumProgressLensValue(
+        nodeId: 'timing',
+        label: 'Timing',
+        lessonFilterId: 'timing',
+        hasChildren: true,
+        practicedSeconds: 3600,
+        normalizedValue: 0.25,
+        practicedExerciseCount: 3,
+        practicedLessonCount: 2,
+        completedExerciseCount: 1,
+        totalExerciseCount: 4,
+        completedLessonCount: 1,
+      ),
+      CurriculumProgressLensValue(
+        nodeId: 'grooves',
+        label: 'Grooves',
+        lessonFilterId: 'grooves',
+        hasChildren: true,
+        practicedSeconds: 20,
+        normalizedValue: 2 / 3,
+        practicedExerciseCount: 1,
+        practicedLessonCount: 1,
+        completedExerciseCount: 2,
+        totalExerciseCount: 3,
+        completedLessonCount: 1,
+      ),
+      CurriculumProgressLensValue(
+        nodeId: 'rudiments',
+        label: 'Rudiments',
+        lessonFilterId: 'rudiments',
+        hasChildren: true,
+        practicedSeconds: 0,
+        normalizedValue: 0,
+        practicedExerciseCount: 0,
+        practicedLessonCount: 0,
+        completedExerciseCount: 0,
+        totalExerciseCount: 2,
+        completedLessonCount: 0,
+      ),
+    ];
+
+const List<CurriculumProgressLensValue> _zeroCompletionValues =
+    <CurriculumProgressLensValue>[
+      CurriculumProgressLensValue(
+        nodeId: 'timing',
+        label: 'Timing',
+        lessonFilterId: 'timing',
+        hasChildren: true,
         practicedSeconds: 0,
         normalizedValue: 0,
         practicedExerciseCount: 0,
@@ -333,9 +464,11 @@ const List<SkillProgressLensValue> _zeroCompletionValues =
         totalExerciseCount: 4,
         completedLessonCount: 0,
       ),
-      SkillProgressLensValue(
-        skillId: 'grooves',
+      CurriculumProgressLensValue(
+        nodeId: 'grooves',
         label: 'Grooves',
+        lessonFilterId: 'grooves',
+        hasChildren: true,
         practicedSeconds: 0,
         normalizedValue: 0,
         practicedExerciseCount: 0,
@@ -344,15 +477,103 @@ const List<SkillProgressLensValue> _zeroCompletionValues =
         totalExerciseCount: 3,
         completedLessonCount: 0,
       ),
-      SkillProgressLensValue(
-        skillId: 'rudiments',
+      CurriculumProgressLensValue(
+        nodeId: 'rudiments',
         label: 'Rudiments',
+        lessonFilterId: 'rudiments',
+        hasChildren: true,
         practicedSeconds: 0,
         normalizedValue: 0,
         practicedExerciseCount: 0,
         practicedLessonCount: 0,
         completedExerciseCount: 0,
         totalExerciseCount: 2,
+        completedLessonCount: 0,
+      ),
+    ];
+
+const List<CurriculumProgressLensValue> _groovesPracticeValues =
+    <CurriculumProgressLensValue>[
+      CurriculumProgressLensValue(
+        nodeId: 'core-grooves',
+        label: 'Core Grooves',
+        lessonFilterId: 'grooves',
+        hasChildren: false,
+        practicedSeconds: 20,
+        normalizedValue: 1,
+        practicedExerciseCount: 1,
+        practicedLessonCount: 1,
+        completedExerciseCount: 2,
+        totalExerciseCount: 3,
+        completedLessonCount: 1,
+      ),
+      CurriculumProgressLensValue(
+        nodeId: 'rock-grooves',
+        label: 'Rock Grooves',
+        lessonFilterId: 'rock-grooves',
+        hasChildren: false,
+        practicedSeconds: 0,
+        normalizedValue: 0,
+        practicedExerciseCount: 0,
+        practicedLessonCount: 0,
+        completedExerciseCount: 0,
+        totalExerciseCount: 0,
+        completedLessonCount: 0,
+      ),
+      CurriculumProgressLensValue(
+        nodeId: 'funk-grooves',
+        label: 'Funk Grooves',
+        lessonFilterId: 'funk-grooves',
+        hasChildren: false,
+        practicedSeconds: 0,
+        normalizedValue: 0,
+        practicedExerciseCount: 0,
+        practicedLessonCount: 0,
+        completedExerciseCount: 0,
+        totalExerciseCount: 0,
+        completedLessonCount: 0,
+      ),
+    ];
+
+const List<CurriculumProgressLensValue> _groovesCompletionValues =
+    <CurriculumProgressLensValue>[
+      CurriculumProgressLensValue(
+        nodeId: 'core-grooves',
+        label: 'Core Grooves',
+        lessonFilterId: 'grooves',
+        hasChildren: false,
+        practicedSeconds: 20,
+        normalizedValue: 2 / 3,
+        practicedExerciseCount: 1,
+        practicedLessonCount: 1,
+        completedExerciseCount: 2,
+        totalExerciseCount: 3,
+        completedLessonCount: 1,
+      ),
+      CurriculumProgressLensValue(
+        nodeId: 'rock-grooves',
+        label: 'Rock Grooves',
+        lessonFilterId: 'rock-grooves',
+        hasChildren: false,
+        practicedSeconds: 0,
+        normalizedValue: 0,
+        practicedExerciseCount: 0,
+        practicedLessonCount: 0,
+        completedExerciseCount: 0,
+        totalExerciseCount: 0,
+        completedLessonCount: 0,
+      ),
+      CurriculumProgressLensValue(
+        nodeId: 'funk-grooves',
+        label: 'Funk Grooves',
+        lessonFilterId: 'funk-grooves',
+        hasChildren: false,
+        practicedSeconds: 0,
+        normalizedValue: 0,
+        practicedExerciseCount: 0,
+        practicedLessonCount: 0,
+        completedExerciseCount: 0,
+        totalExerciseCount: 0,
         completedLessonCount: 0,
       ),
     ];

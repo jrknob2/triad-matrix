@@ -454,27 +454,52 @@ Practice Insights is a top-level destination, but it is not Home.
 
 Current implementation:
 
-- navigable lens portrait
+- hierarchical curriculum radar navigation
 - implemented lenses:
   - Practice Time
   - Exercises Completed
-- radar/spider chart for three or more curriculum skills
+- radar/spider chart for three or more curriculum nodes
 - stable fallback summaries for one-skill and two-skill curriculum states
-- Practice Time values derive from `ExerciseProgress.practicedSeconds ->
-  Exercise -> Lesson -> Lesson.skill`
-- Exercises Completed values derive from `ExerciseProgress.status ==
-  completed -> Exercise -> Lesson -> Lesson.skill`
+- two radar levels:
+  - top-level curriculum categories
+  - one selected category's child nodes
+- second-level nodes terminate at lesson navigation
+- the temporary top-level taxonomy is:
+  - Timing
+  - Grooves
+  - Rudiments
+  - Technique
+  - Coordination
+  - Dynamics
+  - Vocabulary
+  - Reading
+  - Musicianship
+  - Improvisation
+- Vocabulary must contain Triads as a child node
+- every radar is generated from the active curriculum node's children; renderer
+  code must not hardcode spoke names
+- Practice Time values derive from descendant lessons using
+  `ExerciseProgress.practicedSeconds -> Exercise -> Lesson -> curriculum node`
+- Exercises Completed values derive from descendant lessons using
+  `ExerciseProgress.status == completed -> Exercise -> Lesson -> curriculum
+  node`
 - raw practice time and completed/total exercise counts remain visible;
   normalized radius is only visual geometry
-- Practice Time normalizes each skill against the largest practiced-seconds
-  total among visible skills
-- Exercises Completed normalizes each skill as completed exercises divided by
-  total exercises for that skill
+- Practice Time normalizes each child node against the largest
+  practiced-seconds total among visible child nodes
+- Exercises Completed normalizes each child node as completed exercises divided
+  by total exercises for that child node
 - switching lenses updates the section title, explanatory copy, radar values,
   selected-skill summary, and lower metric cards together
-- selected skill is preserved across lens changes when the skill exists in the
+- selected node is preserved across lens changes when the node exists in the
   active dataset
-- tapping a skill selects it and can open Explore with that skill filter
+- tapping a radar spoke or metric row selects a node
+- drilling into a category requires an explicit action; selection alone must not
+  navigate
+- breadcrumbs show the current curriculum position and allow return to the root
+- selected lens persists when drilling into a category or returning by
+  breadcrumb
+- second-level View Lessons opens Explore with the selected node's lesson filter
 - Home links to it from the progress summary
 
 Practice Insights must not imply skill mastery, weakness, rating, ability,
@@ -494,9 +519,14 @@ V1 limitations:
 - one lesson maps to one primary skill
 - all exercise time rolls into that lesson's primary skill
 - all exercise completions roll into that lesson's primary skill
-- skill identity is currently `Lesson.skill`
-- Practice Time radius is relative to the most-practiced visible skill
-- Exercises Completed radius is relative to each skill's own exercise total
+- current real lessons are attached to the temporary taxonomy through
+  `Lesson.skill`
+- Practice Time radius is relative to the most-practiced visible child of the
+  active node
+- Exercises Completed radius is relative to each child node's own exercise
+  total
+- only two radar levels exist in this implementation
+- the taxonomy is temporary and exists to validate hierarchical navigation
 - values may change if curriculum content changes
 
 ## Implemented But Not Active In Normal Flow

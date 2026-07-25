@@ -7,11 +7,14 @@ import '../app/drumcabulary_theme.dart';
 import '../app/drumcabulary_ui.dart';
 import '../coach/lesson_plan_loader.dart';
 import '../coach/lesson_progress.dart';
-import 'skill_progress_lens_aggregator.dart';
+import 'curriculum_progress_lens_aggregator.dart';
 
 class PracticeInsightsScreen extends StatefulWidget {
   final ValueChanged<String>? onOpenSkill;
-  final Future<SkillProgressLensSnapshot> Function(PracticeInsightsLens lens)?
+  final Future<CurriculumProgressLensSnapshot> Function(
+    PracticeInsightsLens lens,
+    List<String> nodePath,
+  )?
   snapshotLoader;
 
   const PracticeInsightsScreen({
@@ -26,24 +29,36 @@ class PracticeInsightsScreen extends StatefulWidget {
 
 class _PracticeInsightsScreenState extends State<PracticeInsightsScreen> {
   PracticeInsightsLens _lens = PracticeInsightsLens.practiceTime;
-  late Future<SkillProgressLensSnapshot> _snapshotFuture = _loadSnapshot(_lens);
-  String? _selectedSkillId;
+  List<String> _nodePath = const <String>[];
+  late Future<CurriculumProgressLensSnapshot> _snapshotFuture = _loadSnapshot(
+    _lens,
+    _nodePath,
+  );
+  String? _selectedNodeId;
 
-  Future<SkillProgressLensSnapshot> _loadSnapshot(
+  Future<CurriculumProgressLensSnapshot> _loadSnapshot(
     PracticeInsightsLens lens,
+    List<String> nodePath,
   ) async {
-    final Future<SkillProgressLensSnapshot> Function(PracticeInsightsLens lens)?
+    final Future<CurriculumProgressLensSnapshot> Function(
+      PracticeInsightsLens lens,
+      List<String> nodePath,
+    )?
     loader = widget.snapshotLoader;
-    if (loader != null) return loader(lens);
+    if (loader != null) return loader(lens, nodePath);
 
     final library = await LessonPlanLoader.loadContent();
     final progressService = LessonProgressService(
       const FileLessonProgressStore(),
     );
     await progressService.load();
-    return const SkillProgressLensAggregator().build(
+    final CurriculumNode root = const CurriculumRadarTreeBuilder().build(
+      library,
+    );
+    return const CurriculumProgressLensAggregator().build(
       lens: lens,
-      library: library,
+      root: root,
+      nodePath: nodePath,
       progressService: progressService,
     );
   }
@@ -51,33 +66,35 @@ class _PracticeInsightsScreenState extends State<PracticeInsightsScreen> {
   @override
   Widget build(BuildContext context) {
     return DrumScreen(
-      child: FutureBuilder<SkillProgressLensSnapshot>(
+      child: FutureBuilder<CurriculumProgressLensSnapshot>(
         future: _snapshotFuture,
         builder:
             (
               BuildContext context,
-              AsyncSnapshot<SkillProgressLensSnapshot> snapshot,
+              AsyncSnapshot<CurriculumProgressLensSnapshot> snapshot,
             ) {
               if (snapshot.hasError) {
                 return _PracticePortraitError(
                   error: snapshot.error,
                   onRetry: () {
                     setState(() {
-                      _snapshotFuture = _loadSnapshot(_lens);
+                      _snapshotFuture = _loadSnapshot(_lens, _nodePath);
                     });
                   },
                 );
               }
-              final SkillProgressLensSnapshot? data = snapshot.data;
+              final CurriculumProgressLensSnapshot? data = snapshot.data;
               if (data == null) {
                 return const Center(child: CircularProgressIndicator());
               }
               return _PracticePortraitView(
                 snapshot: data,
-                selectedSkillId: _resolveSelectedSkillId(data),
-                onSelected: (String skillId) {
-                  setState(() => _selectedSkillId = skillId);
+                selectedNodeId: _resolveSelectedNodeId(data),
+                onSelected: (String nodeId) {
+                  setState(() => _selectedNodeId = nodeId);
                 },
+                onBreadcrumbSelected: _openBreadcrumb,
+                onDrillIn: _drillIntoNode,
                 onLensChanged: _setLens,
                 onOpenSkill: widget.onOpenSkill,
               );
@@ -90,44 +107,67 @@ class _PracticeInsightsScreenState extends State<PracticeInsightsScreen> {
     if (lens == _lens) return;
     setState(() {
       _lens = lens;
-      _snapshotFuture = _loadSnapshot(lens);
+      _snapshotFuture = _loadSnapshot(lens, _nodePath);
     });
   }
 
-  String? _resolveSelectedSkillId(SkillProgressLensSnapshot snapshot) {
+  void _drillIntoNode(String nodeId) {
+    if (_nodePath.isNotEmpty) return;
+    setState(() {
+      _nodePath = <String>[..._nodePath, nodeId];
+      _selectedNodeId = null;
+      _snapshotFuture = _loadSnapshot(_lens, _nodePath);
+    });
+  }
+
+  void _openBreadcrumb(int index) {
+    final List<String> nextPath = _nodePath.take(index).toList(growable: false);
+    setState(() {
+      _nodePath = nextPath;
+      _selectedNodeId = null;
+      _snapshotFuture = _loadSnapshot(_lens, _nodePath);
+    });
+  }
+
+  String? _resolveSelectedNodeId(CurriculumProgressLensSnapshot snapshot) {
     if (snapshot.values.isEmpty) return null;
-    final String? selectedSkillId = _selectedSkillId;
-    if (selectedSkillId != null &&
+    final String? selectedNodeId = _selectedNodeId;
+    if (selectedNodeId != null &&
         snapshot.values.any(
-          (SkillProgressLensValue value) => value.skillId == selectedSkillId,
+          (CurriculumProgressLensValue value) => value.nodeId == selectedNodeId,
         )) {
-      return selectedSkillId;
+      return selectedNodeId;
     }
-    return snapshot.values.first.skillId;
+    return snapshot.values.first.nodeId;
   }
 }
 
 class _PracticePortraitView extends StatelessWidget {
-  final SkillProgressLensSnapshot snapshot;
-  final String? selectedSkillId;
+  final CurriculumProgressLensSnapshot snapshot;
+  final String? selectedNodeId;
   final ValueChanged<String> onSelected;
+  final ValueChanged<int> onBreadcrumbSelected;
+  final ValueChanged<String> onDrillIn;
   final ValueChanged<PracticeInsightsLens> onLensChanged;
   final ValueChanged<String>? onOpenSkill;
 
   const _PracticePortraitView({
     required this.snapshot,
-    required this.selectedSkillId,
+    required this.selectedNodeId,
     required this.onSelected,
+    required this.onBreadcrumbSelected,
+    required this.onDrillIn,
     required this.onLensChanged,
     required this.onOpenSkill,
   });
 
   @override
   Widget build(BuildContext context) {
-    final SkillProgressLensValue? selectedValue = _selectedValue;
+    final CurriculumProgressLensValue? selectedValue = _selectedValue;
     final _LensCopy copy = _copyFor(snapshot.lens);
 
     return ListView(
+      key: ValueKey<String>('practice-insights-${snapshot.currentNode.id}'),
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
       children: <Widget>[
         DrumPanel(
@@ -135,17 +175,22 @@ class _PracticePortraitView extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
+              _CurriculumBreadcrumbs(
+                breadcrumbs: snapshot.breadcrumbs,
+                onSelected: onBreadcrumbSelected,
+              ),
+              const SizedBox(height: 12),
               _LensHeader(
                 copy: copy,
                 lens: snapshot.lens,
                 onLensChanged: onLensChanged,
               ),
               const SizedBox(height: 16),
-              if (!snapshot.hasSkills)
+              if (!snapshot.hasNodes)
                 const _PracticePortraitEmptyState(
-                  title: 'No curriculum skills yet',
+                  title: 'No curriculum nodes yet',
                   message:
-                      'Add lessons with skill metadata to build a practice portrait.',
+                      'Add curriculum child nodes to build a radar navigation view.',
                 )
               else ...<Widget>[
                 if (!snapshot.hasMetricData) ...<Widget>[
@@ -159,24 +204,30 @@ class _PracticePortraitView extends StatelessWidget {
                   values: snapshot.values,
                   lens: snapshot.lens,
                   semanticLabel: copy.radarSemanticLabel,
-                  selectedSkillId: selectedSkillId,
-                  onSkillSelected: onSelected,
+                  selectedNodeId: selectedNodeId,
+                  onNodeSelected: onSelected,
                 ),
                 const SizedBox(height: 16),
                 if (selectedValue != null)
-                  _SelectedSkillSummary(
+                  _SelectedNodeSummary(
                     value: selectedValue,
                     lens: snapshot.lens,
+                    canDrillIn: snapshot.isRoot && selectedValue.hasChildren,
+                    onDrillIn: snapshot.isRoot && selectedValue.hasChildren
+                        ? () => onDrillIn(selectedValue.nodeId)
+                        : null,
                     onOpenSkill: onOpenSkill == null
                         ? null
-                        : () => onOpenSkill!(selectedValue.skillId),
+                        : snapshot.isRoot
+                        ? null
+                        : () => onOpenSkill!(selectedValue.lessonFilterId),
                   ),
                 const SizedBox(height: 16),
-                _SkillMetricList(
+                _NodeMetricList(
                   values: snapshot.values,
                   lens: snapshot.lens,
                   heading: copy.metricHeading,
-                  selectedSkillId: selectedSkillId,
+                  selectedNodeId: selectedNodeId,
                   onSelected: onSelected,
                 ),
               ],
@@ -187,30 +238,30 @@ class _PracticePortraitView extends StatelessWidget {
     );
   }
 
-  SkillProgressLensValue? get _selectedValue {
-    final String? id = selectedSkillId;
+  CurriculumProgressLensValue? get _selectedValue {
+    final String? id = selectedNodeId;
     if (id == null) return null;
-    for (final SkillProgressLensValue value in snapshot.values) {
-      if (value.skillId == id) return value;
+    for (final CurriculumProgressLensValue value in snapshot.values) {
+      if (value.nodeId == id) return value;
     }
     return null;
   }
 }
 
 class PracticeRadarChart extends StatelessWidget {
-  final List<SkillProgressLensValue> values;
+  final List<CurriculumProgressLensValue> values;
   final PracticeInsightsLens lens;
   final String semanticLabel;
-  final String? selectedSkillId;
-  final ValueChanged<String> onSkillSelected;
+  final String? selectedNodeId;
+  final ValueChanged<String> onNodeSelected;
 
   const PracticeRadarChart({
     super.key,
     required this.values,
     this.lens = PracticeInsightsLens.practiceTime,
-    this.semanticLabel = 'Practice distribution by skill',
-    required this.selectedSkillId,
-    required this.onSkillSelected,
+    this.semanticLabel = 'Practice distribution by curriculum node',
+    required this.selectedNodeId,
+    required this.onNodeSelected,
   });
 
   @override
@@ -219,8 +270,8 @@ class PracticeRadarChart extends StatelessWidget {
       return _PracticeRadarFallback(
         values: values,
         lens: lens,
-        selectedSkillId: selectedSkillId,
-        onSkillSelected: onSkillSelected,
+        selectedNodeId: selectedNodeId,
+        onNodeSelected: onNodeSelected,
       );
     }
 
@@ -235,17 +286,17 @@ class PracticeRadarChart extends StatelessWidget {
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTapDown: (TapDownDetails details) {
-              final String? skillId = _nearestSkillForTap(
+              final String? nodeId = _nearestNodeForTap(
                 details.localPosition,
                 Size(width, height),
               );
-              if (skillId != null) onSkillSelected(skillId);
+              if (nodeId != null) onNodeSelected(nodeId);
             },
             child: CustomPaint(
               size: Size(width, height),
               painter: _PracticeRadarPainter(
                 values: values,
-                selectedSkillId: selectedSkillId,
+                selectedNodeId: selectedNodeId,
                 textDirection: Directionality.of(context),
               ),
             ),
@@ -255,29 +306,29 @@ class PracticeRadarChart extends StatelessWidget {
     );
   }
 
-  String? _nearestSkillForTap(Offset position, Size size) {
+  String? _nearestNodeForTap(Offset position, Size size) {
     if (values.isEmpty) return null;
     final Offset center = size.center(Offset.zero);
     final Offset delta = position - center;
-    if (delta.distance == 0) return selectedSkillId ?? values.first.skillId;
+    if (delta.distance == 0) return selectedNodeId ?? values.first.nodeId;
     double angle = math.atan2(delta.dy, delta.dx) + math.pi / 2;
     while (angle < 0) {
       angle += math.pi * 2;
     }
     final double spoke = (angle / (math.pi * 2)) * values.length;
     final int index = spoke.round() % values.length;
-    return values[index].skillId;
+    return values[index].nodeId;
   }
 }
 
 class _PracticeRadarPainter extends CustomPainter {
-  final List<SkillProgressLensValue> values;
-  final String? selectedSkillId;
+  final List<CurriculumProgressLensValue> values;
+  final String? selectedNodeId;
   final TextDirection textDirection;
 
   const _PracticeRadarPainter({
     required this.values,
-    required this.selectedSkillId,
+    required this.selectedNodeId,
     required this.textDirection,
   });
 
@@ -324,7 +375,7 @@ class _PracticeRadarPainter extends CustomPainter {
 
     final Path valuePath = Path();
     for (int index = 0; index < count; index += 1) {
-      final SkillProgressLensValue value = values[index];
+      final CurriculumProgressLensValue value = values[index];
       final Offset point =
           center + _unitFor(index, count) * radius * value.normalizedValue;
       if (index == 0) {
@@ -338,13 +389,13 @@ class _PracticeRadarPainter extends CustomPainter {
     canvas.drawPath(valuePath, outlinePaint);
 
     for (int index = 0; index < count; index += 1) {
-      final SkillProgressLensValue value = values[index];
+      final CurriculumProgressLensValue value = values[index];
       final Offset unit = _unitFor(index, count);
       final Offset point = center + unit * radius * value.normalizedValue;
       canvas.drawCircle(
         point,
-        value.skillId == selectedSkillId ? 5 : 4,
-        value.skillId == selectedSkillId ? selectedPointPaint : pointPaint,
+        value.nodeId == selectedNodeId ? 5 : 4,
+        value.nodeId == selectedNodeId ? selectedPointPaint : pointPaint,
       );
 
       final Offset labelCenter = center + unit * (radius + 42);
@@ -352,7 +403,7 @@ class _PracticeRadarPainter extends CustomPainter {
         canvas,
         labelCenter,
         value,
-        selected: value.skillId == selectedSkillId,
+        selected: value.nodeId == selectedNodeId,
       );
     }
   }
@@ -379,7 +430,7 @@ class _PracticeRadarPainter extends CustomPainter {
   void _drawLabel(
     Canvas canvas,
     Offset center,
-    SkillProgressLensValue value, {
+    CurriculumProgressLensValue value, {
     required bool selected,
   }) {
     final TextPainter painter = TextPainter(
@@ -408,22 +459,22 @@ class _PracticeRadarPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _PracticeRadarPainter oldDelegate) {
     return oldDelegate.values != values ||
-        oldDelegate.selectedSkillId != selectedSkillId ||
+        oldDelegate.selectedNodeId != selectedNodeId ||
         oldDelegate.textDirection != textDirection;
   }
 }
 
 class _PracticeRadarFallback extends StatelessWidget {
-  final List<SkillProgressLensValue> values;
+  final List<CurriculumProgressLensValue> values;
   final PracticeInsightsLens lens;
-  final String? selectedSkillId;
-  final ValueChanged<String> onSkillSelected;
+  final String? selectedNodeId;
+  final ValueChanged<String> onNodeSelected;
 
   const _PracticeRadarFallback({
     required this.values,
     required this.lens,
-    required this.selectedSkillId,
-    required this.onSkillSelected,
+    required this.selectedNodeId,
+    required this.onNodeSelected,
   });
 
   @override
@@ -433,19 +484,19 @@ class _PracticeRadarFallback extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Text(
-          values.length == 1 ? 'One skill tracked' : 'Two skills tracked',
+          values.length == 1 ? 'One node tracked' : 'Two nodes tracked',
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
             color: DrumcabularyTheme.edgeTextPrimary,
             fontWeight: FontWeight.w700,
           ),
         ),
         const SizedBox(height: 10),
-        for (final SkillProgressLensValue value in values) ...<Widget>[
-          _SkillMetricBar(
+        for (final CurriculumProgressLensValue value in values) ...<Widget>[
+          _NodeMetricBar(
             value: value,
             lens: lens,
-            selected: value.skillId == selectedSkillId,
-            onTap: () => onSkillSelected(value.skillId),
+            selected: value.nodeId == selectedNodeId,
+            onTap: () => onNodeSelected(value.nodeId),
           ),
           if (value != values.last) const SizedBox(height: 8),
         ],
@@ -454,18 +505,18 @@ class _PracticeRadarFallback extends StatelessWidget {
   }
 }
 
-class _SkillMetricList extends StatelessWidget {
-  final List<SkillProgressLensValue> values;
+class _NodeMetricList extends StatelessWidget {
+  final List<CurriculumProgressLensValue> values;
   final PracticeInsightsLens lens;
   final String heading;
-  final String? selectedSkillId;
+  final String? selectedNodeId;
   final ValueChanged<String> onSelected;
 
-  const _SkillMetricList({
+  const _NodeMetricList({
     required this.values,
     required this.lens,
     required this.heading,
-    required this.selectedSkillId,
+    required this.selectedNodeId,
     required this.onSelected,
   });
 
@@ -482,12 +533,12 @@ class _SkillMetricList extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-        for (final SkillProgressLensValue value in values) ...<Widget>[
-          _SkillMetricBar(
+        for (final CurriculumProgressLensValue value in values) ...<Widget>[
+          _NodeMetricBar(
             value: value,
             lens: lens,
-            selected: value.skillId == selectedSkillId,
-            onTap: () => onSelected(value.skillId),
+            selected: value.nodeId == selectedNodeId,
+            onTap: () => onSelected(value.nodeId),
           ),
           if (value != values.last) const SizedBox(height: 8),
         ],
@@ -496,13 +547,13 @@ class _SkillMetricList extends StatelessWidget {
   }
 }
 
-class _SkillMetricBar extends StatelessWidget {
-  final SkillProgressLensValue value;
+class _NodeMetricBar extends StatelessWidget {
+  final CurriculumProgressLensValue value;
   final PracticeInsightsLens lens;
   final bool selected;
   final VoidCallback onTap;
 
-  const _SkillMetricBar({
+  const _NodeMetricBar({
     required this.value,
     required this.lens,
     required this.selected,
@@ -575,14 +626,18 @@ class _SkillMetricBar extends StatelessWidget {
   }
 }
 
-class _SelectedSkillSummary extends StatelessWidget {
-  final SkillProgressLensValue value;
+class _SelectedNodeSummary extends StatelessWidget {
+  final CurriculumProgressLensValue value;
   final PracticeInsightsLens lens;
+  final bool canDrillIn;
+  final VoidCallback? onDrillIn;
   final VoidCallback? onOpenSkill;
 
-  const _SelectedSkillSummary({
+  const _SelectedNodeSummary({
     required this.value,
     required this.lens,
+    required this.canDrillIn,
+    required this.onDrillIn,
     required this.onOpenSkill,
   });
 
@@ -602,6 +657,12 @@ class _SelectedSkillSummary extends StatelessWidget {
           crossAxisAlignment: WrapCrossAlignment.center,
           children: <Widget>[
             ..._selectedMetricsFor(value, lens),
+            if (canDrillIn && onDrillIn != null)
+              OutlinedButton.icon(
+                onPressed: onDrillIn,
+                icon: const Icon(Icons.radar_rounded),
+                label: const Text('Open Category'),
+              ),
             if (onOpenSkill != null)
               OutlinedButton.icon(
                 onPressed: onOpenSkill,
@@ -611,6 +672,59 @@ class _SelectedSkillSummary extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _CurriculumBreadcrumbs extends StatelessWidget {
+  final List<CurriculumBreadcrumb> breadcrumbs;
+  final ValueChanged<int> onSelected;
+
+  const _CurriculumBreadcrumbs({
+    required this.breadcrumbs,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (breadcrumbs.isEmpty) return const SizedBox.shrink();
+    final TextStyle? baseStyle = Theme.of(context).textTheme.labelLarge
+        ?.copyWith(
+          color: DrumcabularyTheme.edgeTextSecondary,
+          fontWeight: FontWeight.w600,
+        );
+    final TextStyle? currentStyle = baseStyle?.copyWith(
+      color: DrumcabularyTheme.edgeTextPrimary,
+    );
+
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: <Widget>[
+        for (int index = 0; index < breadcrumbs.length; index += 1) ...<Widget>[
+          if (index > 0)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 5),
+              child: Icon(
+                Icons.chevron_right_rounded,
+                size: 16,
+                color: DrumcabularyTheme.edgeTextMuted,
+              ),
+            ),
+          if (index == breadcrumbs.length - 1)
+            Text(breadcrumbs[index].title, style: currentStyle)
+          else
+            TextButton(
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                visualDensity: VisualDensity.compact,
+              ),
+              onPressed: () => onSelected(index),
+              child: Text(breadcrumbs[index].title, style: baseStyle),
+            ),
+        ],
+      ],
     );
   }
 }
@@ -873,7 +987,7 @@ String _formatPracticeTime(int seconds) {
 }
 
 String _metricValueFor(
-  SkillProgressLensValue value,
+  CurriculumProgressLensValue value,
   PracticeInsightsLens lens,
 ) {
   return switch (lens) {
@@ -886,7 +1000,7 @@ String _metricValueFor(
 }
 
 List<Widget> _selectedMetricsFor(
-  SkillProgressLensValue value,
+  CurriculumProgressLensValue value,
   PracticeInsightsLens lens,
 ) {
   return switch (lens) {
@@ -929,17 +1043,17 @@ _LensCopy _copyFor(PracticeInsightsLens lens) {
       metricHeading: 'Time invested',
       emptyTitle: 'No practice time recorded',
       emptyMessage: 'Practice an exercise to begin building your portrait.',
-      radarSemanticLabel: 'Practice time distribution by skill',
+      radarSemanticLabel: 'Practice time distribution by curriculum node',
     ),
     PracticeInsightsLens.exercisesCompleted => const _LensCopy(
       title: 'Completion Portrait',
       description:
-          'Shows how completed exercises are distributed across your skills.',
+          'Shows how completed exercises are distributed across the curriculum.',
       metricHeading: 'Exercises completed',
       emptyTitle: 'No completed exercises yet',
       emptyMessage:
           'Complete an exercise to begin building your completion portrait.',
-      radarSemanticLabel: 'Exercise completion distribution by skill',
+      radarSemanticLabel: 'Exercise completion distribution by curriculum node',
     ),
   };
 }
