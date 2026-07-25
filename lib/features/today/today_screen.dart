@@ -124,7 +124,9 @@ class _TodayScreenState extends State<TodayScreen> {
 }
 
 class ExploreLessonsScreen extends StatefulWidget {
-  const ExploreLessonsScreen({super.key});
+  final String? initialSkillId;
+
+  const ExploreLessonsScreen({super.key, this.initialSkillId});
 
   @override
   State<ExploreLessonsScreen> createState() => _ExploreLessonsScreenState();
@@ -146,6 +148,15 @@ class _ExploreLessonsScreenState extends State<ExploreLessonsScreen> {
   void initState() {
     super.initState();
     _searchController = TextEditingController();
+    _applyInitialSkillFilter();
+  }
+
+  @override
+  void didUpdateWidget(covariant ExploreLessonsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialSkillId != widget.initialSkillId) {
+      _applyInitialSkillFilter();
+    }
   }
 
   @override
@@ -260,6 +271,15 @@ class _ExploreLessonsScreenState extends State<ExploreLessonsScreen> {
         values.clear();
       }
     });
+  }
+
+  void _applyInitialSkillFilter() {
+    final String? skillId = widget.initialSkillId?.trim();
+    if (skillId == null || skillId.isEmpty) return;
+    _selectedFilters[_ExploreFilterGroupKey.skills]!
+      ..clear()
+      ..add(_labelFor(skillId));
+    _enforceStatusGate();
   }
 
   void _enforceStatusGate() {

@@ -27,10 +27,12 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   int _selectedIndex = 0;
+  String? _initialExploreSkillId;
 
   void _selectDestination(int index) {
     setState(() {
       _selectedIndex = index;
+      _initialExploreSkillId = null;
     });
   }
 
@@ -60,20 +62,20 @@ class _AppShellState extends State<AppShell> {
           onOpenDevices: _openDevices,
         ),
       ),
-      1 => const _ShellDestination(
-        header: _ShellHeaderContent(
+      1 => _ShellDestination(
+        header: const _ShellHeaderContent(
           title: 'What are you working on today?',
           subtitle:
               'Search lessons and exercises or filter by what matters to you.',
         ),
-        body: ExploreLessonsScreen(),
+        body: ExploreLessonsScreen(initialSkillId: _initialExploreSkillId),
       ),
-      2 => const _ShellDestination(
-        header: _ShellHeaderContent(
+      2 => _ShellDestination(
+        header: const _ShellHeaderContent(
           title: 'Practice Insights',
-          subtitle: 'Practice time, consistency, and progress.',
+          subtitle: 'Practice time by skill.',
         ),
-        body: PracticeInsightsScreen(),
+        body: PracticeInsightsScreen(onOpenSkill: _openSkillInExplore),
       ),
       3 => _ShellDestination(
         header: const _ShellHeaderContent(
@@ -105,6 +107,13 @@ class _AppShellState extends State<AppShell> {
 
   void _openDevices() {
     unawaited(showHardwareConnectionDialog(context));
+  }
+
+  void _openSkillInExplore(String skillId) {
+    setState(() {
+      _initialExploreSkillId = skillId;
+      _selectedIndex = 1;
+    });
   }
 
   void _openPattern(AppController controller, String itemId) {

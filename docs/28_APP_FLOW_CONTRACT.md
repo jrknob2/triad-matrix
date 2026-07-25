@@ -454,13 +454,35 @@ Practice Insights is a top-level destination, but it is not Home.
 
 Current implementation:
 
-- lightweight placeholder destination
-- no fake charts
-- no invented coaching
+- Practice Portrait V1
+- one lens only: Practice Time
+- radar/spider chart for three or more curriculum skills
+- stable fallback summaries for one-skill and two-skill curriculum states
+- values derive from `ExerciseProgress.practicedSeconds -> Exercise -> Lesson
+  -> Lesson.skill`
+- raw practice time remains visible; normalized radius is only relative visual
+  geometry
+- tapping a skill selects it and can open Explore with that skill filter
 - Home links to it from the progress summary
 
-Future implementation should consume real practice sessions and exercise
-completion data before adding charts or trend summaries.
+Practice Insights must not imply skill mastery, weakness, rating, ability,
+accuracy, or recommendations. It is a practice-time portrait only.
+
+V1 limitations:
+
+- cumulative all-time practice only
+- no date filtering
+- no session history
+- no trend analysis
+- no recency data
+- no accuracy data
+- no mastery model
+- no BPM achievement model
+- one lesson maps to one primary skill
+- all exercise time rolls into that lesson's primary skill
+- skill identity is currently `Lesson.skill`
+- normalized radius is relative to the most-practiced visible skill
+- values may change if curriculum content changes
 
 ## Implemented But Not Active In Normal Flow
 
