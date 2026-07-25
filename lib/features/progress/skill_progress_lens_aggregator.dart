@@ -3,97 +3,131 @@ import 'package:flutter/foundation.dart';
 import '../coach/lesson_plan.dart';
 import '../coach/lesson_progress.dart';
 
-enum PracticePortraitLens { practiceTime }
+enum PracticeInsightsLens { practiceTime, exercisesCompleted }
 
 @immutable
-class SkillPracticeTimeValue {
+class SkillProgressLensValue {
   final String skillId;
   final String label;
   final int practicedSeconds;
-  final double normalizedValue;
   final int practicedExerciseCount;
   final int practicedLessonCount;
+  final int completedExerciseCount;
+  final int totalExerciseCount;
+  final int completedLessonCount;
+  final double normalizedValue;
 
-  const SkillPracticeTimeValue({
+  const SkillProgressLensValue({
     required this.skillId,
     required this.label,
     required this.practicedSeconds,
-    required this.normalizedValue,
     required this.practicedExerciseCount,
     required this.practicedLessonCount,
+    required this.completedExerciseCount,
+    required this.totalExerciseCount,
+    required this.completedLessonCount,
+    required this.normalizedValue,
   });
 
   bool get hasPractice => practicedSeconds > 0;
+  bool get hasCompletions => completedExerciseCount > 0;
 }
 
 @immutable
-class SkillPracticeTimeSnapshot {
-  final PracticePortraitLens lens;
-  final List<SkillPracticeTimeValue> values;
+class SkillProgressLensSnapshot {
+  final PracticeInsightsLens lens;
+  final List<SkillProgressLensValue> values;
 
-  const SkillPracticeTimeSnapshot({
-    this.lens = PracticePortraitLens.practiceTime,
-    required this.values,
-  });
+  const SkillProgressLensSnapshot({required this.lens, required this.values});
 
   bool get hasSkills => values.isNotEmpty;
-  bool get hasPractice =>
-      values.any((SkillPracticeTimeValue value) => value.hasPractice);
+
+  bool get hasMetricData {
+    return switch (lens) {
+      PracticeInsightsLens.practiceTime => values.any(
+        (SkillProgressLensValue value) => value.hasPractice,
+      ),
+      PracticeInsightsLens.exercisesCompleted => values.any(
+        (SkillProgressLensValue value) => value.hasCompletions,
+      ),
+    };
+  }
+
   int get totalPracticedSeconds => values.fold<int>(
     0,
-    (int total, SkillPracticeTimeValue value) => total + value.practicedSeconds,
+    (int total, SkillProgressLensValue value) => total + value.practicedSeconds,
+  );
+
+  int get totalCompletedExercises => values.fold<int>(
+    0,
+    (int total, SkillProgressLensValue value) =>
+        total + value.completedExerciseCount,
   );
 }
 
-class SkillPracticeTimeAggregator {
-  const SkillPracticeTimeAggregator();
+class SkillProgressLensAggregator {
+  const SkillProgressLensAggregator();
 
-  SkillPracticeTimeSnapshot build({
+  SkillProgressLensSnapshot build({
+    required PracticeInsightsLens lens,
     required LessonContentLibrary library,
     required LessonProgressService progressService,
   }) {
     final List<String> orderedSkillIds = _orderedSkillIds(library);
-    final Map<String, _SkillPracticeAccumulator> accumulators =
-        <String, _SkillPracticeAccumulator>{
+    final Map<String, _SkillProgressAccumulator> accumulators =
+        <String, _SkillProgressAccumulator>{
           for (final String skillId in orderedSkillIds)
-            skillId: _SkillPracticeAccumulator(skillId),
+            skillId: _SkillProgressAccumulator(skillId),
         };
 
     for (final Lesson lesson in _orderedLessons(library)) {
-      final _SkillPracticeAccumulator accumulator = accumulators.putIfAbsent(
+      final _SkillProgressAccumulator accumulator = accumulators.putIfAbsent(
         lesson.skill,
-        () => _SkillPracticeAccumulator(lesson.skill),
+        () => _SkillProgressAccumulator(lesson.skill),
       );
 
       bool lessonHasPracticedExercise = false;
+      bool lessonHasCompletedExercise = false;
       for (final LessonExercise exercise in lesson.exercises) {
         final ExerciseProgress progress = progressService.progressForExercise(
           lessonId: lesson.id,
           exerciseId: exercise.id,
         );
+        accumulator.totalExerciseCount += 1;
+
         final int practicedSeconds = progress.practicedSeconds;
         accumulator.practicedSeconds += practicedSeconds;
         if (practicedSeconds > 0) {
           accumulator.practicedExerciseCount += 1;
           lessonHasPracticedExercise = true;
         }
+
+        if (progress.status == LessonProgressStatus.completed) {
+          accumulator.completedExerciseCount += 1;
+          lessonHasCompletedExercise = true;
+        }
       }
       if (lessonHasPracticedExercise) {
         accumulator.practicedLessonIds.add(lesson.id);
+      }
+      if (lessonHasCompletedExercise) {
+        accumulator.completedLessonIds.add(lesson.id);
       }
     }
 
     final int maxPracticedSeconds = accumulators.values.fold<int>(
       0,
-      (int max, _SkillPracticeAccumulator value) =>
+      (int max, _SkillProgressAccumulator value) =>
           value.practicedSeconds > max ? value.practicedSeconds : max,
     );
 
-    return SkillPracticeTimeSnapshot(
-      values: <SkillPracticeTimeValue>[
+    return SkillProgressLensSnapshot(
+      lens: lens,
+      values: <SkillProgressLensValue>[
         for (final String skillId in orderedSkillIds)
           _valueFor(
             accumulators[skillId]!,
+            lens: lens,
             maxPracticedSeconds: maxPracticedSeconds,
           ),
       ],
@@ -126,19 +160,33 @@ class SkillPracticeTimeAggregator {
     ];
   }
 
-  SkillPracticeTimeValue _valueFor(
-    _SkillPracticeAccumulator accumulator, {
+  SkillProgressLensValue _valueFor(
+    _SkillProgressAccumulator accumulator, {
+    required PracticeInsightsLens lens,
     required int maxPracticedSeconds,
   }) {
-    return SkillPracticeTimeValue(
+    final double normalizedValue = switch (lens) {
+      PracticeInsightsLens.practiceTime =>
+        maxPracticedSeconds == 0
+            ? 0
+            : accumulator.practicedSeconds / maxPracticedSeconds,
+      PracticeInsightsLens.exercisesCompleted =>
+        accumulator.totalExerciseCount == 0
+            ? 0
+            : accumulator.completedExerciseCount /
+                  accumulator.totalExerciseCount,
+    };
+
+    return SkillProgressLensValue(
       skillId: accumulator.skillId,
       label: curriculumSkillLabel(accumulator.skillId),
       practicedSeconds: accumulator.practicedSeconds,
-      normalizedValue: maxPracticedSeconds == 0
-          ? 0
-          : accumulator.practicedSeconds / maxPracticedSeconds,
       practicedExerciseCount: accumulator.practicedExerciseCount,
       practicedLessonCount: accumulator.practicedLessonIds.length,
+      completedExerciseCount: accumulator.completedExerciseCount,
+      totalExerciseCount: accumulator.totalExerciseCount,
+      completedLessonCount: accumulator.completedLessonIds.length,
+      normalizedValue: normalizedValue,
     );
   }
 }
@@ -155,11 +203,14 @@ String curriculumSkillLabel(String skillId) {
       .join(' ');
 }
 
-class _SkillPracticeAccumulator {
+class _SkillProgressAccumulator {
   final String skillId;
   int practicedSeconds = 0;
   int practicedExerciseCount = 0;
+  int completedExerciseCount = 0;
+  int totalExerciseCount = 0;
   final Set<String> practicedLessonIds = <String>{};
+  final Set<String> completedLessonIds = <String>{};
 
-  _SkillPracticeAccumulator(this.skillId);
+  _SkillProgressAccumulator(this.skillId);
 }

@@ -1,6 +1,6 @@
 import 'package:drumcabulary/features/coach/lesson_plan.dart';
 import 'package:drumcabulary/features/coach/lesson_progress.dart';
-import 'package:drumcabulary/features/progress/skill_practice_time_aggregator.dart';
+import 'package:drumcabulary/features/progress/skill_progress_lens_aggregator.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -40,14 +40,15 @@ void main() {
       practicedDuration: const Duration(minutes: 60),
     );
 
-    final SkillPracticeTimeSnapshot snapshot =
-        const SkillPracticeTimeAggregator().build(
+    final SkillProgressLensSnapshot snapshot =
+        const SkillProgressLensAggregator().build(
+          lens: PracticeInsightsLens.practiceTime,
           library: library,
           progressService: progress,
         );
 
-    final SkillPracticeTimeValue timing = _value(snapshot, 'timing');
-    final SkillPracticeTimeValue grooves = _value(snapshot, 'grooves');
+    final SkillProgressLensValue timing = _value(snapshot, 'timing');
+    final SkillProgressLensValue grooves = _value(snapshot, 'grooves');
     expect(timing.practicedSeconds, 3600);
     expect(timing.normalizedValue, 1);
     expect(timing.practicedExerciseCount, 1);
@@ -68,24 +69,122 @@ void main() {
     );
     await progress.load();
 
-    final SkillPracticeTimeSnapshot snapshot =
-        const SkillPracticeTimeAggregator().build(
+    final SkillProgressLensSnapshot snapshot =
+        const SkillProgressLensAggregator().build(
+          lens: PracticeInsightsLens.practiceTime,
           library: library,
           progressService: progress,
         );
 
-    expect(snapshot.hasPractice, isFalse);
+    expect(snapshot.hasMetricData, isFalse);
     expect(
-      snapshot.values.map((SkillPracticeTimeValue value) => value.skillId),
+      snapshot.values.map((SkillProgressLensValue value) => value.skillId),
       <String>['rudiments', 'grooves'],
     );
-    for (final SkillPracticeTimeValue value in snapshot.values) {
+    for (final SkillProgressLensValue value in snapshot.values) {
       expect(value.practicedSeconds, 0);
       expect(value.normalizedValue, 0);
       expect(value.practicedExerciseCount, 0);
       expect(value.practicedLessonCount, 0);
     }
   });
+
+  test('aggregates completed exercises and totals by skill', () async {
+    final LessonContentLibrary library = _library(<Lesson>[
+      _lesson(
+        id: 'rudiment-one',
+        skill: 'rudiments',
+        exercises: <String>['a', 'b'],
+      ),
+      _lesson(
+        id: 'rudiment-two',
+        skill: 'rudiments',
+        exercises: <String>['c', 'd'],
+      ),
+      _lesson(
+        id: 'groove-one',
+        skill: 'grooves',
+        exercises: <String>['e', 'f'],
+      ),
+    ]);
+    final LessonProgressService progress = LessonProgressService(
+      MemoryLessonProgressStore(),
+    );
+    await progress.load();
+
+    await progress.completeExercise(library.lessonsById['rudiment-one']!, 'a');
+    await progress.startExercise(library.lessonsById['rudiment-one']!, 'b');
+    await progress.completeExercise(library.lessonsById['rudiment-two']!, 'c');
+    await progress.completeExercise(library.lessonsById['groove-one']!, 'e');
+
+    final SkillProgressLensSnapshot snapshot =
+        const SkillProgressLensAggregator().build(
+          lens: PracticeInsightsLens.exercisesCompleted,
+          library: library,
+          progressService: progress,
+        );
+
+    final SkillProgressLensValue rudiments = _value(snapshot, 'rudiments');
+    final SkillProgressLensValue grooves = _value(snapshot, 'grooves');
+    expect(rudiments.completedExerciseCount, 2);
+    expect(rudiments.totalExerciseCount, 4);
+    expect(rudiments.completedLessonCount, 2);
+    expect(rudiments.normalizedValue, 0.5);
+    expect(grooves.completedExerciseCount, 1);
+    expect(grooves.totalExerciseCount, 2);
+    expect(grooves.completedLessonCount, 1);
+    expect(grooves.normalizedValue, 0.5);
+  });
+
+  test('completion lens keeps zero-completion skills visible', () async {
+    final LessonContentLibrary library = _library(<Lesson>[
+      _lesson(id: 'rudiment-one', skill: 'rudiments', exercises: <String>['a']),
+      _lesson(id: 'groove-one', skill: 'grooves', exercises: <String>['b']),
+    ]);
+    final LessonProgressService progress = LessonProgressService(
+      MemoryLessonProgressStore(),
+    );
+    await progress.load();
+
+    final SkillProgressLensSnapshot snapshot =
+        const SkillProgressLensAggregator().build(
+          lens: PracticeInsightsLens.exercisesCompleted,
+          library: library,
+          progressService: progress,
+        );
+
+    expect(snapshot.hasMetricData, isFalse);
+    for (final SkillProgressLensValue value in snapshot.values) {
+      expect(value.completedExerciseCount, 0);
+      expect(value.normalizedValue, 0);
+    }
+  });
+
+  test(
+    'completion lens avoids divide by zero for skills with no exercises',
+    () async {
+      final LessonContentLibrary library = _library(<Lesson>[
+        _lesson(id: 'empty-reading', skill: 'reading', exercises: <String>[]),
+      ]);
+      final LessonProgressService progress = LessonProgressService(
+        MemoryLessonProgressStore(),
+      );
+      await progress.load();
+
+      final SkillProgressLensSnapshot snapshot =
+          const SkillProgressLensAggregator().build(
+            lens: PracticeInsightsLens.exercisesCompleted,
+            library: library,
+            progressService: progress,
+          );
+
+      final SkillProgressLensValue reading = _value(snapshot, 'reading');
+      expect(reading.completedExerciseCount, 0);
+      expect(reading.totalExerciseCount, 0);
+      expect(reading.completedLessonCount, 0);
+      expect(reading.normalizedValue, 0);
+    },
+  );
 
   test('uses stable curriculum skill ordering', () async {
     final LessonContentLibrary library = _library(<Lesson>[
@@ -98,14 +197,15 @@ void main() {
     );
     await progress.load();
 
-    final SkillPracticeTimeSnapshot snapshot =
-        const SkillPracticeTimeAggregator().build(
+    final SkillProgressLensSnapshot snapshot =
+        const SkillProgressLensAggregator().build(
+          lens: PracticeInsightsLens.practiceTime,
           library: library,
           progressService: progress,
         );
 
     expect(
-      snapshot.values.map((SkillPracticeTimeValue value) => value.skillId),
+      snapshot.values.map((SkillProgressLensValue value) => value.skillId),
       <String>['timing', 'reading', 'fills'],
     );
   });
@@ -117,12 +217,12 @@ void main() {
   });
 }
 
-SkillPracticeTimeValue _value(
-  SkillPracticeTimeSnapshot snapshot,
+SkillProgressLensValue _value(
+  SkillProgressLensSnapshot snapshot,
   String skillId,
 ) {
   return snapshot.values.singleWhere(
-    (SkillPracticeTimeValue value) => value.skillId == skillId,
+    (SkillProgressLensValue value) => value.skillId == skillId,
   );
 }
 

@@ -73,7 +73,7 @@ class _AppShellState extends State<AppShell> {
       2 => _ShellDestination(
         header: const _ShellHeaderContent(
           title: 'Practice Insights',
-          subtitle: 'Practice time by skill.',
+          subtitle: 'Practice time and completion by skill.',
         ),
         body: PracticeInsightsScreen(onOpenSkill: _openSkillInExplore),
       ),

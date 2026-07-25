@@ -454,19 +454,32 @@ Practice Insights is a top-level destination, but it is not Home.
 
 Current implementation:
 
-- Practice Portrait V1
-- one lens only: Practice Time
+- navigable lens portrait
+- implemented lenses:
+  - Practice Time
+  - Exercises Completed
 - radar/spider chart for three or more curriculum skills
 - stable fallback summaries for one-skill and two-skill curriculum states
-- values derive from `ExerciseProgress.practicedSeconds -> Exercise -> Lesson
-  -> Lesson.skill`
-- raw practice time remains visible; normalized radius is only relative visual
-  geometry
+- Practice Time values derive from `ExerciseProgress.practicedSeconds ->
+  Exercise -> Lesson -> Lesson.skill`
+- Exercises Completed values derive from `ExerciseProgress.status ==
+  completed -> Exercise -> Lesson -> Lesson.skill`
+- raw practice time and completed/total exercise counts remain visible;
+  normalized radius is only visual geometry
+- Practice Time normalizes each skill against the largest practiced-seconds
+  total among visible skills
+- Exercises Completed normalizes each skill as completed exercises divided by
+  total exercises for that skill
+- switching lenses updates the section title, explanatory copy, radar values,
+  selected-skill summary, and lower metric cards together
+- selected skill is preserved across lens changes when the skill exists in the
+  active dataset
 - tapping a skill selects it and can open Explore with that skill filter
 - Home links to it from the progress summary
 
 Practice Insights must not imply skill mastery, weakness, rating, ability,
-accuracy, or recommendations. It is a practice-time portrait only.
+accuracy, or recommendations. It is a practice and curriculum-completion
+portrait only.
 
 V1 limitations:
 
@@ -480,8 +493,10 @@ V1 limitations:
 - no BPM achievement model
 - one lesson maps to one primary skill
 - all exercise time rolls into that lesson's primary skill
+- all exercise completions roll into that lesson's primary skill
 - skill identity is currently `Lesson.skill`
-- normalized radius is relative to the most-practiced visible skill
+- Practice Time radius is relative to the most-practiced visible skill
+- Exercises Completed radius is relative to each skill's own exercise total
 - values may change if curriculum content changes
 
 ## Implemented But Not Active In Normal Flow

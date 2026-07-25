@@ -7,11 +7,12 @@ import '../app/drumcabulary_theme.dart';
 import '../app/drumcabulary_ui.dart';
 import '../coach/lesson_plan_loader.dart';
 import '../coach/lesson_progress.dart';
-import 'skill_practice_time_aggregator.dart';
+import 'skill_progress_lens_aggregator.dart';
 
 class PracticeInsightsScreen extends StatefulWidget {
   final ValueChanged<String>? onOpenSkill;
-  final Future<SkillPracticeTimeSnapshot> Function()? snapshotLoader;
+  final Future<SkillProgressLensSnapshot> Function(PracticeInsightsLens lens)?
+  snapshotLoader;
 
   const PracticeInsightsScreen({
     super.key,
@@ -24,20 +25,24 @@ class PracticeInsightsScreen extends StatefulWidget {
 }
 
 class _PracticeInsightsScreenState extends State<PracticeInsightsScreen> {
-  late Future<SkillPracticeTimeSnapshot> _snapshotFuture = _loadSnapshot();
+  PracticeInsightsLens _lens = PracticeInsightsLens.practiceTime;
+  late Future<SkillProgressLensSnapshot> _snapshotFuture = _loadSnapshot(_lens);
   String? _selectedSkillId;
 
-  Future<SkillPracticeTimeSnapshot> _loadSnapshot() async {
-    final Future<SkillPracticeTimeSnapshot> Function()? loader =
-        widget.snapshotLoader;
-    if (loader != null) return loader();
+  Future<SkillProgressLensSnapshot> _loadSnapshot(
+    PracticeInsightsLens lens,
+  ) async {
+    final Future<SkillProgressLensSnapshot> Function(PracticeInsightsLens lens)?
+    loader = widget.snapshotLoader;
+    if (loader != null) return loader(lens);
 
     final library = await LessonPlanLoader.loadContent();
     final progressService = LessonProgressService(
       const FileLessonProgressStore(),
     );
     await progressService.load();
-    return const SkillPracticeTimeAggregator().build(
+    return const SkillProgressLensAggregator().build(
+      lens: lens,
       library: library,
       progressService: progressService,
     );
@@ -46,24 +51,24 @@ class _PracticeInsightsScreenState extends State<PracticeInsightsScreen> {
   @override
   Widget build(BuildContext context) {
     return DrumScreen(
-      child: FutureBuilder<SkillPracticeTimeSnapshot>(
+      child: FutureBuilder<SkillProgressLensSnapshot>(
         future: _snapshotFuture,
         builder:
             (
               BuildContext context,
-              AsyncSnapshot<SkillPracticeTimeSnapshot> snapshot,
+              AsyncSnapshot<SkillProgressLensSnapshot> snapshot,
             ) {
               if (snapshot.hasError) {
                 return _PracticePortraitError(
                   error: snapshot.error,
                   onRetry: () {
                     setState(() {
-                      _snapshotFuture = _loadSnapshot();
+                      _snapshotFuture = _loadSnapshot(_lens);
                     });
                   },
                 );
               }
-              final SkillPracticeTimeSnapshot? data = snapshot.data;
+              final SkillProgressLensSnapshot? data = snapshot.data;
               if (data == null) {
                 return const Center(child: CircularProgressIndicator());
               }
@@ -73,6 +78,7 @@ class _PracticeInsightsScreenState extends State<PracticeInsightsScreen> {
                 onSelected: (String skillId) {
                   setState(() => _selectedSkillId = skillId);
                 },
+                onLensChanged: _setLens,
                 onOpenSkill: widget.onOpenSkill,
               );
             },
@@ -80,12 +86,20 @@ class _PracticeInsightsScreenState extends State<PracticeInsightsScreen> {
     );
   }
 
-  String? _resolveSelectedSkillId(SkillPracticeTimeSnapshot snapshot) {
+  void _setLens(PracticeInsightsLens lens) {
+    if (lens == _lens) return;
+    setState(() {
+      _lens = lens;
+      _snapshotFuture = _loadSnapshot(lens);
+    });
+  }
+
+  String? _resolveSelectedSkillId(SkillProgressLensSnapshot snapshot) {
     if (snapshot.values.isEmpty) return null;
     final String? selectedSkillId = _selectedSkillId;
     if (selectedSkillId != null &&
         snapshot.values.any(
-          (SkillPracticeTimeValue value) => value.skillId == selectedSkillId,
+          (SkillProgressLensValue value) => value.skillId == selectedSkillId,
         )) {
       return selectedSkillId;
     }
@@ -94,21 +108,24 @@ class _PracticeInsightsScreenState extends State<PracticeInsightsScreen> {
 }
 
 class _PracticePortraitView extends StatelessWidget {
-  final SkillPracticeTimeSnapshot snapshot;
+  final SkillProgressLensSnapshot snapshot;
   final String? selectedSkillId;
   final ValueChanged<String> onSelected;
+  final ValueChanged<PracticeInsightsLens> onLensChanged;
   final ValueChanged<String>? onOpenSkill;
 
   const _PracticePortraitView({
     required this.snapshot,
     required this.selectedSkillId,
     required this.onSelected,
+    required this.onLensChanged,
     required this.onOpenSkill,
   });
 
   @override
   Widget build(BuildContext context) {
-    final SkillPracticeTimeValue? selectedValue = _selectedValue;
+    final SkillProgressLensValue? selectedValue = _selectedValue;
+    final _LensCopy copy = _copyFor(snapshot.lens);
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
@@ -118,29 +135,10 @@ class _PracticePortraitView extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        const DrumSectionTitle(text: 'Practice Portrait'),
-                        const SizedBox(height: 6),
-                        Text(
-                          'Shows where your recorded practice time has been invested.',
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(
-                                color: DrumcabularyTheme.edgeTextSecondary,
-                                height: 1.35,
-                              ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  _LensPill(text: 'Practice Time'),
-                ],
+              _LensHeader(
+                copy: copy,
+                lens: snapshot.lens,
+                onLensChanged: onLensChanged,
               ),
               const SizedBox(height: 16),
               if (!snapshot.hasSkills)
@@ -150,16 +148,17 @@ class _PracticePortraitView extends StatelessWidget {
                       'Add lessons with skill metadata to build a practice portrait.',
                 )
               else ...<Widget>[
-                if (!snapshot.hasPractice) ...<Widget>[
-                  const _PracticePortraitEmptyState(
-                    title: 'No practice time recorded',
-                    message:
-                        'Practice an exercise to begin building your portrait.',
+                if (!snapshot.hasMetricData) ...<Widget>[
+                  _PracticePortraitEmptyState(
+                    title: copy.emptyTitle,
+                    message: copy.emptyMessage,
                   ),
                   const SizedBox(height: 16),
                 ],
                 PracticeRadarChart(
                   values: snapshot.values,
+                  lens: snapshot.lens,
+                  semanticLabel: copy.radarSemanticLabel,
                   selectedSkillId: selectedSkillId,
                   onSkillSelected: onSelected,
                 ),
@@ -167,13 +166,16 @@ class _PracticePortraitView extends StatelessWidget {
                 if (selectedValue != null)
                   _SelectedSkillSummary(
                     value: selectedValue,
+                    lens: snapshot.lens,
                     onOpenSkill: onOpenSkill == null
                         ? null
                         : () => onOpenSkill!(selectedValue.skillId),
                   ),
                 const SizedBox(height: 16),
-                _SkillTimeList(
+                _SkillMetricList(
                   values: snapshot.values,
+                  lens: snapshot.lens,
+                  heading: copy.metricHeading,
                   selectedSkillId: selectedSkillId,
                   onSelected: onSelected,
                 ),
@@ -185,10 +187,10 @@ class _PracticePortraitView extends StatelessWidget {
     );
   }
 
-  SkillPracticeTimeValue? get _selectedValue {
+  SkillProgressLensValue? get _selectedValue {
     final String? id = selectedSkillId;
     if (id == null) return null;
-    for (final SkillPracticeTimeValue value in snapshot.values) {
+    for (final SkillProgressLensValue value in snapshot.values) {
       if (value.skillId == id) return value;
     }
     return null;
@@ -196,13 +198,17 @@ class _PracticePortraitView extends StatelessWidget {
 }
 
 class PracticeRadarChart extends StatelessWidget {
-  final List<SkillPracticeTimeValue> values;
+  final List<SkillProgressLensValue> values;
+  final PracticeInsightsLens lens;
+  final String semanticLabel;
   final String? selectedSkillId;
   final ValueChanged<String> onSkillSelected;
 
   const PracticeRadarChart({
     super.key,
     required this.values,
+    this.lens = PracticeInsightsLens.practiceTime,
+    this.semanticLabel = 'Practice distribution by skill',
     required this.selectedSkillId,
     required this.onSkillSelected,
   });
@@ -212,6 +218,7 @@ class PracticeRadarChart extends StatelessWidget {
     if (values.length < 3) {
       return _PracticeRadarFallback(
         values: values,
+        lens: lens,
         selectedSkillId: selectedSkillId,
         onSkillSelected: onSkillSelected,
       );
@@ -224,7 +231,7 @@ class PracticeRadarChart extends StatelessWidget {
             : 340;
         final double height = width < 420 ? width : 420;
         return Semantics(
-          label: 'Practice time distribution by skill',
+          label: semanticLabel,
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTapDown: (TapDownDetails details) {
@@ -264,7 +271,7 @@ class PracticeRadarChart extends StatelessWidget {
 }
 
 class _PracticeRadarPainter extends CustomPainter {
-  final List<SkillPracticeTimeValue> values;
+  final List<SkillProgressLensValue> values;
   final String? selectedSkillId;
   final TextDirection textDirection;
 
@@ -317,7 +324,7 @@ class _PracticeRadarPainter extends CustomPainter {
 
     final Path valuePath = Path();
     for (int index = 0; index < count; index += 1) {
-      final SkillPracticeTimeValue value = values[index];
+      final SkillProgressLensValue value = values[index];
       final Offset point =
           center + _unitFor(index, count) * radius * value.normalizedValue;
       if (index == 0) {
@@ -331,7 +338,7 @@ class _PracticeRadarPainter extends CustomPainter {
     canvas.drawPath(valuePath, outlinePaint);
 
     for (int index = 0; index < count; index += 1) {
-      final SkillPracticeTimeValue value = values[index];
+      final SkillProgressLensValue value = values[index];
       final Offset unit = _unitFor(index, count);
       final Offset point = center + unit * radius * value.normalizedValue;
       canvas.drawCircle(
@@ -372,7 +379,7 @@ class _PracticeRadarPainter extends CustomPainter {
   void _drawLabel(
     Canvas canvas,
     Offset center,
-    SkillPracticeTimeValue value, {
+    SkillProgressLensValue value, {
     required bool selected,
   }) {
     final TextPainter painter = TextPainter(
@@ -407,12 +414,14 @@ class _PracticeRadarPainter extends CustomPainter {
 }
 
 class _PracticeRadarFallback extends StatelessWidget {
-  final List<SkillPracticeTimeValue> values;
+  final List<SkillProgressLensValue> values;
+  final PracticeInsightsLens lens;
   final String? selectedSkillId;
   final ValueChanged<String> onSkillSelected;
 
   const _PracticeRadarFallback({
     required this.values,
+    required this.lens,
     required this.selectedSkillId,
     required this.onSkillSelected,
   });
@@ -431,9 +440,10 @@ class _PracticeRadarFallback extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-        for (final SkillPracticeTimeValue value in values) ...<Widget>[
-          _SkillTimeBar(
+        for (final SkillProgressLensValue value in values) ...<Widget>[
+          _SkillMetricBar(
             value: value,
+            lens: lens,
             selected: value.skillId == selectedSkillId,
             onTap: () => onSkillSelected(value.skillId),
           ),
@@ -444,13 +454,17 @@ class _PracticeRadarFallback extends StatelessWidget {
   }
 }
 
-class _SkillTimeList extends StatelessWidget {
-  final List<SkillPracticeTimeValue> values;
+class _SkillMetricList extends StatelessWidget {
+  final List<SkillProgressLensValue> values;
+  final PracticeInsightsLens lens;
+  final String heading;
   final String? selectedSkillId;
   final ValueChanged<String> onSelected;
 
-  const _SkillTimeList({
+  const _SkillMetricList({
     required this.values,
+    required this.lens,
+    required this.heading,
     required this.selectedSkillId,
     required this.onSelected,
   });
@@ -461,16 +475,17 @@ class _SkillTimeList extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Text(
-          'Time invested',
+          heading,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
             color: DrumcabularyTheme.edgeTextPrimary,
             fontWeight: FontWeight.w700,
           ),
         ),
         const SizedBox(height: 10),
-        for (final SkillPracticeTimeValue value in values) ...<Widget>[
-          _SkillTimeBar(
+        for (final SkillProgressLensValue value in values) ...<Widget>[
+          _SkillMetricBar(
             value: value,
+            lens: lens,
             selected: value.skillId == selectedSkillId,
             onTap: () => onSelected(value.skillId),
           ),
@@ -481,13 +496,15 @@ class _SkillTimeList extends StatelessWidget {
   }
 }
 
-class _SkillTimeBar extends StatelessWidget {
-  final SkillPracticeTimeValue value;
+class _SkillMetricBar extends StatelessWidget {
+  final SkillProgressLensValue value;
+  final PracticeInsightsLens lens;
   final bool selected;
   final VoidCallback onTap;
 
-  const _SkillTimeBar({
+  const _SkillMetricBar({
     required this.value,
+    required this.lens,
     required this.selected,
     required this.onTap,
   });
@@ -531,7 +548,7 @@ class _SkillTimeBar extends StatelessWidget {
                     ),
                     const SizedBox(width: 12),
                     Text(
-                      _formatPracticeTime(value.practicedSeconds),
+                      _metricValueFor(value, lens),
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
                         color: DrumcabularyTheme.edgeOrange,
                         fontWeight: FontWeight.w700,
@@ -559,10 +576,15 @@ class _SkillTimeBar extends StatelessWidget {
 }
 
 class _SelectedSkillSummary extends StatelessWidget {
-  final SkillPracticeTimeValue value;
+  final SkillProgressLensValue value;
+  final PracticeInsightsLens lens;
   final VoidCallback? onOpenSkill;
 
-  const _SelectedSkillSummary({required this.value, required this.onOpenSkill});
+  const _SelectedSkillSummary({
+    required this.value,
+    required this.lens,
+    required this.onOpenSkill,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -579,18 +601,7 @@ class _SelectedSkillSummary extends StatelessWidget {
           runSpacing: 12,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: <Widget>[
-            _SelectedMetric(
-              label: value.label,
-              value: _formatPracticeTime(value.practicedSeconds),
-            ),
-            _SelectedMetric(
-              label: 'Practiced exercises',
-              value: '${value.practicedExerciseCount}',
-            ),
-            _SelectedMetric(
-              label: 'Lessons touched',
-              value: '${value.practicedLessonCount}',
-            ),
+            ..._selectedMetricsFor(value, lens),
             if (onOpenSkill != null)
               OutlinedButton.icon(
                 onPressed: onOpenSkill,
@@ -642,31 +653,117 @@ class _SelectedMetric extends StatelessWidget {
   }
 }
 
-class _LensPill extends StatelessWidget {
-  final String text;
+class _LensHeader extends StatelessWidget {
+  final _LensCopy copy;
+  final PracticeInsightsLens lens;
+  final ValueChanged<PracticeInsightsLens> onLensChanged;
 
-  const _LensPill({required this.text});
+  const _LensHeader({
+    required this.copy,
+    required this.lens,
+    required this.onLensChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: DrumcabularyTheme.edgeOrange.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: DrumcabularyTheme.edgeOrange.withValues(alpha: 0.48),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        child: Text(
-          text,
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            color: DrumcabularyTheme.edgeOrange,
-            fontWeight: FontWeight.w700,
+    final Widget text = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        DrumSectionTitle(text: copy.title),
+        const SizedBox(height: 6),
+        Text(
+          copy.description,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: DrumcabularyTheme.edgeTextSecondary,
+            height: 1.35,
           ),
         ),
+      ],
+    );
+
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final _LensSelector selector = _LensSelector(
+          lens: lens,
+          onChanged: onLensChanged,
+        );
+        if (constraints.maxWidth < 620) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              text,
+              const SizedBox(height: 12),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: selector,
+              ),
+            ],
+          );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Expanded(child: text),
+            const SizedBox(width: 12),
+            selector,
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _LensSelector extends StatelessWidget {
+  final PracticeInsightsLens lens;
+  final ValueChanged<PracticeInsightsLens> onChanged;
+
+  const _LensSelector({required this.lens, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return SegmentedButton<PracticeInsightsLens>(
+      showSelectedIcon: false,
+      selected: <PracticeInsightsLens>{lens},
+      onSelectionChanged: (Set<PracticeInsightsLens> selected) {
+        if (selected.isEmpty) return;
+        onChanged(selected.first);
+      },
+      style: ButtonStyle(
+        visualDensity: VisualDensity.compact,
+        backgroundColor: WidgetStateProperty.resolveWith((
+          Set<WidgetState> states,
+        ) {
+          if (states.contains(WidgetState.selected)) {
+            return DrumcabularyTheme.edgeOrange.withValues(alpha: 0.14);
+          }
+          return DrumcabularyTheme.edgeSurfaceSecondary;
+        }),
+        foregroundColor: WidgetStateProperty.resolveWith((
+          Set<WidgetState> states,
+        ) {
+          if (states.contains(WidgetState.selected)) {
+            return DrumcabularyTheme.edgeOrange;
+          }
+          return DrumcabularyTheme.edgeTextSecondary;
+        }),
+        side: WidgetStateProperty.resolveWith((Set<WidgetState> states) {
+          return BorderSide(
+            color: states.contains(WidgetState.selected)
+                ? DrumcabularyTheme.edgeOrange.withValues(alpha: 0.68)
+                : DrumcabularyTheme.edgeBorder,
+          );
+        }),
       ),
+      segments: const <ButtonSegment<PracticeInsightsLens>>[
+        ButtonSegment<PracticeInsightsLens>(
+          value: PracticeInsightsLens.practiceTime,
+          label: Text('Practice Time'),
+        ),
+        ButtonSegment<PracticeInsightsLens>(
+          value: PracticeInsightsLens.exercisesCompleted,
+          label: Text('Exercises Completed'),
+        ),
+      ],
     );
   }
 }
@@ -766,10 +863,101 @@ class _PracticePortraitError extends StatelessWidget {
 
 String _formatPracticeTime(int seconds) {
   if (seconds <= 0) return '0 min';
+  if (seconds < 60) return '< 1 min';
   final int totalMinutes = (seconds / 60).round();
   if (totalMinutes < 60) return '$totalMinutes min';
   final int hours = totalMinutes ~/ 60;
   final int minutes = totalMinutes.remainder(60);
   if (minutes == 0) return '$hours hr';
   return '$hours hr $minutes min';
+}
+
+String _metricValueFor(
+  SkillProgressLensValue value,
+  PracticeInsightsLens lens,
+) {
+  return switch (lens) {
+    PracticeInsightsLens.practiceTime => _formatPracticeTime(
+      value.practicedSeconds,
+    ),
+    PracticeInsightsLens.exercisesCompleted =>
+      '${value.completedExerciseCount} of ${value.totalExerciseCount}',
+  };
+}
+
+List<Widget> _selectedMetricsFor(
+  SkillProgressLensValue value,
+  PracticeInsightsLens lens,
+) {
+  return switch (lens) {
+    PracticeInsightsLens.practiceTime => <Widget>[
+      _SelectedMetric(
+        label: value.label,
+        value: _formatPracticeTime(value.practicedSeconds),
+      ),
+      _SelectedMetric(
+        label: 'Practiced exercises',
+        value: '${value.practicedExerciseCount}',
+      ),
+      _SelectedMetric(
+        label: 'Lessons touched',
+        value: '${value.practicedLessonCount}',
+      ),
+    ],
+    PracticeInsightsLens.exercisesCompleted => <Widget>[
+      _SelectedMetric(
+        label: value.label,
+        value: '${value.completedExerciseCount} of ${value.totalExerciseCount}',
+      ),
+      _SelectedMetric(
+        label: 'Total exercises',
+        value: '${value.totalExerciseCount}',
+      ),
+      _SelectedMetric(
+        label: 'Lessons with completions',
+        value: '${value.completedLessonCount}',
+      ),
+    ],
+  };
+}
+
+_LensCopy _copyFor(PracticeInsightsLens lens) {
+  return switch (lens) {
+    PracticeInsightsLens.practiceTime => const _LensCopy(
+      title: 'Practice Portrait',
+      description: 'Shows where your recorded practice time has been invested.',
+      metricHeading: 'Time invested',
+      emptyTitle: 'No practice time recorded',
+      emptyMessage: 'Practice an exercise to begin building your portrait.',
+      radarSemanticLabel: 'Practice time distribution by skill',
+    ),
+    PracticeInsightsLens.exercisesCompleted => const _LensCopy(
+      title: 'Completion Portrait',
+      description:
+          'Shows how completed exercises are distributed across your skills.',
+      metricHeading: 'Exercises completed',
+      emptyTitle: 'No completed exercises yet',
+      emptyMessage:
+          'Complete an exercise to begin building your completion portrait.',
+      radarSemanticLabel: 'Exercise completion distribution by skill',
+    ),
+  };
+}
+
+class _LensCopy {
+  final String title;
+  final String description;
+  final String metricHeading;
+  final String emptyTitle;
+  final String emptyMessage;
+  final String radarSemanticLabel;
+
+  const _LensCopy({
+    required this.title,
+    required this.description,
+    required this.metricHeading,
+    required this.emptyTitle,
+    required this.emptyMessage,
+    required this.radarSemanticLabel,
+  });
 }
