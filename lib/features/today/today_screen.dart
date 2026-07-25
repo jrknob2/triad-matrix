@@ -472,17 +472,20 @@ class _ContinuePracticePanel extends StatelessWidget {
     }
     return DrumPanel(
       tone: DrumPanelTone.warm,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const DrumEyebrow(text: 'Keep Practicing This'),
-          const SizedBox(height: 14),
+          const DrumEyebrow(text: 'Keep Practicing This?'),
+          const SizedBox(height: 12),
           LayoutBuilder(
             builder: (BuildContext context, BoxConstraints constraints) {
-              final bool compact = constraints.maxWidth < 720;
+              final bool compact = constraints.maxWidth < 760;
               final Widget details = _LessonTargetDetails(target: target!);
-              final Widget checklist = _ExerciseChecklist(target: target!);
+              final Widget checklist = _ExerciseChecklist(
+                target: target!,
+                columns: constraints.maxWidth >= 1120 ? 2 : 1,
+              );
               final Widget action = FilledButton.icon(
                 onPressed: onResume,
                 style: FilledButton.styleFrom(
@@ -498,6 +501,15 @@ class _ContinuePracticePanel extends StatelessWidget {
                 icon: const Icon(Icons.play_arrow_rounded, size: 20),
                 label: const Text('Resume'),
               );
+              final Widget completion = Text(
+                '${target!.completedExerciseCount} of ${target!.exerciseCount} complete',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: DrumcabularyTheme.edgeTextSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
+              );
               if (compact) {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -507,36 +519,38 @@ class _ContinuePracticePanel extends StatelessWidget {
                     checklist,
                     const SizedBox(height: 14),
                     action,
+                    const SizedBox(height: 10),
+                    completion,
                   ],
                 );
               }
               return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Flexible(flex: 5, child: details),
-                  const SizedBox(width: 14),
                   Flexible(
                     flex: 4,
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 330),
-                        child: checklist,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        details,
+                        const SizedBox(height: 14),
+                        completion,
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  Align(alignment: Alignment.centerRight, child: action),
+                  const SizedBox(width: 18),
+                  Flexible(
+                    flex: 6,
+                    child: Align(
+                      alignment: Alignment.topLeft,
+                      child: checklist,
+                    ),
+                  ),
+                  const SizedBox(width: 18),
+                  SizedBox(width: 172, child: action),
                 ],
               );
             },
-          ),
-          const SizedBox(height: 14),
-          Text(
-            '${target!.completedExerciseCount} of ${target!.exerciseCount} complete',
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: DrumcabularyTheme.edgeTextSecondary,
-              fontWeight: FontWeight.w600,
-            ),
           ),
         ],
       ),
@@ -603,13 +617,38 @@ class _LessonTargetDetails extends StatelessWidget {
 
 class _ExerciseChecklist extends StatelessWidget {
   final _HomeLessonTarget target;
+  final int columns;
 
-  const _ExerciseChecklist({required this.target});
+  const _ExerciseChecklist({required this.target, this.columns = 1});
 
   @override
   Widget build(BuildContext context) {
     final List<_ExerciseChecklistItem> items = target.checklist;
     if (items.isEmpty) return const SizedBox.shrink();
+    if (columns > 1 && items.length > 3) {
+      final int split = (items.length / 2).ceil();
+      final List<_ExerciseChecklistItem> left = items.take(split).toList();
+      final List<_ExerciseChecklistItem> right = items.skip(split).toList();
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Expanded(child: _ExerciseChecklistColumn(items: left)),
+          const SizedBox(width: 18),
+          Expanded(child: _ExerciseChecklistColumn(items: right)),
+        ],
+      );
+    }
+    return _ExerciseChecklistColumn(items: items);
+  }
+}
+
+class _ExerciseChecklistColumn extends StatelessWidget {
+  final List<_ExerciseChecklistItem> items;
+
+  const _ExerciseChecklistColumn({required this.items});
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -1677,22 +1716,28 @@ class _ExploreLessonThumbnail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final Color color = _difficultyColor(item.difficulty);
     return Container(
       width: 96,
       height: 72,
       decoration: BoxDecoration(
         color: DrumcabularyTheme.edgeBackground,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: DrumcabularyTheme.edgeOrange.withValues(alpha: 0.32),
-        ),
+        border: Border.all(color: color.withValues(alpha: 0.38)),
       ),
       child: Center(
-        child: Icon(
-          _exploreIconFor(item),
-          color: DrumcabularyTheme.edgeOrange,
-          size: 34,
-        ),
+        child: switch (item.kind) {
+          _ExploreResultKind.lesson => Icon(
+            Icons.library_music_rounded,
+            color: color,
+            size: 34,
+          ),
+          _ExploreResultKind.exercise => SizedBox(
+            width: 42,
+            height: 42,
+            child: CustomPaint(painter: _SnareDrumIconPainter(color: color)),
+          ),
+        },
       ),
     );
   }
@@ -1792,11 +1837,7 @@ class _ExploreDifficultyBadge extends StatelessWidget {
       'intermediate' => 2,
       _ => 1,
     };
-    final Color color = switch (difficulty.toLowerCase()) {
-      'advanced' => const Color(0xFFFF4F6D),
-      'intermediate' => DrumcabularyTheme.edgeOrange,
-      _ => const Color(0xFF52D273),
-    };
+    final Color color = _difficultyColor(difficulty);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
@@ -1827,6 +1868,78 @@ class _ExploreDifficultyBadge extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+class _SnareDrumIconPainter extends CustomPainter {
+  final Color color;
+
+  const _SnareDrumIconPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double stroke = size.shortestSide * 0.08;
+    final Paint line = Paint()
+      ..color = color
+      ..strokeWidth = stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..style = PaintingStyle.stroke;
+    final Paint fill = Paint()
+      ..color = color.withValues(alpha: 0.14)
+      ..style = PaintingStyle.fill;
+
+    final Rect shell = Rect.fromLTWH(
+      size.width * 0.18,
+      size.height * 0.42,
+      size.width * 0.64,
+      size.height * 0.28,
+    );
+    final RRect drum = RRect.fromRectAndRadius(
+      shell,
+      Radius.circular(size.shortestSide * 0.12),
+    );
+    canvas.drawRRect(drum, fill);
+    canvas.drawRRect(drum, line);
+
+    canvas.drawArc(
+      Rect.fromLTWH(
+        shell.left,
+        shell.top - shell.height * 0.42,
+        shell.width,
+        shell.height * 0.84,
+      ),
+      0,
+      3.14159,
+      false,
+      line,
+    );
+    canvas.drawLine(
+      Offset(shell.left + shell.width * 0.18, shell.bottom),
+      Offset(shell.left + shell.width * 0.08, size.height * 0.84),
+      line,
+    );
+    canvas.drawLine(
+      Offset(shell.right - shell.width * 0.18, shell.bottom),
+      Offset(shell.right - shell.width * 0.08, size.height * 0.84),
+      line,
+    );
+
+    canvas.drawLine(
+      Offset(size.width * 0.20, size.height * 0.20),
+      Offset(size.width * 0.44, size.height * 0.42),
+      line,
+    );
+    canvas.drawLine(
+      Offset(size.width * 0.80, size.height * 0.20),
+      Offset(size.width * 0.56, size.height * 0.42),
+      line,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _SnareDrumIconPainter oldDelegate) {
+    return oldDelegate.color != color;
   }
 }
 
@@ -1917,9 +2030,12 @@ class _ExploreFilterGroup {
   });
 }
 
+enum _ExploreResultKind { lesson, exercise }
+
 class _ExploreLessonItem {
   final Lesson lesson;
   final LessonProgress progress;
+  final _ExploreResultKind kind;
   final int contentOrder;
   final String difficulty;
   final Set<String> skills;
@@ -1937,6 +2053,7 @@ class _ExploreLessonItem {
   const _ExploreLessonItem({
     required this.lesson,
     required this.progress,
+    required this.kind,
     required this.contentOrder,
     required this.difficulty,
     required this.skills,
@@ -1992,6 +2109,7 @@ class _ExploreLessonItem {
     return _ExploreLessonItem(
       lesson: lesson,
       progress: progress,
+      kind: _ExploreResultKind.lesson,
       contentOrder: contentOrder,
       difficulty: _labelFor(lesson.level),
       skills: skills,
@@ -2571,16 +2689,12 @@ bool _containsAny(String text, List<String> terms) {
   return terms.any(text.contains);
 }
 
-IconData _exploreIconFor(_ExploreLessonItem item) {
-  if (item.skills.contains('Rudiments')) return Icons.graphic_eq_rounded;
-  if (item.skills.contains('Fills')) return Icons.auto_awesome_motion_rounded;
-  if (item.skills.contains('Dynamics')) return Icons.tune_rounded;
-  if (item.skills.contains('Independence')) return Icons.account_tree_rounded;
-  if (item.skills.contains('Timing')) return Icons.timer_rounded;
-  if (item.skills.contains('Reading')) return Icons.menu_book_rounded;
-  if (item.skills.contains('Linear')) return Icons.linear_scale_rounded;
-  if (item.skills.contains('Chops')) return Icons.local_fire_department_rounded;
-  return Icons.music_note_rounded;
+Color _difficultyColor(String difficulty) {
+  return switch (difficulty.toLowerCase()) {
+    'advanced' => const Color(0xFFFF4F6D),
+    'intermediate' => DrumcabularyTheme.edgeOrange,
+    _ => const Color(0xFF52D273),
+  };
 }
 
 class _NavPanel extends StatelessWidget {

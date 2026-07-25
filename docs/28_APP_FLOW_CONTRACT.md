@@ -154,6 +154,8 @@ Rules:
 - Results are lightweight lesson cards with title, short description, metadata
   chips, generated or fallback duration, difficulty, and a save/favorite
   affordance.
+- Result thumbnails use musical type icons: notes for lessons and a snare with
+  sticks for exercises. Thumbnail color follows the result difficulty color.
 - Sorting stays simple: Relevance, Alphabetical, Newest, Shortest, and Longest.
 - Explore must not add nested browse-by flows, tree controls, learning paths,
   or recommendation systems.
@@ -247,15 +249,15 @@ Settings owns:
 - default timer
 - click preference
 - sheet-music display preference
-- light/dark appearance mode
+- system/light/dark appearance mode
 - app accent color
 - app data reset
 - mock scenarios when enabled
 - desktop-only hardware setup entry
 
-Light/dark appearance mode and accent color apply immediately when changed and
-persist as profile settings. Other Settings controls may continue to use the
-existing Save Settings flow.
+System/light/dark appearance mode and accent color apply immediately when
+changed and persist as profile settings. System mode follows the OS appearance.
+Other Settings controls may continue to use the existing Save Settings flow.
 
 Settings should not become:
 

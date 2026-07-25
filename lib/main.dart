@@ -18,8 +18,26 @@ class DrumcabularyApp extends StatefulWidget {
   State<DrumcabularyApp> createState() => _DrumcabularyAppState();
 }
 
-class _DrumcabularyAppState extends State<DrumcabularyApp> {
+class _DrumcabularyAppState extends State<DrumcabularyApp>
+    with WidgetsBindingObserver {
   late final Future<AppController> _controllerFuture = AppController.create();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangePlatformBrightness() {
+    setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -93,6 +111,8 @@ class _StartupError extends StatelessWidget {
 
 Brightness _resolvedBrightness(AppThemeModeV1 mode) {
   return switch (mode) {
+    AppThemeModeV1.system =>
+      WidgetsBinding.instance.platformDispatcher.platformBrightness,
     AppThemeModeV1.light => Brightness.light,
     AppThemeModeV1.dark => Brightness.dark,
   };
@@ -100,6 +120,7 @@ Brightness _resolvedBrightness(AppThemeModeV1 mode) {
 
 ThemeMode _materialThemeMode(AppThemeModeV1 mode) {
   return switch (mode) {
+    AppThemeModeV1.system => ThemeMode.system,
     AppThemeModeV1.light => ThemeMode.light,
     AppThemeModeV1.dark => ThemeMode.dark,
   };

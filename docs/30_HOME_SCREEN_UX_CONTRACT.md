@@ -155,6 +155,14 @@ Contents:
 - completion indicators
 - Resume button
 
+Desktop layout:
+
+- use three columns: lesson context, exercise checklist, Resume action
+- long exercise checklists may split into two internal checklist columns to
+  avoid a tall card with unused space
+- completion count stays with the lesson context, not as a separate full-width
+  footer row
+
 Example:
 
 ```
@@ -186,7 +194,7 @@ NOT:
 
 Section title:
 
-**Keep Practicing This**
+**Keep Practicing This?**
 
 ---
 
