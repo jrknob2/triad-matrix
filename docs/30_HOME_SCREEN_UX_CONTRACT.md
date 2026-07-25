@@ -157,11 +157,13 @@ Contents:
 
 Desktop layout:
 
-- use three columns: lesson context, horizontal exercise carousel, Resume action
+- Row 1 is the section label: "Keep Practicing This?"
+- Row 2 has two columns: lesson context on the left, Resume action on the
+  right
+- Row 3 is a full-width horizontal exercise carousel with the completion count
+  directly below it
 - exercises are shown as compact horizontal cards, similar to the lesson-detail
   exercise navigator, not as a tall vertical checklist
-- completion count stays with the lesson context, not as a separate full-width
-  footer row
 
 Example:
 

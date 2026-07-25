@@ -516,38 +516,29 @@ class _ContinuePracticePanel extends StatelessWidget {
                   children: <Widget>[
                     details,
                     const SizedBox(height: 14),
-                    exerciseCarousel,
-                    const SizedBox(height: 14),
                     action,
                     const SizedBox(height: 10),
+                    exerciseCarousel,
+                    const SizedBox(height: 8),
                     completion,
                   ],
                 );
               }
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  Flexible(
-                    flex: 4,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        details,
-                        const SizedBox(height: 14),
-                        completion,
-                      ],
-                    ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: <Widget>[
+                      Expanded(child: details),
+                      const SizedBox(width: 18),
+                      SizedBox(width: 172, child: action),
+                    ],
                   ),
-                  const SizedBox(width: 18),
-                  Flexible(
-                    flex: 6,
-                    child: Align(
-                      alignment: Alignment.topLeft,
-                      child: exerciseCarousel,
-                    ),
-                  ),
-                  const SizedBox(width: 18),
-                  SizedBox(width: 172, child: action),
+                  const SizedBox(height: 14),
+                  exerciseCarousel,
+                  const SizedBox(height: 8),
+                  Align(alignment: Alignment.centerLeft, child: completion),
                 ],
               );
             },
