@@ -494,6 +494,18 @@ Current implementation:
 - selected node is preserved across lens changes when the node exists in the
   active dataset
 - tapping a radar spoke selects a node
+- tapping a radar spoke updates label selection and summary immediately, but
+  radar rotation waits until the double-click window has passed so the second
+  click target does not move
+- after the double-click window passes without activation, the selected spoke
+  smoothly rotates to 12 o'clock
+- radar rotation applies to spokes, polygon rings, progress polygon, endpoint
+  markers, and hit-test geometry together
+- radar labels move with their spokes but their text remains upright and
+  readable
+- selected radar nodes must be visually obvious through the label only:
+  selected labels use active accent styling and stronger text treatment, while
+  spokes, polygon points, and endpoints keep the normal radar styling
 - drilling into a category requires an explicit action; selection alone must not
   navigate
 - double-clicking a radar spoke data point or label activates the same action as
@@ -503,7 +515,17 @@ Current implementation:
 - breadcrumbs show the current curriculum position and allow return to the root
 - selected lens persists when drilling into a category or returning by
   breadcrumb
+- selected-node summary content cross-fades when the selected node changes
+- selected-node metric values animate visually to their new values without
+  mutating persisted progress values
+- root nodes with children use a contextual `Explore <Node>` action label
 - second-level View Lessons opens Explore with the selected node's lesson filter
+- curriculum nodes may provide optional short descriptions for the selected-node
+  summary; descriptions are presentation metadata, not analytics or
+  recommendations
+- zero-progress selected-node summaries use intentional starting-state copy such
+  as `Ready to begin` or `No completions yet` while retaining useful numeric
+  totals
 - Home links to it from the progress summary
 
 Practice Insights must not imply skill mastery, weakness, rating, ability,

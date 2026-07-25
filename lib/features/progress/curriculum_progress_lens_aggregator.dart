@@ -9,6 +9,7 @@ enum PracticeInsightsLens { practiceTime, exercisesCompleted }
 class CurriculumNode {
   final String id;
   final String title;
+  final String? shortDescription;
   final List<CurriculumNode> children;
   final List<Lesson> lessons;
   final String lessonFilterId;
@@ -16,6 +17,7 @@ class CurriculumNode {
   const CurriculumNode({
     required this.id,
     required this.title,
+    this.shortDescription,
     this.children = const <CurriculumNode>[],
     this.lessons = const <Lesson>[],
     String? lessonFilterId,
@@ -51,6 +53,7 @@ class CurriculumBreadcrumb {
 class CurriculumProgressLensValue {
   final String nodeId;
   final String label;
+  final String? shortDescription;
   final String lessonFilterId;
   final bool hasChildren;
   final int practicedSeconds;
@@ -64,6 +67,7 @@ class CurriculumProgressLensValue {
   const CurriculumProgressLensValue({
     required this.nodeId,
     required this.label,
+    this.shortDescription,
     required this.lessonFilterId,
     required this.hasChildren,
     required this.practicedSeconds,
@@ -243,6 +247,7 @@ class CurriculumProgressLensAggregator {
     return CurriculumProgressLensValue(
       nodeId: node.id,
       label: node.title,
+      shortDescription: node.shortDescription,
       lessonFilterId: node.lessonFilterId,
       hasChildren: node.hasChildren,
       practicedSeconds: accumulator.practicedSeconds,
@@ -274,6 +279,8 @@ class CurriculumRadarTreeBuilder {
         _node(
           id: 'timing',
           title: 'Timing',
+          shortDescription:
+              'Build steady pulse, subdivision control, and confident time feel.',
           lessonsBySkill: lessonsBySkill,
           children: const <_TemporaryNodeSpec>[
             _TemporaryNodeSpec('pulse', 'Pulse'),
@@ -291,11 +298,15 @@ class CurriculumRadarTreeBuilder {
         _node(
           id: 'grooves',
           title: 'Grooves',
+          shortDescription:
+              'Develop the rhythmic patterns that support modern songs.',
           lessonsBySkill: lessonsBySkill,
           children: const <_TemporaryNodeSpec>[
             _TemporaryNodeSpec(
               'core-grooves',
               'Core Grooves',
+              shortDescription:
+                  'Build dependable foundational beats for common musical situations.',
               skillIds: <String>['grooves'],
               lessonFilterId: 'grooves',
             ),
@@ -313,11 +324,15 @@ class CurriculumRadarTreeBuilder {
         _node(
           id: 'rudiments',
           title: 'Rudiments',
+          shortDescription:
+              'Strengthen the sticking vocabulary behind clean drum movement.',
           lessonsBySkill: lessonsBySkill,
           children: const <_TemporaryNodeSpec>[
             _TemporaryNodeSpec(
               'core-rudiments',
               'Core Rudiments',
+              shortDescription:
+                  'Practice essential rudimental shapes and control.',
               skillIds: <String>['rudiments'],
               lessonFilterId: 'rudiments',
             ),
@@ -335,6 +350,8 @@ class CurriculumRadarTreeBuilder {
         _node(
           id: 'technique',
           title: 'Technique',
+          shortDescription:
+              'Refine the physical motions that make playing relaxed and clear.',
           lessonsBySkill: lessonsBySkill,
           children: const <_TemporaryNodeSpec>[
             _TemporaryNodeSpec('grip', 'Grip'),
@@ -352,6 +369,8 @@ class CurriculumRadarTreeBuilder {
         _node(
           id: 'coordination',
           title: 'Coordination',
+          shortDescription:
+              'Coordinate hands and feet across layered rhythmic ideas.',
           lessonsBySkill: lessonsBySkill,
           children: const <_TemporaryNodeSpec>[
             _TemporaryNodeSpec('two-way', 'Two-Way'),
@@ -369,6 +388,8 @@ class CurriculumRadarTreeBuilder {
         _node(
           id: 'dynamics',
           title: 'Dynamics',
+          shortDescription:
+              'Shape accents, ghost notes, and touch into expressive control.',
           lessonsBySkill: lessonsBySkill,
           children: const <_TemporaryNodeSpec>[
             _TemporaryNodeSpec('accents', 'Accents'),
@@ -386,12 +407,21 @@ class CurriculumRadarTreeBuilder {
         _node(
           id: 'vocabulary',
           title: 'Vocabulary',
+          shortDescription:
+              'Build reusable rhythmic phrases for fills, grooves, and solos.',
           lessonsBySkill: lessonsBySkill,
           children: const <_TemporaryNodeSpec>[
-            _TemporaryNodeSpec('triads', 'Triads'),
+            _TemporaryNodeSpec(
+              'triads',
+              'Triads',
+              shortDescription:
+                  'Combine three-note shapes into flexible drum vocabulary.',
+            ),
             _TemporaryNodeSpec(
               'triplet-vocabulary',
               'Triplet Vocabulary',
+              shortDescription:
+                  'Turn triplet cells into musical fill vocabulary.',
               skillIds: <String>['vocabulary'],
               lessonFilterId: 'vocabulary',
             ),
@@ -408,6 +438,8 @@ class CurriculumRadarTreeBuilder {
         _node(
           id: 'reading',
           title: 'Reading',
+          shortDescription:
+              'Connect written rhythms to reliable movement around the kit.',
           lessonsBySkill: lessonsBySkill,
           children: const <_TemporaryNodeSpec>[
             _TemporaryNodeSpec('quarter-notes', 'Quarter Notes'),
@@ -425,6 +457,8 @@ class CurriculumRadarTreeBuilder {
         _node(
           id: 'musicianship',
           title: 'Musicianship',
+          shortDescription:
+              'Develop listening, feel, phrasing, and musical decision-making.',
           lessonsBySkill: lessonsBySkill,
           children: const <_TemporaryNodeSpec>[
             _TemporaryNodeSpec('listening', 'Listening'),
@@ -442,6 +476,8 @@ class CurriculumRadarTreeBuilder {
         _node(
           id: 'improvisation',
           title: 'Improvisation',
+          shortDescription:
+              'Practice variation and spontaneous ideas with clear structure.',
           lessonsBySkill: lessonsBySkill,
           children: const <_TemporaryNodeSpec>[
             _TemporaryNodeSpec('variation', 'Variation'),
@@ -463,12 +499,14 @@ class CurriculumRadarTreeBuilder {
   CurriculumNode _node({
     required String id,
     required String title,
+    String? shortDescription,
     required Map<String, List<Lesson>> lessonsBySkill,
     required List<_TemporaryNodeSpec> children,
   }) {
     return CurriculumNode(
       id: id,
       title: title,
+      shortDescription: shortDescription,
       children: <CurriculumNode>[
         for (final _TemporaryNodeSpec child in children)
           child.toNode(lessonsBySkill),
@@ -487,12 +525,14 @@ class CurriculumRadarTreeBuilder {
 class _TemporaryNodeSpec {
   final String id;
   final String title;
+  final String? shortDescription;
   final List<String> skillIds;
   final String? lessonFilterId;
 
   const _TemporaryNodeSpec(
     this.id,
     this.title, {
+    this.shortDescription,
     this.skillIds = const <String>[],
     this.lessonFilterId,
   });
@@ -508,6 +548,7 @@ class _TemporaryNodeSpec {
     return CurriculumNode(
       id: id,
       title: title,
+      shortDescription: shortDescription,
       lessons: lessonsById.values.toList(growable: false),
       lessonFilterId:
           lessonFilterId ?? (skillIds.isEmpty ? id : skillIds.first),

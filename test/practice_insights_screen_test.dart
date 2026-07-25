@@ -38,6 +38,95 @@ void main() {
     expect(selectedNodeId, 'timing');
   });
 
+  test('radar rotation chooses the shortest path across angle boundaries', () {
+    final double delta = shortestRadarRotationDelta(
+      math.pi - 0.08,
+      -math.pi + 0.08,
+    );
+
+    expect(delta, closeTo(0.16, 0.0001));
+  });
+
+  testWidgets('PracticeRadarChart rotates selected spoke to 12 o clock', (
+    WidgetTester tester,
+  ) async {
+    String selectedNodeId = 'timing';
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Directionality(
+          textDirection: TextDirection.ltr,
+          child: StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              return SizedBox(
+                width: 360,
+                height: 360,
+                child: PracticeRadarChart(
+                  values: _rootPracticeValues,
+                  selectedNodeId: selectedNodeId,
+                  onNodeSelected: (String nodeId) {
+                    setState(() => selectedNodeId = nodeId);
+                  },
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+
+    await tester.tapAt(_radarNodePosition(tester, 1, 3, 120));
+    await _waitForRadarRotation(tester);
+    expect(selectedNodeId, 'grooves');
+
+    await tester.tapAt(
+      tester.getCenter(find.byType(PracticeRadarChart)) + const Offset(0, -120),
+    );
+    await tester.pumpAndSettle();
+
+    expect(selectedNodeId, 'grooves');
+  });
+
+  testWidgets('PracticeRadarChart waits before rotating after a single click', (
+    WidgetTester tester,
+  ) async {
+    String selectedNodeId = 'timing';
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Directionality(
+          textDirection: TextDirection.ltr,
+          child: StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              return SizedBox(
+                width: 360,
+                height: 360,
+                child: PracticeRadarChart(
+                  values: _rootPracticeValues,
+                  selectedNodeId: selectedNodeId,
+                  onNodeSelected: (String nodeId) {
+                    setState(() => selectedNodeId = nodeId);
+                  },
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+
+    await tester.tapAt(_radarNodePosition(tester, 1, 3, 120));
+    await tester.pump(const Duration(milliseconds: 120));
+    expect(selectedNodeId, 'grooves');
+
+    await tester.tapAt(
+      tester.getCenter(find.byType(PracticeRadarChart)) + const Offset(0, -120),
+    );
+    await tester.pumpAndSettle();
+
+    expect(selectedNodeId, 'timing');
+  });
+
   testWidgets('PracticeRadarChart handles one-node edge state', (
     WidgetTester tester,
   ) async {
@@ -113,6 +202,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Time invested'), findsNothing);
+    expect(find.byType(AnimatedSwitcher), findsWidgets);
   });
 
   testWidgets(
@@ -129,8 +219,9 @@ void main() {
       await _tapRadarNode(tester, 1);
       expect(find.text('< 1 min'), findsWidgets);
 
-      await _tapRadarNode(tester, 2);
+      await _tapRadarNode(tester, 2, selectedIndex: 1);
       expect(find.text('0 min'), findsWidgets);
+      expect(find.text('Ready to begin'), findsOneWidget);
     },
   );
 
@@ -155,7 +246,7 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.text('Exercises completed'), findsNothing);
+    expect(find.text('Exercises completed'), findsWidgets);
     expect(find.text('1 of 4'), findsWidgets);
   });
 
@@ -195,13 +286,34 @@ void main() {
 
     await _tapRadarNode(tester, 1);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Open Category'));
+    expect(find.text('Explore Grooves'), findsOneWidget);
+    expect(find.text('Open Category'), findsNothing);
+    await tester.tap(find.text('Explore Grooves'));
     await tester.pumpAndSettle();
 
     expect(find.text('Curriculum'), findsWidgets);
     expect(find.text('Grooves'), findsWidgets);
     expect(find.text('Core Grooves'), findsWidgets);
     expect(find.text('View Lessons'), findsOneWidget);
+  });
+
+  testWidgets('selected nodes can show short descriptions', (
+    WidgetTester tester,
+  ) async {
+    _useLargeSurface(tester);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PracticeInsightsScreen(snapshotLoader: _snapshotForLens),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await _tapRadarNode(tester, 1);
+
+    expect(
+      find.text('Develop the rhythmic patterns that support modern songs.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('breadcrumb return preserves the selected lens', (
@@ -219,7 +331,7 @@ void main() {
     await tester.pumpAndSettle();
     await _tapRadarNode(tester, 1);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Open Category'));
+    await tester.tap(find.text('Explore Grooves'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('Curriculum').first);
     await tester.pumpAndSettle();
@@ -269,7 +381,7 @@ void main() {
 
     await _tapRadarNode(tester, 1);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Open Category'));
+    await tester.tap(find.text('Explore Grooves'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('View Lessons'));
     await tester.tap(find.text('View Lessons'));
@@ -296,7 +408,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await _tapRadarNode(tester, 1);
-    await tester.tap(find.text('Open Category'));
+    await tester.tap(find.text('Explore Grooves'));
     await tester.pumpAndSettle();
     await _doubleTapRadarNode(tester, 0, distance: 126);
 
@@ -342,6 +454,7 @@ void main() {
       ),
       findsOneWidget,
     );
+    expect(find.text('No completions yet'), findsOneWidget);
   });
 }
 
@@ -357,10 +470,27 @@ Future<void> _tapRadarNode(
   int index, {
   int count = 3,
   double distance = 120,
+  int selectedIndex = 0,
 }) async {
   await tester.ensureVisible(find.byType(PracticeRadarChart));
   await tester.pumpAndSettle();
-  await tester.tapAt(_radarNodePosition(tester, index, count, distance));
+  await tester.tapAt(
+    _radarNodePosition(
+      tester,
+      index,
+      count,
+      distance,
+      selectedIndex: selectedIndex,
+    ),
+  );
+  await _waitForRadarRotation(tester);
+}
+
+Future<void> _waitForRadarRotation(WidgetTester tester) async {
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 370));
+  await tester.pump(const Duration(milliseconds: 330));
+  await tester.pump();
   await tester.pumpAndSettle();
 }
 
@@ -383,10 +513,14 @@ Offset _radarNodePosition(
   WidgetTester tester,
   int index,
   int count,
-  double distance,
-) {
+  double distance, {
+  int selectedIndex = 0,
+}) {
   final Offset center = tester.getCenter(find.byType(PracticeRadarChart));
-  final double angle = -math.pi / 2 + (math.pi * 2 * index / count);
+  final double angle =
+      -math.pi / 2 +
+      (math.pi * 2 * index / count) +
+      radarTargetRotationForIndex(selectedIndex, count);
   return center + Offset(math.cos(angle), math.sin(angle)) * distance;
 }
 
@@ -453,6 +587,8 @@ const List<CurriculumProgressLensValue> _rootPracticeValues =
       CurriculumProgressLensValue(
         nodeId: 'timing',
         label: 'Timing',
+        shortDescription:
+            'Build steady pulse, subdivision control, and confident time feel.',
         lessonFilterId: 'timing',
         hasChildren: true,
         practicedSeconds: 3600,
@@ -466,6 +602,8 @@ const List<CurriculumProgressLensValue> _rootPracticeValues =
       CurriculumProgressLensValue(
         nodeId: 'grooves',
         label: 'Grooves',
+        shortDescription:
+            'Develop the rhythmic patterns that support modern songs.',
         lessonFilterId: 'grooves',
         hasChildren: true,
         practicedSeconds: 20,
@@ -479,6 +617,8 @@ const List<CurriculumProgressLensValue> _rootPracticeValues =
       CurriculumProgressLensValue(
         nodeId: 'rudiments',
         label: 'Rudiments',
+        shortDescription:
+            'Strengthen the sticking vocabulary behind clean drum movement.',
         lessonFilterId: 'rudiments',
         hasChildren: true,
         practicedSeconds: 0,
@@ -496,6 +636,8 @@ const List<CurriculumProgressLensValue> _rootCompletionValues =
       CurriculumProgressLensValue(
         nodeId: 'timing',
         label: 'Timing',
+        shortDescription:
+            'Build steady pulse, subdivision control, and confident time feel.',
         lessonFilterId: 'timing',
         hasChildren: true,
         practicedSeconds: 3600,
@@ -509,6 +651,8 @@ const List<CurriculumProgressLensValue> _rootCompletionValues =
       CurriculumProgressLensValue(
         nodeId: 'grooves',
         label: 'Grooves',
+        shortDescription:
+            'Develop the rhythmic patterns that support modern songs.',
         lessonFilterId: 'grooves',
         hasChildren: true,
         practicedSeconds: 20,
@@ -522,6 +666,8 @@ const List<CurriculumProgressLensValue> _rootCompletionValues =
       CurriculumProgressLensValue(
         nodeId: 'rudiments',
         label: 'Rudiments',
+        shortDescription:
+            'Strengthen the sticking vocabulary behind clean drum movement.',
         lessonFilterId: 'rudiments',
         hasChildren: true,
         practicedSeconds: 0,
@@ -539,6 +685,8 @@ const List<CurriculumProgressLensValue> _zeroCompletionValues =
       CurriculumProgressLensValue(
         nodeId: 'timing',
         label: 'Timing',
+        shortDescription:
+            'Build steady pulse, subdivision control, and confident time feel.',
         lessonFilterId: 'timing',
         hasChildren: true,
         practicedSeconds: 0,
@@ -552,6 +700,8 @@ const List<CurriculumProgressLensValue> _zeroCompletionValues =
       CurriculumProgressLensValue(
         nodeId: 'grooves',
         label: 'Grooves',
+        shortDescription:
+            'Develop the rhythmic patterns that support modern songs.',
         lessonFilterId: 'grooves',
         hasChildren: true,
         practicedSeconds: 0,
@@ -565,6 +715,8 @@ const List<CurriculumProgressLensValue> _zeroCompletionValues =
       CurriculumProgressLensValue(
         nodeId: 'rudiments',
         label: 'Rudiments',
+        shortDescription:
+            'Strengthen the sticking vocabulary behind clean drum movement.',
         lessonFilterId: 'rudiments',
         hasChildren: true,
         practicedSeconds: 0,
@@ -577,88 +729,92 @@ const List<CurriculumProgressLensValue> _zeroCompletionValues =
       ),
     ];
 
-const List<CurriculumProgressLensValue> _groovesPracticeValues =
-    <CurriculumProgressLensValue>[
-      CurriculumProgressLensValue(
-        nodeId: 'core-grooves',
-        label: 'Core Grooves',
-        lessonFilterId: 'grooves',
-        hasChildren: false,
-        practicedSeconds: 20,
-        normalizedValue: 1,
-        practicedExerciseCount: 1,
-        practicedLessonCount: 1,
-        completedExerciseCount: 2,
-        totalExerciseCount: 3,
-        completedLessonCount: 1,
-      ),
-      CurriculumProgressLensValue(
-        nodeId: 'rock-grooves',
-        label: 'Rock Grooves',
-        lessonFilterId: 'rock-grooves',
-        hasChildren: false,
-        practicedSeconds: 0,
-        normalizedValue: 0,
-        practicedExerciseCount: 0,
-        practicedLessonCount: 0,
-        completedExerciseCount: 0,
-        totalExerciseCount: 0,
-        completedLessonCount: 0,
-      ),
-      CurriculumProgressLensValue(
-        nodeId: 'funk-grooves',
-        label: 'Funk Grooves',
-        lessonFilterId: 'funk-grooves',
-        hasChildren: false,
-        practicedSeconds: 0,
-        normalizedValue: 0,
-        practicedExerciseCount: 0,
-        practicedLessonCount: 0,
-        completedExerciseCount: 0,
-        totalExerciseCount: 0,
-        completedLessonCount: 0,
-      ),
-    ];
+const List<CurriculumProgressLensValue>
+_groovesPracticeValues = <CurriculumProgressLensValue>[
+  CurriculumProgressLensValue(
+    nodeId: 'core-grooves',
+    label: 'Core Grooves',
+    shortDescription:
+        'Build dependable foundational beats for common musical situations.',
+    lessonFilterId: 'grooves',
+    hasChildren: false,
+    practicedSeconds: 20,
+    normalizedValue: 1,
+    practicedExerciseCount: 1,
+    practicedLessonCount: 1,
+    completedExerciseCount: 2,
+    totalExerciseCount: 3,
+    completedLessonCount: 1,
+  ),
+  CurriculumProgressLensValue(
+    nodeId: 'rock-grooves',
+    label: 'Rock Grooves',
+    lessonFilterId: 'rock-grooves',
+    hasChildren: false,
+    practicedSeconds: 0,
+    normalizedValue: 0,
+    practicedExerciseCount: 0,
+    practicedLessonCount: 0,
+    completedExerciseCount: 0,
+    totalExerciseCount: 0,
+    completedLessonCount: 0,
+  ),
+  CurriculumProgressLensValue(
+    nodeId: 'funk-grooves',
+    label: 'Funk Grooves',
+    lessonFilterId: 'funk-grooves',
+    hasChildren: false,
+    practicedSeconds: 0,
+    normalizedValue: 0,
+    practicedExerciseCount: 0,
+    practicedLessonCount: 0,
+    completedExerciseCount: 0,
+    totalExerciseCount: 0,
+    completedLessonCount: 0,
+  ),
+];
 
-const List<CurriculumProgressLensValue> _groovesCompletionValues =
-    <CurriculumProgressLensValue>[
-      CurriculumProgressLensValue(
-        nodeId: 'core-grooves',
-        label: 'Core Grooves',
-        lessonFilterId: 'grooves',
-        hasChildren: false,
-        practicedSeconds: 20,
-        normalizedValue: 2 / 3,
-        practicedExerciseCount: 1,
-        practicedLessonCount: 1,
-        completedExerciseCount: 2,
-        totalExerciseCount: 3,
-        completedLessonCount: 1,
-      ),
-      CurriculumProgressLensValue(
-        nodeId: 'rock-grooves',
-        label: 'Rock Grooves',
-        lessonFilterId: 'rock-grooves',
-        hasChildren: false,
-        practicedSeconds: 0,
-        normalizedValue: 0,
-        practicedExerciseCount: 0,
-        practicedLessonCount: 0,
-        completedExerciseCount: 0,
-        totalExerciseCount: 0,
-        completedLessonCount: 0,
-      ),
-      CurriculumProgressLensValue(
-        nodeId: 'funk-grooves',
-        label: 'Funk Grooves',
-        lessonFilterId: 'funk-grooves',
-        hasChildren: false,
-        practicedSeconds: 0,
-        normalizedValue: 0,
-        practicedExerciseCount: 0,
-        practicedLessonCount: 0,
-        completedExerciseCount: 0,
-        totalExerciseCount: 0,
-        completedLessonCount: 0,
-      ),
-    ];
+const List<CurriculumProgressLensValue>
+_groovesCompletionValues = <CurriculumProgressLensValue>[
+  CurriculumProgressLensValue(
+    nodeId: 'core-grooves',
+    label: 'Core Grooves',
+    shortDescription:
+        'Build dependable foundational beats for common musical situations.',
+    lessonFilterId: 'grooves',
+    hasChildren: false,
+    practicedSeconds: 20,
+    normalizedValue: 2 / 3,
+    practicedExerciseCount: 1,
+    practicedLessonCount: 1,
+    completedExerciseCount: 2,
+    totalExerciseCount: 3,
+    completedLessonCount: 1,
+  ),
+  CurriculumProgressLensValue(
+    nodeId: 'rock-grooves',
+    label: 'Rock Grooves',
+    lessonFilterId: 'rock-grooves',
+    hasChildren: false,
+    practicedSeconds: 0,
+    normalizedValue: 0,
+    practicedExerciseCount: 0,
+    practicedLessonCount: 0,
+    completedExerciseCount: 0,
+    totalExerciseCount: 0,
+    completedLessonCount: 0,
+  ),
+  CurriculumProgressLensValue(
+    nodeId: 'funk-grooves',
+    label: 'Funk Grooves',
+    lessonFilterId: 'funk-grooves',
+    hasChildren: false,
+    practicedSeconds: 0,
+    normalizedValue: 0,
+    practicedExerciseCount: 0,
+    practicedLessonCount: 0,
+    completedExerciseCount: 0,
+    totalExerciseCount: 0,
+    completedLessonCount: 0,
+  ),
+];

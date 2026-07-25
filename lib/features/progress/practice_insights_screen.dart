@@ -9,6 +9,29 @@ import '../coach/lesson_plan_loader.dart';
 import '../coach/lesson_progress.dart';
 import 'curriculum_progress_lens_aggregator.dart';
 
+const double _radarFullTurn = math.pi * 2;
+const double _radarTopAngle = -math.pi / 2;
+const Duration _radarRotationDuration = Duration(milliseconds: 320);
+const Duration _summaryTransitionDuration = Duration(milliseconds: 220);
+const Duration _metricTransitionDuration = Duration(milliseconds: 260);
+
+double radarTargetRotationForIndex(int index, int count) {
+  if (count <= 0) return 0;
+  return -_radarFullTurn * index / count;
+}
+
+double shortestRadarRotationDelta(double current, double target) {
+  final double rawDelta = target - current;
+  return _normalizeRadarAngle(rawDelta);
+}
+
+double _normalizeRadarAngle(double angle) {
+  double normalized = angle % _radarFullTurn;
+  if (normalized <= -math.pi) normalized += _radarFullTurn;
+  if (normalized > math.pi) normalized -= _radarFullTurn;
+  return normalized;
+}
+
 class PracticeInsightsScreen extends StatefulWidget {
   final ValueChanged<String>? onOpenSkill;
   final Future<CurriculumProgressLensSnapshot> Function(
@@ -210,18 +233,40 @@ class _PracticePortraitView extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 if (selectedValue != null)
-                  _SelectedNodeSummary(
-                    value: selectedValue,
-                    lens: snapshot.lens,
-                    canDrillIn: snapshot.isRoot && selectedValue.hasChildren,
-                    onDrillIn: snapshot.isRoot && selectedValue.hasChildren
-                        ? () => onDrillIn(selectedValue.nodeId)
-                        : null,
-                    onOpenSkill: onOpenSkill == null
-                        ? null
-                        : snapshot.isRoot
-                        ? null
-                        : () => onOpenSkill!(selectedValue.lessonFilterId),
+                  AnimatedSwitcher(
+                    duration: _summaryTransitionDuration,
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeInCubic,
+                    transitionBuilder:
+                        (Widget child, Animation<double> animation) {
+                          final Animation<Offset> offset = Tween<Offset>(
+                            begin: const Offset(0, 0.02),
+                            end: Offset.zero,
+                          ).animate(animation);
+                          return FadeTransition(
+                            opacity: animation,
+                            child: SlideTransition(
+                              position: offset,
+                              child: child,
+                            ),
+                          );
+                        },
+                    child: _SelectedNodeSummary(
+                      key: ValueKey<String>(
+                        '${snapshot.lens.name}-${selectedValue.nodeId}',
+                      ),
+                      value: selectedValue,
+                      lens: snapshot.lens,
+                      canDrillIn: snapshot.isRoot && selectedValue.hasChildren,
+                      onDrillIn: snapshot.isRoot && selectedValue.hasChildren
+                          ? () => onDrillIn(selectedValue.nodeId)
+                          : null,
+                      onOpenSkill: onOpenSkill == null
+                          ? null
+                          : snapshot.isRoot
+                          ? null
+                          : () => onOpenSkill!(selectedValue.lessonFilterId),
+                    ),
                   ),
               ],
             ],
@@ -283,11 +328,60 @@ class PracticeRadarChart extends StatefulWidget {
   State<PracticeRadarChart> createState() => _PracticeRadarChartState();
 }
 
-class _PracticeRadarChartState extends State<PracticeRadarChart> {
+class _PracticeRadarChartState extends State<PracticeRadarChart>
+    with SingleTickerProviderStateMixin {
   static const Duration _doubleClickWindow = Duration(milliseconds: 360);
 
+  late final AnimationController _rotationController;
+  Animation<double>? _rotationAnimation;
+  double _rotation = 0;
+  Timer? _pendingRotationTimer;
+  bool _deferNextSelectionRotation = false;
   String? _lastPointerNodeId;
   Duration? _lastPointerTime;
+
+  @override
+  void initState() {
+    super.initState();
+    _rotation = _rotationForSelected(from: 0);
+    _rotationController =
+        AnimationController(vsync: this, duration: _radarRotationDuration)
+          ..addListener(() {
+            final Animation<double>? animation = _rotationAnimation;
+            if (animation == null) return;
+            setState(() {
+              _rotation = animation.value;
+            });
+          });
+  }
+
+  @override
+  void didUpdateWidget(covariant PracticeRadarChart oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final bool selectionChanged =
+        oldWidget.selectedNodeId != widget.selectedNodeId;
+    final bool nodeOrderChanged =
+        oldWidget.values.length != widget.values.length ||
+        !_sameNodeOrder(oldWidget.values, widget.values);
+    if (selectionChanged || nodeOrderChanged) {
+      if (_deferNextSelectionRotation &&
+          selectionChanged &&
+          !nodeOrderChanged) {
+        _deferNextSelectionRotation = false;
+        _scheduleRotationAfterDoubleClickWindow();
+        return;
+      }
+      _cancelPendingRotation();
+      _animateRotationToSelection();
+    }
+  }
+
+  @override
+  void dispose() {
+    _cancelPendingRotation();
+    _rotationController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -319,6 +413,7 @@ class _PracticeRadarChartState extends State<PracticeRadarChart> {
               painter: _PracticeRadarPainter(
                 values: widget.values,
                 selectedNodeId: widget.selectedNodeId,
+                rotation: _rotation,
                 textDirection: Directionality.of(context),
               ),
             ),
@@ -338,12 +433,15 @@ class _PracticeRadarChartState extends State<PracticeRadarChart> {
         lastTime != null &&
         event.timeStamp - lastTime <= _doubleClickWindow;
     if (isDoubleClick) {
+      _cancelPendingRotation();
       _lastPointerNodeId = null;
       _lastPointerTime = null;
       widget.onNodeActivated?.call(nodeId);
       return;
     }
 
+    _cancelPendingRotation();
+    _deferNextSelectionRotation = true;
     _lastPointerNodeId = nodeId;
     _lastPointerTime = event.timeStamp;
     widget.onNodeSelected(nodeId);
@@ -356,24 +454,83 @@ class _PracticeRadarChartState extends State<PracticeRadarChart> {
     if (delta.distance == 0) {
       return widget.selectedNodeId ?? widget.values.first.nodeId;
     }
-    double angle = math.atan2(delta.dy, delta.dx) + math.pi / 2;
+    double angle = math.atan2(delta.dy, delta.dx) + math.pi / 2 - _rotation;
     while (angle < 0) {
-      angle += math.pi * 2;
+      angle += _radarFullTurn;
     }
-    final double spoke = (angle / (math.pi * 2)) * widget.values.length;
+    final double spoke = (angle / _radarFullTurn) * widget.values.length;
     final int index = spoke.round() % widget.values.length;
     return widget.values[index].nodeId;
+  }
+
+  void _animateRotationToSelection() {
+    final double target = _rotationForSelected(from: _rotation);
+    if ((target - _rotation).abs() < 0.0001) return;
+    final bool disableAnimations =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    if (disableAnimations) {
+      _rotationController.stop();
+      setState(() => _rotation = target);
+      return;
+    }
+    _rotationAnimation = Tween<double>(begin: _rotation, end: target).animate(
+      CurvedAnimation(
+        parent: _rotationController,
+        curve: Curves.easeInOutCubic,
+      ),
+    );
+    _rotationController.forward(from: 0);
+  }
+
+  void _scheduleRotationAfterDoubleClickWindow() {
+    _cancelPendingRotation();
+    _pendingRotationTimer = Timer(_doubleClickWindow, () {
+      _pendingRotationTimer = null;
+      if (!mounted) return;
+      _animateRotationToSelection();
+    });
+  }
+
+  void _cancelPendingRotation() {
+    _pendingRotationTimer?.cancel();
+    _pendingRotationTimer = null;
+  }
+
+  double _rotationForSelected({required double from}) {
+    final int selectedIndex = widget.values.indexWhere(
+      (CurriculumProgressLensValue value) =>
+          value.nodeId == widget.selectedNodeId,
+    );
+    if (selectedIndex < 0) return from;
+    final double target = radarTargetRotationForIndex(
+      selectedIndex,
+      widget.values.length,
+    );
+    return from + shortestRadarRotationDelta(from, target);
+  }
+
+  bool _sameNodeOrder(
+    List<CurriculumProgressLensValue> previous,
+    List<CurriculumProgressLensValue> next,
+  ) {
+    if (previous.length != next.length) return false;
+    for (int index = 0; index < previous.length; index += 1) {
+      if (previous[index].nodeId != next[index].nodeId) return false;
+    }
+    return true;
   }
 }
 
 class _PracticeRadarPainter extends CustomPainter {
   final List<CurriculumProgressLensValue> values;
   final String? selectedNodeId;
+  final double rotation;
   final TextDirection textDirection;
 
   const _PracticeRadarPainter({
     required this.values,
     required this.selectedNodeId,
+    required this.rotation,
     required this.textDirection,
   });
 
@@ -401,9 +558,6 @@ class _PracticeRadarPainter extends CustomPainter {
       ..strokeWidth = 2;
     final Paint pointPaint = Paint()
       ..color = DrumcabularyTheme.edgeOrange
-      ..style = PaintingStyle.fill;
-    final Paint selectedPointPaint = Paint()
-      ..color = const Color(0xFF52D273)
       ..style = PaintingStyle.fill;
 
     for (int ring = 1; ring <= 4; ring += 1) {
@@ -435,21 +589,13 @@ class _PracticeRadarPainter extends CustomPainter {
 
     for (int index = 0; index < count; index += 1) {
       final CurriculumProgressLensValue value = values[index];
+      final bool selected = value.nodeId == selectedNodeId;
       final Offset unit = _unitFor(index, count);
       final Offset point = center + unit * radius * value.normalizedValue;
-      canvas.drawCircle(
-        point,
-        value.nodeId == selectedNodeId ? 5 : 4,
-        value.nodeId == selectedNodeId ? selectedPointPaint : pointPaint,
-      );
+      canvas.drawCircle(point, 4, pointPaint);
 
       final Offset labelCenter = center + unit * (radius + 42);
-      _drawLabel(
-        canvas,
-        labelCenter,
-        value,
-        selected: value.nodeId == selectedNodeId,
-      );
+      _drawLabel(canvas, size, labelCenter, value, selected: selected);
     }
   }
 
@@ -468,12 +614,14 @@ class _PracticeRadarPainter extends CustomPainter {
   }
 
   Offset _unitFor(int index, int count) {
-    final double angle = -math.pi / 2 + (math.pi * 2 * index / count);
+    final double angle =
+        _radarTopAngle + (_radarFullTurn * index / count) + rotation;
     return Offset(math.cos(angle), math.sin(angle));
   }
 
   void _drawLabel(
     Canvas canvas,
+    Size size,
     Offset center,
     CurriculumProgressLensValue value, {
     required bool selected,
@@ -483,9 +631,9 @@ class _PracticeRadarPainter extends CustomPainter {
         text: value.label,
         style: TextStyle(
           color: selected
-              ? DrumcabularyTheme.edgeTextPrimary
+              ? DrumcabularyTheme.edgeOrange
               : DrumcabularyTheme.edgeTextSecondary,
-          fontSize: 12,
+          fontSize: selected ? 13 : 12,
           fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
           height: 1.15,
         ),
@@ -494,17 +642,23 @@ class _PracticeRadarPainter extends CustomPainter {
       ellipsis: '...',
       textAlign: TextAlign.center,
       textDirection: textDirection,
-    )..layout(maxWidth: 92);
-    painter.paint(
-      canvas,
-      Offset(center.dx - painter.width / 2, center.dy - painter.height / 2),
+    )..layout(maxWidth: selected ? 104 : 92);
+    final double left = (center.dx - painter.width / 2).clamp(
+      0,
+      math.max(0, size.width - painter.width),
     );
+    final double top = (center.dy - painter.height / 2).clamp(
+      0,
+      math.max(0, size.height - painter.height),
+    );
+    painter.paint(canvas, Offset(left, top));
   }
 
   @override
   bool shouldRepaint(covariant _PracticeRadarPainter oldDelegate) {
     return oldDelegate.values != values ||
         oldDelegate.selectedNodeId != selectedNodeId ||
+        oldDelegate.rotation != rotation ||
         oldDelegate.textDirection != textDirection;
   }
 }
@@ -645,6 +799,7 @@ class _SelectedNodeSummary extends StatelessWidget {
   final VoidCallback? onOpenSkill;
 
   const _SelectedNodeSummary({
+    super.key,
     required this.value,
     required this.lens,
     required this.canDrillIn,
@@ -654,6 +809,7 @@ class _SelectedNodeSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final String? status = _summaryStatusFor(value, lens);
     return DecoratedBox(
       decoration: BoxDecoration(
         color: DrumcabularyTheme.edgeSurfaceSecondary,
@@ -662,25 +818,122 @@ class _SelectedNodeSummary extends StatelessWidget {
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
-        child: Wrap(
-          spacing: 16,
-          runSpacing: 12,
-          crossAxisAlignment: WrapCrossAlignment.center,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            ..._selectedMetricsFor(value, lens),
-            if (canDrillIn && onDrillIn != null)
-              OutlinedButton.icon(
-                onPressed: onDrillIn,
-                icon: const Icon(Icons.radar_rounded),
-                label: const Text('Open Category'),
-              ),
-            if (onOpenSkill != null)
-              OutlinedButton.icon(
-                onPressed: onOpenSkill,
-                icon: const Icon(Icons.arrow_forward_rounded),
-                label: const Text('View Lessons'),
-              ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        value.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              color: DrumcabularyTheme.edgeTextPrimary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                      if (value.shortDescription != null) ...<Widget>[
+                        const SizedBox(height: 5),
+                        Text(
+                          value.shortDescription!,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: DrumcabularyTheme.edgeTextSecondary,
+                                height: 1.3,
+                              ),
+                        ),
+                      ],
+                      if (status != null) ...<Widget>[
+                        const SizedBox(height: 8),
+                        _SummaryStatusPill(text: status),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                if (canDrillIn && onDrillIn != null)
+                  _SummaryActionButton(
+                    onPressed: onDrillIn,
+                    icon: Icons.radar_rounded,
+                    label: 'Explore ${value.label}',
+                  ),
+                if (onOpenSkill != null)
+                  _SummaryActionButton(
+                    onPressed: onOpenSkill,
+                    icon: Icons.arrow_forward_rounded,
+                    label: 'View Lessons',
+                  ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 16,
+              runSpacing: 12,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: _selectedMetricsFor(value, lens),
+            ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SummaryActionButton extends StatelessWidget {
+  final VoidCallback? onPressed;
+  final IconData icon;
+  final String label;
+
+  const _SummaryActionButton({
+    required this.onPressed,
+    required this.icon,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 220),
+      child: OutlinedButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon),
+        label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+      ),
+    );
+  }
+}
+
+class _SummaryStatusPill extends StatelessWidget {
+  final String text;
+
+  const _SummaryStatusPill({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: DrumcabularyTheme.edgeOrange.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: DrumcabularyTheme.edgeOrange.withValues(alpha: 0.38),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        child: Text(
+          text,
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+            color: DrumcabularyTheme.edgeOrange,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
     );
@@ -742,12 +995,19 @@ class _CurriculumBreadcrumbs extends StatelessWidget {
 
 class _SelectedMetric extends StatelessWidget {
   final String label;
-  final String value;
+  final double value;
+  final String Function(double value) formatter;
 
-  const _SelectedMetric({required this.label, required this.value});
+  const _SelectedMetric({
+    required this.label,
+    required this.value,
+    required this.formatter,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final bool disableAnimations =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     return SizedBox(
       width: 160,
       child: Column(
@@ -763,14 +1023,24 @@ class _SelectedMetric extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 3),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: DrumcabularyTheme.edgeTextPrimary,
-              fontWeight: FontWeight.w700,
-            ),
+          TweenAnimationBuilder<double>(
+            tween: Tween<double>(end: value),
+            duration: disableAnimations
+                ? Duration.zero
+                : _metricTransitionDuration,
+            curve: Curves.easeOutCubic,
+            builder: (BuildContext context, double animatedValue, Widget? _) {
+              return Text(
+                formatter(animatedValue),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: DrumcabularyTheme.edgeTextPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
+              );
+            },
+            onEnd: () {},
           ),
         ],
       ),
@@ -1017,32 +1287,53 @@ List<Widget> _selectedMetricsFor(
   return switch (lens) {
     PracticeInsightsLens.practiceTime => <Widget>[
       _SelectedMetric(
-        label: value.label,
-        value: _formatPracticeTime(value.practicedSeconds),
+        label: 'Practice time',
+        value: value.practicedSeconds.toDouble(),
+        formatter: (double seconds) => _formatPracticeTime(seconds.round()),
       ),
       _SelectedMetric(
         label: 'Practiced exercises',
-        value: '${value.practicedExerciseCount}',
+        value: value.practicedExerciseCount.toDouble(),
+        formatter: _formatWholeNumber,
       ),
       _SelectedMetric(
         label: 'Lessons touched',
-        value: '${value.practicedLessonCount}',
+        value: value.practicedLessonCount.toDouble(),
+        formatter: _formatWholeNumber,
       ),
     ],
     PracticeInsightsLens.exercisesCompleted => <Widget>[
       _SelectedMetric(
-        label: value.label,
-        value: '${value.completedExerciseCount} of ${value.totalExerciseCount}',
+        label: 'Exercises completed',
+        value: value.completedExerciseCount.toDouble(),
+        formatter: (double completed) =>
+            '${completed.round()} of ${value.totalExerciseCount}',
       ),
       _SelectedMetric(
         label: 'Total exercises',
-        value: '${value.totalExerciseCount}',
+        value: value.totalExerciseCount.toDouble(),
+        formatter: _formatWholeNumber,
       ),
       _SelectedMetric(
         label: 'Lessons with completions',
-        value: '${value.completedLessonCount}',
+        value: value.completedLessonCount.toDouble(),
+        formatter: _formatWholeNumber,
       ),
     ],
+  };
+}
+
+String _formatWholeNumber(double value) => '${value.round()}';
+
+String? _summaryStatusFor(
+  CurriculumProgressLensValue value,
+  PracticeInsightsLens lens,
+) {
+  return switch (lens) {
+    PracticeInsightsLens.practiceTime =>
+      value.practicedSeconds == 0 ? 'Ready to begin' : null,
+    PracticeInsightsLens.exercisesCompleted =>
+      value.completedExerciseCount == 0 ? 'No completions yet' : null,
   };
 }
 
