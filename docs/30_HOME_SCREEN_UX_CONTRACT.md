@@ -157,9 +157,9 @@ Contents:
 
 Desktop layout:
 
-- use three columns: lesson context, exercise checklist, Resume action
-- long exercise checklists may split into two internal checklist columns to
-  avoid a tall card with unused space
+- use three columns: lesson context, horizontal exercise carousel, Resume action
+- exercises are shown as compact horizontal cards, similar to the lesson-detail
+  exercise navigator, not as a tall vertical checklist
 - completion count stays with the lesson context, not as a separate full-width
   footer row
 

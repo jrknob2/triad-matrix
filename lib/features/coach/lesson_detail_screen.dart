@@ -1198,8 +1198,6 @@ class _LessonPracticeFooter extends StatelessWidget {
                 ? maximumPanelWidth
                 : availablePanelWidth;
 
-            final double panelHeight = panelWidth;
-
             return SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
@@ -1207,7 +1205,6 @@ class _LessonPracticeFooter extends StatelessWidget {
                 children: <Widget>[
                   SizedBox(
                     width: panelWidth,
-                    height: panelHeight,
                     child: _BpmInlineControl(
                       bpm: bpm,
                       defaultBpm: defaultBpm,
@@ -1222,7 +1219,6 @@ class _LessonPracticeFooter extends StatelessWidget {
                   const SizedBox(width: spacing),
                   _PracticeModeGrid(
                     cardWidth: panelWidth,
-                    cardHeight: panelHeight,
                     active: active,
                     practicedLabel: practicedLabel,
                     guidedPracticeActive: guidedPracticeActive,
@@ -1245,7 +1241,6 @@ class _LessonPracticeFooter extends StatelessWidget {
 
 class _PracticeModeGrid extends StatelessWidget {
   final double cardWidth;
-  final double cardHeight;
   final bool active;
   final String practicedLabel;
   final bool guidedPracticeActive;
@@ -1258,7 +1253,6 @@ class _PracticeModeGrid extends StatelessWidget {
 
   const _PracticeModeGrid({
     required this.cardWidth,
-    required this.cardHeight,
     required this.active,
     required this.practicedLabel,
     required this.guidedPracticeActive,
@@ -1277,7 +1271,6 @@ class _PracticeModeGrid extends StatelessWidget {
       children: <Widget>[
         _PracticeModeCard(
           width: cardWidth,
-          height: cardHeight,
           icon: active ? Icons.check_rounded : Icons.timer_outlined,
           title: 'Practice It',
           description: active
@@ -1290,7 +1283,6 @@ class _PracticeModeGrid extends StatelessWidget {
         const SizedBox(width: 10),
         _PracticeModeCard(
           width: cardWidth,
-          height: cardHeight,
           icon: guidedPracticeActive
               ? Icons.stop_rounded
               : Icons.lightbulb_outline_rounded,
@@ -1308,7 +1300,6 @@ class _PracticeModeGrid extends StatelessWidget {
         const SizedBox(width: 10),
         _PracticeModeCard(
           width: cardWidth,
-          height: cardHeight,
           icon: Icons.hearing_rounded,
           title: 'Hear It',
           description: 'Listen at the selected tempo.',
@@ -1318,7 +1309,6 @@ class _PracticeModeGrid extends StatelessWidget {
         const SizedBox(width: 10),
         _PracticeModeCard(
           width: cardWidth,
-          height: cardHeight,
           icon: Icons.play_circle_outline_rounded,
           title: 'Play Along',
           description: 'Play while MIDI listens.',
@@ -1332,7 +1322,6 @@ class _PracticeModeGrid extends StatelessWidget {
 
 class _PracticeModeCard extends StatelessWidget {
   final double width;
-  final double height;
   final IconData icon;
   final String title;
   final String description;
@@ -1342,7 +1331,6 @@ class _PracticeModeCard extends StatelessWidget {
 
   const _PracticeModeCard({
     required this.width,
-    required this.height,
     required this.icon,
     required this.title,
     required this.description,
@@ -1362,7 +1350,6 @@ class _PracticeModeCard extends StatelessWidget {
 
     return SizedBox(
       width: width,
-      height: height,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -1377,8 +1364,9 @@ class _PracticeModeCard extends StatelessWidget {
               border: Border.all(color: borderColor),
             ),
             child: Padding(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(12),
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Row(
@@ -1410,7 +1398,7 @@ class _PracticeModeCard extends StatelessWidget {
                   const SizedBox(height: 12),
                   Text(
                     description,
-                    maxLines: 3,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: textTheme.bodySmall?.copyWith(
                       color: enabled
@@ -1419,10 +1407,10 @@ class _PracticeModeCard extends StatelessWidget {
                       height: 1.35,
                     ),
                   ),
-                  const Spacer(),
+                  const SizedBox(height: 8),
                   Text(
                     detail,
-                    maxLines: 2,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: textTheme.labelMedium?.copyWith(
                       color: enabled

@@ -198,6 +198,9 @@ Rules:
   collapsed exercise rows below the active card.
 - BPM controls do not live inside Tip. The footer owns tempo because Hear It and
   Play Along both consume it.
+- Footer practice-mode cards size to their content. Secondary detail labels sit
+  directly under the card description; cards must not force square/tall heights
+  or pin labels to the bottom with empty space.
 - The notation sheet must not repeat a Hear It header/control when the footer
   already owns Hear It.
 - More Actions contains only secondary lesson actions such as Print Lesson.

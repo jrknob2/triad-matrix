@@ -482,9 +482,9 @@ class _ContinuePracticePanel extends StatelessWidget {
             builder: (BuildContext context, BoxConstraints constraints) {
               final bool compact = constraints.maxWidth < 760;
               final Widget details = _LessonTargetDetails(target: target!);
-              final Widget checklist = _ExerciseChecklist(
-                target: target!,
-                columns: constraints.maxWidth >= 1120 ? 2 : 1,
+              final Widget exerciseCarousel = _ExerciseCarousel(
+                items: target!.checklist,
+                currentExerciseNumber: target!.nextExerciseNumber,
               );
               final Widget action = FilledButton.icon(
                 onPressed: onResume,
@@ -516,7 +516,7 @@ class _ContinuePracticePanel extends StatelessWidget {
                   children: <Widget>[
                     details,
                     const SizedBox(height: 14),
-                    checklist,
+                    exerciseCarousel,
                     const SizedBox(height: 14),
                     action,
                     const SizedBox(height: 10),
@@ -543,7 +543,7 @@ class _ContinuePracticePanel extends StatelessWidget {
                     flex: 6,
                     child: Align(
                       alignment: Alignment.topLeft,
-                      child: checklist,
+                      child: exerciseCarousel,
                     ),
                   ),
                   const SizedBox(width: 18),
@@ -615,106 +615,135 @@ class _LessonTargetDetails extends StatelessWidget {
   }
 }
 
-class _ExerciseChecklist extends StatelessWidget {
-  final _HomeLessonTarget target;
-  final int columns;
-
-  const _ExerciseChecklist({required this.target, this.columns = 1});
-
-  @override
-  Widget build(BuildContext context) {
-    final List<_ExerciseChecklistItem> items = target.checklist;
-    if (items.isEmpty) return const SizedBox.shrink();
-    if (columns > 1 && items.length > 3) {
-      final int split = (items.length / 2).ceil();
-      final List<_ExerciseChecklistItem> left = items.take(split).toList();
-      final List<_ExerciseChecklistItem> right = items.skip(split).toList();
-      return Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Expanded(child: _ExerciseChecklistColumn(items: left)),
-          const SizedBox(width: 18),
-          Expanded(child: _ExerciseChecklistColumn(items: right)),
-        ],
-      );
-    }
-    return _ExerciseChecklistColumn(items: items);
-  }
-}
-
-class _ExerciseChecklistColumn extends StatelessWidget {
+class _ExerciseCarousel extends StatelessWidget {
   final List<_ExerciseChecklistItem> items;
+  final int currentExerciseNumber;
 
-  const _ExerciseChecklistColumn({required this.items});
+  const _ExerciseCarousel({
+    required this.items,
+    required this.currentExerciseNumber,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        for (final _ExerciseChecklistItem item in items) ...<Widget>[
-          _ExerciseChecklistRow(item: item),
-          if (item != items.last) const SizedBox(height: 8),
-        ],
-      ],
+    if (items.isEmpty) return const SizedBox.shrink();
+    return SizedBox(
+      height: 82,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: items.length,
+        separatorBuilder: (BuildContext context, int index) =>
+            const SizedBox(width: 10),
+        itemBuilder: (BuildContext context, int index) {
+          final _ExerciseChecklistItem item = items[index];
+          return _ExerciseCarouselCard(
+            item: item,
+            active:
+                item.number == currentExerciseNumber &&
+                item.status != LessonProgressStatus.completed,
+          );
+        },
+      ),
     );
   }
 }
 
-class _ExerciseChecklistRow extends StatelessWidget {
+class _ExerciseCarouselCard extends StatelessWidget {
   final _ExerciseChecklistItem item;
+  final bool active;
 
-  const _ExerciseChecklistRow({required this.item});
+  const _ExerciseCarouselCard({required this.item, required this.active});
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: <Widget>[
-        Expanded(
-          child: Text(
-            item.title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: DrumcabularyTheme.edgeTextPrimary,
-              fontWeight: FontWeight.w700,
-            ),
+    final bool completed = item.status == LessonProgressStatus.completed;
+    final Color statusColor = completed
+        ? const Color(0xFF52D273)
+        : active
+        ? DrumcabularyTheme.edgeOrange
+        : DrumcabularyTheme.edgeTextSecondary;
+    final String statusLabel = completed
+        ? 'Complete'
+        : active
+        ? 'Up Next'
+        : 'Not Started';
+
+    return SizedBox(
+      width: 214,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: active
+              ? DrumcabularyTheme.edgeOrange.withValues(alpha: 0.12)
+              : DrumcabularyTheme.edgeSurfaceSecondary,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: completed || active
+                ? statusColor
+                : DrumcabularyTheme.edgeBorder,
           ),
         ),
-        const SizedBox(width: 10),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: List<Widget>.generate(5, (int index) {
-            final bool completed =
-                item.status == LessonProgressStatus.completed;
-            final bool current = item.status == LessonProgressStatus.inProgress;
-            final Color borderColor = completed || current
-                ? DrumcabularyTheme.edgeOrange
-                : DrumcabularyTheme.edgeOrange.withValues(alpha: 0.34);
-            return Padding(
-              padding: const EdgeInsets.only(left: 3),
-              child: DecoratedBox(
+        child: Padding(
+          padding: const EdgeInsets.all(10),
+          child: Row(
+            children: <Widget>[
+              Container(
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
-                  color: completed
-                      ? DrumcabularyTheme.edgeOrange
-                      : DrumcabularyTheme.edgeSurface,
-                  borderRadius: BorderRadius.circular(3),
-                  border: Border.all(
-                    color: borderColor,
-                    width: current ? 1.4 : 1.1,
-                  ),
+                  shape: BoxShape.circle,
+                  color: completed || active
+                      ? statusColor.withValues(alpha: completed ? 0.18 : 1)
+                      : DrumcabularyTheme.edgeBackground,
+                  border: Border.all(color: statusColor),
                 ),
-                child: const SizedBox(width: 12, height: 12),
+                child: Center(
+                  child: completed
+                      ? Icon(Icons.check_rounded, color: statusColor, size: 21)
+                      : Text(
+                          '${item.number}',
+                          style: Theme.of(context).textTheme.labelLarge
+                              ?.copyWith(
+                                color: active
+                                    ? DrumcabularyTheme.edgeTextPrimary
+                                    : statusColor,
+                                fontWeight: FontWeight.w700,
+                              ),
+                        ),
+                ),
               ),
-            );
-          }),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      item.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: DrumcabularyTheme.edgeTextPrimary,
+                        fontWeight: FontWeight.w700,
+                        height: 1.1,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      statusLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: statusColor,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-        const SizedBox(width: 8),
-        if (item.status == LessonProgressStatus.completed)
-          const Icon(Icons.check_circle, color: Color(0xFF52D273), size: 20)
-        else
-          const SizedBox(width: 20),
-      ],
+      ),
     );
   }
 }
@@ -2834,7 +2863,11 @@ class _HomeLessonTarget {
         exerciseId: exercise.id,
       );
       checklist.add(
-        _ExerciseChecklistItem(title: exercise.title, status: progress.status),
+        _ExerciseChecklistItem(
+          number: index,
+          title: exercise.title,
+          status: progress.status,
+        ),
       );
       if (progress.status == LessonProgressStatus.completed) {
         completed += 1;
@@ -2859,10 +2892,15 @@ class _HomeLessonTarget {
 }
 
 class _ExerciseChecklistItem {
+  final int number;
   final String title;
   final LessonProgressStatus status;
 
-  const _ExerciseChecklistItem({required this.title, required this.status});
+  const _ExerciseChecklistItem({
+    required this.number,
+    required this.title,
+    required this.status,
+  });
 }
 
 class _PracticeStats {
