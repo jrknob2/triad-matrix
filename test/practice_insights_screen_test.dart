@@ -1,5 +1,8 @@
+import 'dart:math' as math;
+
 import 'package:drumcabulary/features/progress/curriculum_progress_lens_aggregator.dart';
 import 'package:drumcabulary/features/progress/practice_insights_screen.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -30,6 +33,7 @@ void main() {
 
     final Offset center = tester.getCenter(find.byType(PracticeRadarChart));
     await tester.tapAt(center + const Offset(0, -120));
+    await tester.pumpAndSettle();
 
     expect(selectedNodeId, 'timing');
   });
@@ -108,7 +112,7 @@ void main() {
       find.text('Shows where your recorded practice time has been invested.'),
       findsOneWidget,
     );
-    expect(find.text('Time invested'), findsOneWidget);
+    expect(find.text('Time invested'), findsNothing);
   });
 
   testWidgets(
@@ -122,7 +126,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      await _tapRadarNode(tester, 1);
       expect(find.text('< 1 min'), findsWidgets);
+
+      await _tapRadarNode(tester, 2);
       expect(find.text('0 min'), findsWidgets);
     },
   );
@@ -148,8 +155,8 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.text('Exercises completed'), findsOneWidget);
-    expect(find.text('2 of 3'), findsWidgets);
+    expect(find.text('Exercises completed'), findsNothing);
+    expect(find.text('1 of 4'), findsWidgets);
   });
 
   testWidgets('selected node is preserved across lens changes', (
@@ -163,8 +170,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('Grooves').last);
-    await tester.tap(find.text('Grooves').last);
+    await _tapRadarNode(tester, 1);
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('Exercises Completed'));
     await tester.tap(find.text('Exercises Completed'));
@@ -187,8 +193,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('Grooves').last);
-    await tester.tap(find.text('Grooves').last);
+    await _tapRadarNode(tester, 1);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Open Category'));
     await tester.pumpAndSettle();
@@ -196,7 +201,6 @@ void main() {
     expect(find.text('Curriculum'), findsWidgets);
     expect(find.text('Grooves'), findsWidgets);
     expect(find.text('Core Grooves'), findsWidgets);
-    expect(find.text('Rock Grooves'), findsWidgets);
     expect(find.text('View Lessons'), findsOneWidget);
   });
 
@@ -213,8 +217,7 @@ void main() {
 
     await tester.tap(find.text('Exercises Completed'));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Grooves').last);
-    await tester.tap(find.text('Grooves').last);
+    await _tapRadarNode(tester, 1);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Open Category'));
     await tester.pumpAndSettle();
@@ -225,6 +228,25 @@ void main() {
 
     expect(find.text('Completion Portrait'), findsOneWidget);
     expect(find.text('Timing'), findsWidgets);
+  });
+
+  testWidgets('double-clicking a root radar label drills into the category', (
+    WidgetTester tester,
+  ) async {
+    _useLargeSurface(tester);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PracticeInsightsScreen(
+          snapshotLoader: _snapshotForLens,
+          onOpenSkill: (_) {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await _doubleTapRadarNode(tester, 1, distance: 168);
+
+    expect(find.text('Core Grooves'), findsWidgets);
   });
 
   testWidgets('second-level View Lessons opens the existing lesson flow', (
@@ -245,13 +267,38 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('Grooves').last);
-    await tester.tap(find.text('Grooves').last);
+    await _tapRadarNode(tester, 1);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Open Category'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('View Lessons'));
     await tester.tap(find.text('View Lessons'));
+
+    expect(openedSkillId, 'grooves');
+  });
+
+  testWidgets('double-clicking a second-level radar point opens lessons', (
+    WidgetTester tester,
+  ) async {
+    _useLargeSurface(tester);
+    String? openedSkillId;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PracticeInsightsScreen(
+          snapshotLoader: _snapshotForLens,
+          onOpenSkill: (String skillId) {
+            openedSkillId = skillId;
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await _tapRadarNode(tester, 1);
+    await tester.tap(find.text('Open Category'));
+    await tester.pumpAndSettle();
+    await _doubleTapRadarNode(tester, 0, distance: 126);
 
     expect(openedSkillId, 'grooves');
   });
@@ -303,6 +350,44 @@ void _useLargeSurface(WidgetTester tester) {
   tester.view.physicalSize = const Size(1100, 1100);
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
+}
+
+Future<void> _tapRadarNode(
+  WidgetTester tester,
+  int index, {
+  int count = 3,
+  double distance = 120,
+}) async {
+  await tester.ensureVisible(find.byType(PracticeRadarChart));
+  await tester.pumpAndSettle();
+  await tester.tapAt(_radarNodePosition(tester, index, count, distance));
+  await tester.pumpAndSettle();
+}
+
+Future<void> _doubleTapRadarNode(
+  WidgetTester tester,
+  int index, {
+  int count = 3,
+  double distance = 120,
+}) async {
+  await tester.ensureVisible(find.byType(PracticeRadarChart));
+  await tester.pumpAndSettle();
+  final Offset position = _radarNodePosition(tester, index, count, distance);
+  await tester.tapAt(position);
+  await tester.pump(kDoubleTapMinTime);
+  await tester.tapAt(position);
+  await tester.pumpAndSettle();
+}
+
+Offset _radarNodePosition(
+  WidgetTester tester,
+  int index,
+  int count,
+  double distance,
+) {
+  final Offset center = tester.getCenter(find.byType(PracticeRadarChart));
+  final double angle = -math.pi / 2 + (math.pi * 2 * index / count);
+  return center + Offset(math.cos(angle), math.sin(angle)) * distance;
 }
 
 Future<CurriculumProgressLensSnapshot> _snapshotForLens(

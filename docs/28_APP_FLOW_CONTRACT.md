@@ -490,12 +490,16 @@ Current implementation:
 - Exercises Completed normalizes each child node as completed exercises divided
   by total exercises for that child node
 - switching lenses updates the section title, explanatory copy, radar values,
-  selected-skill summary, and lower metric cards together
+  and selected-node summary together
 - selected node is preserved across lens changes when the node exists in the
   active dataset
-- tapping a radar spoke or metric row selects a node
+- tapping a radar spoke selects a node
 - drilling into a category requires an explicit action; selection alone must not
   navigate
+- double-clicking a radar spoke data point or label activates the same action as
+  the selected-node button:
+  - root category nodes drill into the second-level radar
+  - second-level nodes open Explore with that node's lesson filter
 - breadcrumbs show the current curriculum position and allow return to the root
 - selected lens persists when drilling into a category or returning by
   breadcrumb

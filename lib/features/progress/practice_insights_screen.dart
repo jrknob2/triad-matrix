@@ -206,6 +206,7 @@ class _PracticePortraitView extends StatelessWidget {
                   semanticLabel: copy.radarSemanticLabel,
                   selectedNodeId: selectedNodeId,
                   onNodeSelected: onSelected,
+                  onNodeActivated: _activateNode,
                 ),
                 const SizedBox(height: 16),
                 if (selectedValue != null)
@@ -222,14 +223,6 @@ class _PracticePortraitView extends StatelessWidget {
                         ? null
                         : () => onOpenSkill!(selectedValue.lessonFilterId),
                   ),
-                const SizedBox(height: 16),
-                _NodeMetricList(
-                  values: snapshot.values,
-                  lens: snapshot.lens,
-                  heading: copy.metricHeading,
-                  selectedNodeId: selectedNodeId,
-                  onSelected: onSelected,
-                ),
               ],
             ],
           ),
@@ -246,14 +239,35 @@ class _PracticePortraitView extends StatelessWidget {
     }
     return null;
   }
+
+  void _activateNode(String nodeId) {
+    final CurriculumProgressLensValue? value = _valueFor(nodeId);
+    if (value == null) return;
+    if (snapshot.isRoot && value.hasChildren) {
+      onDrillIn(value.nodeId);
+      return;
+    }
+    final ValueChanged<String>? openSkill = onOpenSkill;
+    if (!snapshot.isRoot && openSkill != null) {
+      openSkill(value.lessonFilterId);
+    }
+  }
+
+  CurriculumProgressLensValue? _valueFor(String nodeId) {
+    for (final CurriculumProgressLensValue value in snapshot.values) {
+      if (value.nodeId == nodeId) return value;
+    }
+    return null;
+  }
 }
 
-class PracticeRadarChart extends StatelessWidget {
+class PracticeRadarChart extends StatefulWidget {
   final List<CurriculumProgressLensValue> values;
   final PracticeInsightsLens lens;
   final String semanticLabel;
   final String? selectedNodeId;
   final ValueChanged<String> onNodeSelected;
+  final ValueChanged<String>? onNodeActivated;
 
   const PracticeRadarChart({
     super.key,
@@ -262,16 +276,28 @@ class PracticeRadarChart extends StatelessWidget {
     this.semanticLabel = 'Practice distribution by curriculum node',
     required this.selectedNodeId,
     required this.onNodeSelected,
+    this.onNodeActivated,
   });
 
   @override
+  State<PracticeRadarChart> createState() => _PracticeRadarChartState();
+}
+
+class _PracticeRadarChartState extends State<PracticeRadarChart> {
+  static const Duration _doubleClickWindow = Duration(milliseconds: 360);
+
+  String? _lastPointerNodeId;
+  Duration? _lastPointerTime;
+
+  @override
   Widget build(BuildContext context) {
-    if (values.length < 3) {
+    if (widget.values.length < 3) {
       return _PracticeRadarFallback(
-        values: values,
-        lens: lens,
-        selectedNodeId: selectedNodeId,
-        onNodeSelected: onNodeSelected,
+        values: widget.values,
+        lens: widget.lens,
+        selectedNodeId: widget.selectedNodeId,
+        onNodeSelected: widget.onNodeSelected,
+        onNodeActivated: widget.onNodeActivated,
       );
     }
 
@@ -282,21 +308,17 @@ class PracticeRadarChart extends StatelessWidget {
             : 340;
         final double height = width < 420 ? width : 420;
         return Semantics(
-          label: semanticLabel,
-          child: GestureDetector(
+          label: widget.semanticLabel,
+          child: Listener(
             behavior: HitTestBehavior.opaque,
-            onTapDown: (TapDownDetails details) {
-              final String? nodeId = _nearestNodeForTap(
-                details.localPosition,
-                Size(width, height),
-              );
-              if (nodeId != null) onNodeSelected(nodeId);
+            onPointerDown: (PointerDownEvent event) {
+              _handlePointerDown(event, Size(width, height));
             },
             child: CustomPaint(
               size: Size(width, height),
               painter: _PracticeRadarPainter(
-                values: values,
-                selectedNodeId: selectedNodeId,
+                values: widget.values,
+                selectedNodeId: widget.selectedNodeId,
                 textDirection: Directionality.of(context),
               ),
             ),
@@ -306,18 +328,41 @@ class PracticeRadarChart extends StatelessWidget {
     );
   }
 
+  void _handlePointerDown(PointerDownEvent event, Size size) {
+    final String? nodeId = _nearestNodeForTap(event.localPosition, size);
+    if (nodeId == null) return;
+
+    final Duration? lastTime = _lastPointerTime;
+    final bool isDoubleClick =
+        _lastPointerNodeId == nodeId &&
+        lastTime != null &&
+        event.timeStamp - lastTime <= _doubleClickWindow;
+    if (isDoubleClick) {
+      _lastPointerNodeId = null;
+      _lastPointerTime = null;
+      widget.onNodeActivated?.call(nodeId);
+      return;
+    }
+
+    _lastPointerNodeId = nodeId;
+    _lastPointerTime = event.timeStamp;
+    widget.onNodeSelected(nodeId);
+  }
+
   String? _nearestNodeForTap(Offset position, Size size) {
-    if (values.isEmpty) return null;
+    if (widget.values.isEmpty) return null;
     final Offset center = size.center(Offset.zero);
     final Offset delta = position - center;
-    if (delta.distance == 0) return selectedNodeId ?? values.first.nodeId;
+    if (delta.distance == 0) {
+      return widget.selectedNodeId ?? widget.values.first.nodeId;
+    }
     double angle = math.atan2(delta.dy, delta.dx) + math.pi / 2;
     while (angle < 0) {
       angle += math.pi * 2;
     }
-    final double spoke = (angle / (math.pi * 2)) * values.length;
-    final int index = spoke.round() % values.length;
-    return values[index].nodeId;
+    final double spoke = (angle / (math.pi * 2)) * widget.values.length;
+    final int index = spoke.round() % widget.values.length;
+    return widget.values[index].nodeId;
   }
 }
 
@@ -469,12 +514,14 @@ class _PracticeRadarFallback extends StatelessWidget {
   final PracticeInsightsLens lens;
   final String? selectedNodeId;
   final ValueChanged<String> onNodeSelected;
+  final ValueChanged<String>? onNodeActivated;
 
   const _PracticeRadarFallback({
     required this.values,
     required this.lens,
     required this.selectedNodeId,
     required this.onNodeSelected,
+    required this.onNodeActivated,
   });
 
   @override
@@ -497,48 +544,9 @@ class _PracticeRadarFallback extends StatelessWidget {
             lens: lens,
             selected: value.nodeId == selectedNodeId,
             onTap: () => onNodeSelected(value.nodeId),
-          ),
-          if (value != values.last) const SizedBox(height: 8),
-        ],
-      ],
-    );
-  }
-}
-
-class _NodeMetricList extends StatelessWidget {
-  final List<CurriculumProgressLensValue> values;
-  final PracticeInsightsLens lens;
-  final String heading;
-  final String? selectedNodeId;
-  final ValueChanged<String> onSelected;
-
-  const _NodeMetricList({
-    required this.values,
-    required this.lens,
-    required this.heading,
-    required this.selectedNodeId,
-    required this.onSelected,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(
-          heading,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: DrumcabularyTheme.edgeTextPrimary,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 10),
-        for (final CurriculumProgressLensValue value in values) ...<Widget>[
-          _NodeMetricBar(
-            value: value,
-            lens: lens,
-            selected: value.nodeId == selectedNodeId,
-            onTap: () => onSelected(value.nodeId),
+            onDoubleTap: onNodeActivated == null
+                ? null
+                : () => onNodeActivated!(value.nodeId),
           ),
           if (value != values.last) const SizedBox(height: 8),
         ],
@@ -552,12 +560,14 @@ class _NodeMetricBar extends StatelessWidget {
   final PracticeInsightsLens lens;
   final bool selected;
   final VoidCallback onTap;
+  final VoidCallback? onDoubleTap;
 
   const _NodeMetricBar({
     required this.value,
     required this.lens,
     required this.selected,
     required this.onTap,
+    required this.onDoubleTap,
   });
 
   @override
@@ -566,6 +576,7 @@ class _NodeMetricBar extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
+        onDoubleTap: onDoubleTap,
         borderRadius: BorderRadius.circular(8),
         child: Ink(
           decoration: BoxDecoration(
@@ -1040,7 +1051,6 @@ _LensCopy _copyFor(PracticeInsightsLens lens) {
     PracticeInsightsLens.practiceTime => const _LensCopy(
       title: 'Practice Portrait',
       description: 'Shows where your recorded practice time has been invested.',
-      metricHeading: 'Time invested',
       emptyTitle: 'No practice time recorded',
       emptyMessage: 'Practice an exercise to begin building your portrait.',
       radarSemanticLabel: 'Practice time distribution by curriculum node',
@@ -1049,7 +1059,6 @@ _LensCopy _copyFor(PracticeInsightsLens lens) {
       title: 'Completion Portrait',
       description:
           'Shows how completed exercises are distributed across the curriculum.',
-      metricHeading: 'Exercises completed',
       emptyTitle: 'No completed exercises yet',
       emptyMessage:
           'Complete an exercise to begin building your completion portrait.',
@@ -1061,7 +1070,6 @@ _LensCopy _copyFor(PracticeInsightsLens lens) {
 class _LensCopy {
   final String title;
   final String description;
-  final String metricHeading;
   final String emptyTitle;
   final String emptyMessage;
   final String radarSemanticLabel;
@@ -1069,7 +1077,6 @@ class _LensCopy {
   const _LensCopy({
     required this.title,
     required this.description,
-    required this.metricHeading,
     required this.emptyTitle,
     required this.emptyMessage,
     required this.radarSemanticLabel,
