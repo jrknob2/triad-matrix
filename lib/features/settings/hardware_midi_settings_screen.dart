@@ -118,7 +118,7 @@ class _HardwareConnectionDialogState extends State<HardwareConnectionDialog> {
               _QuickLedControllerPanel(
                 controller: _ledController,
                 onRefresh: () => unawaited(_ledController.refreshPorts()),
-                onSelect: _ledController.selectPort,
+                onSelect: _selectLedPort,
                 onConnect: () => unawaited(_ledController.connect()),
                 onDisconnect: () => unawaited(_ledController.disconnect()),
               ),
@@ -143,6 +143,11 @@ class _HardwareConnectionDialogState extends State<HardwareConnectionDialog> {
     final MidiInputDevice? device = _midiService.selectedDevice;
     if (device == null) return;
     unawaited(_midiService.connectToDevice(device));
+  }
+
+  void _selectLedPort(String? path) {
+    if (path == null) return;
+    unawaited(_ledController.selectPortAndConnect(path));
   }
 }
 
@@ -216,7 +221,7 @@ class _HardwareMidiSettingsScreenState
               controller: _ledController,
               testingLeds: _testingLeds,
               onRefresh: () => unawaited(_ledController.refreshPorts()),
-              onSelect: _ledController.selectPort,
+              onSelect: _selectLedPort,
               onConnect: () => unawaited(_ledController.connect()),
               onDisconnect: () => unawaited(_ledController.disconnect()),
               onTest: _testLeds,
@@ -246,6 +251,11 @@ class _HardwareMidiSettingsScreenState
       return;
     }
     await _midiService.connectToDevice(device);
+  }
+
+  void _selectLedPort(String? path) {
+    if (path == null) return;
+    unawaited(_ledController.selectPortAndConnect(path));
   }
 
   Future<void> _testMidiInput() async {

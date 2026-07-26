@@ -276,6 +276,24 @@ void main() {
       expect(platform.lastConnection.writes, <String>['SNARE\n']);
     });
 
+    test('selecting a serial port can connect immediately', () async {
+      final _FakeSerialPlatform platform = _FakeSerialPlatform();
+      final SerialLedController controller = SerialLedController(
+        platform: platform,
+      );
+      addTearDown(controller.dispose);
+
+      await controller.refreshPorts();
+      await controller.selectPortAndConnect(_FakeSerialPlatform.esp32.path);
+
+      expect(controller.selectedPort?.path, _FakeSerialPlatform.esp32.path);
+      expect(controller.status, SerialLedConnectionStatus.connected);
+      expect(platform.connections, hasLength(1));
+      expect(platform.lastConnection.writes, <String>[
+        'SYS,GET,ORIENTATION,ALL\n',
+      ]);
+    });
+
     test('cue frame writes the full frame as one payload', () async {
       final _FakeSerialPlatform platform = _FakeSerialPlatform();
       final SerialLedController controller = SerialLedController(

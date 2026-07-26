@@ -305,6 +305,13 @@ class SerialLedController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> selectPortAndConnect(String? path) async {
+    if (_disposed || isConnected) return;
+    selectPort(path);
+    if (_selectedPort == null) return;
+    await connect();
+  }
+
   Future<void> connect() async {
     if (_disposed || isConnected) return;
     final SerialLedPort? port = _selectedPort;

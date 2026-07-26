@@ -20,7 +20,19 @@ class DrumcabularyApp extends StatefulWidget {
 
 class _DrumcabularyAppState extends State<DrumcabularyApp>
     with WidgetsBindingObserver {
-  late final Future<AppController> _controllerFuture = AppController.create();
+  static const Duration _minimumSplashDuration = Duration(seconds: 1);
+
+  late final Future<AppController> _controllerFuture =
+      _createControllerAfterSplash();
+
+  Future<AppController> _createControllerAfterSplash() async {
+    final Future<AppController> controllerFuture = AppController.create();
+    await Future.wait<Object?>(<Future<Object?>>[
+      controllerFuture,
+      Future<Object?>.delayed(_minimumSplashDuration),
+    ]);
+    return controllerFuture;
+  }
 
   @override
   void initState() {

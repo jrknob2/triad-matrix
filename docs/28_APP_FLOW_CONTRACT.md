@@ -302,6 +302,9 @@ Rules:
 - tapping either control opens a quick hardware connection modal
 - the quick modal contains only device selection, refresh, connect, disconnect,
   and concise connection state
+- selecting a MIDI or LED device from the modal starts connection immediately;
+  the separate Connect button remains a recovery/manual action for the selected
+  device
 - the quick modal does not contain tests, orientation settings, raw diagnostics,
   or capture controls
 - Settings continues to own the full Hardware & MIDI screen
@@ -357,7 +360,8 @@ Current behavior:
 - flashes the shared LED controller for each recorded live hit when the LED
   controller is connected
 - ignores Note Off and velocity-zero Note On events
-- emits voice-first notation such as `[HH K]`, `[OHH]`, and `[S]`
+- emits voice-first notation such as `[HH K]`, `[OHH]`, `[S]`, and
+  `[S:^R(L)(L)]`
 - writes generated notation into an editable text field
 - renders the edited/generated notation with the shared notation preview
 - does not show local MIDI or LED device status buttons; the shell hardware

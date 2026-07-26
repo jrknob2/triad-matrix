@@ -343,9 +343,6 @@ class PatternSequenceV1 {
     final String upper = text.toUpperCase();
     for (int index = 0; index < upper.length; index += 1) {
       final String char = upper[index];
-      if (char == '^') continue;
-      if (char == '(') continue;
-      if (char == ')') continue;
       if (char == '[') {
         final int close = upper.indexOf(']', index + 1);
         if (close < 0) {

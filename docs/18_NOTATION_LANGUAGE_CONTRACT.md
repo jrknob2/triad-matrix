@@ -390,6 +390,7 @@ Examples:
 [HH]
 [OHH]
 [S]
+[S:^R(L)(L)]
 [HH K]
 [OHH K]
 ```
@@ -397,8 +398,13 @@ Examples:
 The LEKATO/General MIDI map distinguishes closed hi-hat note 42 and open
 hi-hat note 46. When the hardware provides `hiHatOpen`, capture emits `OHH`.
 
-MIDI capture must not invent left/right sticking from note input. If the MIDI
-stream does not identify hands, captured events omit sticking.
+MIDI capture uses velocity to classify captured hand-played voices as normal,
+accented, or ghosted. Normal hits omit sticking. Accented and ghosted hits are
+emitted as semantic stroke notation so captured expressive phrases remain
+voice-first, such as `[S:^R(L)(L)]`. The initial capture thresholds are velocity
+`<= 63` for ghost strokes and `>= 100` for accented strokes. The current default
+hand assignment is a capture heuristic: accents use `R`, ghosts use `L`. These
+thresholds and hand defaults are capture configuration, not notation grammar.
 
 ## Render Document Contract
 

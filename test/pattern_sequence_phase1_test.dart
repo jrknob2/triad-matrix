@@ -69,24 +69,34 @@ void main() {
       },
     );
 
-    test('practice item preserves authored pattern text separately', () {
-      const String pattern = '^R^L^R(L)(L) K ^R^L^R(L)(L) ^R^L^R(L)(L) [XK]';
-      final PracticeItemV1 item = PracticeItemV1(
-        id: 'authored_pattern',
-        family: MaterialFamilyV1.custom,
-        name: 'Authored Pattern',
-        pattern: pattern,
-        accentedNoteIndices: const <int>[],
-        ghostNoteIndices: const <int>[],
-        voiceAssignments: const <DrumVoiceV1>[],
-        source: PracticeItemSourceV1.userDefined,
-        tags: const <String>['custom'],
-        saved: true,
-      );
+    test(
+      'practice item preserves authored voice-first pattern text separately',
+      () {
+        const String pattern =
+            '[S:^R] [S:^L] [S:^R] [S:(L)] [S:(L)] [K] '
+            '[S:^R] [S:^L] [S:^R] [S:(L)] [S:(L)] '
+            '[S:^R] [S:^L] [S:^R] [S:(L)] [S:(L)] [CR K]';
+        final PracticeItemV1 item = PracticeItemV1(
+          id: 'authored_pattern',
+          family: MaterialFamilyV1.custom,
+          name: 'Authored Pattern',
+          pattern: pattern,
+          accentedNoteIndices: const <int>[],
+          ghostNoteIndices: const <int>[],
+          voiceAssignments: const <DrumVoiceV1>[],
+          source: PracticeItemSourceV1.userDefined,
+          tags: const <String>['custom'],
+          saved: true,
+        );
 
-      expect(item.pattern, pattern);
-      expect(item.sticking, pattern);
-      expect(item.sequence.positionCount, 17);
+        expect(item.pattern, pattern);
+        expect(item.sticking, pattern);
+        expect(item.sequence.positionCount, 17);
+      },
+    );
+
+    test('rejects obsolete unbracketed dynamic notation', () {
+      expect(() => PatternSequenceV1.parse('^R(L)(L)'), throwsFormatException);
     });
 
     test(

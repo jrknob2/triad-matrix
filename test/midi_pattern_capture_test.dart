@@ -119,6 +119,189 @@ void main() {
       expect(controller.stop(), '[OHH]');
     });
 
+    test(
+      'captures velocity accents and ghosts through the live entrypoint',
+      () {
+        final DateTime startedAt = DateTime(2026);
+        final MidiPatternCaptureController controller =
+            MidiPatternCaptureController(clock: () => startedAt);
+        final RawMidiEvent raw = _rawMidiEvent(
+          velocity: 120,
+          timestamp: startedAt,
+        );
+
+        controller.record();
+        controller
+          ..captureMappedEvent(
+            raw: raw,
+            drum: DrumInputEvent(
+              voice: DrumVoice.snare,
+              midiNote: raw.note,
+              velocity: raw.velocity,
+              timestamp: raw.timestamp,
+            ),
+          )
+          ..captureMappedEvent(
+            raw: _rawMidiEvent(
+              velocity: 24,
+              timestamp: startedAt.add(const Duration(milliseconds: 80)),
+            ),
+            drum: DrumInputEvent(
+              voice: DrumVoice.snare,
+              midiNote: raw.note,
+              velocity: 24,
+              timestamp: startedAt.add(const Duration(milliseconds: 80)),
+            ),
+          )
+          ..captureMappedEvent(
+            raw: _rawMidiEvent(
+              velocity: 28,
+              timestamp: startedAt.add(const Duration(milliseconds: 160)),
+            ),
+            drum: DrumInputEvent(
+              voice: DrumVoice.snare,
+              midiNote: raw.note,
+              velocity: 28,
+              timestamp: startedAt.add(const Duration(milliseconds: 160)),
+            ),
+          );
+
+        expect(controller.stop(), '[S:^R(L)(L)]');
+      },
+    );
+
+    test('normal capture velocities do not invent sticking', () {
+      final DateTime startedAt = DateTime(2026);
+      final MidiPatternCaptureController controller =
+          MidiPatternCaptureController(clock: () => startedAt);
+
+      controller.record();
+      controller
+        ..capture(
+          _diagnosticEvent(
+            voice: DrumVoice.snare,
+            velocity: 72,
+            timestamp: startedAt,
+          ),
+        )
+        ..capture(
+          _diagnosticEvent(
+            voice: DrumVoice.snare,
+            velocity: 74,
+            timestamp: startedAt.add(const Duration(milliseconds: 80)),
+          ),
+        );
+
+      expect(controller.stop(), '[S] [S]');
+    });
+
+    test(
+      'default velocity threshold boundaries classify accents and ghosts',
+      () {
+        final DateTime startedAt = DateTime(2026);
+        final MidiPatternCaptureController controller =
+            MidiPatternCaptureController(clock: () => startedAt);
+
+        controller.record();
+        controller
+          ..capture(
+            _diagnosticEvent(
+              voice: DrumVoice.snare,
+              velocity: 99,
+              timestamp: startedAt,
+            ),
+          )
+          ..capture(
+            _diagnosticEvent(
+              voice: DrumVoice.snare,
+              velocity: 100,
+              timestamp: startedAt.add(const Duration(milliseconds: 80)),
+            ),
+          )
+          ..capture(
+            _diagnosticEvent(
+              voice: DrumVoice.snare,
+              velocity: 64,
+              timestamp: startedAt.add(const Duration(milliseconds: 160)),
+            ),
+          )
+          ..capture(
+            _diagnosticEvent(
+              voice: DrumVoice.snare,
+              velocity: 63,
+              timestamp: startedAt.add(const Duration(milliseconds: 240)),
+            ),
+          );
+
+        expect(controller.stop(), '[S] [S:^R] [S] [S:(L)]');
+      },
+    );
+
+    test('kick capture does not invent hand sticking from velocity', () {
+      final DateTime startedAt = DateTime(2026);
+      final MidiPatternCaptureController controller =
+          MidiPatternCaptureController(clock: () => startedAt);
+
+      controller.record();
+      controller
+        ..capture(
+          _diagnosticEvent(
+            voice: DrumVoice.kick,
+            velocity: 127,
+            timestamp: startedAt,
+          ),
+        )
+        ..capture(
+          _diagnosticEvent(
+            voice: DrumVoice.kick,
+            velocity: 10,
+            timestamp: startedAt.add(const Duration(milliseconds: 80)),
+          ),
+        );
+
+      expect(controller.stop(), '[K] [K]');
+    });
+
+    test('velocity thresholds are configurable', () {
+      final DateTime startedAt = DateTime(2026);
+      final MidiPatternCaptureController controller =
+          MidiPatternCaptureController(
+            clock: () => startedAt,
+            builder: const MidiPatternBuilder(
+              config: MidiPatternCaptureConfig(
+                ghostVelocityMaximum: 35,
+                accentVelocityMinimum: 100,
+              ),
+            ),
+          );
+
+      controller.record();
+      controller
+        ..capture(
+          _diagnosticEvent(
+            voice: DrumVoice.snare,
+            velocity: 99,
+            timestamp: startedAt,
+          ),
+        )
+        ..capture(
+          _diagnosticEvent(
+            voice: DrumVoice.snare,
+            velocity: 100,
+            timestamp: startedAt.add(const Duration(milliseconds: 80)),
+          ),
+        )
+        ..capture(
+          _diagnosticEvent(
+            voice: DrumVoice.snare,
+            velocity: 35,
+            timestamp: startedAt.add(const Duration(milliseconds: 160)),
+          ),
+        );
+
+      expect(controller.stop(), '[S] [S:^R(L)]');
+    });
+
     test('Record clears the previous tempo estimate', () {
       final DateTime startedAt = DateTime(2026);
       final MidiPatternCaptureController controller =
@@ -258,6 +441,65 @@ void main() {
         ]),
         '[S] [HH]',
       );
+    });
+
+    test('captured structured strokes serialize as one voice-first phrase', () {
+      final String pattern = builder.buildPattern(<CapturedMidiHit>[
+        _hit(
+          DrumVoice.snare,
+          velocity: 120,
+          stroke: _stroke(
+            DrumSheetStrokeHand.right,
+            articulation: DrumSheetStrokeArticulation.accent,
+          ),
+        ),
+        _hit(
+          DrumVoice.snare,
+          velocity: 24,
+          offset: const Duration(milliseconds: 80),
+          stroke: _stroke(
+            DrumSheetStrokeHand.left,
+            articulation: DrumSheetStrokeArticulation.ghost,
+          ),
+        ),
+        _hit(
+          DrumVoice.snare,
+          velocity: 28,
+          offset: const Duration(milliseconds: 160),
+          stroke: _stroke(
+            DrumSheetStrokeHand.left,
+            articulation: DrumSheetStrokeArticulation.ghost,
+          ),
+        ),
+      ]);
+
+      expect(pattern, '[S:^R(L)(L)]');
+      final List<DrumSheetNotationNote> notes = DrumSheetPatternParser.parse(
+        pattern,
+      );
+      expect(notes, hasLength(3));
+      expect(notes[0].accent, isTrue);
+      expect(notes[1].ghost, isTrue);
+      expect(notes[2].ghost, isTrue);
+    });
+
+    test('captured simultaneous structured voices serialize together', () {
+      final String pattern = builder.buildPattern(<CapturedMidiHit>[
+        _hit(
+          DrumVoice.hiHatClosed,
+          velocity: 80,
+          stroke: _stroke(DrumSheetStrokeHand.right),
+        ),
+        _hit(
+          DrumVoice.snare,
+          velocity: 88,
+          offset: const Duration(milliseconds: 8),
+          stroke: _stroke(DrumSheetStrokeHand.left),
+        ),
+      ]);
+
+      expect(pattern, '[HH:R S:L]');
+      expect(() => DrumSheetPatternParser.parse(pattern), returnsNormally);
     });
 
     test('closed and open hi-hat serialize distinctly', () {
@@ -777,8 +1019,21 @@ CapturedMidiHit _hit(
   DrumVoice voice, {
   required int velocity,
   Duration offset = Duration.zero,
+  DrumSheetStrokeDescriptor? stroke,
 }) {
-  return CapturedMidiHit(voice: voice, velocity: velocity, offset: offset);
+  return CapturedMidiHit(
+    voice: voice,
+    velocity: velocity,
+    offset: offset,
+    stroke: stroke,
+  );
+}
+
+DrumSheetStrokeDescriptor _stroke(
+  DrumSheetStrokeHand hand, {
+  DrumSheetStrokeArticulation articulation = DrumSheetStrokeArticulation.normal,
+}) {
+  return DrumSheetStrokeDescriptor(hand: hand, articulation: articulation);
 }
 
 MidiDiagnosticEvent _diagnosticEvent({

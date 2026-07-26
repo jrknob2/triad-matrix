@@ -13,6 +13,10 @@ class MidiPatternCaptureConfig {
   final double tempoEventsPerQuarterNote;
   final int minimumEstimatedBpm;
   final int maximumEstimatedBpm;
+  final int ghostVelocityMaximum;
+  final int accentVelocityMinimum;
+  final DrumSheetStrokeHand ghostStrokeHand;
+  final DrumSheetStrokeHand accentStrokeHand;
 
   const MidiPatternCaptureConfig({
     this.simultaneousWindow = const Duration(milliseconds: 30),
@@ -21,10 +25,17 @@ class MidiPatternCaptureConfig {
     this.tempoEventsPerQuarterNote = 2,
     this.minimumEstimatedBpm = 30,
     this.maximumEstimatedBpm = 260,
+    this.ghostVelocityMaximum = 63,
+    this.accentVelocityMinimum = 100,
+    this.ghostStrokeHand = DrumSheetStrokeHand.left,
+    this.accentStrokeHand = DrumSheetStrokeHand.right,
   }) : assert(tempoIntervalSampleCount > 0),
        assert(tempoEventsPerQuarterNote > 0),
        assert(minimumEstimatedBpm > 0),
-       assert(maximumEstimatedBpm >= minimumEstimatedBpm);
+       assert(maximumEstimatedBpm >= minimumEstimatedBpm),
+       assert(ghostVelocityMaximum >= 0),
+       assert(ghostVelocityMaximum < accentVelocityMinimum),
+       assert(accentVelocityMinimum <= 127);
 }
 
 @immutable
@@ -32,11 +43,13 @@ class CapturedMidiHit {
   final DrumVoice voice;
   final int velocity;
   final Duration offset;
+  final DrumSheetStrokeDescriptor? stroke;
 
   const CapturedMidiHit({
     required this.voice,
     required this.velocity,
     required this.offset,
+    this.stroke,
   });
 }
 
@@ -111,6 +124,7 @@ class MidiPatternCaptureController extends ChangeNotifier {
   void captureMappedEvent({
     required RawMidiEvent raw,
     required DrumInputEvent drum,
+    DrumSheetStrokeDescriptor? stroke,
   }) {
     if (!_isRecording) {
       return;
@@ -124,11 +138,14 @@ class MidiPatternCaptureController extends ChangeNotifier {
 
     final DateTime startedAt = _startedAt ?? raw.timestamp;
     final Duration offset = raw.timestamp.difference(startedAt);
+    final DrumSheetStrokeDescriptor? resolvedStroke =
+        stroke ?? _strokeForCapturedVelocity(raw.velocity, drum.voice);
     _hits.add(
       CapturedMidiHit(
         voice: drum.voice,
         velocity: raw.velocity,
         offset: offset.isNegative ? Duration.zero : offset,
+        stroke: resolvedStroke,
       ),
     );
     _scheduleLiveUpdate();
@@ -164,6 +181,26 @@ class MidiPatternCaptureController extends ChangeNotifier {
     _liveUpdateTimer?.cancel();
     super.dispose();
   }
+
+  DrumSheetStrokeDescriptor? _strokeForCapturedVelocity(
+    int velocity,
+    DrumVoice voice,
+  ) {
+    if (!_supportsVelocityArticulation(voice)) return null;
+    if (velocity <= builder.config.ghostVelocityMaximum) {
+      return DrumSheetStrokeDescriptor(
+        hand: builder.config.ghostStrokeHand,
+        articulation: DrumSheetStrokeArticulation.ghost,
+      );
+    }
+    if (velocity >= builder.config.accentVelocityMinimum) {
+      return DrumSheetStrokeDescriptor(
+        hand: builder.config.accentStrokeHand,
+        articulation: DrumSheetStrokeArticulation.accent,
+      );
+    }
+    return null;
+  }
 }
 
 class MidiPatternBuilder {
@@ -187,7 +224,11 @@ class MidiPatternBuilder {
     final List<List<CapturedMidiHit>> groups = _simultaneousGroups(
       supportedHits,
     );
-    final String pattern = groups.map(_patternForGroup).join(' ');
+    final List<DrumSheetNotationNote> notes = <DrumSheetNotationNote>[
+      for (final List<CapturedMidiHit> group in groups)
+        if (_noteForGroup(group) case final DrumSheetNotationNote note) note,
+    ];
+    final String pattern = DrumSheetPatternParser.serialize(notes);
 
     // Keep the capture path honest: generated output must remain accepted by
     // the same parser used by the rest of the authoring UI during development.
@@ -295,12 +336,41 @@ class MidiPatternBuilder {
     });
   }
 
-  String _patternForGroup(List<CapturedMidiHit> group) {
-    final String labels = group
-        .map((CapturedMidiHit hit) => _voiceLabel(hit.voice))
-        .whereType<String>()
-        .join(' ');
-    return labels.isEmpty ? '' : '[$labels]';
+  DrumSheetNotationNote? _noteForGroup(List<CapturedMidiHit> group) {
+    final List<DrumSheetVoiceStroke> voiceStrokes = <DrumSheetVoiceStroke>[];
+    for (final CapturedMidiHit hit in group) {
+      final DrumSheetVoice? voice = _sheetVoice(hit.voice);
+      if (voice == null) continue;
+      voiceStrokes.add(DrumSheetVoiceStroke(voice: voice, stroke: hit.stroke));
+    }
+    if (voiceStrokes.isEmpty) return null;
+
+    final List<DrumSheetVoice> voices = <DrumSheetVoice>[
+      for (final DrumSheetVoiceStroke voiceStroke in voiceStrokes)
+        voiceStroke.voice,
+    ];
+    final List<DrumSheetStrokeDescriptor> authoredStrokes =
+        <DrumSheetStrokeDescriptor>[
+          for (final DrumSheetVoiceStroke voiceStroke in voiceStrokes)
+            if (voiceStroke.stroke != null) voiceStroke.stroke!,
+        ];
+    return DrumSheetNotationNote(
+      voices: voices,
+      voiceStrokes: voiceStrokes,
+      sticking: authoredStrokes
+          .map((DrumSheetStrokeDescriptor stroke) => stroke.displayLabel)
+          .join(),
+      accent: authoredStrokes.any(
+        (DrumSheetStrokeDescriptor stroke) =>
+            stroke.articulation == DrumSheetStrokeArticulation.accent,
+      ),
+      ghost:
+          authoredStrokes.isNotEmpty &&
+          authoredStrokes.every(
+            (DrumSheetStrokeDescriptor stroke) =>
+                stroke.articulation == DrumSheetStrokeArticulation.ghost,
+          ),
+    );
   }
 }
 
@@ -340,5 +410,27 @@ int _voiceOrder(DrumVoice voice) {
     DrumVoice.floorTom => 8,
     DrumVoice.kick => 9,
     DrumVoice.unknown => 10,
+  };
+}
+
+DrumSheetVoice? _sheetVoice(DrumVoice voice) {
+  return switch (voice) {
+    DrumVoice.snare => DrumSheetVoice.snare,
+    DrumVoice.kick => DrumSheetVoice.kick,
+    DrumVoice.hiHatClosed || DrumVoice.hiHatPedal => DrumSheetVoice.hihat,
+    DrumVoice.hiHatOpen => DrumSheetVoice.openHiHat,
+    DrumVoice.tom1 => DrumSheetVoice.tom1,
+    DrumVoice.tom2 => DrumSheetVoice.tom2,
+    DrumVoice.floorTom => DrumSheetVoice.floorTom,
+    DrumVoice.crash => DrumSheetVoice.crash,
+    DrumVoice.ride => DrumSheetVoice.ride,
+    DrumVoice.unknown => null,
+  };
+}
+
+bool _supportsVelocityArticulation(DrumVoice voice) {
+  return switch (voice) {
+    DrumVoice.kick || DrumVoice.hiHatPedal || DrumVoice.unknown => false,
+    _ => true,
   };
 }

@@ -144,7 +144,11 @@ Current MVP rules:
 - The estimate assumes the generated default capture pattern uses eighth-note
   spacing, so two captured event gaps equal one quarter-note beat.
 - Capture emits voice-first notation such as `[HH K]`, `[OHH]`, and `[S]`.
-- Capture does not infer hand sticking from MIDI velocity.
+- Capture uses MIDI velocity to classify hand-played voices into normal,
+  accented, and ghosted strokes. Normal hits omit sticking; accented and
+  ghosted captures emit semantic voice-first stroke notation such as
+  `[S:^R(L)(L)]`. Initial thresholds are velocity `<= 63` for ghost strokes
+  and `>= 100` for accented strokes.
 - The estimate is shown for quick authoring feedback only. It is not assessment,
   scoring, or a full tempo-grid inference engine.
 
@@ -291,8 +295,9 @@ Use the diagnostic event log to fill this out.
 - The note map is in memory only.
 - The LEKATO-specific map has not been authored yet.
 - The diagnostic does not persist recordings or mappings.
-- The diagnostic does not infer left hand or right hand. A MIDI pad strike does
-  not identify which limb hit the pad.
+- MIDI pad strikes do not identify which limb hit the pad. Capture currently
+  uses a simple default hand heuristic for expressive strokes: accents use `R`
+  and ghosts use `L`. Normal captures still omit sticking.
 - Unknown MIDI notes remain visible and map to `unknown`.
 - Device reconnection is handled by rescan/setup-change behavior; if automatic
   reconnection does not restore input immediately, use `Rescan` and `Connect`.
