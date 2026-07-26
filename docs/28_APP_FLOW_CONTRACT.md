@@ -457,8 +457,10 @@ Current implementation:
 - hierarchical Curriculum Compass navigation
 - one stable Progress compass view; there is no Practice Time / Exercises
   Completed selector on this screen
-- radial per-spoke chart for three or more curriculum nodes
-- stable fallback summaries for one-skill and two-skill curriculum states
+- radial per-spoke chart for every non-empty compass level, including one-node
+  and two-node states
+- one-node and two-node states must not fall back to list/card presentation;
+  their children are still compass spokes
 - compass levels:
   - top-level curriculum categories
   - category topic nodes
@@ -510,9 +512,14 @@ Current implementation:
   the selected-node button:
   - curriculum, category, and topic nodes with visible child nodes drill into the
     next compass level
-  - lesson nodes open the lesson when a lesson route is available
+  - lesson nodes with visible child nodes drill into the exercise compass
   - exercise nodes open or practice the exercise when an exercise route is
     available
+- the compass remains the primary navigation surface through lesson and exercise
+  depth:
+  - opening a topic shows lesson titles as compass spokes
+  - opening a lesson shows exercise titles as compass spokes
+  - only opening an exercise leaves the compass
 - topics with lesson content and lessons with exercise content filter their
   compass children to content the user has meaningfully interacted with
 - a lesson is meaningfully interacted with when existing persisted progress shows
@@ -538,7 +545,14 @@ Current implementation:
 - selected-node metric values animate visually to their new values without
   mutating persisted progress values
 - curriculum nodes with children use a contextual `Explore <Node>` action label
-- topic browse-all actions open Explore with the selected node's lesson filter
+- topic browse-all actions use `Browse All Lessons` and open Explore with the
+  selected node's lesson filter
+- lesson browse-all actions use `View All Exercises` and open the existing
+  lesson detail route only as an explicit catalog escape hatch
+- selected lesson summaries use `Explore <Lesson>` to drill into the exercise
+  compass; they must not also show a default `Open Lesson` action
+- selected exercise summaries use `Practice Exercise` to leave the compass and
+  open the existing exercise/practice experience
 - selected-node summaries show exact values:
   - Progress as a percentage derived from completed/available exercises
   - practiced duration, preserving `< 1 min` for nonzero sub-minute practice

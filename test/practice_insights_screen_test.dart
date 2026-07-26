@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:drumcabulary/features/coach/lesson_plan.dart';
 import 'package:drumcabulary/features/progress/curriculum_compass_aggregator.dart';
 import 'package:drumcabulary/features/progress/practice_insights_screen.dart';
 import 'package:flutter/gestures.dart';
@@ -168,35 +169,63 @@ void main() {
   testWidgets('CurriculumCompassChart handles one-node edge state', (
     WidgetTester tester,
   ) async {
+    String? selectedNodeId;
+    String? activatedNodeId;
     await tester.pumpWidget(
       MaterialApp(
         home: CurriculumCompassChart(
           values: _rootValues.take(1).toList(growable: false),
-          selectedNodeId: 'timing',
-          onNodeSelected: (_) {},
+          selectedNodeId: null,
+          onNodeSelected: (String nodeId) {
+            selectedNodeId = nodeId;
+          },
+          onNodeActivated: (String nodeId) {
+            activatedNodeId = nodeId;
+          },
         ),
       ),
     );
 
-    expect(find.text('One node tracked'), findsOneWidget);
-    expect(find.text('Timing'), findsOneWidget);
-    expect(find.text('Progress'), findsWidgets);
+    expect(find.text('One node tracked'), findsNothing);
+    await tester.tapAt(
+      tester.getCenter(find.byType(CurriculumCompassChart)) +
+          const Offset(0, -100),
+    );
+    await tester.pump(kDoubleTapMinTime);
+    await tester.tapAt(
+      tester.getCenter(find.byType(CurriculumCompassChart)) +
+          const Offset(0, -100),
+    );
+    await tester.pumpAndSettle();
+
+    expect(selectedNodeId, 'timing');
+    expect(activatedNodeId, 'timing');
   });
 
   testWidgets('CurriculumCompassChart handles two-node edge state', (
     WidgetTester tester,
   ) async {
+    String? selectedNodeId;
     await tester.pumpWidget(
       MaterialApp(
         home: CurriculumCompassChart(
           values: _rootValues.take(2).toList(growable: false),
           selectedNodeId: 'timing',
-          onNodeSelected: (_) {},
+          onNodeSelected: (String nodeId) {
+            selectedNodeId = nodeId;
+          },
         ),
       ),
     );
 
-    expect(find.text('Two nodes tracked'), findsOneWidget);
+    expect(find.text('Two nodes tracked'), findsNothing);
+    await tester.tapAt(
+      tester.getCenter(find.byType(CurriculumCompassChart)) +
+          const Offset(0, 100),
+    );
+    await tester.pumpAndSettle();
+
+    expect(selectedNodeId, 'grooves');
   });
 
   testWidgets('PracticeInsightsScreen shows no-data state', (
@@ -218,6 +247,82 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('No curriculum nodes yet'), findsOneWidget);
+  });
+
+  testWidgets('PracticeInsightsScreen distinguishes no lessons available', (
+    WidgetTester tester,
+  ) async {
+    _useLargeSurface(tester);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PracticeInsightsScreen(
+          snapshotLoader: (List<String> nodePath, int pageIndex) async =>
+              _snapshot(
+                currentNode: _emptyTopicNode,
+                breadcrumbs: _emptyTopicBreadcrumbs,
+                values: const <CurriculumCompassPoint>[],
+              ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('No lessons are available yet'), findsOneWidget);
+    expect(
+      find.text('No lessons are attached to this topic yet.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('PracticeInsightsScreen distinguishes no exercises available', (
+    WidgetTester tester,
+  ) async {
+    _useLargeSurface(tester);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PracticeInsightsScreen(
+          snapshotLoader: (List<String> nodePath, int pageIndex) async =>
+              _snapshot(
+                currentNode: _emptyLessonNode,
+                breadcrumbs: _emptyLessonBreadcrumbs,
+                values: const <CurriculumCompassPoint>[],
+              ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('No exercises are available yet'), findsOneWidget);
+    expect(
+      find.text('No exercises are available in this lesson yet.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('one interacted lesson still renders as compass, not a list', (
+    WidgetTester tester,
+  ) async {
+    _useLargeSurface(tester);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PracticeInsightsScreen(
+          snapshotLoader: (List<String> nodePath, int pageIndex) async =>
+              _snapshot(
+                currentNode: _coreGroovesNode,
+                breadcrumbs: _coreGroovesBreadcrumbs,
+                values: <CurriculumCompassPoint>[_lessonValues.first],
+                childKind: CompassNodeKind.lesson,
+                availableChildCount: 1,
+                valuesFilteredByInteraction: true,
+              ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('One node tracked'), findsNothing);
+    expect(find.text('Money Beat'), findsOneWidget);
+    expect(find.text('Explore Money Beat'), findsOneWidget);
   });
 
   testWidgets(
@@ -388,8 +493,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('No lesson activity yet'), findsOneWidget);
-    expect(find.text('View All Lessons'), findsOneWidget);
-    await tester.tap(find.text('View All Lessons'));
+    expect(find.text('Browse All Lessons'), findsOneWidget);
+    await tester.tap(find.text('Browse All Lessons'));
     expect(openedSkillId, 'grooves');
   });
 
@@ -421,22 +526,19 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(requestedPages, contains(1));
-    expect(find.text('Lesson 10'), findsWidgets);
+    expect(find.text('Lesson 9'), findsWidgets);
+    expect(find.text('Explore Lesson 9'), findsOneWidget);
   });
 
-  testWidgets('lesson and exercise contextual callbacks are available', (
+  testWidgets('lessons drill to exercise compass before exercise activation', (
     WidgetTester tester,
   ) async {
     _useLargeSurface(tester);
-    String? openedLessonId;
     String? openedExerciseKey;
     await tester.pumpWidget(
       MaterialApp(
         home: PracticeInsightsScreen(
           snapshotLoader: _snapshotForPath,
-          onOpenLesson: (String lessonId) {
-            openedLessonId = lessonId;
-          },
           onOpenExercise: (String lessonId, String exerciseId) {
             openedExerciseKey = '$lessonId/$exerciseId';
           },
@@ -450,13 +552,57 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Explore Core Grooves'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Open Lesson'));
-    expect(openedLessonId, 'money-beat');
+    expect(find.text('Open Lesson'), findsNothing);
+    expect(find.text('Explore Money Beat'), findsOneWidget);
 
     await tester.tap(find.text('Explore Money Beat'));
     await tester.pumpAndSettle();
+    expect(find.text('Add Snare'), findsWidgets);
     await tester.tap(find.text('Practice Exercise'));
     expect(openedExerciseKey, 'money-beat/add-snare');
+  });
+
+  testWidgets('no-interaction exercise state offers view-all exercises', (
+    WidgetTester tester,
+  ) async {
+    _useLargeSurface(tester);
+    String? openedLessonId;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PracticeInsightsScreen(
+          snapshotLoader: _snapshotForPath,
+          onOpenSkill: (_) {},
+          onOpenLesson: (String lessonId) {
+            openedLessonId = lessonId;
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await _tapCompassNode(tester, 1);
+    await tester.tap(find.text('Explore Grooves'));
+    await tester.pumpAndSettle();
+    await _tapCompassNode(tester, 1, count: 3, distance: 126);
+    await tester.tap(find.text('Explore Empty Topic'));
+    await tester.pumpAndSettle();
+    expect(find.text('Browse All Lessons'), findsOneWidget);
+
+    await tester.tap(find.text('Curriculum').first);
+    await tester.pumpAndSettle();
+    await _tapCompassNode(tester, 1);
+    await tester.tap(find.text('Explore Grooves'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Explore Core Grooves'));
+    await tester.pumpAndSettle();
+    await _tapCompassNode(tester, 1, count: 11, distance: 126);
+    await tester.tap(find.text('Explore Empty Lesson'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('No exercises practiced yet'), findsOneWidget);
+    expect(find.text('View All Exercises'), findsOneWidget);
+    await tester.tap(find.text('View All Exercises'));
+    expect(openedLessonId, 'empty-lesson');
   });
 }
 
@@ -579,6 +725,20 @@ Future<CurriculumCompassSnapshot> _snapshotForPath(
       valuesFilteredByInteraction: true,
     );
   }
+  if (_samePath(nodePath, const <String>[
+    'grooves',
+    'core-grooves',
+    'lesson:empty-lesson',
+  ])) {
+    return _snapshot(
+      currentNode: _emptyLessonNode,
+      breadcrumbs: _emptyLessonBreadcrumbs,
+      values: const <CurriculumCompassPoint>[],
+      childKind: CompassNodeKind.exercise,
+      availableChildCount: 2,
+      valuesFilteredByInteraction: true,
+    );
+  }
   return _snapshot(
     currentNode: _rootNode,
     breadcrumbs: _rootBreadcrumbs,
@@ -650,6 +810,39 @@ const CurriculumNode _moneyBeatNode = CurriculumNode(
   id: 'lesson:money-beat',
   title: 'Money Beat',
   kind: CompassNodeKind.lesson,
+);
+
+const Lesson _emptyLesson = Lesson(
+  id: 'empty-lesson',
+  title: 'Empty Lesson',
+  level: 'beginner',
+  skill: 'grooves',
+  order: 99,
+  estimatedMinutes: 10,
+  overview: 'Empty lesson overview.',
+  objective: 'Objective.',
+  exercises: <LessonExercise>[
+    LessonExercise(
+      id: 'first',
+      title: 'First',
+      why: 'Why.',
+      what: 'What.',
+      how: 'How.',
+      tempo: TempoTarget(start: 60, target: 90),
+      notation: ExerciseNotation(
+        sections: <ExerciseNotationSection>[
+          ExerciseNotationSection(pattern: '[S]'),
+        ],
+      ),
+    ),
+  ],
+);
+
+const CurriculumNode _emptyLessonNode = CurriculumNode(
+  id: 'lesson:empty-lesson',
+  title: 'Empty Lesson',
+  kind: CompassNodeKind.lesson,
+  lesson: _emptyLesson,
 );
 
 const List<CurriculumBreadcrumb> _rootBreadcrumbs = <CurriculumBreadcrumb>[
@@ -733,6 +926,30 @@ const List<CurriculumBreadcrumb> _moneyBeatBreadcrumbs = <CurriculumBreadcrumb>[
     kind: CompassNodeKind.lesson,
   ),
 ];
+
+const List<CurriculumBreadcrumb> _emptyLessonBreadcrumbs =
+    <CurriculumBreadcrumb>[
+      CurriculumBreadcrumb(
+        id: CurriculumCompassTreeBuilder.rootId,
+        title: 'Curriculum',
+        kind: CompassNodeKind.curriculum,
+      ),
+      CurriculumBreadcrumb(
+        id: 'grooves',
+        title: 'Grooves',
+        kind: CompassNodeKind.category,
+      ),
+      CurriculumBreadcrumb(
+        id: 'core-grooves',
+        title: 'Core Grooves',
+        kind: CompassNodeKind.topic,
+      ),
+      CurriculumBreadcrumb(
+        id: 'lesson:empty-lesson',
+        title: 'Empty Lesson',
+        kind: CompassNodeKind.lesson,
+      ),
+    ];
 
 const List<CurriculumCompassPoint> _rootValues = <CurriculumCompassPoint>[
   CurriculumCompassPoint(
@@ -839,6 +1056,13 @@ final List<CurriculumCompassPoint> _lessonValues = <CurriculumCompassPoint>[
     lessonId: 'money-beat',
     progressRatio: 0.5,
     practicedSeconds: 120,
+  ),
+  _lessonPoint(
+    nodeId: 'lesson:empty-lesson',
+    label: 'Empty Lesson',
+    lessonId: 'empty-lesson',
+    progressRatio: 0,
+    practicedSeconds: 30,
   ),
   for (int index = 1; index <= 10; index += 1)
     _lessonPoint(
