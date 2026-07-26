@@ -11,6 +11,7 @@ import 'curriculum_compass_aggregator.dart';
 
 const double _compassFullTurn = math.pi * 2;
 const double _compassTopAngle = -math.pi / 2;
+const double curriculumCompassInnerZeroRadiusFactor = 0.26;
 const Duration _compassRotationDuration = Duration(milliseconds: 320);
 const Duration _summaryTransitionDuration = Duration(milliseconds: 220);
 const Duration _metricTransitionDuration = Duration(milliseconds: 260);
@@ -32,14 +33,30 @@ double _normalizeCompassAngle(double angle) {
   return normalized;
 }
 
+double curriculumCompassDisplayRadiusForProgress({
+  required double outerRadius,
+  required double progressRatio,
+}) {
+  final double innerRadius =
+      outerRadius * curriculumCompassInnerZeroRadiusFactor;
+  return innerRadius + progressRatio.clamp(0, 1) * (outerRadius - innerRadius);
+}
+
 class PracticeInsightsScreen extends StatefulWidget {
   final ValueChanged<String>? onOpenSkill;
-  final Future<CurriculumCompassSnapshot> Function(List<String> nodePath)?
+  final ValueChanged<String>? onOpenLesson;
+  final CompassExerciseCallback? onOpenExercise;
+  final Future<CurriculumCompassSnapshot> Function(
+    List<String> nodePath,
+    int pageIndex,
+  )?
   snapshotLoader;
 
   const PracticeInsightsScreen({
     super.key,
     this.onOpenSkill,
+    this.onOpenLesson,
+    this.onOpenExercise,
     this.snapshotLoader,
   });
 
@@ -49,15 +66,23 @@ class PracticeInsightsScreen extends StatefulWidget {
 
 class _PracticeInsightsScreenState extends State<PracticeInsightsScreen> {
   List<String> _nodePath = const <String>[];
+  int _pageIndex = 0;
   late Future<CurriculumCompassSnapshot> _snapshotFuture = _loadSnapshot(
     _nodePath,
+    _pageIndex,
   );
   String? _selectedNodeId;
 
-  Future<CurriculumCompassSnapshot> _loadSnapshot(List<String> nodePath) async {
-    final Future<CurriculumCompassSnapshot> Function(List<String> nodePath)?
+  Future<CurriculumCompassSnapshot> _loadSnapshot(
+    List<String> nodePath,
+    int pageIndex,
+  ) async {
+    final Future<CurriculumCompassSnapshot> Function(
+      List<String> nodePath,
+      int pageIndex,
+    )?
     loader = widget.snapshotLoader;
-    if (loader != null) return loader(nodePath);
+    if (loader != null) return loader(nodePath, pageIndex);
 
     final library = await LessonPlanLoader.loadContent();
     final progressService = LessonProgressService(
@@ -71,6 +96,7 @@ class _PracticeInsightsScreenState extends State<PracticeInsightsScreen> {
       root: root,
       nodePath: nodePath,
       progressService: progressService,
+      pageIndex: pageIndex,
     );
   }
 
@@ -89,7 +115,7 @@ class _PracticeInsightsScreenState extends State<PracticeInsightsScreen> {
                   error: snapshot.error,
                   onRetry: () {
                     setState(() {
-                      _snapshotFuture = _loadSnapshot(_nodePath);
+                      _snapshotFuture = _loadSnapshot(_nodePath, _pageIndex);
                     });
                   },
                 );
@@ -106,7 +132,10 @@ class _PracticeInsightsScreenState extends State<PracticeInsightsScreen> {
                 },
                 onBreadcrumbSelected: _openBreadcrumb,
                 onDrillIn: _drillIntoNode,
+                onPageSelected: _openPage,
                 onOpenSkill: widget.onOpenSkill,
+                onOpenLesson: widget.onOpenLesson,
+                onOpenExercise: widget.onOpenExercise,
               );
             },
       ),
@@ -114,11 +143,11 @@ class _PracticeInsightsScreenState extends State<PracticeInsightsScreen> {
   }
 
   void _drillIntoNode(String nodeId) {
-    if (_nodePath.isNotEmpty) return;
     setState(() {
       _nodePath = <String>[..._nodePath, nodeId];
+      _pageIndex = 0;
       _selectedNodeId = null;
-      _snapshotFuture = _loadSnapshot(_nodePath);
+      _snapshotFuture = _loadSnapshot(_nodePath, _pageIndex);
     });
   }
 
@@ -126,8 +155,17 @@ class _PracticeInsightsScreenState extends State<PracticeInsightsScreen> {
     final List<String> nextPath = _nodePath.take(index).toList(growable: false);
     setState(() {
       _nodePath = nextPath;
+      _pageIndex = 0;
       _selectedNodeId = null;
-      _snapshotFuture = _loadSnapshot(_nodePath);
+      _snapshotFuture = _loadSnapshot(_nodePath, _pageIndex);
+    });
+  }
+
+  void _openPage(int pageIndex) {
+    setState(() {
+      _pageIndex = pageIndex;
+      _selectedNodeId = null;
+      _snapshotFuture = _loadSnapshot(_nodePath, _pageIndex);
     });
   }
 
@@ -150,7 +188,10 @@ class _PracticePortraitView extends StatelessWidget {
   final ValueChanged<String> onSelected;
   final ValueChanged<int> onBreadcrumbSelected;
   final ValueChanged<String> onDrillIn;
+  final ValueChanged<int> onPageSelected;
   final ValueChanged<String>? onOpenSkill;
+  final ValueChanged<String>? onOpenLesson;
+  final CompassExerciseCallback? onOpenExercise;
 
   const _PracticePortraitView({
     required this.snapshot,
@@ -158,7 +199,10 @@ class _PracticePortraitView extends StatelessWidget {
     required this.onSelected,
     required this.onBreadcrumbSelected,
     required this.onDrillIn,
+    required this.onPageSelected,
     required this.onOpenSkill,
+    required this.onOpenLesson,
+    required this.onOpenExercise,
   });
 
   @override
@@ -182,16 +226,18 @@ class _PracticePortraitView extends StatelessWidget {
               const _CompassHeader(),
               const SizedBox(height: 16),
               if (!snapshot.hasNodes)
-                const _PracticePortraitEmptyState(
-                  title: 'No curriculum nodes yet',
-                  message: 'Add curriculum child nodes to build the compass.',
+                _PracticePortraitEmptyState(
+                  title: _emptyStateTitle(snapshot),
+                  message: _emptyStateMessage(snapshot),
+                  actionLabel: _emptyStateActionLabel(snapshot),
+                  onAction: _emptyStateAction,
                 )
               else ...<Widget>[
                 if (!snapshot.hasMetricData) ...<Widget>[
                   const _PracticePortraitEmptyState(
                     title: 'No practice recorded yet',
                     message:
-                        'The compass is ready. Practice or complete an exercise to fill it in.',
+                        'The compass is ready. Complete an exercise to move progress outward.',
                   ),
                   const SizedBox(height: 16),
                 ],
@@ -202,6 +248,19 @@ class _PracticePortraitView extends StatelessWidget {
                   onNodeSelected: onSelected,
                   onNodeActivated: _activateNode,
                 ),
+                if (snapshot.pageCount > 1) ...<Widget>[
+                  const SizedBox(height: 12),
+                  _CompassPaginationControls(
+                    pageIndex: snapshot.pageIndex,
+                    pageCount: snapshot.pageCount,
+                    onPrevious: snapshot.hasPreviousPage
+                        ? () => onPageSelected(snapshot.pageIndex - 1)
+                        : null,
+                    onNext: snapshot.hasNextPage
+                        ? () => onPageSelected(snapshot.pageIndex + 1)
+                        : null,
+                  ),
+                ],
                 const SizedBox(height: 16),
                 if (selectedValue != null)
                   AnimatedSwitcher(
@@ -227,15 +286,12 @@ class _PracticePortraitView extends StatelessWidget {
                         'compass-summary-${selectedValue.nodeId}',
                       ),
                       value: selectedValue,
-                      canDrillIn: snapshot.isRoot && selectedValue.hasChildren,
-                      onDrillIn: snapshot.isRoot && selectedValue.hasChildren
+                      onDrillIn: selectedValue.hasChildren
                           ? () => onDrillIn(selectedValue.nodeId)
                           : null,
-                      onOpenSkill: onOpenSkill == null
-                          ? null
-                          : snapshot.isRoot
-                          ? null
-                          : () => onOpenSkill!(selectedValue.lessonFilterId),
+                      onOpenSkill: _openSkillActionFor(selectedValue),
+                      onOpenLesson: _openLessonActionFor(selectedValue),
+                      onOpenExercise: _openExerciseActionFor(selectedValue),
                     ),
                   ),
               ],
@@ -258,14 +314,60 @@ class _PracticePortraitView extends StatelessWidget {
   void _activateNode(String nodeId) {
     final CurriculumCompassPoint? value = _valueFor(nodeId);
     if (value == null) return;
-    if (snapshot.isRoot && value.hasChildren) {
+    if (value.hasChildren) {
       onDrillIn(value.nodeId);
       return;
     }
+    final VoidCallback? action =
+        _openExerciseActionFor(value) ??
+        _openLessonActionFor(value) ??
+        _openSkillActionFor(value);
+    action?.call();
+  }
+
+  VoidCallback? _openSkillActionFor(CurriculumCompassPoint value) {
     final ValueChanged<String>? openSkill = onOpenSkill;
-    if (!snapshot.isRoot && openSkill != null) {
-      openSkill(value.lessonFilterId);
+    if (openSkill == null) return null;
+    if (value.kind == CompassNodeKind.lesson ||
+        value.kind == CompassNodeKind.exercise) {
+      return null;
     }
+    if (value.hasChildren) return null;
+    return () => openSkill(value.lessonFilterId);
+  }
+
+  VoidCallback? _openLessonActionFor(CurriculumCompassPoint value) {
+    final ValueChanged<String>? openLesson = onOpenLesson;
+    if (openLesson == null || value.kind != CompassNodeKind.lesson) return null;
+    final String? lessonId = value.lessonId;
+    if (lessonId == null) return null;
+    return () => openLesson(lessonId);
+  }
+
+  VoidCallback? _openExerciseActionFor(CurriculumCompassPoint value) {
+    final CompassExerciseCallback? openExercise = onOpenExercise;
+    if (openExercise == null || value.kind != CompassNodeKind.exercise) {
+      return null;
+    }
+    final String? lessonId = value.lessonId;
+    final String? exerciseId = value.exerciseId;
+    if (lessonId == null || exerciseId == null) return null;
+    return () => openExercise(lessonId, exerciseId);
+  }
+
+  VoidCallback? get _emptyStateAction {
+    final ValueChanged<String>? openSkill = onOpenSkill;
+    if (openSkill != null && snapshot.childKind == CompassNodeKind.lesson) {
+      return () => openSkill(snapshot.currentNode.lessonFilterId);
+    }
+    final ValueChanged<String>? openLesson = onOpenLesson;
+    final String? lessonId = snapshot.currentNode.lesson?.id;
+    if (openLesson != null &&
+        lessonId != null &&
+        snapshot.childKind == CompassNodeKind.exercise) {
+      return () => openLesson(lessonId);
+    }
+    return null;
   }
 
   CurriculumCompassPoint? _valueFor(String nodeId) {
@@ -507,6 +609,7 @@ class _CurriculumCompassPainter extends CustomPainter {
 
     final Offset center = size.center(Offset.zero);
     final double radius = math.min(size.width, size.height) * 0.30;
+    final double innerRadius = radius * curriculumCompassInnerZeroRadiusFactor;
     final Paint gridPaint = Paint()
       ..color = DrumcabularyTheme.edgeBorder
       ..style = PaintingStyle.stroke
@@ -515,65 +618,59 @@ class _CurriculumCompassPainter extends CustomPainter {
       ..color = DrumcabularyTheme.edgeBorder.withValues(alpha: 0.72)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
-    final Paint trackPaint = Paint()
-      ..color = DrumcabularyTheme.edgeBorder.withValues(alpha: 0.42)
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..strokeWidth = 4;
-    final Paint practicePaint = Paint()
+    final Paint polygonFillPaint = Paint()
+      ..color = DrumcabularyTheme.edgeOrange.withValues(alpha: 0.12)
+      ..style = PaintingStyle.fill;
+    final Paint polygonStrokePaint = Paint()
       ..color = DrumcabularyTheme.edgeOrange
       ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..strokeWidth = 5;
-    final Paint completionPaint = Paint()
-      ..color = const Color(0xFF52D273)
+      ..strokeWidth = 2.4;
+    final Paint innerRingPaint = Paint()
+      ..color = DrumcabularyTheme.edgeBorder.withValues(alpha: 0.88)
       ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..strokeWidth = 3;
-    final Paint practiceMarkerPaint = Paint()
-      ..color = DrumcabularyTheme.edgeOrange
-      ..style = PaintingStyle.fill;
-    final Paint completionMarkerPaint = Paint()
-      ..color = const Color(0xFF52D273)
-      ..style = PaintingStyle.fill;
+      ..strokeWidth = 1.4;
 
-    for (int ring = 1; ring <= 4; ring += 1) {
+    for (int ring = 0; ring <= 4; ring += 1) {
+      final double ringRadius = innerRadius + (radius - innerRadius) * ring / 4;
       canvas.drawPath(
-        _polygonPath(center, radius * ring / 4, count),
-        gridPaint,
+        _polygonPath(center, ringRadius, count),
+        ring == 0 ? innerRingPaint : gridPaint,
       );
     }
 
     for (int index = 0; index < count; index += 1) {
       final Offset unit = _unitFor(index, count);
-      canvas.drawLine(center, center + unit * radius, spokePaint);
+      canvas.drawLine(
+        center + unit * innerRadius,
+        center + unit * radius,
+        spokePaint,
+      );
     }
 
+    final Path progressPath = Path();
     for (int index = 0; index < count; index += 1) {
       final CurriculumCompassPoint value = values[index];
       final bool selected = value.nodeId == selectedNodeId;
       final Offset unit = _unitFor(index, count);
-      final Offset perpendicular = Offset(-unit.dy, unit.dx);
-      final Offset practiceStart = center + perpendicular * -4;
-      final Offset practiceEnd = center + unit * radius + perpendicular * -4;
-      final Offset completionStart = center + perpendicular * 4;
-      final Offset completionEnd = center + unit * radius + perpendicular * 4;
-      canvas.drawLine(practiceStart, practiceEnd, trackPaint);
-      canvas.drawLine(completionStart, completionEnd, trackPaint);
-
-      final Offset practicePoint =
-          practiceStart +
-          unit * radius * value.practiceInvestmentRatio.clamp(0, 1);
-      final Offset completionPoint =
-          completionStart + unit * radius * value.completionRatio.clamp(0, 1);
-      canvas.drawLine(practiceStart, practicePoint, practicePaint);
-      canvas.drawLine(completionStart, completionPoint, completionPaint);
-      canvas.drawCircle(practicePoint, 3.5, practiceMarkerPaint);
-      canvas.drawCircle(completionPoint, 3, completionMarkerPaint);
+      final double displayRadius = curriculumCompassDisplayRadiusForProgress(
+        outerRadius: radius,
+        progressRatio: value.progressRatio,
+      );
+      final Offset point = center + unit * displayRadius;
+      if (index == 0) {
+        progressPath.moveTo(point.dx, point.dy);
+      } else {
+        progressPath.lineTo(point.dx, point.dy);
+      }
 
       final Offset labelCenter = center + unit * (radius + 42);
       _drawLabel(canvas, size, labelCenter, value, selected: selected);
     }
+    progressPath.close();
+    canvas.drawPath(progressPath, polygonFillPaint);
+    canvas.drawPath(progressPath, polygonStrokePaint);
+
+    _drawCenterHub(canvas, center);
   }
 
   Path _polygonPath(Offset center, double radius, int count) {
@@ -594,6 +691,35 @@ class _CurriculumCompassPainter extends CustomPainter {
     final double angle =
         _compassTopAngle + (_compassFullTurn * index / count) + rotation;
     return Offset(math.cos(angle), math.sin(angle));
+  }
+
+  void _drawCenterHub(Canvas canvas, Offset center) {
+    final Paint hubPaint = Paint()
+      ..color = DrumcabularyTheme.edgeSurfaceSecondary.withValues(alpha: 0.92)
+      ..style = PaintingStyle.fill;
+    final Paint hubBorderPaint = Paint()
+      ..color = DrumcabularyTheme.edgeBorder
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    canvas.drawCircle(center, 28, hubPaint);
+    canvas.drawCircle(center, 28, hubBorderPaint);
+    final TextPainter painter = TextPainter(
+      text: TextSpan(
+        text: 'Progress',
+        style: TextStyle(
+          color: DrumcabularyTheme.edgeTextMuted,
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          height: 1,
+        ),
+      ),
+      textAlign: TextAlign.center,
+      textDirection: textDirection,
+    )..layout(maxWidth: 56);
+    painter.paint(
+      canvas,
+      Offset(center.dx - painter.width / 2, center.dy - painter.height / 2),
+    );
   }
 
   void _drawLabel(
@@ -739,7 +865,7 @@ class _CompassMetricBars extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: <Widget>[
                         Text(
-                          _formatPracticeTime(value.practicedSeconds),
+                          _formatProgressPercent(value.progressRatio),
                           style: Theme.of(context).textTheme.labelLarge
                               ?.copyWith(
                                 color: DrumcabularyTheme.edgeOrange,
@@ -751,7 +877,7 @@ class _CompassMetricBars extends StatelessWidget {
                           _completionTextFor(value),
                           style: Theme.of(context).textTheme.labelMedium
                               ?.copyWith(
-                                color: const Color(0xFF52D273),
+                                color: DrumcabularyTheme.edgeTextSecondary,
                                 fontWeight: FontWeight.w700,
                               ),
                         ),
@@ -761,15 +887,9 @@ class _CompassMetricBars extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 _CompactMetricBar(
-                  label: 'Practice Investment',
-                  value: value.practiceInvestmentRatio,
+                  label: 'Progress',
+                  value: value.progressRatio,
                   color: DrumcabularyTheme.edgeOrange,
-                ),
-                const SizedBox(height: 6),
-                _CompactMetricBar(
-                  label: 'Curriculum Completion',
-                  value: value.completionRatio,
-                  color: const Color(0xFF52D273),
                 ),
               ],
             ),
@@ -825,16 +945,18 @@ class _CompactMetricBar extends StatelessWidget {
 
 class _SelectedNodeSummary extends StatelessWidget {
   final CurriculumCompassPoint value;
-  final bool canDrillIn;
   final VoidCallback? onDrillIn;
   final VoidCallback? onOpenSkill;
+  final VoidCallback? onOpenLesson;
+  final VoidCallback? onOpenExercise;
 
   const _SelectedNodeSummary({
     super.key,
     required this.value,
-    required this.canDrillIn,
     required this.onDrillIn,
     required this.onOpenSkill,
+    required this.onOpenLesson,
+    required this.onOpenExercise,
   });
 
   @override
@@ -896,7 +1018,7 @@ class _SelectedNodeSummary extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-                if (canDrillIn && onDrillIn != null)
+                if (onDrillIn != null)
                   _SummaryActionButton(
                     onPressed: onDrillIn,
                     icon: Icons.explore_rounded,
@@ -907,6 +1029,18 @@ class _SelectedNodeSummary extends StatelessWidget {
                     onPressed: onOpenSkill,
                     icon: Icons.arrow_forward_rounded,
                     label: 'View Lessons',
+                  ),
+                if (onOpenLesson != null)
+                  _SummaryActionButton(
+                    onPressed: onOpenLesson,
+                    icon: Icons.open_in_new_rounded,
+                    label: 'Open Lesson',
+                  ),
+                if (onOpenExercise != null)
+                  _SummaryActionButton(
+                    onPressed: onOpenExercise,
+                    icon: Icons.play_arrow_rounded,
+                    label: 'Practice Exercise',
                   ),
               ],
             ),
@@ -1090,105 +1224,16 @@ class _CompassHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Widget text = Column(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         const DrumSectionTitle(text: 'Curriculum Compass'),
         const SizedBox(height: 6),
         Text(
-          'Maps where practice time is invested and how much curriculum work is complete.',
+          'Maps curriculum progress while keeping practice time in context.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: DrumcabularyTheme.edgeTextSecondary,
             height: 1.35,
-          ),
-        ),
-      ],
-    );
-
-    return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-        if (constraints.maxWidth < 620) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              text,
-              const SizedBox(height: 12),
-              const _CompassLegend(),
-            ],
-          );
-        }
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Expanded(child: text),
-            const SizedBox(width: 12),
-            const _CompassLegend(),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _CompassLegend extends StatelessWidget {
-  const _CompassLegend();
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 12,
-      runSpacing: 8,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: <Widget>[
-        _LegendItem(
-          label: 'Practice Investment',
-          color: DrumcabularyTheme.edgeOrange,
-          strokeWidth: 5,
-        ),
-        const _LegendItem(
-          label: 'Curriculum Completion',
-          color: Color(0xFF52D273),
-          strokeWidth: 3,
-        ),
-      ],
-    );
-  }
-}
-
-class _LegendItem extends StatelessWidget {
-  final String label;
-  final Color color;
-  final double strokeWidth;
-
-  const _LegendItem({
-    required this.label,
-    required this.color,
-    required this.strokeWidth,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        SizedBox(
-          width: 26,
-          child: Center(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: SizedBox(width: 24, height: strokeWidth),
-            ),
-          ),
-        ),
-        const SizedBox(width: 6),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-            color: DrumcabularyTheme.edgeTextSecondary,
-            fontWeight: FontWeight.w600,
           ),
         ),
       ],
@@ -1199,10 +1244,14 @@ class _LegendItem extends StatelessWidget {
 class _PracticePortraitEmptyState extends StatelessWidget {
   final String title;
   final String message;
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
   const _PracticePortraitEmptyState({
     required this.title,
     required this.message,
+    this.actionLabel,
+    this.onAction,
   });
 
   @override
@@ -1238,11 +1287,65 @@ class _PracticePortraitEmptyState extends StatelessWidget {
                       height: 1.3,
                     ),
                   ),
+                  if (actionLabel != null && onAction != null) ...<Widget>[
+                    const SizedBox(height: 10),
+                    OutlinedButton.icon(
+                      onPressed: onAction,
+                      icon: const Icon(Icons.arrow_forward_rounded),
+                      label: Text(actionLabel!),
+                    ),
+                  ],
                 ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _CompassPaginationControls extends StatelessWidget {
+  final int pageIndex;
+  final int pageCount;
+  final VoidCallback? onPrevious;
+  final VoidCallback? onNext;
+
+  const _CompassPaginationControls({
+    required this.pageIndex,
+    required this.pageCount,
+    required this.onPrevious,
+    required this.onNext,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: 'Compass page ${pageIndex + 1} of $pageCount',
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          OutlinedButton.icon(
+            onPressed: onPrevious,
+            icon: const Icon(Icons.chevron_left_rounded),
+            label: const Text('Previous set'),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: Text(
+              '${pageIndex + 1} of $pageCount',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: DrumcabularyTheme.edgeTextSecondary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          OutlinedButton.icon(
+            onPressed: onNext,
+            icon: const Icon(Icons.chevron_right_rounded),
+            label: const Text('Next set'),
+          ),
+        ],
       ),
     );
   }
@@ -1305,8 +1408,17 @@ String _completionTextFor(CurriculumCompassPoint value) {
   return '${value.completedExerciseCount} of ${value.totalExerciseCount}';
 }
 
+String _formatProgressPercent(double value) {
+  return '${(value.clamp(0, 1) * 100).round()}%';
+}
+
 List<Widget> _selectedMetricsFor(CurriculumCompassPoint value) {
   return <Widget>[
+    _SelectedMetric(
+      label: 'Progress',
+      value: value.progressRatio,
+      formatter: _formatProgressPercent,
+    ),
     _SelectedMetric(
       label: 'Practiced',
       value: value.practicedSeconds.toDouble(),
@@ -1331,6 +1443,9 @@ String _formatWholeNumber(double value) => '${value.round()}';
 
 List<String> _summaryStatusesFor(CurriculumCompassPoint value) {
   if (value.totalExerciseCount == 0) return <String>['No exercises yet'];
+  if (value.kind == CompassNodeKind.exercise) {
+    return <String>[value.isCompleted ? 'Completed' : 'Not completed'];
+  }
   return <String>[
     if (value.practicedSeconds == 0) 'Not practiced yet',
     if (value.completedExerciseCount == 0) 'No completions yet',
@@ -1341,6 +1456,7 @@ String _compassSemanticLabel(List<CurriculumCompassPoint> values) {
   final StringBuffer buffer = StringBuffer('Curriculum Compass.');
   for (final CurriculumCompassPoint value in values) {
     buffer.write(' ${value.label}. ');
+    buffer.write('${_formatProgressPercent(value.progressRatio)} progress. ');
     buffer.write('${_formatPracticeTime(value.practicedSeconds)} practiced. ');
     if (value.totalExerciseCount == 0) {
       buffer.write('No exercises yet.');
@@ -1351,4 +1467,49 @@ String _compassSemanticLabel(List<CurriculumCompassPoint> values) {
     }
   }
   return buffer.toString();
+}
+
+String _emptyStateTitle(CurriculumCompassSnapshot snapshot) {
+  if (snapshot.hasNoInteraction) {
+    return switch (snapshot.childKind) {
+      CompassNodeKind.lesson => 'No lesson activity yet',
+      CompassNodeKind.exercise => 'No exercises practiced yet',
+      _ => 'No activity yet',
+    };
+  }
+  return switch (snapshot.childKind) {
+    CompassNodeKind.lesson => 'No lessons are available yet',
+    CompassNodeKind.exercise => 'No exercises are available yet',
+    _ => 'No curriculum nodes yet',
+  };
+}
+
+String _emptyStateMessage(CurriculumCompassSnapshot snapshot) {
+  if (snapshot.hasNoInteraction) {
+    return switch (snapshot.childKind) {
+      CompassNodeKind.lesson =>
+        'You have not practiced any lessons in this topic yet.',
+      CompassNodeKind.exercise =>
+        'You have not practiced any exercises in this lesson yet.',
+      _ => 'Practice or complete content here to fill in the compass.',
+    };
+  }
+  return switch (snapshot.childKind) {
+    CompassNodeKind.lesson => 'No lessons are attached to this topic yet.',
+    CompassNodeKind.exercise =>
+      'No exercises are available in this lesson yet.',
+    _ => 'Add curriculum child nodes to build the compass.',
+  };
+}
+
+String? _emptyStateActionLabel(CurriculumCompassSnapshot snapshot) {
+  if (snapshot.hasNoInteraction &&
+      snapshot.childKind == CompassNodeKind.lesson) {
+    return 'View All Lessons';
+  }
+  if (snapshot.hasNoInteraction &&
+      snapshot.childKind == CompassNodeKind.exercise) {
+    return 'View All Exercises';
+  }
+  return null;
 }

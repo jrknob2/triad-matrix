@@ -22,11 +22,13 @@ import 'lesson_progress.dart';
 
 class LessonDetailScreen extends StatefulWidget {
   final Lesson lesson;
+  final String? initialExerciseId;
   final LessonProgressService? progressService;
 
   const LessonDetailScreen({
     super.key,
     required this.lesson,
+    this.initialExerciseId,
     this.progressService,
   });
 
@@ -69,6 +71,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
   @override
   void initState() {
     super.initState();
+    _selectedExerciseId = widget.initialExerciseId;
     _midiService.addListener(_handleMidiServiceChanged);
     _ledController.addListener(_handleLedControllerChanged);
     unawaited(_midiService.start());
@@ -77,8 +80,9 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
   @override
   void didUpdateWidget(covariant LessonDetailScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.lesson.id != widget.lesson.id) {
-      _selectedExerciseId = null;
+    if (oldWidget.lesson.id != widget.lesson.id ||
+        oldWidget.initialExerciseId != widget.initialExerciseId) {
+      _selectedExerciseId = widget.initialExerciseId;
       _previewBpm = _initialPreviewBpmFor(widget.lesson);
       _clearGuidedPracticeController(stop: true);
     }

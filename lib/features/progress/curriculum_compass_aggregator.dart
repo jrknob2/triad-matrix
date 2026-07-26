@@ -3,22 +3,35 @@ import 'package:flutter/foundation.dart';
 import '../coach/lesson_plan.dart';
 import '../coach/lesson_progress.dart';
 
+const int defaultMaxVisibleCompassPoints = 10;
+
+enum CompassNodeKind { curriculum, category, topic, lesson, exercise }
+
+typedef CompassExerciseCallback =
+    void Function(String lessonId, String exerciseId);
+
 @immutable
 class CurriculumNode {
   final String id;
   final String title;
+  final CompassNodeKind kind;
   final String? shortDescription;
   final List<CurriculumNode> children;
-  final List<Lesson> lessons;
   final String lessonFilterId;
+  final Lesson? lesson;
+  final LessonExercise? exercise;
+  final int curriculumOrder;
 
   const CurriculumNode({
     required this.id,
     required this.title,
+    required this.kind,
     this.shortDescription,
     this.children = const <CurriculumNode>[],
-    this.lessons = const <Lesson>[],
     String? lessonFilterId,
+    this.lesson,
+    this.exercise,
+    this.curriculumOrder = 0,
   }) : lessonFilterId = lessonFilterId ?? id;
 
   bool get hasChildren => children.isNotEmpty;
@@ -26,7 +39,8 @@ class CurriculumNode {
   List<Lesson> get subtreeLessons {
     final Map<String, Lesson> byId = <String, Lesson>{};
     void collect(CurriculumNode node) {
-      for (final Lesson lesson in node.lessons) {
+      final Lesson? lesson = node.lesson;
+      if (lesson != null) {
         byId[lesson.id] = lesson;
       }
       for (final CurriculumNode child in node.children) {
@@ -43,45 +57,56 @@ class CurriculumNode {
 class CurriculumBreadcrumb {
   final String id;
   final String title;
+  final CompassNodeKind kind;
 
-  const CurriculumBreadcrumb({required this.id, required this.title});
+  const CurriculumBreadcrumb({
+    required this.id,
+    required this.title,
+    required this.kind,
+  });
 }
 
 @immutable
 class CurriculumCompassPoint {
   final String nodeId;
   final String label;
+  final CompassNodeKind kind;
   final String? shortDescription;
   final String lessonFilterId;
   final bool hasChildren;
+  final String? lessonId;
+  final String? exerciseId;
   final int practicedSeconds;
   final int practicedExerciseCount;
   final int practicedLessonCount;
   final int completedExerciseCount;
   final int totalExerciseCount;
   final int completedLessonCount;
-  final double practiceInvestmentRatio;
-  final double completionRatio;
+  final double progressRatio;
 
   const CurriculumCompassPoint({
     required this.nodeId,
     required this.label,
+    required this.kind,
     this.shortDescription,
     required this.lessonFilterId,
     required this.hasChildren,
+    this.lessonId,
+    this.exerciseId,
     required this.practicedSeconds,
     required this.practicedExerciseCount,
     required this.practicedLessonCount,
     required this.completedExerciseCount,
     required this.totalExerciseCount,
     required this.completedLessonCount,
-    required this.practiceInvestmentRatio,
-    required this.completionRatio,
+    required this.progressRatio,
   });
 
   bool get hasPractice => practicedSeconds > 0;
   bool get hasCompletions => completedExerciseCount > 0;
   bool get hasExercises => totalExerciseCount > 0;
+  bool get isCompleted =>
+      hasExercises && completedExerciseCount >= totalExerciseCount;
 }
 
 @immutable
@@ -89,36 +114,88 @@ class CurriculumCompassSnapshot {
   final CurriculumNode currentNode;
   final List<CurriculumBreadcrumb> breadcrumbs;
   final List<CurriculumCompassPoint> values;
+  final int pageIndex;
+  final int pageCount;
+  final int totalValueCount;
+  final int availableChildCount;
+  final int maxVisiblePoints;
+  final bool valuesFilteredByInteraction;
+  final CompassNodeKind? childKind;
 
   const CurriculumCompassSnapshot({
     required this.currentNode,
     required this.breadcrumbs,
     required this.values,
+    this.pageIndex = 0,
+    this.pageCount = 0,
+    this.totalValueCount = 0,
+    this.availableChildCount = 0,
+    this.maxVisiblePoints = defaultMaxVisibleCompassPoints,
+    this.valuesFilteredByInteraction = false,
+    this.childKind,
   });
 
   bool get hasNodes => values.isNotEmpty;
   bool get isRoot => currentNode.id == CurriculumCompassTreeBuilder.rootId;
+  bool get hasPreviousPage => pageIndex > 0;
+  bool get hasNextPage => pageIndex + 1 < pageCount;
+  bool get hasAvailableContent => availableChildCount > 0;
+  bool get hasNoInteraction =>
+      valuesFilteredByInteraction && hasAvailableContent && values.isEmpty;
+  bool get hasNoContent => !hasAvailableContent;
 
   bool get hasMetricData {
     return values.any(
       (CurriculumCompassPoint value) =>
-          value.hasPractice || value.hasCompletions,
+          value.progressRatio > 0 || value.hasPractice || value.hasCompletions,
     );
   }
 }
 
 class CurriculumCompassAggregator {
-  const CurriculumCompassAggregator();
+  final CurriculumCompassInteractionPolicy interactionPolicy;
+
+  const CurriculumCompassAggregator({
+    this.interactionPolicy = const CurriculumCompassInteractionPolicy(),
+  });
 
   CurriculumCompassSnapshot build({
     required CurriculumNode root,
     required List<String> nodePath,
     required LessonProgressService progressService,
+    int pageIndex = 0,
+    int maxVisiblePoints = defaultMaxVisibleCompassPoints,
   }) {
     final _ResolvedNode resolved = _resolveNode(root, nodePath);
-    final List<CurriculumCompassPoint> values = _valuesForChildren(
-      resolved.node.children,
+    final List<CurriculumNode> availableChildren = resolved.node.children;
+    final CompassNodeKind? childKind = availableChildren.isEmpty
+        ? null
+        : availableChildren.first.kind;
+    final bool filterByInteraction =
+        childKind == CompassNodeKind.lesson ||
+        childKind == CompassNodeKind.exercise;
+    final List<CurriculumNode> orderedChildren = _orderedChildren(
+      availableChildren,
       progressService: progressService,
+      filterByInteraction: filterByInteraction,
+    );
+    final int safeMaxVisiblePoints = maxVisiblePoints <= 0
+        ? defaultMaxVisibleCompassPoints
+        : maxVisiblePoints;
+    final int pageCount = orderedChildren.isEmpty
+        ? 0
+        : ((orderedChildren.length - 1) ~/ safeMaxVisiblePoints) + 1;
+    final int safePageIndex = pageCount == 0
+        ? 0
+        : pageIndex.clamp(0, pageCount - 1).toInt();
+    final int start = safePageIndex * safeMaxVisiblePoints;
+    final int end = (start + safeMaxVisiblePoints).clamp(
+      0,
+      orderedChildren.length,
+    );
+    final List<CurriculumNode> visibleChildren = orderedChildren.sublist(
+      start,
+      end,
     );
 
     return CurriculumCompassSnapshot(
@@ -127,11 +204,22 @@ class CurriculumCompassAggregator {
         const CurriculumBreadcrumb(
           id: CurriculumCompassTreeBuilder.rootId,
           title: 'Curriculum',
+          kind: CompassNodeKind.curriculum,
         ),
         for (final CurriculumNode node in resolved.path)
-          CurriculumBreadcrumb(id: node.id, title: node.title),
+          CurriculumBreadcrumb(id: node.id, title: node.title, kind: node.kind),
       ],
-      values: values,
+      values: <CurriculumCompassPoint>[
+        for (final CurriculumNode child in visibleChildren)
+          _valueFor(child, _accumulatorFor(child, progressService)),
+      ],
+      pageIndex: safePageIndex,
+      pageCount: pageCount,
+      totalValueCount: orderedChildren.length,
+      availableChildCount: availableChildren.length,
+      maxVisiblePoints: safeMaxVisiblePoints,
+      valuesFilteredByInteraction: filterByInteraction,
+      childKind: childKind,
     );
   }
 
@@ -154,40 +242,40 @@ class CurriculumCompassAggregator {
     return null;
   }
 
-  List<CurriculumCompassPoint> _valuesForChildren(
+  List<CurriculumNode> _orderedChildren(
     List<CurriculumNode> children, {
     required LessonProgressService progressService,
+    required bool filterByInteraction,
   }) {
-    final Map<String, _NodeProgressAccumulator> accumulators =
-        <String, _NodeProgressAccumulator>{
-          for (final CurriculumNode child in children)
-            child.id: _accumulatorFor(child, progressService),
-        };
-    final int maxPracticedSeconds = accumulators.values.fold<int>(
-      0,
-      (int max, _NodeProgressAccumulator value) =>
-          value.practicedSeconds > max ? value.practicedSeconds : max,
-    );
-
-    return <CurriculumCompassPoint>[
+    if (!filterByInteraction) return children;
+    final List<CurriculumNode> interacted = <CurriculumNode>[
       for (final CurriculumNode child in children)
-        _valueFor(
+        if (interactionPolicy.hasMeaningfulInteraction(child, progressService))
           child,
-          accumulators[child.id]!,
-          maxPracticedSeconds: maxPracticedSeconds,
-        ),
     ];
+    interacted.sort(
+      (CurriculumNode a, CurriculumNode b) =>
+          interactionPolicy.compare(a, b, progressService),
+    );
+    return interacted;
   }
 
   _NodeProgressAccumulator _accumulatorFor(
     CurriculumNode node,
     LessonProgressService progressService,
   ) {
+    if (node.kind == CompassNodeKind.exercise) {
+      return _accumulatorForExercise(node, progressService);
+    }
+
     final _NodeProgressAccumulator accumulator = _NodeProgressAccumulator();
+    final Set<String> countedExercises = <String>{};
     for (final Lesson lesson in node.subtreeLessons) {
       bool lessonHasPracticedExercise = false;
       bool lessonHasCompletedExercise = false;
       for (final LessonExercise exercise in lesson.exercises) {
+        final String exerciseKey = '${lesson.id}/${exercise.id}';
+        if (!countedExercises.add(exerciseKey)) continue;
         final ExerciseProgress progress = progressService.progressForExercise(
           lessonId: lesson.id,
           exerciseId: exercise.id,
@@ -206,7 +294,10 @@ class CurriculumCompassAggregator {
           lessonHasCompletedExercise = true;
         }
       }
-      if (lessonHasPracticedExercise) {
+      final LessonProgress lessonProgress = progressService.progressForLesson(
+        lesson.id,
+      );
+      if (lessonHasPracticedExercise || lessonProgress.practicedSeconds > 0) {
         accumulator.practicedLessonIds.add(lesson.id);
       }
       if (lessonHasCompletedExercise) {
@@ -216,32 +307,228 @@ class CurriculumCompassAggregator {
     return accumulator;
   }
 
+  _NodeProgressAccumulator _accumulatorForExercise(
+    CurriculumNode node,
+    LessonProgressService progressService,
+  ) {
+    final Lesson? lesson = node.lesson;
+    final LessonExercise? exercise = node.exercise;
+    final _NodeProgressAccumulator accumulator = _NodeProgressAccumulator();
+    if (lesson == null || exercise == null) return accumulator;
+    final ExerciseProgress progress = progressService.progressForExercise(
+      lessonId: lesson.id,
+      exerciseId: exercise.id,
+    );
+    accumulator.totalExerciseCount = 1;
+    accumulator.practicedSeconds = progress.practicedSeconds;
+    if (progress.practicedSeconds > 0) {
+      accumulator.practicedExerciseCount = 1;
+      accumulator.practicedLessonIds.add(lesson.id);
+    }
+    if (progress.status == LessonProgressStatus.completed) {
+      accumulator.completedExerciseCount = 1;
+      accumulator.completedLessonIds.add(lesson.id);
+    }
+    return accumulator;
+  }
+
   CurriculumCompassPoint _valueFor(
     CurriculumNode node,
-    _NodeProgressAccumulator accumulator, {
-    required int maxPracticedSeconds,
-  }) {
-    final double practiceInvestmentRatio = maxPracticedSeconds == 0
-        ? 0
-        : accumulator.practicedSeconds / maxPracticedSeconds;
-    final double completionRatio = accumulator.totalExerciseCount == 0
+    _NodeProgressAccumulator accumulator,
+  ) {
+    final double progressRatio = accumulator.totalExerciseCount == 0
         ? 0
         : accumulator.completedExerciseCount / accumulator.totalExerciseCount;
 
     return CurriculumCompassPoint(
       nodeId: node.id,
       label: node.title,
+      kind: node.kind,
       shortDescription: node.shortDescription,
       lessonFilterId: node.lessonFilterId,
       hasChildren: node.hasChildren,
+      lessonId: node.lesson?.id,
+      exerciseId: node.exercise?.id,
       practicedSeconds: accumulator.practicedSeconds,
       practicedExerciseCount: accumulator.practicedExerciseCount,
       practicedLessonCount: accumulator.practicedLessonIds.length,
       completedExerciseCount: accumulator.completedExerciseCount,
       totalExerciseCount: accumulator.totalExerciseCount,
       completedLessonCount: accumulator.completedLessonIds.length,
-      practiceInvestmentRatio: practiceInvestmentRatio,
-      completionRatio: completionRatio,
+      progressRatio: progressRatio,
+    );
+  }
+}
+
+class CurriculumCompassInteractionPolicy {
+  const CurriculumCompassInteractionPolicy();
+
+  bool hasMeaningfulInteraction(
+    CurriculumNode node,
+    LessonProgressService progressService,
+  ) {
+    return switch (node.kind) {
+      CompassNodeKind.lesson => _hasInteractedLesson(node, progressService),
+      CompassNodeKind.exercise => _hasInteractedExercise(node, progressService),
+      _ => true,
+    };
+  }
+
+  int compare(
+    CurriculumNode a,
+    CurriculumNode b,
+    LessonProgressService progressService,
+  ) {
+    final DateTime? aLatest = latestInteraction(a, progressService);
+    final DateTime? bLatest = latestInteraction(b, progressService);
+    if (aLatest != null || bLatest != null) {
+      if (aLatest == null) return 1;
+      if (bLatest == null) return -1;
+      final int latestComparison = bLatest.compareTo(aLatest);
+      if (latestComparison != 0) return latestComparison;
+    }
+
+    final int practicedComparison =
+        practicedSeconds(b, progressService) -
+        practicedSeconds(a, progressService);
+    if (practicedComparison != 0) return practicedComparison;
+
+    return a.curriculumOrder.compareTo(b.curriculumOrder);
+  }
+
+  DateTime? latestInteraction(
+    CurriculumNode node,
+    LessonProgressService progressService,
+  ) {
+    return switch (node.kind) {
+      CompassNodeKind.lesson => _latestLessonInteraction(node, progressService),
+      CompassNodeKind.exercise => _latestExerciseInteraction(
+        node,
+        progressService,
+      ),
+      _ => null,
+    };
+  }
+
+  int practicedSeconds(
+    CurriculumNode node,
+    LessonProgressService progressService,
+  ) {
+    return switch (node.kind) {
+      CompassNodeKind.lesson => _lessonPracticedSeconds(node, progressService),
+      CompassNodeKind.exercise => _exerciseProgress(
+        node,
+        progressService,
+      ).practicedSeconds,
+      _ => 0,
+    };
+  }
+
+  bool _hasInteractedLesson(
+    CurriculumNode node,
+    LessonProgressService progressService,
+  ) {
+    final Lesson? lesson = node.lesson;
+    if (lesson == null) return false;
+    final LessonProgress progress = progressService.progressForLesson(
+      lesson.id,
+    );
+    if (progress.status != LessonProgressStatus.notStarted ||
+        progress.startedAt != null ||
+        progress.lastOpenedAt != null ||
+        progress.completedAt != null ||
+        progress.practicedSeconds > 0) {
+      return true;
+    }
+    return progress.exerciseProgressById.values.any(
+      _exerciseProgressInteracted,
+    );
+  }
+
+  bool _hasInteractedExercise(
+    CurriculumNode node,
+    LessonProgressService progressService,
+  ) {
+    return _exerciseProgressInteracted(
+      _exerciseProgress(node, progressService),
+    );
+  }
+
+  bool _exerciseProgressInteracted(ExerciseProgress progress) {
+    return progress.status != LessonProgressStatus.notStarted ||
+        progress.startedAt != null ||
+        progress.lastPracticedAt != null ||
+        progress.completedAt != null ||
+        progress.practicedSeconds > 0;
+  }
+
+  DateTime? _latestLessonInteraction(
+    CurriculumNode node,
+    LessonProgressService progressService,
+  ) {
+    final Lesson? lesson = node.lesson;
+    if (lesson == null) return null;
+    final LessonProgress progress = progressService.progressForLesson(
+      lesson.id,
+    );
+    DateTime? latest = _latestOf(
+      progress.startedAt,
+      progress.lastOpenedAt,
+      progress.completedAt,
+    );
+    for (final ExerciseProgress exerciseProgress
+        in progress.exerciseProgressById.values) {
+      latest = _maxDate(latest, _latestOfExercise(exerciseProgress));
+    }
+    return latest;
+  }
+
+  DateTime? _latestExerciseInteraction(
+    CurriculumNode node,
+    LessonProgressService progressService,
+  ) {
+    return _latestOfExercise(_exerciseProgress(node, progressService));
+  }
+
+  DateTime? _latestOfExercise(ExerciseProgress progress) {
+    return _latestOf(
+      progress.startedAt,
+      progress.lastPracticedAt,
+      progress.completedAt,
+    );
+  }
+
+  int _lessonPracticedSeconds(
+    CurriculumNode node,
+    LessonProgressService progressService,
+  ) {
+    final Lesson? lesson = node.lesson;
+    if (lesson == null) return 0;
+    final LessonProgress progress = progressService.progressForLesson(
+      lesson.id,
+    );
+    final int exerciseSeconds = progress.exerciseProgressById.values.fold<int>(
+      0,
+      (int total, ExerciseProgress exerciseProgress) =>
+          total + exerciseProgress.practicedSeconds,
+    );
+    return progress.practicedSeconds > exerciseSeconds
+        ? progress.practicedSeconds
+        : exerciseSeconds;
+  }
+
+  ExerciseProgress _exerciseProgress(
+    CurriculumNode node,
+    LessonProgressService progressService,
+  ) {
+    final Lesson? lesson = node.lesson;
+    final LessonExercise? exercise = node.exercise;
+    if (lesson == null || exercise == null) {
+      return ExerciseProgress.notStarted(lessonId: '', exerciseId: '');
+    }
+    return progressService.progressForExercise(
+      lessonId: lesson.id,
+      exerciseId: exercise.id,
     );
   }
 }
@@ -260,6 +547,7 @@ class CurriculumCompassTreeBuilder {
     return CurriculumNode(
       id: rootId,
       title: 'Curriculum',
+      kind: CompassNodeKind.curriculum,
       children: <CurriculumNode>[
         _node(
           id: 'timing',
@@ -267,6 +555,7 @@ class CurriculumCompassTreeBuilder {
           shortDescription:
               'Build steady pulse, subdivision control, and confident time feel.',
           lessonsBySkill: lessonsBySkill,
+          order: 0,
           children: const <_TemporaryNodeSpec>[
             _TemporaryNodeSpec('pulse', 'Pulse'),
             _TemporaryNodeSpec('subdivisions', 'Subdivisions'),
@@ -286,6 +575,7 @@ class CurriculumCompassTreeBuilder {
           shortDescription:
               'Develop the rhythmic patterns that support modern songs.',
           lessonsBySkill: lessonsBySkill,
+          order: 1,
           children: const <_TemporaryNodeSpec>[
             _TemporaryNodeSpec(
               'core-grooves',
@@ -312,6 +602,7 @@ class CurriculumCompassTreeBuilder {
           shortDescription:
               'Strengthen the sticking vocabulary behind clean drum movement.',
           lessonsBySkill: lessonsBySkill,
+          order: 2,
           children: const <_TemporaryNodeSpec>[
             _TemporaryNodeSpec(
               'core-rudiments',
@@ -338,6 +629,7 @@ class CurriculumCompassTreeBuilder {
           shortDescription:
               'Refine the physical motions that make playing relaxed and clear.',
           lessonsBySkill: lessonsBySkill,
+          order: 3,
           children: const <_TemporaryNodeSpec>[
             _TemporaryNodeSpec('grip', 'Grip'),
             _TemporaryNodeSpec('rebound', 'Rebound'),
@@ -357,6 +649,7 @@ class CurriculumCompassTreeBuilder {
           shortDescription:
               'Coordinate hands and feet across layered rhythmic ideas.',
           lessonsBySkill: lessonsBySkill,
+          order: 4,
           children: const <_TemporaryNodeSpec>[
             _TemporaryNodeSpec('two-way', 'Two-Way'),
             _TemporaryNodeSpec('three-way', 'Three-Way'),
@@ -376,6 +669,7 @@ class CurriculumCompassTreeBuilder {
           shortDescription:
               'Shape accents, ghost notes, and touch into expressive control.',
           lessonsBySkill: lessonsBySkill,
+          order: 5,
           children: const <_TemporaryNodeSpec>[
             _TemporaryNodeSpec('accents', 'Accents'),
             _TemporaryNodeSpec('ghost-notes', 'Ghost Notes'),
@@ -395,6 +689,7 @@ class CurriculumCompassTreeBuilder {
           shortDescription:
               'Build reusable rhythmic phrases for fills, grooves, and solos.',
           lessonsBySkill: lessonsBySkill,
+          order: 6,
           children: const <_TemporaryNodeSpec>[
             _TemporaryNodeSpec(
               'triads',
@@ -426,6 +721,7 @@ class CurriculumCompassTreeBuilder {
           shortDescription:
               'Connect written rhythms to reliable movement around the kit.',
           lessonsBySkill: lessonsBySkill,
+          order: 7,
           children: const <_TemporaryNodeSpec>[
             _TemporaryNodeSpec('quarter-notes', 'Quarter Notes'),
             _TemporaryNodeSpec('eighth-notes', 'Eighth Notes'),
@@ -445,6 +741,7 @@ class CurriculumCompassTreeBuilder {
           shortDescription:
               'Develop listening, feel, phrasing, and musical decision-making.',
           lessonsBySkill: lessonsBySkill,
+          order: 8,
           children: const <_TemporaryNodeSpec>[
             _TemporaryNodeSpec('listening', 'Listening'),
             _TemporaryNodeSpec('form', 'Form'),
@@ -464,6 +761,7 @@ class CurriculumCompassTreeBuilder {
           shortDescription:
               'Practice variation and spontaneous ideas with clear structure.',
           lessonsBySkill: lessonsBySkill,
+          order: 9,
           children: const <_TemporaryNodeSpec>[
             _TemporaryNodeSpec('variation', 'Variation'),
             _TemporaryNodeSpec('development', 'Development'),
@@ -487,14 +785,17 @@ class CurriculumCompassTreeBuilder {
     String? shortDescription,
     required Map<String, List<Lesson>> lessonsBySkill,
     required List<_TemporaryNodeSpec> children,
+    required int order,
   }) {
     return CurriculumNode(
       id: id,
       title: title,
+      kind: CompassNodeKind.category,
       shortDescription: shortDescription,
+      curriculumOrder: order,
       children: <CurriculumNode>[
-        for (final _TemporaryNodeSpec child in children)
-          child.toNode(lessonsBySkill),
+        for (final (int index, _TemporaryNodeSpec child) in children.indexed)
+          child.toNode(lessonsBySkill, index),
       ],
     );
   }
@@ -522,23 +823,66 @@ class _TemporaryNodeSpec {
     this.lessonFilterId,
   });
 
-  CurriculumNode toNode(Map<String, List<Lesson>> lessonsBySkill) {
+  CurriculumNode toNode(Map<String, List<Lesson>> lessonsBySkill, int order) {
     final Map<String, Lesson> lessonsById = <String, Lesson>{};
     for (final String skillId in skillIds) {
       for (final Lesson lesson in lessonsBySkill[skillId] ?? const <Lesson>[]) {
         lessonsById[lesson.id] = lesson;
       }
     }
+    final List<Lesson> lessons = lessonsById.values.toList(growable: false)
+      ..sort((Lesson a, Lesson b) => a.order.compareTo(b.order));
 
     return CurriculumNode(
       id: id,
       title: title,
+      kind: CompassNodeKind.topic,
       shortDescription: shortDescription,
-      lessons: lessonsById.values.toList(growable: false),
+      curriculumOrder: order,
       lessonFilterId:
           lessonFilterId ?? (skillIds.isEmpty ? id : skillIds.first),
+      children: <CurriculumNode>[
+        for (final (int index, Lesson lesson) in lessons.indexed)
+          _lessonNode(lesson, index),
+      ],
     );
   }
+
+  CurriculumNode _lessonNode(Lesson lesson, int order) {
+    return CurriculumNode(
+      id: 'lesson:${lesson.id}',
+      title: lesson.title,
+      kind: CompassNodeKind.lesson,
+      shortDescription: lesson.overview,
+      lessonFilterId: lesson.skill,
+      lesson: lesson,
+      curriculumOrder: order,
+      children: <CurriculumNode>[
+        for (final (int index, LessonExercise exercise)
+            in lesson.exercises.indexed)
+          CurriculumNode(
+            id: 'exercise:${lesson.id}:${exercise.id}',
+            title: exercise.title,
+            kind: CompassNodeKind.exercise,
+            shortDescription: exercise.what,
+            lessonFilterId: lesson.skill,
+            lesson: lesson,
+            exercise: exercise,
+            curriculumOrder: index,
+          ),
+      ],
+    );
+  }
+}
+
+DateTime? _latestOf(DateTime? first, DateTime? second, DateTime? third) {
+  return _maxDate(_maxDate(first, second), third);
+}
+
+DateTime? _maxDate(DateTime? first, DateTime? second) {
+  if (first == null) return second;
+  if (second == null) return first;
+  return first.isAfter(second) ? first : second;
 }
 
 class _ResolvedNode {

@@ -4,12 +4,19 @@ import 'package:drumcabulary/features/progress/curriculum_compass_aggregator.dar
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('builds the temporary top-level curriculum compass tree', () {
+  test('builds curriculum, category, topic, lesson, and exercise nodes', () {
     final CurriculumNode root = const CurriculumCompassTreeBuilder().build(
-      _library(<Lesson>[]),
+      _library(<Lesson>[
+        _lesson(
+          id: 'groove-one',
+          skill: 'grooves',
+          exercises: <String>['a', 'b'],
+        ),
+      ]),
     );
 
     expect(root.id, CurriculumCompassTreeBuilder.rootId);
+    expect(root.kind, CompassNodeKind.curriculum);
     expect(root.children.map((CurriculumNode node) => node.title), <String>[
       'Timing',
       'Grooves',
@@ -23,8 +30,21 @@ void main() {
       'Improvisation',
     ]);
     for (final CurriculumNode topLevelNode in root.children) {
+      expect(topLevelNode.kind, CompassNodeKind.category);
       expect(topLevelNode.children, hasLength(10));
     }
+
+    final CurriculumNode coreGrooves = _child(
+      _child(root, 'grooves'),
+      'core-grooves',
+    );
+    expect(coreGrooves.kind, CompassNodeKind.topic);
+    expect(coreGrooves.children.single.kind, CompassNodeKind.lesson);
+    expect(coreGrooves.children.single.children, hasLength(2));
+    expect(
+      coreGrooves.children.single.children.first.kind,
+      CompassNodeKind.exercise,
+    );
 
     final CurriculumNode vocabulary = _child(root, 'vocabulary');
     expect(
@@ -33,70 +53,8 @@ void main() {
     );
   });
 
-  test('aggregates practice investment and completion together', () async {
-    final LessonContentLibrary library = _library(<Lesson>[
-      _lesson(
-        id: 'groove-one',
-        skill: 'grooves',
-        exercises: <String>['a', 'b'],
-      ),
-      _lesson(id: 'groove-two', skill: 'grooves', exercises: <String>['c']),
-      _lesson(id: 'rudiment-one', skill: 'rudiments', exercises: <String>['d']),
-    ]);
-    final LessonProgressService progress = LessonProgressService(
-      MemoryLessonProgressStore(),
-    );
-    await progress.load();
-
-    await progress.completeExercise(
-      library.lessonsById['groove-one']!,
-      'a',
-      practicedDuration: const Duration(minutes: 10),
-    );
-    await progress.completeExercise(
-      library.lessonsById['groove-one']!,
-      'b',
-      practicedDuration: const Duration(minutes: 5),
-    );
-    await progress.completeExercise(
-      library.lessonsById['groove-two']!,
-      'c',
-      practicedDuration: const Duration(minutes: 15),
-    );
-    await progress.completeExercise(
-      library.lessonsById['rudiment-one']!,
-      'd',
-      practicedDuration: const Duration(minutes: 60),
-    );
-
-    final CurriculumNode root = const CurriculumCompassTreeBuilder().build(
-      library,
-    );
-    final CurriculumCompassSnapshot snapshot =
-        const CurriculumCompassAggregator().build(
-          root: root,
-          nodePath: const <String>[],
-          progressService: progress,
-        );
-
-    final CurriculumCompassPoint rudiments = _value(snapshot, 'rudiments');
-    final CurriculumCompassPoint grooves = _value(snapshot, 'grooves');
-    expect(rudiments.practicedSeconds, 3600);
-    expect(rudiments.practiceInvestmentRatio, 1);
-    expect(rudiments.completionRatio, 1);
-    expect(rudiments.practicedExerciseCount, 1);
-    expect(rudiments.practicedLessonCount, 1);
-    expect(grooves.practicedSeconds, 1800);
-    expect(grooves.practiceInvestmentRatio, 0.5);
-    expect(grooves.completedExerciseCount, 3);
-    expect(grooves.totalExerciseCount, 3);
-    expect(grooves.completionRatio, 1);
-    expect(grooves.practicedExerciseCount, 3);
-    expect(grooves.practicedLessonCount, 2);
-  });
-
   test(
-    'builds second-level compass values from selected category children',
+    'aggregates progress from completion ratio and keeps exact metrics',
     () async {
       final LessonContentLibrary library = _library(<Lesson>[
         _lesson(
@@ -104,53 +62,176 @@ void main() {
           skill: 'grooves',
           exercises: <String>['a', 'b'],
         ),
+        _lesson(id: 'groove-two', skill: 'grooves', exercises: <String>['c']),
+        _lesson(
+          id: 'rudiment-one',
+          skill: 'rudiments',
+          exercises: <String>['d'],
+        ),
       ]);
       final LessonProgressService progress = LessonProgressService(
         MemoryLessonProgressStore(),
       );
       await progress.load();
+
       await progress.completeExercise(
         library.lessonsById['groove-one']!,
         'a',
-        practicedDuration: const Duration(minutes: 8),
+        practicedDuration: const Duration(minutes: 10),
+      );
+      await progress.completeExercise(
+        library.lessonsById['groove-one']!,
+        'b',
+        practicedDuration: const Duration(minutes: 5),
+      );
+      await progress.completeExercise(
+        library.lessonsById['rudiment-one']!,
+        'd',
+        practicedDuration: const Duration(minutes: 60),
       );
 
       final CurriculumCompassSnapshot snapshot =
           const CurriculumCompassAggregator().build(
             root: const CurriculumCompassTreeBuilder().build(library),
-            nodePath: const <String>['grooves'],
+            nodePath: const <String>[],
             progressService: progress,
           );
 
-      expect(snapshot.currentNode.id, 'grooves');
-      expect(snapshot.isRoot, isFalse);
-      expect(
-        snapshot.breadcrumbs.map((CurriculumBreadcrumb item) => item.title),
-        <String>['Curriculum', 'Grooves'],
-      );
-      expect(snapshot.values, hasLength(10));
-
-      final CurriculumCompassPoint coreGrooves = _value(
-        snapshot,
-        'core-grooves',
-      );
-      expect(coreGrooves.lessonFilterId, 'grooves');
-      expect(coreGrooves.completedExerciseCount, 1);
-      expect(coreGrooves.totalExerciseCount, 2);
-      expect(coreGrooves.practiceInvestmentRatio, 1);
-      expect(coreGrooves.completionRatio, 0.5);
-
-      final CurriculumCompassPoint rockGrooves = _value(
-        snapshot,
-        'rock-grooves',
-      );
-      expect(rockGrooves.totalExerciseCount, 0);
-      expect(rockGrooves.practiceInvestmentRatio, 0);
-      expect(rockGrooves.completionRatio, 0);
+      final CurriculumCompassPoint rudiments = _value(snapshot, 'rudiments');
+      final CurriculumCompassPoint grooves = _value(snapshot, 'grooves');
+      expect(rudiments.progressRatio, 1);
+      expect(rudiments.practicedSeconds, 3600);
+      expect(rudiments.completedExerciseCount, 1);
+      expect(rudiments.totalExerciseCount, 1);
+      expect(grooves.progressRatio, 2 / 3);
+      expect(grooves.practicedSeconds, 900);
+      expect(grooves.completedExerciseCount, 2);
+      expect(grooves.totalExerciseCount, 3);
+      expect(grooves.practicedLessonCount, 1);
     },
   );
 
-  test('keeps temporary nodes visible without fabricated metrics', () async {
+  test('builds topic compass values from selected category children', () async {
+    final LessonContentLibrary library = _library(<Lesson>[
+      _lesson(
+        id: 'groove-one',
+        skill: 'grooves',
+        exercises: <String>['a', 'b'],
+      ),
+    ]);
+    final LessonProgressService progress = LessonProgressService(
+      MemoryLessonProgressStore(),
+    );
+    await progress.load();
+    await progress.completeExercise(
+      library.lessonsById['groove-one']!,
+      'a',
+      practicedDuration: const Duration(minutes: 8),
+    );
+
+    final CurriculumCompassSnapshot snapshot =
+        const CurriculumCompassAggregator().build(
+          root: const CurriculumCompassTreeBuilder().build(library),
+          nodePath: const <String>['grooves'],
+          progressService: progress,
+        );
+
+    expect(snapshot.currentNode.id, 'grooves');
+    expect(snapshot.childKind, CompassNodeKind.topic);
+    expect(snapshot.values, hasLength(10));
+    expect(
+      snapshot.breadcrumbs.map((CurriculumBreadcrumb item) => item.title),
+      <String>['Curriculum', 'Grooves'],
+    );
+
+    final CurriculumCompassPoint coreGrooves = _value(snapshot, 'core-grooves');
+    expect(coreGrooves.lessonFilterId, 'grooves');
+    expect(coreGrooves.completedExerciseCount, 1);
+    expect(coreGrooves.totalExerciseCount, 2);
+    expect(coreGrooves.progressRatio, 0.5);
+
+    final CurriculumCompassPoint rockGrooves = _value(snapshot, 'rock-grooves');
+    expect(rockGrooves.totalExerciseCount, 0);
+    expect(rockGrooves.progressRatio, 0);
+  });
+
+  test(
+    'lesson-level compass includes only interacted lessons and pages them',
+    () async {
+      final LessonContentLibrary library = _library(<Lesson>[
+        for (int index = 0; index < 12; index += 1)
+          _lesson(
+            id: 'groove-$index',
+            skill: 'grooves',
+            order: index + 1,
+            exercises: <String>['a'],
+          ),
+      ]);
+      final LessonProgressService progress = LessonProgressService(
+        MemoryLessonProgressStore(),
+      );
+      await progress.load();
+      for (int index = 0; index < 12; index += 1) {
+        await progress.openLesson(
+          'groove-$index',
+          at: DateTime.utc(2026, 1, index + 1),
+        );
+      }
+
+      final CurriculumNode root = const CurriculumCompassTreeBuilder().build(
+        library,
+      );
+      final CurriculumCompassSnapshot firstPage =
+          const CurriculumCompassAggregator().build(
+            root: root,
+            nodePath: const <String>['grooves', 'core-grooves'],
+            pageIndex: 0,
+            progressService: progress,
+          );
+      final CurriculumCompassSnapshot secondPage =
+          const CurriculumCompassAggregator().build(
+            root: root,
+            nodePath: const <String>['grooves', 'core-grooves'],
+            pageIndex: 1,
+            progressService: progress,
+          );
+
+      expect(firstPage.childKind, CompassNodeKind.lesson);
+      expect(firstPage.valuesFilteredByInteraction, isTrue);
+      expect(firstPage.values, hasLength(defaultMaxVisibleCompassPoints));
+      expect(firstPage.pageCount, 2);
+      expect(firstPage.values.first.nodeId, 'lesson:groove-11');
+      expect(secondPage.values, hasLength(2));
+      expect(secondPage.values.first.nodeId, 'lesson:groove-1');
+    },
+  );
+
+  test(
+    'untouched lessons are excluded but no-interaction state is explicit',
+    () async {
+      final LessonContentLibrary library = _library(<Lesson>[
+        _lesson(id: 'groove-one', skill: 'grooves', exercises: <String>['a']),
+      ]);
+      final LessonProgressService progress = LessonProgressService(
+        MemoryLessonProgressStore(),
+      );
+      await progress.load();
+
+      final CurriculumCompassSnapshot snapshot =
+          const CurriculumCompassAggregator().build(
+            root: const CurriculumCompassTreeBuilder().build(library),
+            nodePath: const <String>['grooves', 'core-grooves'],
+            progressService: progress,
+          );
+
+      expect(snapshot.values, isEmpty);
+      expect(snapshot.hasNoInteraction, isTrue);
+      expect(snapshot.hasNoContent, isFalse);
+      expect(snapshot.availableChildCount, 1);
+    },
+  );
+
+  test('no-content state is distinct from no-interaction state', () async {
     final LessonProgressService progress = LessonProgressService(
       MemoryLessonProgressStore(),
     );
@@ -165,19 +246,59 @@ void main() {
               lessonsByLevelId: <String, List<Lesson>>{},
             ),
           ),
-          nodePath: const <String>['vocabulary'],
+          nodePath: const <String>['vocabulary', 'triads'],
           progressService: progress,
         );
 
-    expect(snapshot.hasMetricData, isFalse);
-    expect(_value(snapshot, 'triads').label, 'Triads');
-    for (final CurriculumCompassPoint value in snapshot.values) {
-      expect(value.practicedSeconds, 0);
-      expect(value.totalExerciseCount, 0);
-      expect(value.practiceInvestmentRatio, 0);
-      expect(value.completionRatio, 0);
-    }
+    expect(snapshot.values, isEmpty);
+    expect(snapshot.hasNoContent, isTrue);
+    expect(snapshot.hasNoInteraction, isFalse);
   });
+
+  test(
+    'exercise-level compass includes interacted exercises with binary progress',
+    () async {
+      final LessonContentLibrary library = _library(<Lesson>[
+        _lesson(
+          id: 'groove-one',
+          skill: 'grooves',
+          exercises: <String>['a', 'b', 'c'],
+        ),
+      ]);
+      final LessonProgressService progress = LessonProgressService(
+        MemoryLessonProgressStore(),
+      );
+      await progress.load();
+      final Lesson lesson = library.lessonsById['groove-one']!;
+      await progress.startExercise(lesson, 'b', at: DateTime.utc(2026, 1, 1));
+      await progress.completeExercise(
+        lesson,
+        'a',
+        at: DateTime.utc(2026, 1, 2),
+        practicedDuration: const Duration(seconds: 30),
+      );
+
+      final CurriculumCompassSnapshot snapshot =
+          const CurriculumCompassAggregator().build(
+            root: const CurriculumCompassTreeBuilder().build(library),
+            nodePath: const <String>[
+              'grooves',
+              'core-grooves',
+              'lesson:groove-one',
+            ],
+            progressService: progress,
+          );
+
+      expect(snapshot.childKind, CompassNodeKind.exercise);
+      expect(snapshot.valuesFilteredByInteraction, isTrue);
+      expect(
+        snapshot.values.map((CurriculumCompassPoint value) => value.nodeId),
+        <String>['exercise:groove-one:a', 'exercise:groove-one:b'],
+      );
+      expect(_value(snapshot, 'exercise:groove-one:a').progressRatio, 1);
+      expect(_value(snapshot, 'exercise:groove-one:b').progressRatio, 0);
+    },
+  );
 
   test('unknown node path falls back to the root compass safely', () async {
     final LessonProgressService progress = LessonProgressService(
@@ -245,15 +366,16 @@ Lesson _lesson({
   required String id,
   required String skill,
   required List<String> exercises,
+  int order = 1,
 }) {
   return Lesson(
     id: id,
     title: id,
     level: 'beginner',
     skill: skill,
-    order: 1,
+    order: order,
     estimatedMinutes: 10,
-    overview: 'Overview.',
+    overview: 'Overview for $id.',
     objective: 'Objective.',
     exercises: <LessonExercise>[
       for (final String exerciseId in exercises) _exercise(exerciseId),

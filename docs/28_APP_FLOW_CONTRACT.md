@@ -455,14 +455,15 @@ Practice Insights is a top-level destination, but it is not Home.
 Current implementation:
 
 - hierarchical Curriculum Compass navigation
-- one stable multi-metric compass view; there is no Practice Time / Exercises
+- one stable Progress compass view; there is no Practice Time / Exercises
   Completed selector on this screen
 - radial per-spoke chart for three or more curriculum nodes
 - stable fallback summaries for one-skill and two-skill curriculum states
-- two compass levels:
+- compass levels:
   - top-level curriculum categories
-  - one selected category's child nodes
-- second-level nodes terminate at lesson navigation
+  - category topic nodes
+  - interacted lessons within a topic
+  - interacted exercises within a lesson
 - the temporary top-level taxonomy is:
   - Timing
   - Grooves
@@ -475,53 +476,71 @@ Current implementation:
   - Musicianship
   - Improvisation
 - Vocabulary must contain Triads as a child node
-- every compass is generated from the active curriculum node's children;
+- every compass is generated from the active curriculum node's prepared children;
   renderer code must not hardcode spoke names
-- Practice Investment derives from descendant lessons using
-  `ExerciseProgress.practicedSeconds -> Exercise -> Lesson -> curriculum node`
-- Curriculum Completion derives from descendant lessons using
+- Progress derives from descendant lessons using
   `ExerciseProgress.status == completed -> Exercise -> Lesson -> curriculum
   node`
-- each compass point carries both derived ratios:
-  - `practiceInvestmentRatio`: sibling-relative practiced seconds normalized
-    against the most-practiced visible sibling
-  - `completionRatio`: completed exercises divided by available exercises in
-    that node's descendant content
-- ratios are visual geometry only; raw practice time and completed/available
-  exercise counts remain visible in the selected-node summary
-- if every visible sibling has zero practice time, every Practice Investment
-  ratio is zero
-- if a node has no available exercises, its Curriculum Completion ratio is zero
+- each compass point carries one derived `progressRatio`: completed exercises
+  divided by available exercises in that node's descendant content
+- practice time is not part of the chart formula; it remains supporting context
+  in the selected-node summary
+- if a node has no available exercises, its Progress ratio is zero
   and the summary uses a `No exercises yet` state
-- the compact compass legend labels both encodings:
-  - Practice Investment
-  - Curriculum Completion
+- zero Progress renders on an inner zero ring, not at the chart center
+- one hundred percent Progress renders on the outer ring
+- the center of the compass is visually calm and may contain a small Progress
+  label only
 - tapping a compass spoke selects a node
 - tapping a compass spoke updates label selection and summary immediately, but
   compass rotation waits until the double-click window has passed so the second
   click target does not move
 - after the double-click window passes without activation, the selected spoke
   smoothly rotates to 12 o'clock
-- compass rotation applies to spokes, rings, metric tracks, markers, and
+- compass rotation applies to spokes, rings, the progress polygon, and
   hit-test geometry together
 - compass labels move with their spokes but their text remains upright and
   readable
 - selected compass nodes must be visually obvious through the label only:
-  selected labels use active accent styling and stronger text treatment, while
-  spokes, metric tracks, and endpoints keep the normal compass styling
+  selected labels use active accent styling and stronger text treatment, while the
+  spoke and progress polygon keep the normal compass styling
 - drilling into a category requires an explicit action; selection alone must not
   navigate
 - double-clicking a compass spoke data point or label activates the same action as
   the selected-node button:
-  - root category nodes drill into the second-level compass
-  - second-level nodes open Explore with that node's lesson filter
-- breadcrumbs show the current curriculum position and allow return to the root
+  - curriculum, category, and topic nodes with visible child nodes drill into the
+    next compass level
+  - lesson nodes open the lesson when a lesson route is available
+  - exercise nodes open or practice the exercise when an exercise route is
+    available
+- topics with lesson content and lessons with exercise content filter their
+  compass children to content the user has meaningfully interacted with
+- a lesson is meaningfully interacted with when existing persisted progress shows
+  it has been opened, started, practiced, completed, or has at least one
+  interacted exercise
+- an exercise is meaningfully interacted with when existing persisted progress
+  shows it has been started, practiced, or completed
+- untouched lessons and exercises remain accessible through conventional
+  browse-all actions rather than being forced into the compass
+- no-content and no-interaction states are distinct:
+  - no content: `No exercises are available yet.`
+  - content exists but no interaction: `You have not practiced any exercises in
+    this lesson yet.`
+- visible compass points are capped by the configured maximum of 10
+- when more than 10 interacted points exist, explicit Previous/Next pagination
+  switches the visible set; filtering, ordering, and pagination live in the data
+  provider, not the painter
+- interacted lesson and exercise nodes are ordered by most recent persisted
+  interaction, then greatest practiced duration, then curriculum order
+- breadcrumbs show the full current curriculum position and allow return to any
+  ancestor
 - selected-node summary content cross-fades when the selected node changes
 - selected-node metric values animate visually to their new values without
   mutating persisted progress values
-- root nodes with children use a contextual `Explore <Node>` action label
-- second-level View Lessons opens Explore with the selected node's lesson filter
-- selected-node summaries show both exact values at once:
+- curriculum nodes with children use a contextual `Explore <Node>` action label
+- topic browse-all actions open Explore with the selected node's lesson filter
+- selected-node summaries show exact values:
+  - Progress as a percentage derived from completed/available exercises
   - practiced duration, preserving `< 1 min` for nonzero sub-minute practice
   - completed exercise count out of available exercise count
   - lessons touched where useful
@@ -552,11 +571,10 @@ V1 limitations:
 - all exercise completions roll into that lesson's primary skill
 - current real lessons are attached to the temporary taxonomy through
   `Lesson.skill`
-- Practice Investment radius is relative to the most-practiced visible child of
-  the active node
-- Curriculum Completion radius is relative to each child node's own exercise
+- Progress radius is based on each child node's own completed/available exercise
   total
-- only two compass levels exist in this implementation
+- lesson/exercise compass levels are personalized activity views, not complete
+  catalogs
 - the taxonomy is temporary and exists to validate hierarchical navigation
 - values may change if curriculum content changes
 

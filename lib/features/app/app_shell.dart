@@ -5,6 +5,10 @@ import 'package:flutter/material.dart';
 import '../../core/practice/practice_domain_v1.dart';
 import '../../state/app_controller.dart';
 import 'drumcabulary_theme.dart';
+import '../coach/lesson_detail_screen.dart';
+import '../coach/lesson_plan.dart';
+import '../coach/lesson_plan_loader.dart';
+import '../coach/lesson_progress.dart';
 import '../hardware/hardware_capabilities.dart';
 import '../hardware/hardware_status_header.dart';
 import '../library/pattern_screen.dart';
@@ -75,7 +79,14 @@ class _AppShellState extends State<AppShell> {
           title: 'Practice Insights',
           subtitle: 'Practice time and completion by skill.',
         ),
-        body: PracticeInsightsScreen(onOpenSkill: _openSkillInExplore),
+        body: PracticeInsightsScreen(
+          onOpenSkill: _openSkillInExplore,
+          onOpenLesson: (String lessonId) =>
+              unawaited(_openLessonFromInsights(lessonId)),
+          onOpenExercise: (String lessonId, String exerciseId) => unawaited(
+            _openLessonFromInsights(lessonId, initialExerciseId: exerciseId),
+          ),
+        ),
       ),
       3 => _ShellDestination(
         header: const _ShellHeaderContent(
@@ -114,6 +125,32 @@ class _AppShellState extends State<AppShell> {
       _initialExploreSkillId = skillId;
       _selectedIndex = 1;
     });
+  }
+
+  Future<void> _openLessonFromInsights(
+    String lessonId, {
+    String? initialExerciseId,
+  }) async {
+    final LessonContentLibrary library = await LessonPlanLoader.loadContent();
+    final Lesson? lesson = library.lessonsById[lessonId];
+    if (lesson == null || !mounted) return;
+
+    final LessonProgressService progressService = LessonProgressService(
+      const FileLessonProgressStore(),
+    );
+    await progressService.load();
+    await progressService.openLesson(lesson.id);
+    if (!mounted) return;
+
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (BuildContext context) => LessonDetailScreen(
+          lesson: lesson,
+          initialExerciseId: initialExerciseId,
+          progressService: progressService,
+        ),
+      ),
+    );
   }
 
   void _openPattern(AppController controller, String itemId) {

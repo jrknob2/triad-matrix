@@ -20,7 +20,7 @@ void main() {
             width: 360,
             height: 360,
             child: CurriculumCompassChart(
-              values: _rootPracticeValues,
+              values: _rootValues,
               selectedNodeId: 'timing',
               onNodeSelected: (String nodeId) {
                 selectedNodeId = nodeId;
@@ -50,6 +50,38 @@ void main() {
     },
   );
 
+  test('inner zero ring maps progress without using the center', () {
+    const double outerRadius = 100;
+
+    expect(
+      curriculumCompassDisplayRadiusForProgress(
+        outerRadius: outerRadius,
+        progressRatio: 0,
+      ),
+      closeTo(outerRadius * curriculumCompassInnerZeroRadiusFactor, 0.0001),
+    );
+    expect(
+      curriculumCompassDisplayRadiusForProgress(
+        outerRadius: outerRadius,
+        progressRatio: 1,
+      ),
+      outerRadius,
+    );
+    expect(
+      curriculumCompassDisplayRadiusForProgress(
+        outerRadius: outerRadius,
+        progressRatio: 0.5,
+      ),
+      closeTo(
+        outerRadius * curriculumCompassInnerZeroRadiusFactor +
+            (outerRadius -
+                    outerRadius * curriculumCompassInnerZeroRadiusFactor) *
+                0.5,
+        0.0001,
+      ),
+    );
+  });
+
   testWidgets('CurriculumCompassChart rotates selected spoke to 12 o clock', (
     WidgetTester tester,
   ) async {
@@ -65,7 +97,7 @@ void main() {
                 width: 360,
                 height: 360,
                 child: CurriculumCompassChart(
-                  values: _rootPracticeValues,
+                  values: _rootValues,
                   selectedNodeId: selectedNodeId,
                   onNodeSelected: (String nodeId) {
                     setState(() => selectedNodeId = nodeId);
@@ -106,7 +138,7 @@ void main() {
                   width: 360,
                   height: 360,
                   child: CurriculumCompassChart(
-                    values: _rootPracticeValues,
+                    values: _rootValues,
                     selectedNodeId: selectedNodeId,
                     onNodeSelected: (String nodeId) {
                       setState(() => selectedNodeId = nodeId);
@@ -139,7 +171,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: CurriculumCompassChart(
-          values: _rootPracticeValues.take(1).toList(growable: false),
+          values: _rootValues.take(1).toList(growable: false),
           selectedNodeId: 'timing',
           onNodeSelected: (_) {},
         ),
@@ -148,6 +180,7 @@ void main() {
 
     expect(find.text('One node tracked'), findsOneWidget);
     expect(find.text('Timing'), findsOneWidget);
+    expect(find.text('Progress'), findsWidgets);
   });
 
   testWidgets('CurriculumCompassChart handles two-node edge state', (
@@ -156,7 +189,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: CurriculumCompassChart(
-          values: _rootPracticeValues.take(2).toList(growable: false),
+          values: _rootValues.take(2).toList(growable: false),
           selectedNodeId: 'timing',
           onNodeSelected: (_) {},
         ),
@@ -173,7 +206,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: PracticeInsightsScreen(
-          snapshotLoader: (List<String> nodePath) async =>
+          snapshotLoader: (List<String> nodePath, int pageIndex) async =>
               const CurriculumCompassSnapshot(
                 currentNode: _rootNode,
                 breadcrumbs: _rootBreadcrumbs,
@@ -188,7 +221,7 @@ void main() {
   });
 
   testWidgets(
-    'PracticeInsightsScreen shows Curriculum Compass without a lens selector',
+    'PracticeInsightsScreen shows a single Progress compass without metric lenses',
     (WidgetTester tester) async {
       _useLargeSurface(tester);
       await tester.pumpWidget(
@@ -201,40 +234,19 @@ void main() {
       expect(find.text('Curriculum'), findsWidgets);
       expect(find.text('Practice Time'), findsNothing);
       expect(find.text('Exercises Completed'), findsNothing);
+      expect(find.text('Practice Investment'), findsNothing);
+      expect(find.text('Curriculum Completion'), findsNothing);
       expect(find.text('Curriculum Compass'), findsOneWidget);
-      expect(find.text('Practice Investment'), findsOneWidget);
-      expect(find.text('Curriculum Completion'), findsOneWidget);
       expect(
         find.text(
-          'Maps where practice time is invested and how much curriculum work is complete.',
+          'Maps curriculum progress while keeping practice time in context.',
         ),
         findsOneWidget,
       );
-      expect(find.byType(AnimatedSwitcher), findsWidgets);
     },
   );
 
-  testWidgets(
-    'sub-minute nonzero practice time displays as less than one minute',
-    (WidgetTester tester) async {
-      _useLargeSurface(tester);
-      await tester.pumpWidget(
-        MaterialApp(
-          home: PracticeInsightsScreen(snapshotLoader: _snapshotForPath),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      await _tapCompassNode(tester, 1);
-      expect(find.text('< 1 min'), findsWidgets);
-
-      await _tapCompassNode(tester, 2, selectedIndex: 1);
-      expect(find.text('0 min'), findsWidgets);
-      expect(find.text('Not practiced yet'), findsOneWidget);
-    },
-  );
-
-  testWidgets('selected summary shows exact practice and completion metrics', (
+  testWidgets('selected summary shows exact progress and supporting metrics', (
     WidgetTester tester,
   ) async {
     _useLargeSurface(tester);
@@ -245,11 +257,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(find.text('Progress'), findsWidgets);
+    expect(find.text('25%'), findsWidgets);
     expect(find.text('1 hr'), findsWidgets);
     expect(find.text('Exercises completed'), findsWidgets);
     expect(find.text('1 of 4'), findsWidgets);
     expect(find.text('Lessons touched'), findsOneWidget);
-    expect(find.text('2'), findsWidgets);
   });
 
   testWidgets('zero-progress selected node shows intentional empty states', (
@@ -270,34 +283,24 @@ void main() {
     expect(find.text('0 of 2'), findsWidgets);
   });
 
-  testWidgets('drill-in shows second-level compass and breadcrumbs', (
-    WidgetTester tester,
-  ) async {
-    _useLargeSurface(tester);
-    await tester.pumpWidget(
-      MaterialApp(
-        home: PracticeInsightsScreen(
-          snapshotLoader: _snapshotForPath,
-          onOpenSkill: (_) {},
+  testWidgets(
+    'sub-minute nonzero practice time displays as less than one minute',
+    (WidgetTester tester) async {
+      _useLargeSurface(tester);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: PracticeInsightsScreen(snapshotLoader: _snapshotForPath),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    await _tapCompassNode(tester, 1);
-    await tester.pumpAndSettle();
-    expect(find.text('Explore Grooves'), findsOneWidget);
-    expect(find.text('Open Category'), findsNothing);
-    await tester.tap(find.text('Explore Grooves'));
-    await tester.pumpAndSettle();
+      await _tapCompassNode(tester, 1);
 
-    expect(find.text('Curriculum'), findsWidgets);
-    expect(find.text('Grooves'), findsWidgets);
-    expect(find.text('Core Grooves'), findsWidgets);
-    expect(find.text('View Lessons'), findsOneWidget);
-  });
+      expect(find.text('< 1 min'), findsWidgets);
+    },
+  );
 
-  testWidgets('selected nodes can show short descriptions', (
+  testWidgets('drill-in supports category, topic, and lesson breadcrumbs', (
     WidgetTester tester,
   ) async {
     _useLargeSurface(tester);
@@ -309,11 +312,18 @@ void main() {
     await tester.pumpAndSettle();
 
     await _tapCompassNode(tester, 1);
+    expect(find.text('Explore Grooves'), findsOneWidget);
+    await tester.tap(find.text('Explore Grooves'));
+    await tester.pumpAndSettle();
+    expect(find.text('Core Grooves'), findsWidgets);
+    expect(find.text('Explore Core Grooves'), findsOneWidget);
 
-    expect(
-      find.text('Develop the rhythmic patterns that support modern songs.'),
-      findsOneWidget,
-    );
+    await tester.tap(find.text('Explore Core Grooves'));
+    await tester.pumpAndSettle();
+    expect(find.text('Money Beat'), findsWidgets);
+    expect(find.text('Curriculum'), findsWidgets);
+    expect(find.text('Grooves'), findsWidgets);
+    expect(find.text('Core Grooves'), findsWidgets);
   });
 
   testWidgets('breadcrumb return preserves compass navigation', (
@@ -328,10 +338,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await _tapCompassNode(tester, 1);
-    await tester.pumpAndSettle();
     await tester.tap(find.text('Explore Grooves'));
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Curriculum').first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Curriculum').first);
     await tester.pumpAndSettle();
@@ -346,10 +353,7 @@ void main() {
     _useLargeSurface(tester);
     await tester.pumpWidget(
       MaterialApp(
-        home: PracticeInsightsScreen(
-          snapshotLoader: _snapshotForPath,
-          onOpenSkill: (_) {},
-        ),
+        home: PracticeInsightsScreen(snapshotLoader: _snapshotForPath),
       ),
     );
     await tester.pumpAndSettle();
@@ -359,12 +363,11 @@ void main() {
     expect(find.text('Core Grooves'), findsWidgets);
   });
 
-  testWidgets('second-level View Lessons opens the existing lesson flow', (
+  testWidgets('no-interaction lesson state offers browse-all lessons', (
     WidgetTester tester,
   ) async {
     _useLargeSurface(tester);
     String? openedSkillId;
-
     await tester.pumpWidget(
       MaterialApp(
         home: PracticeInsightsScreen(
@@ -373,53 +376,6 @@ void main() {
             openedSkillId = skillId;
           },
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await _tapCompassNode(tester, 1);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Explore Grooves'));
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('View Lessons'));
-    await tester.tap(find.text('View Lessons'));
-
-    expect(openedSkillId, 'grooves');
-  });
-
-  testWidgets('double-clicking a second-level compass point opens lessons', (
-    WidgetTester tester,
-  ) async {
-    _useLargeSurface(tester);
-    String? openedSkillId;
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: PracticeInsightsScreen(
-          snapshotLoader: _snapshotForPath,
-          onOpenSkill: (String skillId) {
-            openedSkillId = skillId;
-          },
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await _tapCompassNode(tester, 1);
-    await tester.tap(find.text('Explore Grooves'));
-    await tester.pumpAndSettle();
-    await _doubleTapCompassNode(tester, 0, distance: 126);
-
-    expect(openedSkillId, 'grooves');
-  });
-
-  testWidgets('no-content selected node shows no-exercises state', (
-    WidgetTester tester,
-  ) async {
-    _useLargeSurface(tester);
-    await tester.pumpWidget(
-      MaterialApp(
-        home: PracticeInsightsScreen(snapshotLoader: _snapshotForPath),
       ),
     );
     await tester.pumpAndSettle();
@@ -428,8 +384,79 @@ void main() {
     await tester.tap(find.text('Explore Grooves'));
     await tester.pumpAndSettle();
     await _tapCompassNode(tester, 1, count: 3, distance: 126);
+    await tester.tap(find.text('Explore Empty Topic'));
+    await tester.pumpAndSettle();
 
-    expect(find.text('No exercises yet'), findsWidgets);
+    expect(find.text('No lesson activity yet'), findsOneWidget);
+    expect(find.text('View All Lessons'), findsOneWidget);
+    await tester.tap(find.text('View All Lessons'));
+    expect(openedSkillId, 'grooves');
+  });
+
+  testWidgets('pagination changes visible compass page and resets selection', (
+    WidgetTester tester,
+  ) async {
+    _useLargeSurface(tester);
+    final List<int> requestedPages = <int>[];
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PracticeInsightsScreen(
+          snapshotLoader: (List<String> path, int pageIndex) {
+            requestedPages.add(pageIndex);
+            return _snapshotForPath(path, pageIndex);
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await _tapCompassNode(tester, 1);
+    await tester.tap(find.text('Explore Grooves'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Explore Core Grooves'));
+    await tester.pumpAndSettle();
+    expect(find.text('1 of 2'), findsWidgets);
+
+    await tester.tap(find.text('Next set'));
+    await tester.pumpAndSettle();
+
+    expect(requestedPages, contains(1));
+    expect(find.text('Lesson 10'), findsWidgets);
+  });
+
+  testWidgets('lesson and exercise contextual callbacks are available', (
+    WidgetTester tester,
+  ) async {
+    _useLargeSurface(tester);
+    String? openedLessonId;
+    String? openedExerciseKey;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PracticeInsightsScreen(
+          snapshotLoader: _snapshotForPath,
+          onOpenLesson: (String lessonId) {
+            openedLessonId = lessonId;
+          },
+          onOpenExercise: (String lessonId, String exerciseId) {
+            openedExerciseKey = '$lessonId/$exerciseId';
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await _tapCompassNode(tester, 1);
+    await tester.tap(find.text('Explore Grooves'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Explore Core Grooves'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Open Lesson'));
+    expect(openedLessonId, 'money-beat');
+
+    await tester.tap(find.text('Explore Money Beat'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Practice Exercise'));
+    expect(openedExerciseKey, 'money-beat/add-snare');
   });
 }
 
@@ -501,41 +528,135 @@ Offset _compassNodePosition(
 
 Future<CurriculumCompassSnapshot> _snapshotForPath(
   List<String> nodePath,
+  int pageIndex,
 ) async {
-  final bool inGrooves = nodePath.isNotEmpty && nodePath.first == 'grooves';
+  if (_samePath(nodePath, const <String>['grooves'])) {
+    return _snapshot(
+      currentNode: _groovesNode,
+      breadcrumbs: _groovesBreadcrumbs,
+      values: _groovesValues,
+      childKind: CompassNodeKind.topic,
+      availableChildCount: 3,
+    );
+  }
+  if (_samePath(nodePath, const <String>['grooves', 'core-grooves'])) {
+    final List<CurriculumCompassPoint> allValues = _lessonValues;
+    final int start = pageIndex == 0 ? 0 : 10;
+    final int end = pageIndex == 0 ? 10 : allValues.length;
+    return _snapshot(
+      currentNode: _coreGroovesNode,
+      breadcrumbs: _coreGroovesBreadcrumbs,
+      values: allValues.sublist(start, end),
+      childKind: CompassNodeKind.lesson,
+      availableChildCount: allValues.length,
+      valuesFilteredByInteraction: true,
+      pageIndex: pageIndex,
+      pageCount: 2,
+      totalValueCount: allValues.length,
+    );
+  }
+  if (_samePath(nodePath, const <String>['grooves', 'empty-topic'])) {
+    return _snapshot(
+      currentNode: _emptyTopicNode,
+      breadcrumbs: _emptyTopicBreadcrumbs,
+      values: const <CurriculumCompassPoint>[],
+      childKind: CompassNodeKind.lesson,
+      availableChildCount: 1,
+      valuesFilteredByInteraction: true,
+    );
+  }
+  if (_samePath(nodePath, const <String>[
+    'grooves',
+    'core-grooves',
+    'lesson:money-beat',
+  ])) {
+    return _snapshot(
+      currentNode: _moneyBeatNode,
+      breadcrumbs: _moneyBeatBreadcrumbs,
+      values: _exerciseValues,
+      childKind: CompassNodeKind.exercise,
+      availableChildCount: 2,
+      valuesFilteredByInteraction: true,
+    );
+  }
   return _snapshot(
-    currentNode: inGrooves ? _groovesNode : _rootNode,
-    breadcrumbs: inGrooves ? _groovesBreadcrumbs : _rootBreadcrumbs,
-    values: inGrooves ? _groovesValues : _rootPracticeValues,
+    currentNode: _rootNode,
+    breadcrumbs: _rootBreadcrumbs,
+    values: _rootValues,
+    childKind: CompassNodeKind.category,
+    availableChildCount: 3,
   );
+}
+
+bool _samePath(List<String> a, List<String> b) {
+  if (a.length != b.length) return false;
+  for (int index = 0; index < a.length; index += 1) {
+    if (a[index] != b[index]) return false;
+  }
+  return true;
 }
 
 CurriculumCompassSnapshot _snapshot({
   required CurriculumNode currentNode,
   required List<CurriculumBreadcrumb> breadcrumbs,
   required List<CurriculumCompassPoint> values,
+  int pageIndex = 0,
+  int pageCount = 0,
+  int totalValueCount = 0,
+  int availableChildCount = 0,
+  bool valuesFilteredByInteraction = false,
+  CompassNodeKind? childKind,
 }) {
   return CurriculumCompassSnapshot(
     currentNode: currentNode,
     breadcrumbs: breadcrumbs,
     values: values,
+    pageIndex: pageIndex,
+    pageCount: pageCount,
+    totalValueCount: totalValueCount == 0 ? values.length : totalValueCount,
+    availableChildCount: availableChildCount,
+    valuesFilteredByInteraction: valuesFilteredByInteraction,
+    childKind: childKind,
   );
 }
 
 const CurriculumNode _rootNode = CurriculumNode(
   id: CurriculumCompassTreeBuilder.rootId,
   title: 'Curriculum',
+  kind: CompassNodeKind.curriculum,
 );
 
 const CurriculumNode _groovesNode = CurriculumNode(
   id: 'grooves',
   title: 'Grooves',
+  kind: CompassNodeKind.category,
+);
+
+const CurriculumNode _coreGroovesNode = CurriculumNode(
+  id: 'core-grooves',
+  title: 'Core Grooves',
+  kind: CompassNodeKind.topic,
+  lessonFilterId: 'grooves',
+);
+
+const CurriculumNode _emptyTopicNode = CurriculumNode(
+  id: 'empty-topic',
+  title: 'Empty Topic',
+  kind: CompassNodeKind.topic,
+  lessonFilterId: 'grooves',
+);
+
+const CurriculumNode _moneyBeatNode = CurriculumNode(
+  id: 'lesson:money-beat',
+  title: 'Money Beat',
+  kind: CompassNodeKind.lesson,
 );
 
 const List<CurriculumBreadcrumb> _rootBreadcrumbs = <CurriculumBreadcrumb>[
   CurriculumBreadcrumb(
     id: CurriculumCompassTreeBuilder.rootId,
     title: 'Curriculum',
+    kind: CompassNodeKind.curriculum,
   ),
 ];
 
@@ -543,73 +664,103 @@ const List<CurriculumBreadcrumb> _groovesBreadcrumbs = <CurriculumBreadcrumb>[
   CurriculumBreadcrumb(
     id: CurriculumCompassTreeBuilder.rootId,
     title: 'Curriculum',
+    kind: CompassNodeKind.curriculum,
   ),
-  CurriculumBreadcrumb(id: 'grooves', title: 'Grooves'),
+  CurriculumBreadcrumb(
+    id: 'grooves',
+    title: 'Grooves',
+    kind: CompassNodeKind.category,
+  ),
 ];
 
-const List<CurriculumCompassPoint> _rootPracticeValues =
-    <CurriculumCompassPoint>[
-      CurriculumCompassPoint(
-        nodeId: 'timing',
-        label: 'Timing',
-        shortDescription:
-            'Build steady pulse, subdivision control, and confident time feel.',
-        lessonFilterId: 'timing',
-        hasChildren: true,
-        practicedSeconds: 3600,
-        practiceInvestmentRatio: 1,
-        completionRatio: 0.25,
-        practicedExerciseCount: 3,
-        practicedLessonCount: 2,
-        completedExerciseCount: 1,
-        totalExerciseCount: 4,
-        completedLessonCount: 1,
+const List<CurriculumBreadcrumb> _coreGroovesBreadcrumbs =
+    <CurriculumBreadcrumb>[
+      CurriculumBreadcrumb(
+        id: CurriculumCompassTreeBuilder.rootId,
+        title: 'Curriculum',
+        kind: CompassNodeKind.curriculum,
       ),
-      CurriculumCompassPoint(
-        nodeId: 'grooves',
-        label: 'Grooves',
-        shortDescription:
-            'Develop the rhythmic patterns that support modern songs.',
-        lessonFilterId: 'grooves',
-        hasChildren: true,
-        practicedSeconds: 20,
-        practiceInvestmentRatio: 20 / 3600,
-        completionRatio: 2 / 3,
-        practicedExerciseCount: 1,
-        practicedLessonCount: 1,
-        completedExerciseCount: 2,
-        totalExerciseCount: 3,
-        completedLessonCount: 1,
+      CurriculumBreadcrumb(
+        id: 'grooves',
+        title: 'Grooves',
+        kind: CompassNodeKind.category,
       ),
-      CurriculumCompassPoint(
-        nodeId: 'rudiments',
-        label: 'Rudiments',
-        shortDescription:
-            'Strengthen the sticking vocabulary behind clean drum movement.',
-        lessonFilterId: 'rudiments',
-        hasChildren: true,
-        practicedSeconds: 0,
-        practiceInvestmentRatio: 0,
-        completionRatio: 0,
-        practicedExerciseCount: 0,
-        practicedLessonCount: 0,
-        completedExerciseCount: 0,
-        totalExerciseCount: 2,
-        completedLessonCount: 0,
+      CurriculumBreadcrumb(
+        id: 'core-grooves',
+        title: 'Core Grooves',
+        kind: CompassNodeKind.topic,
       ),
     ];
 
-const List<CurriculumCompassPoint> _groovesValues = <CurriculumCompassPoint>[
+const List<CurriculumBreadcrumb> _emptyTopicBreadcrumbs =
+    <CurriculumBreadcrumb>[
+      CurriculumBreadcrumb(
+        id: CurriculumCompassTreeBuilder.rootId,
+        title: 'Curriculum',
+        kind: CompassNodeKind.curriculum,
+      ),
+      CurriculumBreadcrumb(
+        id: 'grooves',
+        title: 'Grooves',
+        kind: CompassNodeKind.category,
+      ),
+      CurriculumBreadcrumb(
+        id: 'empty-topic',
+        title: 'Empty Topic',
+        kind: CompassNodeKind.topic,
+      ),
+    ];
+
+const List<CurriculumBreadcrumb> _moneyBeatBreadcrumbs = <CurriculumBreadcrumb>[
+  CurriculumBreadcrumb(
+    id: CurriculumCompassTreeBuilder.rootId,
+    title: 'Curriculum',
+    kind: CompassNodeKind.curriculum,
+  ),
+  CurriculumBreadcrumb(
+    id: 'grooves',
+    title: 'Grooves',
+    kind: CompassNodeKind.category,
+  ),
+  CurriculumBreadcrumb(
+    id: 'core-grooves',
+    title: 'Core Grooves',
+    kind: CompassNodeKind.topic,
+  ),
+  CurriculumBreadcrumb(
+    id: 'lesson:money-beat',
+    title: 'Money Beat',
+    kind: CompassNodeKind.lesson,
+  ),
+];
+
+const List<CurriculumCompassPoint> _rootValues = <CurriculumCompassPoint>[
   CurriculumCompassPoint(
-    nodeId: 'core-grooves',
-    label: 'Core Grooves',
+    nodeId: 'timing',
+    label: 'Timing',
+    kind: CompassNodeKind.category,
     shortDescription:
-        'Build dependable foundational beats for common musical situations.',
+        'Build steady pulse, subdivision control, and confident time feel.',
+    lessonFilterId: 'timing',
+    hasChildren: true,
+    practicedSeconds: 3600,
+    progressRatio: 0.25,
+    practicedExerciseCount: 3,
+    practicedLessonCount: 2,
+    completedExerciseCount: 1,
+    totalExerciseCount: 4,
+    completedLessonCount: 1,
+  ),
+  CurriculumCompassPoint(
+    nodeId: 'grooves',
+    label: 'Grooves',
+    kind: CompassNodeKind.category,
+    shortDescription:
+        'Develop the rhythmic patterns that support modern songs.',
     lessonFilterId: 'grooves',
-    hasChildren: false,
+    hasChildren: true,
     practicedSeconds: 20,
-    practiceInvestmentRatio: 1,
-    completionRatio: 2 / 3,
+    progressRatio: 2 / 3,
     practicedExerciseCount: 1,
     practicedLessonCount: 1,
     completedExerciseCount: 2,
@@ -617,27 +768,62 @@ const List<CurriculumCompassPoint> _groovesValues = <CurriculumCompassPoint>[
     completedLessonCount: 1,
   ),
   CurriculumCompassPoint(
-    nodeId: 'rock-grooves',
-    label: 'Rock Grooves',
-    lessonFilterId: 'rock-grooves',
-    hasChildren: false,
+    nodeId: 'rudiments',
+    label: 'Rudiments',
+    kind: CompassNodeKind.category,
+    shortDescription:
+        'Strengthen the sticking vocabulary behind clean drum movement.',
+    lessonFilterId: 'rudiments',
+    hasChildren: true,
     practicedSeconds: 0,
-    practiceInvestmentRatio: 0,
-    completionRatio: 0,
+    progressRatio: 0,
     practicedExerciseCount: 0,
     practicedLessonCount: 0,
     completedExerciseCount: 0,
-    totalExerciseCount: 0,
+    totalExerciseCount: 2,
+    completedLessonCount: 0,
+  ),
+];
+
+const List<CurriculumCompassPoint> _groovesValues = <CurriculumCompassPoint>[
+  CurriculumCompassPoint(
+    nodeId: 'core-grooves',
+    label: 'Core Grooves',
+    kind: CompassNodeKind.topic,
+    shortDescription:
+        'Build dependable foundational beats for common musical situations.',
+    lessonFilterId: 'grooves',
+    hasChildren: true,
+    practicedSeconds: 20,
+    progressRatio: 2 / 3,
+    practicedExerciseCount: 1,
+    practicedLessonCount: 1,
+    completedExerciseCount: 2,
+    totalExerciseCount: 3,
+    completedLessonCount: 1,
+  ),
+  CurriculumCompassPoint(
+    nodeId: 'empty-topic',
+    label: 'Empty Topic',
+    kind: CompassNodeKind.topic,
+    lessonFilterId: 'grooves',
+    hasChildren: true,
+    practicedSeconds: 0,
+    progressRatio: 0,
+    practicedExerciseCount: 0,
+    practicedLessonCount: 0,
+    completedExerciseCount: 0,
+    totalExerciseCount: 1,
     completedLessonCount: 0,
   ),
   CurriculumCompassPoint(
-    nodeId: 'funk-grooves',
-    label: 'Funk Grooves',
-    lessonFilterId: 'funk-grooves',
+    nodeId: 'rock-grooves',
+    label: 'Rock Grooves',
+    kind: CompassNodeKind.topic,
+    lessonFilterId: 'rock-grooves',
     hasChildren: false,
     practicedSeconds: 0,
-    practiceInvestmentRatio: 0,
-    completionRatio: 0,
+    progressRatio: 0,
     practicedExerciseCount: 0,
     practicedLessonCount: 0,
     completedExerciseCount: 0,
@@ -645,3 +831,80 @@ const List<CurriculumCompassPoint> _groovesValues = <CurriculumCompassPoint>[
     completedLessonCount: 0,
   ),
 ];
+
+final List<CurriculumCompassPoint> _lessonValues = <CurriculumCompassPoint>[
+  _lessonPoint(
+    nodeId: 'lesson:money-beat',
+    label: 'Money Beat',
+    lessonId: 'money-beat',
+    progressRatio: 0.5,
+    practicedSeconds: 120,
+  ),
+  for (int index = 1; index <= 10; index += 1)
+    _lessonPoint(
+      nodeId: 'lesson:lesson-$index',
+      label: 'Lesson $index',
+      lessonId: 'lesson-$index',
+      progressRatio: 0,
+      practicedSeconds: 30,
+    ),
+];
+
+const List<CurriculumCompassPoint> _exerciseValues = <CurriculumCompassPoint>[
+  CurriculumCompassPoint(
+    nodeId: 'exercise:money-beat:add-snare',
+    label: 'Add Snare',
+    kind: CompassNodeKind.exercise,
+    lessonFilterId: 'grooves',
+    hasChildren: false,
+    lessonId: 'money-beat',
+    exerciseId: 'add-snare',
+    practicedSeconds: 45,
+    progressRatio: 1,
+    practicedExerciseCount: 1,
+    practicedLessonCount: 1,
+    completedExerciseCount: 1,
+    totalExerciseCount: 1,
+    completedLessonCount: 1,
+  ),
+  CurriculumCompassPoint(
+    nodeId: 'exercise:money-beat:add-kick',
+    label: 'Add Kick',
+    kind: CompassNodeKind.exercise,
+    lessonFilterId: 'grooves',
+    hasChildren: false,
+    lessonId: 'money-beat',
+    exerciseId: 'add-kick',
+    practicedSeconds: 10,
+    progressRatio: 0,
+    practicedExerciseCount: 1,
+    practicedLessonCount: 1,
+    completedExerciseCount: 0,
+    totalExerciseCount: 1,
+    completedLessonCount: 0,
+  ),
+];
+
+CurriculumCompassPoint _lessonPoint({
+  required String nodeId,
+  required String label,
+  required String lessonId,
+  required double progressRatio,
+  required int practicedSeconds,
+}) {
+  return CurriculumCompassPoint(
+    nodeId: nodeId,
+    label: label,
+    kind: CompassNodeKind.lesson,
+    lessonFilterId: 'grooves',
+    hasChildren: true,
+    lessonId: lessonId,
+    practicedSeconds: practicedSeconds,
+    progressRatio: progressRatio,
+    practicedExerciseCount: practicedSeconds > 0 ? 1 : 0,
+    practicedLessonCount: practicedSeconds > 0 ? 1 : 0,
+    completedExerciseCount: (progressRatio * 2).round(),
+    totalExerciseCount: 2,
+    completedLessonCount: progressRatio >= 1 ? 1 : 0,
+  );
+}
