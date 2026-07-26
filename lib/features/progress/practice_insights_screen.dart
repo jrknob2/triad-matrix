@@ -7,37 +7,34 @@ import '../app/drumcabulary_theme.dart';
 import '../app/drumcabulary_ui.dart';
 import '../coach/lesson_plan_loader.dart';
 import '../coach/lesson_progress.dart';
-import 'curriculum_progress_lens_aggregator.dart';
+import 'curriculum_compass_aggregator.dart';
 
-const double _radarFullTurn = math.pi * 2;
-const double _radarTopAngle = -math.pi / 2;
-const Duration _radarRotationDuration = Duration(milliseconds: 320);
+const double _compassFullTurn = math.pi * 2;
+const double _compassTopAngle = -math.pi / 2;
+const Duration _compassRotationDuration = Duration(milliseconds: 320);
 const Duration _summaryTransitionDuration = Duration(milliseconds: 220);
 const Duration _metricTransitionDuration = Duration(milliseconds: 260);
 
-double radarTargetRotationForIndex(int index, int count) {
+double curriculumCompassTargetRotationForIndex(int index, int count) {
   if (count <= 0) return 0;
-  return -_radarFullTurn * index / count;
+  return -_compassFullTurn * index / count;
 }
 
-double shortestRadarRotationDelta(double current, double target) {
+double shortestCompassRotationDelta(double current, double target) {
   final double rawDelta = target - current;
-  return _normalizeRadarAngle(rawDelta);
+  return _normalizeCompassAngle(rawDelta);
 }
 
-double _normalizeRadarAngle(double angle) {
-  double normalized = angle % _radarFullTurn;
-  if (normalized <= -math.pi) normalized += _radarFullTurn;
-  if (normalized > math.pi) normalized -= _radarFullTurn;
+double _normalizeCompassAngle(double angle) {
+  double normalized = angle % _compassFullTurn;
+  if (normalized <= -math.pi) normalized += _compassFullTurn;
+  if (normalized > math.pi) normalized -= _compassFullTurn;
   return normalized;
 }
 
 class PracticeInsightsScreen extends StatefulWidget {
   final ValueChanged<String>? onOpenSkill;
-  final Future<CurriculumProgressLensSnapshot> Function(
-    PracticeInsightsLens lens,
-    List<String> nodePath,
-  )?
+  final Future<CurriculumCompassSnapshot> Function(List<String> nodePath)?
   snapshotLoader;
 
   const PracticeInsightsScreen({
@@ -51,35 +48,26 @@ class PracticeInsightsScreen extends StatefulWidget {
 }
 
 class _PracticeInsightsScreenState extends State<PracticeInsightsScreen> {
-  PracticeInsightsLens _lens = PracticeInsightsLens.practiceTime;
   List<String> _nodePath = const <String>[];
-  late Future<CurriculumProgressLensSnapshot> _snapshotFuture = _loadSnapshot(
-    _lens,
+  late Future<CurriculumCompassSnapshot> _snapshotFuture = _loadSnapshot(
     _nodePath,
   );
   String? _selectedNodeId;
 
-  Future<CurriculumProgressLensSnapshot> _loadSnapshot(
-    PracticeInsightsLens lens,
-    List<String> nodePath,
-  ) async {
-    final Future<CurriculumProgressLensSnapshot> Function(
-      PracticeInsightsLens lens,
-      List<String> nodePath,
-    )?
+  Future<CurriculumCompassSnapshot> _loadSnapshot(List<String> nodePath) async {
+    final Future<CurriculumCompassSnapshot> Function(List<String> nodePath)?
     loader = widget.snapshotLoader;
-    if (loader != null) return loader(lens, nodePath);
+    if (loader != null) return loader(nodePath);
 
     final library = await LessonPlanLoader.loadContent();
     final progressService = LessonProgressService(
       const FileLessonProgressStore(),
     );
     await progressService.load();
-    final CurriculumNode root = const CurriculumRadarTreeBuilder().build(
+    final CurriculumNode root = const CurriculumCompassTreeBuilder().build(
       library,
     );
-    return const CurriculumProgressLensAggregator().build(
-      lens: lens,
+    return const CurriculumCompassAggregator().build(
       root: root,
       nodePath: nodePath,
       progressService: progressService,
@@ -89,24 +77,24 @@ class _PracticeInsightsScreenState extends State<PracticeInsightsScreen> {
   @override
   Widget build(BuildContext context) {
     return DrumScreen(
-      child: FutureBuilder<CurriculumProgressLensSnapshot>(
+      child: FutureBuilder<CurriculumCompassSnapshot>(
         future: _snapshotFuture,
         builder:
             (
               BuildContext context,
-              AsyncSnapshot<CurriculumProgressLensSnapshot> snapshot,
+              AsyncSnapshot<CurriculumCompassSnapshot> snapshot,
             ) {
               if (snapshot.hasError) {
                 return _PracticePortraitError(
                   error: snapshot.error,
                   onRetry: () {
                     setState(() {
-                      _snapshotFuture = _loadSnapshot(_lens, _nodePath);
+                      _snapshotFuture = _loadSnapshot(_nodePath);
                     });
                   },
                 );
               }
-              final CurriculumProgressLensSnapshot? data = snapshot.data;
+              final CurriculumCompassSnapshot? data = snapshot.data;
               if (data == null) {
                 return const Center(child: CircularProgressIndicator());
               }
@@ -118,7 +106,6 @@ class _PracticeInsightsScreenState extends State<PracticeInsightsScreen> {
                 },
                 onBreadcrumbSelected: _openBreadcrumb,
                 onDrillIn: _drillIntoNode,
-                onLensChanged: _setLens,
                 onOpenSkill: widget.onOpenSkill,
               );
             },
@@ -126,20 +113,12 @@ class _PracticeInsightsScreenState extends State<PracticeInsightsScreen> {
     );
   }
 
-  void _setLens(PracticeInsightsLens lens) {
-    if (lens == _lens) return;
-    setState(() {
-      _lens = lens;
-      _snapshotFuture = _loadSnapshot(lens, _nodePath);
-    });
-  }
-
   void _drillIntoNode(String nodeId) {
     if (_nodePath.isNotEmpty) return;
     setState(() {
       _nodePath = <String>[..._nodePath, nodeId];
       _selectedNodeId = null;
-      _snapshotFuture = _loadSnapshot(_lens, _nodePath);
+      _snapshotFuture = _loadSnapshot(_nodePath);
     });
   }
 
@@ -148,16 +127,16 @@ class _PracticeInsightsScreenState extends State<PracticeInsightsScreen> {
     setState(() {
       _nodePath = nextPath;
       _selectedNodeId = null;
-      _snapshotFuture = _loadSnapshot(_lens, _nodePath);
+      _snapshotFuture = _loadSnapshot(_nodePath);
     });
   }
 
-  String? _resolveSelectedNodeId(CurriculumProgressLensSnapshot snapshot) {
+  String? _resolveSelectedNodeId(CurriculumCompassSnapshot snapshot) {
     if (snapshot.values.isEmpty) return null;
     final String? selectedNodeId = _selectedNodeId;
     if (selectedNodeId != null &&
         snapshot.values.any(
-          (CurriculumProgressLensValue value) => value.nodeId == selectedNodeId,
+          (CurriculumCompassPoint value) => value.nodeId == selectedNodeId,
         )) {
       return selectedNodeId;
     }
@@ -166,12 +145,11 @@ class _PracticeInsightsScreenState extends State<PracticeInsightsScreen> {
 }
 
 class _PracticePortraitView extends StatelessWidget {
-  final CurriculumProgressLensSnapshot snapshot;
+  final CurriculumCompassSnapshot snapshot;
   final String? selectedNodeId;
   final ValueChanged<String> onSelected;
   final ValueChanged<int> onBreadcrumbSelected;
   final ValueChanged<String> onDrillIn;
-  final ValueChanged<PracticeInsightsLens> onLensChanged;
   final ValueChanged<String>? onOpenSkill;
 
   const _PracticePortraitView({
@@ -180,14 +158,12 @@ class _PracticePortraitView extends StatelessWidget {
     required this.onSelected,
     required this.onBreadcrumbSelected,
     required this.onDrillIn,
-    required this.onLensChanged,
     required this.onOpenSkill,
   });
 
   @override
   Widget build(BuildContext context) {
-    final CurriculumProgressLensValue? selectedValue = _selectedValue;
-    final _LensCopy copy = _copyFor(snapshot.lens);
+    final CurriculumCompassPoint? selectedValue = _selectedValue;
 
     return ListView(
       key: ValueKey<String>('practice-insights-${snapshot.currentNode.id}'),
@@ -203,30 +179,25 @@ class _PracticePortraitView extends StatelessWidget {
                 onSelected: onBreadcrumbSelected,
               ),
               const SizedBox(height: 12),
-              _LensHeader(
-                copy: copy,
-                lens: snapshot.lens,
-                onLensChanged: onLensChanged,
-              ),
+              const _CompassHeader(),
               const SizedBox(height: 16),
               if (!snapshot.hasNodes)
                 const _PracticePortraitEmptyState(
                   title: 'No curriculum nodes yet',
-                  message:
-                      'Add curriculum child nodes to build a radar navigation view.',
+                  message: 'Add curriculum child nodes to build the compass.',
                 )
               else ...<Widget>[
                 if (!snapshot.hasMetricData) ...<Widget>[
-                  _PracticePortraitEmptyState(
-                    title: copy.emptyTitle,
-                    message: copy.emptyMessage,
+                  const _PracticePortraitEmptyState(
+                    title: 'No practice recorded yet',
+                    message:
+                        'The compass is ready. Practice or complete an exercise to fill it in.',
                   ),
                   const SizedBox(height: 16),
                 ],
-                PracticeRadarChart(
+                CurriculumCompassChart(
                   values: snapshot.values,
-                  lens: snapshot.lens,
-                  semanticLabel: copy.radarSemanticLabel,
+                  semanticLabel: _compassSemanticLabel(snapshot.values),
                   selectedNodeId: selectedNodeId,
                   onNodeSelected: onSelected,
                   onNodeActivated: _activateNode,
@@ -253,10 +224,9 @@ class _PracticePortraitView extends StatelessWidget {
                         },
                     child: _SelectedNodeSummary(
                       key: ValueKey<String>(
-                        '${snapshot.lens.name}-${selectedValue.nodeId}',
+                        'compass-summary-${selectedValue.nodeId}',
                       ),
                       value: selectedValue,
-                      lens: snapshot.lens,
                       canDrillIn: snapshot.isRoot && selectedValue.hasChildren,
                       onDrillIn: snapshot.isRoot && selectedValue.hasChildren
                           ? () => onDrillIn(selectedValue.nodeId)
@@ -276,17 +246,17 @@ class _PracticePortraitView extends StatelessWidget {
     );
   }
 
-  CurriculumProgressLensValue? get _selectedValue {
+  CurriculumCompassPoint? get _selectedValue {
     final String? id = selectedNodeId;
     if (id == null) return null;
-    for (final CurriculumProgressLensValue value in snapshot.values) {
+    for (final CurriculumCompassPoint value in snapshot.values) {
       if (value.nodeId == id) return value;
     }
     return null;
   }
 
   void _activateNode(String nodeId) {
-    final CurriculumProgressLensValue? value = _valueFor(nodeId);
+    final CurriculumCompassPoint? value = _valueFor(nodeId);
     if (value == null) return;
     if (snapshot.isRoot && value.hasChildren) {
       onDrillIn(value.nodeId);
@@ -298,37 +268,35 @@ class _PracticePortraitView extends StatelessWidget {
     }
   }
 
-  CurriculumProgressLensValue? _valueFor(String nodeId) {
-    for (final CurriculumProgressLensValue value in snapshot.values) {
+  CurriculumCompassPoint? _valueFor(String nodeId) {
+    for (final CurriculumCompassPoint value in snapshot.values) {
       if (value.nodeId == nodeId) return value;
     }
     return null;
   }
 }
 
-class PracticeRadarChart extends StatefulWidget {
-  final List<CurriculumProgressLensValue> values;
-  final PracticeInsightsLens lens;
+class CurriculumCompassChart extends StatefulWidget {
+  final List<CurriculumCompassPoint> values;
   final String semanticLabel;
   final String? selectedNodeId;
   final ValueChanged<String> onNodeSelected;
   final ValueChanged<String>? onNodeActivated;
 
-  const PracticeRadarChart({
+  const CurriculumCompassChart({
     super.key,
     required this.values,
-    this.lens = PracticeInsightsLens.practiceTime,
-    this.semanticLabel = 'Practice distribution by curriculum node',
+    this.semanticLabel = 'Curriculum Compass',
     required this.selectedNodeId,
     required this.onNodeSelected,
     this.onNodeActivated,
   });
 
   @override
-  State<PracticeRadarChart> createState() => _PracticeRadarChartState();
+  State<CurriculumCompassChart> createState() => _CurriculumCompassChartState();
 }
 
-class _PracticeRadarChartState extends State<PracticeRadarChart>
+class _CurriculumCompassChartState extends State<CurriculumCompassChart>
     with SingleTickerProviderStateMixin {
   static const Duration _doubleClickWindow = Duration(milliseconds: 360);
 
@@ -345,7 +313,7 @@ class _PracticeRadarChartState extends State<PracticeRadarChart>
     super.initState();
     _rotation = _rotationForSelected(from: 0);
     _rotationController =
-        AnimationController(vsync: this, duration: _radarRotationDuration)
+        AnimationController(vsync: this, duration: _compassRotationDuration)
           ..addListener(() {
             final Animation<double>? animation = _rotationAnimation;
             if (animation == null) return;
@@ -356,7 +324,7 @@ class _PracticeRadarChartState extends State<PracticeRadarChart>
   }
 
   @override
-  void didUpdateWidget(covariant PracticeRadarChart oldWidget) {
+  void didUpdateWidget(covariant CurriculumCompassChart oldWidget) {
     super.didUpdateWidget(oldWidget);
     final bool selectionChanged =
         oldWidget.selectedNodeId != widget.selectedNodeId;
@@ -386,9 +354,8 @@ class _PracticeRadarChartState extends State<PracticeRadarChart>
   @override
   Widget build(BuildContext context) {
     if (widget.values.length < 3) {
-      return _PracticeRadarFallback(
+      return _CurriculumCompassFallback(
         values: widget.values,
-        lens: widget.lens,
         selectedNodeId: widget.selectedNodeId,
         onNodeSelected: widget.onNodeSelected,
         onNodeActivated: widget.onNodeActivated,
@@ -410,7 +377,7 @@ class _PracticeRadarChartState extends State<PracticeRadarChart>
             },
             child: CustomPaint(
               size: Size(width, height),
-              painter: _PracticeRadarPainter(
+              painter: _CurriculumCompassPainter(
                 values: widget.values,
                 selectedNodeId: widget.selectedNodeId,
                 rotation: _rotation,
@@ -456,9 +423,9 @@ class _PracticeRadarChartState extends State<PracticeRadarChart>
     }
     double angle = math.atan2(delta.dy, delta.dx) + math.pi / 2 - _rotation;
     while (angle < 0) {
-      angle += _radarFullTurn;
+      angle += _compassFullTurn;
     }
-    final double spoke = (angle / _radarFullTurn) * widget.values.length;
+    final double spoke = (angle / _compassFullTurn) * widget.values.length;
     final int index = spoke.round() % widget.values.length;
     return widget.values[index].nodeId;
   }
@@ -498,20 +465,19 @@ class _PracticeRadarChartState extends State<PracticeRadarChart>
 
   double _rotationForSelected({required double from}) {
     final int selectedIndex = widget.values.indexWhere(
-      (CurriculumProgressLensValue value) =>
-          value.nodeId == widget.selectedNodeId,
+      (CurriculumCompassPoint value) => value.nodeId == widget.selectedNodeId,
     );
     if (selectedIndex < 0) return from;
-    final double target = radarTargetRotationForIndex(
+    final double target = curriculumCompassTargetRotationForIndex(
       selectedIndex,
       widget.values.length,
     );
-    return from + shortestRadarRotationDelta(from, target);
+    return from + shortestCompassRotationDelta(from, target);
   }
 
   bool _sameNodeOrder(
-    List<CurriculumProgressLensValue> previous,
-    List<CurriculumProgressLensValue> next,
+    List<CurriculumCompassPoint> previous,
+    List<CurriculumCompassPoint> next,
   ) {
     if (previous.length != next.length) return false;
     for (int index = 0; index < previous.length; index += 1) {
@@ -521,13 +487,13 @@ class _PracticeRadarChartState extends State<PracticeRadarChart>
   }
 }
 
-class _PracticeRadarPainter extends CustomPainter {
-  final List<CurriculumProgressLensValue> values;
+class _CurriculumCompassPainter extends CustomPainter {
+  final List<CurriculumCompassPoint> values;
   final String? selectedNodeId;
   final double rotation;
   final TextDirection textDirection;
 
-  const _PracticeRadarPainter({
+  const _CurriculumCompassPainter({
     required this.values,
     required this.selectedNodeId,
     required this.rotation,
@@ -549,15 +515,26 @@ class _PracticeRadarPainter extends CustomPainter {
       ..color = DrumcabularyTheme.edgeBorder.withValues(alpha: 0.72)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
-    final Paint fillPaint = Paint()
-      ..color = DrumcabularyTheme.edgeOrange.withValues(alpha: 0.24)
-      ..style = PaintingStyle.fill;
-    final Paint outlinePaint = Paint()
+    final Paint trackPaint = Paint()
+      ..color = DrumcabularyTheme.edgeBorder.withValues(alpha: 0.42)
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = 4;
+    final Paint practicePaint = Paint()
       ..color = DrumcabularyTheme.edgeOrange
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
-    final Paint pointPaint = Paint()
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = 5;
+    final Paint completionPaint = Paint()
+      ..color = const Color(0xFF52D273)
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = 3;
+    final Paint practiceMarkerPaint = Paint()
       ..color = DrumcabularyTheme.edgeOrange
+      ..style = PaintingStyle.fill;
+    final Paint completionMarkerPaint = Paint()
+      ..color = const Color(0xFF52D273)
       ..style = PaintingStyle.fill;
 
     for (int ring = 1; ring <= 4; ring += 1) {
@@ -572,27 +549,27 @@ class _PracticeRadarPainter extends CustomPainter {
       canvas.drawLine(center, center + unit * radius, spokePaint);
     }
 
-    final Path valuePath = Path();
     for (int index = 0; index < count; index += 1) {
-      final CurriculumProgressLensValue value = values[index];
-      final Offset point =
-          center + _unitFor(index, count) * radius * value.normalizedValue;
-      if (index == 0) {
-        valuePath.moveTo(point.dx, point.dy);
-      } else {
-        valuePath.lineTo(point.dx, point.dy);
-      }
-    }
-    valuePath.close();
-    canvas.drawPath(valuePath, fillPaint);
-    canvas.drawPath(valuePath, outlinePaint);
-
-    for (int index = 0; index < count; index += 1) {
-      final CurriculumProgressLensValue value = values[index];
+      final CurriculumCompassPoint value = values[index];
       final bool selected = value.nodeId == selectedNodeId;
       final Offset unit = _unitFor(index, count);
-      final Offset point = center + unit * radius * value.normalizedValue;
-      canvas.drawCircle(point, 4, pointPaint);
+      final Offset perpendicular = Offset(-unit.dy, unit.dx);
+      final Offset practiceStart = center + perpendicular * -4;
+      final Offset practiceEnd = center + unit * radius + perpendicular * -4;
+      final Offset completionStart = center + perpendicular * 4;
+      final Offset completionEnd = center + unit * radius + perpendicular * 4;
+      canvas.drawLine(practiceStart, practiceEnd, trackPaint);
+      canvas.drawLine(completionStart, completionEnd, trackPaint);
+
+      final Offset practicePoint =
+          practiceStart +
+          unit * radius * value.practiceInvestmentRatio.clamp(0, 1);
+      final Offset completionPoint =
+          completionStart + unit * radius * value.completionRatio.clamp(0, 1);
+      canvas.drawLine(practiceStart, practicePoint, practicePaint);
+      canvas.drawLine(completionStart, completionPoint, completionPaint);
+      canvas.drawCircle(practicePoint, 3.5, practiceMarkerPaint);
+      canvas.drawCircle(completionPoint, 3, completionMarkerPaint);
 
       final Offset labelCenter = center + unit * (radius + 42);
       _drawLabel(canvas, size, labelCenter, value, selected: selected);
@@ -615,7 +592,7 @@ class _PracticeRadarPainter extends CustomPainter {
 
   Offset _unitFor(int index, int count) {
     final double angle =
-        _radarTopAngle + (_radarFullTurn * index / count) + rotation;
+        _compassTopAngle + (_compassFullTurn * index / count) + rotation;
     return Offset(math.cos(angle), math.sin(angle));
   }
 
@@ -623,7 +600,7 @@ class _PracticeRadarPainter extends CustomPainter {
     Canvas canvas,
     Size size,
     Offset center,
-    CurriculumProgressLensValue value, {
+    CurriculumCompassPoint value, {
     required bool selected,
   }) {
     final TextPainter painter = TextPainter(
@@ -655,7 +632,7 @@ class _PracticeRadarPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _PracticeRadarPainter oldDelegate) {
+  bool shouldRepaint(covariant _CurriculumCompassPainter oldDelegate) {
     return oldDelegate.values != values ||
         oldDelegate.selectedNodeId != selectedNodeId ||
         oldDelegate.rotation != rotation ||
@@ -663,16 +640,14 @@ class _PracticeRadarPainter extends CustomPainter {
   }
 }
 
-class _PracticeRadarFallback extends StatelessWidget {
-  final List<CurriculumProgressLensValue> values;
-  final PracticeInsightsLens lens;
+class _CurriculumCompassFallback extends StatelessWidget {
+  final List<CurriculumCompassPoint> values;
   final String? selectedNodeId;
   final ValueChanged<String> onNodeSelected;
   final ValueChanged<String>? onNodeActivated;
 
-  const _PracticeRadarFallback({
+  const _CurriculumCompassFallback({
     required this.values,
-    required this.lens,
     required this.selectedNodeId,
     required this.onNodeSelected,
     required this.onNodeActivated,
@@ -692,10 +667,9 @@ class _PracticeRadarFallback extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-        for (final CurriculumProgressLensValue value in values) ...<Widget>[
-          _NodeMetricBar(
+        for (final CurriculumCompassPoint value in values) ...<Widget>[
+          _CompassMetricBars(
             value: value,
-            lens: lens,
             selected: value.nodeId == selectedNodeId,
             onTap: () => onNodeSelected(value.nodeId),
             onDoubleTap: onNodeActivated == null
@@ -709,16 +683,14 @@ class _PracticeRadarFallback extends StatelessWidget {
   }
 }
 
-class _NodeMetricBar extends StatelessWidget {
-  final CurriculumProgressLensValue value;
-  final PracticeInsightsLens lens;
+class _CompassMetricBars extends StatelessWidget {
+  final CurriculumCompassPoint value;
   final bool selected;
   final VoidCallback onTap;
   final VoidCallback? onDoubleTap;
 
-  const _NodeMetricBar({
+  const _CompassMetricBars({
     required this.value,
-    required this.lens,
     required this.selected,
     required this.onTap,
     required this.onDoubleTap,
@@ -763,24 +735,41 @@ class _NodeMetricBar extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    Text(
-                      _metricValueFor(value, lens),
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: DrumcabularyTheme.edgeOrange,
-                        fontWeight: FontWeight.w700,
-                      ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: <Widget>[
+                        Text(
+                          _formatPracticeTime(value.practicedSeconds),
+                          style: Theme.of(context).textTheme.labelLarge
+                              ?.copyWith(
+                                color: DrumcabularyTheme.edgeOrange,
+                                fontWeight: FontWeight.w700,
+                              ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _completionTextFor(value),
+                          style: Theme.of(context).textTheme.labelMedium
+                              ?.copyWith(
+                                color: const Color(0xFF52D273),
+                                fontWeight: FontWeight.w700,
+                              ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(999),
-                  child: LinearProgressIndicator(
-                    minHeight: 7,
-                    value: value.normalizedValue,
-                    color: DrumcabularyTheme.edgeOrange,
-                    backgroundColor: DrumcabularyTheme.edgeBorder,
-                  ),
+                _CompactMetricBar(
+                  label: 'Practice Investment',
+                  value: value.practiceInvestmentRatio,
+                  color: DrumcabularyTheme.edgeOrange,
+                ),
+                const SizedBox(height: 6),
+                _CompactMetricBar(
+                  label: 'Curriculum Completion',
+                  value: value.completionRatio,
+                  color: const Color(0xFF52D273),
                 ),
               ],
             ),
@@ -791,9 +780,51 @@ class _NodeMetricBar extends StatelessWidget {
   }
 }
 
+class _CompactMetricBar extends StatelessWidget {
+  final String label;
+  final double value;
+  final Color color;
+
+  const _CompactMetricBar({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        SizedBox(
+          width: 138,
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: DrumcabularyTheme.edgeTextMuted,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        Expanded(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              minHeight: 6,
+              value: value.clamp(0, 1),
+              color: color,
+              backgroundColor: DrumcabularyTheme.edgeBorder,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _SelectedNodeSummary extends StatelessWidget {
-  final CurriculumProgressLensValue value;
-  final PracticeInsightsLens lens;
+  final CurriculumCompassPoint value;
   final bool canDrillIn;
   final VoidCallback? onDrillIn;
   final VoidCallback? onOpenSkill;
@@ -801,7 +832,6 @@ class _SelectedNodeSummary extends StatelessWidget {
   const _SelectedNodeSummary({
     super.key,
     required this.value,
-    required this.lens,
     required this.canDrillIn,
     required this.onDrillIn,
     required this.onOpenSkill,
@@ -809,7 +839,7 @@ class _SelectedNodeSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String? status = _summaryStatusFor(value, lens);
+    final List<String> statuses = _summaryStatusesFor(value);
     return DecoratedBox(
       decoration: BoxDecoration(
         color: DrumcabularyTheme.edgeSurfaceSecondary,
@@ -851,9 +881,16 @@ class _SelectedNodeSummary extends StatelessWidget {
                               ),
                         ),
                       ],
-                      if (status != null) ...<Widget>[
+                      if (statuses.isNotEmpty) ...<Widget>[
                         const SizedBox(height: 8),
-                        _SummaryStatusPill(text: status),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 6,
+                          children: <Widget>[
+                            for (final String status in statuses)
+                              _SummaryStatusPill(text: status),
+                          ],
+                        ),
                       ],
                     ],
                   ),
@@ -862,7 +899,7 @@ class _SelectedNodeSummary extends StatelessWidget {
                 if (canDrillIn && onDrillIn != null)
                   _SummaryActionButton(
                     onPressed: onDrillIn,
-                    icon: Icons.radar_rounded,
+                    icon: Icons.explore_rounded,
                     label: 'Explore ${value.label}',
                   ),
                 if (onOpenSkill != null)
@@ -878,7 +915,7 @@ class _SelectedNodeSummary extends StatelessWidget {
               spacing: 16,
               runSpacing: 12,
               crossAxisAlignment: WrapCrossAlignment.center,
-              children: _selectedMetricsFor(value, lens),
+              children: _selectedMetricsFor(value),
             ),
           ],
         ),
@@ -1048,26 +1085,18 @@ class _SelectedMetric extends StatelessWidget {
   }
 }
 
-class _LensHeader extends StatelessWidget {
-  final _LensCopy copy;
-  final PracticeInsightsLens lens;
-  final ValueChanged<PracticeInsightsLens> onLensChanged;
-
-  const _LensHeader({
-    required this.copy,
-    required this.lens,
-    required this.onLensChanged,
-  });
+class _CompassHeader extends StatelessWidget {
+  const _CompassHeader();
 
   @override
   Widget build(BuildContext context) {
     final Widget text = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        DrumSectionTitle(text: copy.title),
+        const DrumSectionTitle(text: 'Curriculum Compass'),
         const SizedBox(height: 6),
         Text(
-          copy.description,
+          'Maps where practice time is invested and how much curriculum work is complete.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: DrumcabularyTheme.edgeTextSecondary,
             height: 1.35,
@@ -1078,20 +1107,13 @@ class _LensHeader extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
-        final _LensSelector selector = _LensSelector(
-          lens: lens,
-          onChanged: onLensChanged,
-        );
         if (constraints.maxWidth < 620) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               text,
               const SizedBox(height: 12),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: selector,
-              ),
+              const _CompassLegend(),
             ],
           );
         }
@@ -1100,7 +1122,7 @@ class _LensHeader extends StatelessWidget {
           children: <Widget>[
             Expanded(child: text),
             const SizedBox(width: 12),
-            selector,
+            const _CompassLegend(),
           ],
         );
       },
@@ -1108,55 +1130,66 @@ class _LensHeader extends StatelessWidget {
   }
 }
 
-class _LensSelector extends StatelessWidget {
-  final PracticeInsightsLens lens;
-  final ValueChanged<PracticeInsightsLens> onChanged;
-
-  const _LensSelector({required this.lens, required this.onChanged});
+class _CompassLegend extends StatelessWidget {
+  const _CompassLegend();
 
   @override
   Widget build(BuildContext context) {
-    return SegmentedButton<PracticeInsightsLens>(
-      showSelectedIcon: false,
-      selected: <PracticeInsightsLens>{lens},
-      onSelectionChanged: (Set<PracticeInsightsLens> selected) {
-        if (selected.isEmpty) return;
-        onChanged(selected.first);
-      },
-      style: ButtonStyle(
-        visualDensity: VisualDensity.compact,
-        backgroundColor: WidgetStateProperty.resolveWith((
-          Set<WidgetState> states,
-        ) {
-          if (states.contains(WidgetState.selected)) {
-            return DrumcabularyTheme.edgeOrange.withValues(alpha: 0.14);
-          }
-          return DrumcabularyTheme.edgeSurfaceSecondary;
-        }),
-        foregroundColor: WidgetStateProperty.resolveWith((
-          Set<WidgetState> states,
-        ) {
-          if (states.contains(WidgetState.selected)) {
-            return DrumcabularyTheme.edgeOrange;
-          }
-          return DrumcabularyTheme.edgeTextSecondary;
-        }),
-        side: WidgetStateProperty.resolveWith((Set<WidgetState> states) {
-          return BorderSide(
-            color: states.contains(WidgetState.selected)
-                ? DrumcabularyTheme.edgeOrange.withValues(alpha: 0.68)
-                : DrumcabularyTheme.edgeBorder,
-          );
-        }),
-      ),
-      segments: const <ButtonSegment<PracticeInsightsLens>>[
-        ButtonSegment<PracticeInsightsLens>(
-          value: PracticeInsightsLens.practiceTime,
-          label: Text('Practice Time'),
+    return Wrap(
+      spacing: 12,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: <Widget>[
+        _LegendItem(
+          label: 'Practice Investment',
+          color: DrumcabularyTheme.edgeOrange,
+          strokeWidth: 5,
         ),
-        ButtonSegment<PracticeInsightsLens>(
-          value: PracticeInsightsLens.exercisesCompleted,
-          label: Text('Exercises Completed'),
+        const _LegendItem(
+          label: 'Curriculum Completion',
+          color: Color(0xFF52D273),
+          strokeWidth: 3,
+        ),
+      ],
+    );
+  }
+}
+
+class _LegendItem extends StatelessWidget {
+  final String label;
+  final Color color;
+  final double strokeWidth;
+
+  const _LegendItem({
+    required this.label,
+    required this.color,
+    required this.strokeWidth,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        SizedBox(
+          width: 26,
+          child: Center(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: SizedBox(width: 24, height: strokeWidth),
+            ),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+            color: DrumcabularyTheme.edgeTextSecondary,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ],
     );
@@ -1184,7 +1217,7 @@ class _PracticePortraitEmptyState extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         child: Row(
           children: <Widget>[
-            Icon(Icons.radar_rounded, color: DrumcabularyTheme.edgeOrange),
+            Icon(Icons.explore_rounded, color: DrumcabularyTheme.edgeOrange),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -1267,109 +1300,55 @@ String _formatPracticeTime(int seconds) {
   return '$hours hr $minutes min';
 }
 
-String _metricValueFor(
-  CurriculumProgressLensValue value,
-  PracticeInsightsLens lens,
-) {
-  return switch (lens) {
-    PracticeInsightsLens.practiceTime => _formatPracticeTime(
-      value.practicedSeconds,
-    ),
-    PracticeInsightsLens.exercisesCompleted =>
-      '${value.completedExerciseCount} of ${value.totalExerciseCount}',
-  };
+String _completionTextFor(CurriculumCompassPoint value) {
+  if (value.totalExerciseCount == 0) return 'No exercises yet';
+  return '${value.completedExerciseCount} of ${value.totalExerciseCount}';
 }
 
-List<Widget> _selectedMetricsFor(
-  CurriculumProgressLensValue value,
-  PracticeInsightsLens lens,
-) {
-  return switch (lens) {
-    PracticeInsightsLens.practiceTime => <Widget>[
-      _SelectedMetric(
-        label: 'Practice time',
-        value: value.practicedSeconds.toDouble(),
-        formatter: (double seconds) => _formatPracticeTime(seconds.round()),
-      ),
-      _SelectedMetric(
-        label: 'Practiced exercises',
-        value: value.practicedExerciseCount.toDouble(),
-        formatter: _formatWholeNumber,
-      ),
-      _SelectedMetric(
-        label: 'Lessons touched',
-        value: value.practicedLessonCount.toDouble(),
-        formatter: _formatWholeNumber,
-      ),
-    ],
-    PracticeInsightsLens.exercisesCompleted => <Widget>[
-      _SelectedMetric(
-        label: 'Exercises completed',
-        value: value.completedExerciseCount.toDouble(),
-        formatter: (double completed) =>
-            '${completed.round()} of ${value.totalExerciseCount}',
-      ),
-      _SelectedMetric(
-        label: 'Total exercises',
-        value: value.totalExerciseCount.toDouble(),
-        formatter: _formatWholeNumber,
-      ),
-      _SelectedMetric(
-        label: 'Lessons with completions',
-        value: value.completedLessonCount.toDouble(),
-        formatter: _formatWholeNumber,
-      ),
-    ],
-  };
+List<Widget> _selectedMetricsFor(CurriculumCompassPoint value) {
+  return <Widget>[
+    _SelectedMetric(
+      label: 'Practiced',
+      value: value.practicedSeconds.toDouble(),
+      formatter: (double seconds) => _formatPracticeTime(seconds.round()),
+    ),
+    _SelectedMetric(
+      label: 'Exercises completed',
+      value: value.completedExerciseCount.toDouble(),
+      formatter: (double completed) => value.totalExerciseCount == 0
+          ? 'No exercises yet'
+          : '${completed.round()} of ${value.totalExerciseCount}',
+    ),
+    _SelectedMetric(
+      label: 'Lessons touched',
+      value: value.practicedLessonCount.toDouble(),
+      formatter: _formatWholeNumber,
+    ),
+  ];
 }
 
 String _formatWholeNumber(double value) => '${value.round()}';
 
-String? _summaryStatusFor(
-  CurriculumProgressLensValue value,
-  PracticeInsightsLens lens,
-) {
-  return switch (lens) {
-    PracticeInsightsLens.practiceTime =>
-      value.practicedSeconds == 0 ? 'Ready to begin' : null,
-    PracticeInsightsLens.exercisesCompleted =>
-      value.completedExerciseCount == 0 ? 'No completions yet' : null,
-  };
+List<String> _summaryStatusesFor(CurriculumCompassPoint value) {
+  if (value.totalExerciseCount == 0) return <String>['No exercises yet'];
+  return <String>[
+    if (value.practicedSeconds == 0) 'Not practiced yet',
+    if (value.completedExerciseCount == 0) 'No completions yet',
+  ];
 }
 
-_LensCopy _copyFor(PracticeInsightsLens lens) {
-  return switch (lens) {
-    PracticeInsightsLens.practiceTime => const _LensCopy(
-      title: 'Practice Portrait',
-      description: 'Shows where your recorded practice time has been invested.',
-      emptyTitle: 'No practice time recorded',
-      emptyMessage: 'Practice an exercise to begin building your portrait.',
-      radarSemanticLabel: 'Practice time distribution by curriculum node',
-    ),
-    PracticeInsightsLens.exercisesCompleted => const _LensCopy(
-      title: 'Completion Portrait',
-      description:
-          'Shows how completed exercises are distributed across the curriculum.',
-      emptyTitle: 'No completed exercises yet',
-      emptyMessage:
-          'Complete an exercise to begin building your completion portrait.',
-      radarSemanticLabel: 'Exercise completion distribution by curriculum node',
-    ),
-  };
-}
-
-class _LensCopy {
-  final String title;
-  final String description;
-  final String emptyTitle;
-  final String emptyMessage;
-  final String radarSemanticLabel;
-
-  const _LensCopy({
-    required this.title,
-    required this.description,
-    required this.emptyTitle,
-    required this.emptyMessage,
-    required this.radarSemanticLabel,
-  });
+String _compassSemanticLabel(List<CurriculumCompassPoint> values) {
+  final StringBuffer buffer = StringBuffer('Curriculum Compass.');
+  for (final CurriculumCompassPoint value in values) {
+    buffer.write(' ${value.label}. ');
+    buffer.write('${_formatPracticeTime(value.practicedSeconds)} practiced. ');
+    if (value.totalExerciseCount == 0) {
+      buffer.write('No exercises yet.');
+    } else {
+      buffer.write(
+        '${value.completedExerciseCount} of ${value.totalExerciseCount} exercises completed.',
+      );
+    }
+  }
+  return buffer.toString();
 }

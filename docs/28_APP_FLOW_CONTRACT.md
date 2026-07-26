@@ -454,13 +454,12 @@ Practice Insights is a top-level destination, but it is not Home.
 
 Current implementation:
 
-- hierarchical curriculum radar navigation
-- implemented lenses:
-  - Practice Time
-  - Exercises Completed
-- radar/spider chart for three or more curriculum nodes
+- hierarchical Curriculum Compass navigation
+- one stable multi-metric compass view; there is no Practice Time / Exercises
+  Completed selector on this screen
+- radial per-spoke chart for three or more curriculum nodes
 - stable fallback summaries for one-skill and two-skill curriculum states
-- two radar levels:
+- two compass levels:
   - top-level curriculum categories
   - one selected category's child nodes
 - second-level nodes terminate at lesson navigation
@@ -476,56 +475,62 @@ Current implementation:
   - Musicianship
   - Improvisation
 - Vocabulary must contain Triads as a child node
-- every radar is generated from the active curriculum node's children; renderer
-  code must not hardcode spoke names
-- Practice Time values derive from descendant lessons using
+- every compass is generated from the active curriculum node's children;
+  renderer code must not hardcode spoke names
+- Practice Investment derives from descendant lessons using
   `ExerciseProgress.practicedSeconds -> Exercise -> Lesson -> curriculum node`
-- Exercises Completed values derive from descendant lessons using
+- Curriculum Completion derives from descendant lessons using
   `ExerciseProgress.status == completed -> Exercise -> Lesson -> curriculum
   node`
-- raw practice time and completed/total exercise counts remain visible;
-  normalized radius is only visual geometry
-- Practice Time normalizes each child node against the largest
-  practiced-seconds total among visible child nodes
-- Exercises Completed normalizes each child node as completed exercises divided
-  by total exercises for that child node
-- switching lenses updates the section title, explanatory copy, radar values,
-  and selected-node summary together
-- selected node is preserved across lens changes when the node exists in the
-  active dataset
-- tapping a radar spoke selects a node
-- tapping a radar spoke updates label selection and summary immediately, but
-  radar rotation waits until the double-click window has passed so the second
+- each compass point carries both derived ratios:
+  - `practiceInvestmentRatio`: sibling-relative practiced seconds normalized
+    against the most-practiced visible sibling
+  - `completionRatio`: completed exercises divided by available exercises in
+    that node's descendant content
+- ratios are visual geometry only; raw practice time and completed/available
+  exercise counts remain visible in the selected-node summary
+- if every visible sibling has zero practice time, every Practice Investment
+  ratio is zero
+- if a node has no available exercises, its Curriculum Completion ratio is zero
+  and the summary uses a `No exercises yet` state
+- the compact compass legend labels both encodings:
+  - Practice Investment
+  - Curriculum Completion
+- tapping a compass spoke selects a node
+- tapping a compass spoke updates label selection and summary immediately, but
+  compass rotation waits until the double-click window has passed so the second
   click target does not move
 - after the double-click window passes without activation, the selected spoke
   smoothly rotates to 12 o'clock
-- radar rotation applies to spokes, polygon rings, progress polygon, endpoint
-  markers, and hit-test geometry together
-- radar labels move with their spokes but their text remains upright and
+- compass rotation applies to spokes, rings, metric tracks, markers, and
+  hit-test geometry together
+- compass labels move with their spokes but their text remains upright and
   readable
-- selected radar nodes must be visually obvious through the label only:
+- selected compass nodes must be visually obvious through the label only:
   selected labels use active accent styling and stronger text treatment, while
-  spokes, polygon points, and endpoints keep the normal radar styling
+  spokes, metric tracks, and endpoints keep the normal compass styling
 - drilling into a category requires an explicit action; selection alone must not
   navigate
-- double-clicking a radar spoke data point or label activates the same action as
+- double-clicking a compass spoke data point or label activates the same action as
   the selected-node button:
-  - root category nodes drill into the second-level radar
+  - root category nodes drill into the second-level compass
   - second-level nodes open Explore with that node's lesson filter
 - breadcrumbs show the current curriculum position and allow return to the root
-- selected lens persists when drilling into a category or returning by
-  breadcrumb
 - selected-node summary content cross-fades when the selected node changes
 - selected-node metric values animate visually to their new values without
   mutating persisted progress values
 - root nodes with children use a contextual `Explore <Node>` action label
 - second-level View Lessons opens Explore with the selected node's lesson filter
+- selected-node summaries show both exact values at once:
+  - practiced duration, preserving `< 1 min` for nonzero sub-minute practice
+  - completed exercise count out of available exercise count
+  - lessons touched where useful
 - curriculum nodes may provide optional short descriptions for the selected-node
   summary; descriptions are presentation metadata, not analytics or
   recommendations
 - zero-progress selected-node summaries use intentional starting-state copy such
-  as `Ready to begin` or `No completions yet` while retaining useful numeric
-  totals
+  as `Not practiced yet`, `No completions yet`, or `No exercises yet` while
+  retaining useful numeric totals
 - Home links to it from the progress summary
 
 Practice Insights must not imply skill mastery, weakness, rating, ability,
@@ -547,11 +552,11 @@ V1 limitations:
 - all exercise completions roll into that lesson's primary skill
 - current real lessons are attached to the temporary taxonomy through
   `Lesson.skill`
-- Practice Time radius is relative to the most-practiced visible child of the
-  active node
-- Exercises Completed radius is relative to each child node's own exercise
+- Practice Investment radius is relative to the most-practiced visible child of
+  the active node
+- Curriculum Completion radius is relative to each child node's own exercise
   total
-- only two radar levels exist in this implementation
+- only two compass levels exist in this implementation
 - the taxonomy is temporary and exists to validate hierarchical navigation
 - values may change if curriculum content changes
 

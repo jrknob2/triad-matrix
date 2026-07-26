@@ -3,8 +3,6 @@ import 'package:flutter/foundation.dart';
 import '../coach/lesson_plan.dart';
 import '../coach/lesson_progress.dart';
 
-enum PracticeInsightsLens { practiceTime, exercisesCompleted }
-
 @immutable
 class CurriculumNode {
   final String id;
@@ -50,7 +48,7 @@ class CurriculumBreadcrumb {
 }
 
 @immutable
-class CurriculumProgressLensValue {
+class CurriculumCompassPoint {
   final String nodeId;
   final String label;
   final String? shortDescription;
@@ -62,9 +60,10 @@ class CurriculumProgressLensValue {
   final int completedExerciseCount;
   final int totalExerciseCount;
   final int completedLessonCount;
-  final double normalizedValue;
+  final double practiceInvestmentRatio;
+  final double completionRatio;
 
-  const CurriculumProgressLensValue({
+  const CurriculumCompassPoint({
     required this.nodeId,
     required this.label,
     this.shortDescription,
@@ -76,64 +75,57 @@ class CurriculumProgressLensValue {
     required this.completedExerciseCount,
     required this.totalExerciseCount,
     required this.completedLessonCount,
-    required this.normalizedValue,
+    required this.practiceInvestmentRatio,
+    required this.completionRatio,
   });
 
   bool get hasPractice => practicedSeconds > 0;
   bool get hasCompletions => completedExerciseCount > 0;
+  bool get hasExercises => totalExerciseCount > 0;
 }
 
 @immutable
-class CurriculumProgressLensSnapshot {
-  final PracticeInsightsLens lens;
+class CurriculumCompassSnapshot {
   final CurriculumNode currentNode;
   final List<CurriculumBreadcrumb> breadcrumbs;
-  final List<CurriculumProgressLensValue> values;
+  final List<CurriculumCompassPoint> values;
 
-  const CurriculumProgressLensSnapshot({
-    required this.lens,
+  const CurriculumCompassSnapshot({
     required this.currentNode,
     required this.breadcrumbs,
     required this.values,
   });
 
   bool get hasNodes => values.isNotEmpty;
-  bool get isRoot => currentNode.id == CurriculumRadarTreeBuilder.rootId;
+  bool get isRoot => currentNode.id == CurriculumCompassTreeBuilder.rootId;
 
   bool get hasMetricData {
-    return switch (lens) {
-      PracticeInsightsLens.practiceTime => values.any(
-        (CurriculumProgressLensValue value) => value.hasPractice,
-      ),
-      PracticeInsightsLens.exercisesCompleted => values.any(
-        (CurriculumProgressLensValue value) => value.hasCompletions,
-      ),
-    };
+    return values.any(
+      (CurriculumCompassPoint value) =>
+          value.hasPractice || value.hasCompletions,
+    );
   }
 }
 
-class CurriculumProgressLensAggregator {
-  const CurriculumProgressLensAggregator();
+class CurriculumCompassAggregator {
+  const CurriculumCompassAggregator();
 
-  CurriculumProgressLensSnapshot build({
-    required PracticeInsightsLens lens,
+  CurriculumCompassSnapshot build({
     required CurriculumNode root,
     required List<String> nodePath,
     required LessonProgressService progressService,
   }) {
     final _ResolvedNode resolved = _resolveNode(root, nodePath);
-    final List<CurriculumProgressLensValue> values = _valuesForChildren(
+    final List<CurriculumCompassPoint> values = _valuesForChildren(
       resolved.node.children,
-      lens: lens,
       progressService: progressService,
     );
 
-    return CurriculumProgressLensSnapshot(
-      lens: lens,
+    return CurriculumCompassSnapshot(
       currentNode: resolved.node,
       breadcrumbs: <CurriculumBreadcrumb>[
         const CurriculumBreadcrumb(
-          id: CurriculumRadarTreeBuilder.rootId,
+          id: CurriculumCompassTreeBuilder.rootId,
           title: 'Curriculum',
         ),
         for (final CurriculumNode node in resolved.path)
@@ -162,9 +154,8 @@ class CurriculumProgressLensAggregator {
     return null;
   }
 
-  List<CurriculumProgressLensValue> _valuesForChildren(
+  List<CurriculumCompassPoint> _valuesForChildren(
     List<CurriculumNode> children, {
-    required PracticeInsightsLens lens,
     required LessonProgressService progressService,
   }) {
     final Map<String, _NodeProgressAccumulator> accumulators =
@@ -178,12 +169,11 @@ class CurriculumProgressLensAggregator {
           value.practicedSeconds > max ? value.practicedSeconds : max,
     );
 
-    return <CurriculumProgressLensValue>[
+    return <CurriculumCompassPoint>[
       for (final CurriculumNode child in children)
         _valueFor(
           child,
           accumulators[child.id]!,
-          lens: lens,
           maxPracticedSeconds: maxPracticedSeconds,
         ),
     ];
@@ -226,25 +216,19 @@ class CurriculumProgressLensAggregator {
     return accumulator;
   }
 
-  CurriculumProgressLensValue _valueFor(
+  CurriculumCompassPoint _valueFor(
     CurriculumNode node,
     _NodeProgressAccumulator accumulator, {
-    required PracticeInsightsLens lens,
     required int maxPracticedSeconds,
   }) {
-    final double normalizedValue = switch (lens) {
-      PracticeInsightsLens.practiceTime =>
-        maxPracticedSeconds == 0
-            ? 0
-            : accumulator.practicedSeconds / maxPracticedSeconds,
-      PracticeInsightsLens.exercisesCompleted =>
-        accumulator.totalExerciseCount == 0
-            ? 0
-            : accumulator.completedExerciseCount /
-                  accumulator.totalExerciseCount,
-    };
+    final double practiceInvestmentRatio = maxPracticedSeconds == 0
+        ? 0
+        : accumulator.practicedSeconds / maxPracticedSeconds;
+    final double completionRatio = accumulator.totalExerciseCount == 0
+        ? 0
+        : accumulator.completedExerciseCount / accumulator.totalExerciseCount;
 
-    return CurriculumProgressLensValue(
+    return CurriculumCompassPoint(
       nodeId: node.id,
       label: node.title,
       shortDescription: node.shortDescription,
@@ -256,15 +240,16 @@ class CurriculumProgressLensAggregator {
       completedExerciseCount: accumulator.completedExerciseCount,
       totalExerciseCount: accumulator.totalExerciseCount,
       completedLessonCount: accumulator.completedLessonIds.length,
-      normalizedValue: normalizedValue,
+      practiceInvestmentRatio: practiceInvestmentRatio,
+      completionRatio: completionRatio,
     );
   }
 }
 
-class CurriculumRadarTreeBuilder {
+class CurriculumCompassTreeBuilder {
   static const String rootId = 'curriculum';
 
-  const CurriculumRadarTreeBuilder();
+  const CurriculumCompassTreeBuilder();
 
   CurriculumNode build(LessonContentLibrary library) {
     final Map<String, List<Lesson>> lessonsBySkill = <String, List<Lesson>>{};

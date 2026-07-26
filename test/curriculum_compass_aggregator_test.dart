@@ -1,15 +1,15 @@
 import 'package:drumcabulary/features/coach/lesson_plan.dart';
 import 'package:drumcabulary/features/coach/lesson_progress.dart';
-import 'package:drumcabulary/features/progress/curriculum_progress_lens_aggregator.dart';
+import 'package:drumcabulary/features/progress/curriculum_compass_aggregator.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('builds the temporary top-level curriculum radar tree', () {
-    final CurriculumNode root = const CurriculumRadarTreeBuilder().build(
+  test('builds the temporary top-level curriculum compass tree', () {
+    final CurriculumNode root = const CurriculumCompassTreeBuilder().build(
       _library(<Lesson>[]),
     );
 
-    expect(root.id, CurriculumRadarTreeBuilder.rootId);
+    expect(root.id, CurriculumCompassTreeBuilder.rootId);
     expect(root.children.map((CurriculumNode node) => node.title), <String>[
       'Timing',
       'Grooves',
@@ -33,7 +33,7 @@ void main() {
     );
   });
 
-  test('aggregates practiced seconds by top-level curriculum node', () async {
+  test('aggregates practice investment and completion together', () async {
     final LessonContentLibrary library = _library(<Lesson>[
       _lesson(
         id: 'groove-one',
@@ -69,31 +69,34 @@ void main() {
       practicedDuration: const Duration(minutes: 60),
     );
 
-    final CurriculumNode root = const CurriculumRadarTreeBuilder().build(
+    final CurriculumNode root = const CurriculumCompassTreeBuilder().build(
       library,
     );
-    final CurriculumProgressLensSnapshot snapshot =
-        const CurriculumProgressLensAggregator().build(
-          lens: PracticeInsightsLens.practiceTime,
+    final CurriculumCompassSnapshot snapshot =
+        const CurriculumCompassAggregator().build(
           root: root,
           nodePath: const <String>[],
           progressService: progress,
         );
 
-    final CurriculumProgressLensValue rudiments = _value(snapshot, 'rudiments');
-    final CurriculumProgressLensValue grooves = _value(snapshot, 'grooves');
+    final CurriculumCompassPoint rudiments = _value(snapshot, 'rudiments');
+    final CurriculumCompassPoint grooves = _value(snapshot, 'grooves');
     expect(rudiments.practicedSeconds, 3600);
-    expect(rudiments.normalizedValue, 1);
+    expect(rudiments.practiceInvestmentRatio, 1);
+    expect(rudiments.completionRatio, 1);
     expect(rudiments.practicedExerciseCount, 1);
     expect(rudiments.practicedLessonCount, 1);
     expect(grooves.practicedSeconds, 1800);
-    expect(grooves.normalizedValue, 0.5);
+    expect(grooves.practiceInvestmentRatio, 0.5);
+    expect(grooves.completedExerciseCount, 3);
+    expect(grooves.totalExerciseCount, 3);
+    expect(grooves.completionRatio, 1);
     expect(grooves.practicedExerciseCount, 3);
     expect(grooves.practicedLessonCount, 2);
   });
 
   test(
-    'builds second-level radar values from selected category children',
+    'builds second-level compass values from selected category children',
     () async {
       final LessonContentLibrary library = _library(<Lesson>[
         _lesson(
@@ -112,10 +115,9 @@ void main() {
         practicedDuration: const Duration(minutes: 8),
       );
 
-      final CurriculumProgressLensSnapshot snapshot =
-          const CurriculumProgressLensAggregator().build(
-            lens: PracticeInsightsLens.exercisesCompleted,
-            root: const CurriculumRadarTreeBuilder().build(library),
+      final CurriculumCompassSnapshot snapshot =
+          const CurriculumCompassAggregator().build(
+            root: const CurriculumCompassTreeBuilder().build(library),
             nodePath: const <String>['grooves'],
             progressService: progress,
           );
@@ -128,21 +130,23 @@ void main() {
       );
       expect(snapshot.values, hasLength(10));
 
-      final CurriculumProgressLensValue coreGrooves = _value(
+      final CurriculumCompassPoint coreGrooves = _value(
         snapshot,
         'core-grooves',
       );
       expect(coreGrooves.lessonFilterId, 'grooves');
       expect(coreGrooves.completedExerciseCount, 1);
       expect(coreGrooves.totalExerciseCount, 2);
-      expect(coreGrooves.normalizedValue, 0.5);
+      expect(coreGrooves.practiceInvestmentRatio, 1);
+      expect(coreGrooves.completionRatio, 0.5);
 
-      final CurriculumProgressLensValue rockGrooves = _value(
+      final CurriculumCompassPoint rockGrooves = _value(
         snapshot,
         'rock-grooves',
       );
       expect(rockGrooves.totalExerciseCount, 0);
-      expect(rockGrooves.normalizedValue, 0);
+      expect(rockGrooves.practiceInvestmentRatio, 0);
+      expect(rockGrooves.completionRatio, 0);
     },
   );
 
@@ -152,10 +156,9 @@ void main() {
     );
     await progress.load();
 
-    final CurriculumProgressLensSnapshot snapshot =
-        const CurriculumProgressLensAggregator().build(
-          lens: PracticeInsightsLens.practiceTime,
-          root: const CurriculumRadarTreeBuilder().build(
+    final CurriculumCompassSnapshot snapshot =
+        const CurriculumCompassAggregator().build(
+          root: const CurriculumCompassTreeBuilder().build(
             LessonContentLibrary(
               index: ContentIndex(version: 1, levels: <ContentLevel>[]),
               lessonsById: <String, Lesson>{},
@@ -168,23 +171,23 @@ void main() {
 
     expect(snapshot.hasMetricData, isFalse);
     expect(_value(snapshot, 'triads').label, 'Triads');
-    for (final CurriculumProgressLensValue value in snapshot.values) {
+    for (final CurriculumCompassPoint value in snapshot.values) {
       expect(value.practicedSeconds, 0);
       expect(value.totalExerciseCount, 0);
-      expect(value.normalizedValue, 0);
+      expect(value.practiceInvestmentRatio, 0);
+      expect(value.completionRatio, 0);
     }
   });
 
-  test('unknown node path falls back to the root radar safely', () async {
+  test('unknown node path falls back to the root compass safely', () async {
     final LessonProgressService progress = LessonProgressService(
       MemoryLessonProgressStore(),
     );
     await progress.load();
 
-    final CurriculumProgressLensSnapshot snapshot =
-        const CurriculumProgressLensAggregator().build(
-          lens: PracticeInsightsLens.practiceTime,
-          root: const CurriculumRadarTreeBuilder().build(
+    final CurriculumCompassSnapshot snapshot =
+        const CurriculumCompassAggregator().build(
+          root: const CurriculumCompassTreeBuilder().build(
             LessonContentLibrary(
               index: ContentIndex(version: 1, levels: <ContentLevel>[]),
               lessonsById: <String, Lesson>{},
@@ -195,18 +198,18 @@ void main() {
           progressService: progress,
         );
 
-    expect(snapshot.currentNode.id, CurriculumRadarTreeBuilder.rootId);
+    expect(snapshot.currentNode.id, CurriculumCompassTreeBuilder.rootId);
     expect(snapshot.breadcrumbs, hasLength(1));
     expect(snapshot.values, hasLength(10));
   });
 }
 
-CurriculumProgressLensValue _value(
-  CurriculumProgressLensSnapshot snapshot,
+CurriculumCompassPoint _value(
+  CurriculumCompassSnapshot snapshot,
   String nodeId,
 ) {
   return snapshot.values.singleWhere(
-    (CurriculumProgressLensValue value) => value.nodeId == nodeId,
+    (CurriculumCompassPoint value) => value.nodeId == nodeId,
   );
 }
 
@@ -265,9 +268,10 @@ LessonExercise _exercise(String id) {
     why: 'Why.',
     what: 'What.',
     how: 'How.',
+    tempo: const TempoTarget(start: 60, target: 90),
     notation: const ExerciseNotation(
       sections: <ExerciseNotationSection>[
-        ExerciseNotationSection(pattern: '[S:R]'),
+        ExerciseNotationSection(pattern: '[S]'),
       ],
     ),
   );
