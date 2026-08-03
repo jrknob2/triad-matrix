@@ -13,6 +13,7 @@ import '../practice/pattern_led_playback_output.dart';
 import '../practice/playback_drum_voice_mapper.dart';
 import '../practice/widgets/sheet_notation_display.dart';
 import 'midi_pattern_capture.dart';
+import 'midi_pattern_capture_controls.dart';
 
 class MidiPatternCaptureCard extends StatefulWidget {
   final MidiPatternCaptureController controller;
@@ -137,8 +138,7 @@ class _MidiPatternCaptureCardState extends State<MidiPatternCaptureCard> {
     }
 
     try {
-      final DrumSheetNotationDocument document =
-          DrumSheetNotationDocument.fromPattern(trimmed);
+      final DrumSheetNotationDocument document = _documentForPattern(trimmed);
       if (_renderedDocument != document) {
         _disposeGuidedPractice(sendStop: true);
         unawaited(_notationController.stopAudioPreview());
@@ -157,6 +157,19 @@ class _MidiPatternCaptureCardState extends State<MidiPatternCaptureCard> {
     } on Object catch (error) {
       _setValidationError('$error');
     }
+  }
+
+  DrumSheetNotationDocument _documentForPattern(String pattern) {
+    final CapturedPatternResult? result = widget.controller.result;
+    if (result != null && result.pattern.trim() == pattern.trim()) {
+      return DrumSheetNotationDocument.fromPattern(
+        pattern,
+        subdivision: result.subdivision,
+        feel: result.feel,
+        timeSignature: result.config.timeSignature,
+      );
+    }
+    return DrumSheetNotationDocument.fromPattern(pattern);
   }
 
   void _setValidationError(String message) {
@@ -183,11 +196,17 @@ class _MidiPatternCaptureCardState extends State<MidiPatternCaptureCard> {
             ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 14),
+          MidiPatternCaptureFramingControls(
+            config: widget.controller.config,
+            enabled: !widget.controller.isRecording,
+            onChanged: widget.controller.updateConfig,
+          ),
+          const SizedBox(height: 14),
           DrumActionRow(
             children: <Widget>[
               FilledButton.icon(
                 onPressed: !widget.controller.isRecording && _canRecordFromMidi
-                    ? widget.controller.record
+                    ? () => widget.controller.record()
                     : null,
                 icon: const Icon(Icons.fiber_manual_record_rounded),
                 label: const Text('Record'),
@@ -202,13 +221,17 @@ class _MidiPatternCaptureCardState extends State<MidiPatternCaptureCard> {
             ],
           ),
           const SizedBox(height: 10),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Chip(
-              label: Text(
-                'Estimated BPM ${_tempoEstimateLabel(widget.controller.tempoEstimate)}',
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: <Widget>[
+              Chip(label: Text(_captureStatusLabel(widget.controller))),
+              Chip(
+                label: Text(
+                  'Estimated BPM ${_tempoEstimateLabel(widget.controller.tempoEstimate)}',
+                ),
               ),
-            ),
+            ],
           ),
           const SizedBox(height: 14),
           Text(
@@ -681,4 +704,19 @@ class _PracticeControls extends StatelessWidget {
 String _tempoEstimateLabel(MidiTempoEstimate? estimate) {
   if (estimate == null) return '--';
   return '${estimate.roundedBpm}';
+}
+
+String _captureStatusLabel(MidiPatternCaptureController controller) {
+  final String? message = controller.statusMessage;
+  if (message != null && message.trim().isNotEmpty) return message;
+  return switch (controller.status) {
+    MidiPatternCaptureStatus.countingIn => 'Count-in',
+    MidiPatternCaptureStatus.recording => 'Listening',
+    MidiPatternCaptureStatus.analyzing => 'Confirming pattern',
+    MidiPatternCaptureStatus.finishingCycle => 'Finish this repetition',
+    MidiPatternCaptureStatus.captured => 'Captured',
+    MidiPatternCaptureStatus.review => 'Review',
+    MidiPatternCaptureStatus.error => 'Capture error',
+    MidiPatternCaptureStatus.idle => 'Ready',
+  };
 }

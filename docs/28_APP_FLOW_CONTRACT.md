@@ -356,12 +356,29 @@ Current behavior:
 - visible only on desktop-capable platforms
 - uses the shared MIDI input service
 - requires the MIDI device to be connected first
+- exposes musical framing controls before recording:
+  - time signature: `4/4`, `3/4`, or `6/8`
+  - pattern length: `1`, `2`, `4`, or `8` measures
+  - tempo mode: automatic estimate or fixed BPM
+  - count-in: off, one measure, or two measures when fixed tempo is selected
+  - Capture Until Recognized, enabled by default
 - records mapped MIDI hits
+- preserves the raw MIDI hit timeline until the capture has been analyzed or
+  manually cleared
 - flashes the shared LED controller for each recorded live hit when the LED
   controller is connected
 - ignores Note Off and velocity-zero Note On events
 - emits voice-first notation such as `[HH K]`, `[OHH]`, `[S]`, and
   `[S:^R(L)(L)]`
+- uses the configured meter and pattern length as the capture frame; automatic
+  tempo estimation estimates the pulse inside that frame but does not infer a
+  different meter or pattern length
+- groups simultaneous hits with a named tolerance and analyzes repeated cycles
+  so one accidental extra hit or one missing hit does not immediately destroy a
+  capture
+- stores timing metadata beside the generated notation where the existing
+  authoring model supports it, including time signature, default subdivision,
+  and per-note value overrides
 - writes generated notation into an editable text field
 - renders the edited/generated notation with the shared notation preview
 - does not show local MIDI or LED device status buttons; the shell hardware
@@ -378,10 +395,32 @@ Current behavior:
   the shared LED controller are connected
 - does not infer hand sticking from MIDI velocity
 - estimates BPM from grouped onset intervals
+- can stop manually at any time; manual stop produces the best current
+  analyzed notation and never discards the final captured hit
+
+Capture states:
+
+```text
+Ready -> Count-in -> Listening -> Confirming pattern -> Finish this repetition
+-> Captured -> Review
+```
+
+The implementation may represent these as finer internal states, but user
+status copy should stay focused on where the student is in the capture process.
+When Capture Until Recognized is enabled and the same framed pattern has been
+heard with sufficient confidence, the app plays one confirmation sound and stops
+at the next configured cycle boundary. It must not stop early inside the current
+repetition.
 
 The Author capture card must not create its own playback or guided-practice
 timeline. Hear It, Play Along, and Guided Practice are entry points into the
 same playback, MIDI, notation-selection, and LED services used elsewhere.
+
+Capture limitation:
+
+- The notation source remains voice-first only. Mixed rhythmic subdivision is
+  carried through existing render/save sidecar metadata where possible, not
+  inline duration syntax.
 
 This is now part of Author. It is still a foundation flow, not the final full
 lesson-authoring suite.

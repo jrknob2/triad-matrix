@@ -95,6 +95,7 @@ class _PatternScreenState extends State<PatternScreen> {
     offset: 0,
   );
   String? _captureMessage;
+  CapturedPatternResult? _pendingCaptureResult;
 
   @override
   void initState() {
@@ -316,6 +317,7 @@ class _PatternScreenState extends State<PatternScreen> {
     final MidiInputService? service = _midiInputService;
     if (service == null || !_captureController.isRecording) return;
     final DrumInputEvent drum = _drumKitMapper.map(raw);
+    _captureController.captureMappedEvent(raw: raw, drum: drum);
     if (drum.voice == DrumVoice.unknown) {
       if (raw.messageType == MidiMessageType.noteOn && raw.velocity > 0) {
         setState(() {
@@ -324,7 +326,6 @@ class _PatternScreenState extends State<PatternScreen> {
       }
       return;
     }
-    _captureController.captureMappedEvent(raw: raw, drum: drum);
   }
 
   Future<void> _startMidiCapture() async {
@@ -338,15 +339,21 @@ class _PatternScreenState extends State<PatternScreen> {
     }
     _captureController.record();
     setState(() {
-      _captureMessage = 'Recording MIDI hits...';
+      _pendingCaptureResult = null;
+      _captureMessage = 'Listening for a repeated pattern.';
     });
   }
 
   void _stopMidiCapture() {
     final String pattern = _captureController.stop();
     setState(() {
+      _pendingCaptureResult = _captureController.result?.hasPattern == true
+          ? _captureController.result
+          : null;
       _captureMessage = pattern.isEmpty
           ? 'No supported MIDI hits captured.'
+          : _captureController.result?.recognized == true
+          ? 'Pattern recognized. Replace or append it to the exercise.'
           : 'Capture ready. Replace or append it to the exercise.';
     });
   }
@@ -354,6 +361,7 @@ class _PatternScreenState extends State<PatternScreen> {
   void _clearMidiCapture() {
     _captureController.clear();
     setState(() {
+      _pendingCaptureResult = null;
       _captureMessage = null;
     });
   }
@@ -361,6 +369,7 @@ class _PatternScreenState extends State<PatternScreen> {
   void _replacePatternWithCapture() {
     final String captured = _captureController.generatedPattern.trim();
     if (captured.isEmpty) return;
+    final CapturedPatternResult? result = _captureController.result;
     _recordUndo();
     _patternController.value = TextEditingValue(
       text: captured,
@@ -370,6 +379,9 @@ class _PatternScreenState extends State<PatternScreen> {
     setState(() {
       _notationSelectionOwnsPatternRange = false;
       _selectedNoteIndexes = const <int>{};
+      _pendingCaptureResult = result?.pattern.trim() == captured
+          ? result
+          : null;
       _captureMessage = 'Captured notation replaced the editor text.';
     });
   }
@@ -379,6 +391,7 @@ class _PatternScreenState extends State<PatternScreen> {
     if (captured.isEmpty) return;
     final String existing = _patternController.text.trim();
     final String next = existing.isEmpty ? captured : '$existing $captured';
+    final CapturedPatternResult? result = _captureController.result;
     _recordUndo();
     _patternController.value = TextEditingValue(
       text: next,
@@ -388,6 +401,10 @@ class _PatternScreenState extends State<PatternScreen> {
     setState(() {
       _notationSelectionOwnsPatternRange = false;
       _selectedNoteIndexes = const <int>{};
+      _pendingCaptureResult =
+          existing.isEmpty && result?.pattern.trim() == captured
+          ? result
+          : null;
       _captureMessage = 'Captured notation appended to the editor text.';
     });
   }
@@ -399,6 +416,9 @@ class _PatternScreenState extends State<PatternScreen> {
   void _handlePatternTextChanged(String value) {
     _validatePattern(value, lenient: true);
     setState(() {
+      if (_pendingCaptureResult?.pattern.trim() != value.trim().toUpperCase()) {
+        _pendingCaptureResult = null;
+      }
       _notationSelectionOwnsPatternRange = false;
       _selectedNoteIndexes = _selectedIndexesForPatternSelection(
         _patternController.selection,
@@ -431,6 +451,19 @@ class _PatternScreenState extends State<PatternScreen> {
 
   DrumSheetNotationDocument get _currentNotationDocument {
     try {
+      final CapturedPatternResult? captureResult =
+          _matchingPendingCaptureResult(
+            _patternController.text.trim().toUpperCase(),
+          );
+      if (captureResult != null) {
+        return DrumSheetNotationDocument.fromPattern(
+          _patternController.text.toUpperCase(),
+          subdivision: captureResult.subdivision,
+          feel: captureResult.feel,
+          timeSignature: captureResult.config.timeSignature,
+          lenient: true,
+        );
+      }
       return DrumSheetNotationDocument.fromPattern(
         _patternController.text.toUpperCase(),
         lenient: true,
@@ -904,6 +937,21 @@ class _PatternScreenState extends State<PatternScreen> {
     final List<PatternTokenV1> tokens = parsedNotes
         .map(legacyTokenForSheetNote)
         .toList(growable: false);
+    final CapturedPatternResult? captureResult = _matchingPendingCaptureResult(
+      patternText,
+    );
+    final List<PatternNoteValueV1?> noteValueOverrides =
+        captureResult != null &&
+            captureResult.noteValueOverrides.length == parsedNotes.length
+        ? captureResult.noteValueOverrides
+              .map(storedValueForSheetNoteValue)
+              .toList(growable: false)
+        : parsedNotes
+              .map(
+                (DrumSheetNotationNote note) =>
+                    storedValueForSheetNoteValue(note.value),
+              )
+              .toList(growable: false);
     final String savedItemId = widget.controller.savePracticeItemEdits(
       itemId: widget.itemId,
       accentedNoteIndices: accentIndicesForSheetNotes(parsedNotes),
@@ -919,12 +967,10 @@ class _PatternScreenState extends State<PatternScreen> {
       pattern: patternText,
       groupingHint: PatternGroupingV1.none,
       beatGrouping: _groupingTextFromPattern(patternText),
-      noteValueOverrides: parsedNotes
-          .map(
-            (DrumSheetNotationNote note) =>
-                storedValueForSheetNoteValue(note.value),
-          )
-          .toList(growable: false),
+      notationSubdivision: captureResult == null
+          ? null
+          : storedValueForSheetNoteValue(captureResult.subdivision),
+      noteValueOverrides: noteValueOverrides,
       saveAsPattern: true,
     );
     _undoStack.clear();
@@ -937,6 +983,15 @@ class _PatternScreenState extends State<PatternScreen> {
       context,
     ).showSnackBar(const SnackBar(content: Text('Exercise saved.')));
     return savedItemId;
+  }
+
+  CapturedPatternResult? _matchingPendingCaptureResult(String patternText) {
+    final CapturedPatternResult? result = _pendingCaptureResult;
+    if (result == null) return null;
+    return result.pattern.trim().toUpperCase() ==
+            patternText.trim().toUpperCase()
+        ? result
+        : null;
   }
 
   Future<bool> _handleUnsavedExit(PracticeItemV1 item) async {

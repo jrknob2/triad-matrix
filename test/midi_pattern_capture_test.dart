@@ -724,6 +724,133 @@ void main() {
       expect(estimate?.intervalCount, 2);
       expect(estimate?.averageOnsetInterval, const Duration(milliseconds: 250));
     });
+
+    test('default capture config frames one 4/4 measure in auto tempo', () {
+      const MidiPatternCaptureConfig config = MidiPatternCaptureConfig();
+
+      expect(config.timeSignature, '4/4');
+      expect(config.measureCount, 1);
+      expect(config.tempoMode, MidiPatternCaptureTempoMode.auto);
+      expect(config.autoStopWhenRecognized, isTrue);
+      expect(config.simultaneousWindow, const Duration(milliseconds: 30));
+    });
+
+    test('fixed tempo repeated cycles collapse to the recognized pattern', () {
+      const MidiPatternBuilder fixedBuilder = MidiPatternBuilder(
+        config: MidiPatternCaptureConfig(
+          tempoMode: MidiPatternCaptureTempoMode.fixed,
+          fixedBpm: 60,
+          timeSignature: '4/4',
+          measureCount: 1,
+          autoStopWhenRecognized: false,
+        ),
+      );
+
+      final CapturedPatternResult result = fixedBuilder.analyzePattern(
+        _repeatedSixteenthPhrase(repetitions: 3),
+      );
+
+      expect(result.recognized, isTrue);
+      expect(result.repetitionCount, 3);
+      expect(result.pattern, '[S:^R(L)(L)]');
+      expect(result.subdivision, DrumSheetNoteValue.sixteenth);
+      expect(result.feel, DrumSheetFeel.straight);
+    });
+
+    test(
+      'recognition tolerates one missing hit and one accidental extra hit',
+      () {
+        const MidiPatternBuilder fixedBuilder = MidiPatternBuilder(
+          config: MidiPatternCaptureConfig(
+            tempoMode: MidiPatternCaptureTempoMode.fixed,
+            fixedBpm: 60,
+            autoStopWhenRecognized: false,
+          ),
+        );
+        final List<CapturedMidiHit> hits =
+            _repeatedSixteenthPhrase(
+              repetitions: 4,
+              skipLastGhostInRepetition: 2,
+            )..add(
+              _hit(
+                DrumVoice.kick,
+                velocity: 90,
+                offset: const Duration(milliseconds: 5100),
+              ),
+            );
+
+        final CapturedPatternResult result = fixedBuilder.analyzePattern(hits);
+
+        expect(result.recognized, isTrue);
+        expect(result.pattern, '[S:^R(L)(L)]');
+      },
+    );
+  });
+
+  group('MidiPatternCaptureController recognition state', () {
+    test('preserves raw MIDI events until capture is cleared', () {
+      final DateTime startedAt = DateTime(2026);
+      final MidiPatternCaptureController controller =
+          MidiPatternCaptureController(clock: () => startedAt);
+
+      controller.record();
+      controller.capture(
+        _diagnosticEvent(
+          voice: DrumVoice.snare,
+          messageType: MidiMessageType.noteOff,
+          velocity: 64,
+          timestamp: startedAt.add(const Duration(milliseconds: 12)),
+        ),
+      );
+
+      expect(controller.rawEvents, hasLength(1));
+      expect(controller.capturedHits, isEmpty);
+
+      controller.clear();
+
+      expect(controller.rawEvents, isEmpty);
+    });
+
+    test(
+      'recognized fixed-cycle capture enters finishing cycle once',
+      () async {
+        final DateTime startedAt = DateTime(2026);
+        int recognitionSignals = 0;
+        final MidiPatternCaptureController controller =
+            MidiPatternCaptureController(
+              clock: () => startedAt,
+              recognitionSignal: () async {
+                recognitionSignals += 1;
+              },
+            );
+        const MidiPatternCaptureConfig config = MidiPatternCaptureConfig(
+          tempoMode: MidiPatternCaptureTempoMode.fixed,
+          fixedBpm: 60,
+          liveUpdateInterval: Duration(milliseconds: 1),
+        );
+
+        controller.record(config);
+        for (final CapturedMidiHit hit in _repeatedSixteenthPhrase(
+          repetitions: 3,
+        )) {
+          controller.capture(
+            _diagnosticEvent(
+              voice: hit.voice,
+              velocity: hit.velocity,
+              timestamp: startedAt.add(hit.offset),
+            ),
+          );
+        }
+
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+
+        expect(controller.result?.recognized, isTrue);
+        expect(controller.status, MidiPatternCaptureStatus.finishingCycle);
+        expect(recognitionSignals, 1);
+
+        controller.clear();
+      },
+    );
   });
 
   group('MidiPatternCaptureCard', () {
@@ -1027,6 +1154,54 @@ CapturedMidiHit _hit(
     offset: offset,
     stroke: stroke,
   );
+}
+
+List<CapturedMidiHit> _repeatedSixteenthPhrase({
+  required int repetitions,
+  int? skipLastGhostInRepetition,
+}) {
+  const Duration cycle = Duration(milliseconds: 4000);
+  final List<CapturedMidiHit> hits = <CapturedMidiHit>[];
+  for (int repetition = 0; repetition < repetitions; repetition += 1) {
+    final Duration base = Duration(
+      microseconds: cycle.inMicroseconds * repetition,
+    );
+    hits.add(
+      _hit(
+        DrumVoice.snare,
+        velocity: 120,
+        offset: base,
+        stroke: _stroke(
+          DrumSheetStrokeHand.right,
+          articulation: DrumSheetStrokeArticulation.accent,
+        ),
+      ),
+    );
+    hits.add(
+      _hit(
+        DrumVoice.snare,
+        velocity: 28,
+        offset: base + const Duration(milliseconds: 250),
+        stroke: _stroke(
+          DrumSheetStrokeHand.left,
+          articulation: DrumSheetStrokeArticulation.ghost,
+        ),
+      ),
+    );
+    if (skipLastGhostInRepetition == repetition) continue;
+    hits.add(
+      _hit(
+        DrumVoice.snare,
+        velocity: 30,
+        offset: base + const Duration(milliseconds: 500),
+        stroke: _stroke(
+          DrumSheetStrokeHand.left,
+          articulation: DrumSheetStrokeArticulation.ghost,
+        ),
+      ),
+    );
+  }
+  return hits;
 }
 
 DrumSheetStrokeDescriptor _stroke(

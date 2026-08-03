@@ -5,6 +5,7 @@ import '../app/drumcabulary_ui.dart';
 import '../practice/widgets/pattern_text_styles.dart';
 import 'midi_input_models.dart';
 import 'midi_pattern_capture.dart';
+import 'midi_pattern_capture_controls.dart';
 
 class MidiPatternCapturePanel extends StatelessWidget {
   final MidiPatternCaptureController controller;
@@ -53,6 +54,26 @@ class MidiPatternCapturePanel extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
+          MidiPatternCaptureFramingControls(
+            config: controller.config,
+            enabled: !controller.isRecording,
+            onChanged: controller.updateConfig,
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: <Widget>[
+              Chip(label: Text(_captureStatusLabel(controller))),
+              if (controller.tempoEstimate != null)
+                Chip(
+                  label: Text(
+                    'Estimated ${controller.tempoEstimate!.roundedBpm} BPM',
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
           if (controller.generatedPattern.isNotEmpty)
             SelectableText(
               controller.generatedPattern,
@@ -67,15 +88,6 @@ class MidiPatternCapturePanel extends StatelessWidget {
                 color: DrumcabularyTheme.edgeTextSecondary,
               ),
             ),
-          if (controller.tempoEstimate != null) ...<Widget>[
-            const SizedBox(height: 6),
-            Text(
-              'Estimated ${controller.tempoEstimate!.roundedBpm} BPM',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: DrumcabularyTheme.edgeTextSecondary,
-              ),
-            ),
-          ],
           if (message != null) ...<Widget>[
             const SizedBox(height: 6),
             Text(
@@ -137,5 +149,20 @@ String _midiCaptureStatusLabel(MidiInputStatus? status) {
     MidiInputStatus.connectionError => 'Connection Error',
     MidiInputStatus.noDevicesFound => 'No Device',
     MidiInputStatus.disconnected || null => 'Disconnected',
+  };
+}
+
+String _captureStatusLabel(MidiPatternCaptureController controller) {
+  final String? message = controller.statusMessage;
+  if (message != null && message.trim().isNotEmpty) return message;
+  return switch (controller.status) {
+    MidiPatternCaptureStatus.countingIn => 'Count-in',
+    MidiPatternCaptureStatus.recording => 'Listening',
+    MidiPatternCaptureStatus.analyzing => 'Confirming pattern',
+    MidiPatternCaptureStatus.finishingCycle => 'Finish this repetition',
+    MidiPatternCaptureStatus.captured => 'Captured',
+    MidiPatternCaptureStatus.review => 'Review',
+    MidiPatternCaptureStatus.error => 'Capture error',
+    MidiPatternCaptureStatus.idle => 'Ready',
   };
 }

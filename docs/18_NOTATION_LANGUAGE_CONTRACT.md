@@ -406,6 +406,24 @@ voice-first, such as `[S:^R(L)(L)]`. The initial capture thresholds are velocity
 hand assignment is a capture heuristic: accents use `R`, ghosts use `L`. These
 thresholds and hand defaults are capture configuration, not notation grammar.
 
+Pattern capture is framed by user-selected musical metadata: time signature,
+pattern length in measures, tempo mode, fixed BPM when used, count-in length,
+and whether capture should stop automatically when a repeated cycle is
+recognized. Capture analyzes a raw hit timeline after MIDI input is collected;
+the MIDI callback must not be the final pattern serializer.
+
+Repeated-pattern recognition emits two artifacts:
+
+- the canonical editable voice-first notation string
+- sidecar rhythmic metadata supported by the app model, such as time signature,
+  default subdivision, and per-note note-value overrides
+
+The notation language intentionally does not gain inline duration syntax for
+capture. Mixed subdivision evidence must be represented through render/save
+metadata where available. When the current sidecar model cannot fully represent
+mixed straight/triplet feel, capture should preserve the editable notation and
+surface the limitation rather than inventing ambiguous notation syntax.
+
 ## Render Document Contract
 
 The renderer accepts a render-ready JSON document.

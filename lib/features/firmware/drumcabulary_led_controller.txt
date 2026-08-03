@@ -1,0 +1,2729 @@
+#include <Adafruit_NeoPixel.h>
+#include <Preferences.h>
+
+/*
+===============================================================================
+DRUMCABULARY ESP32-S3 LED CONTROLLER
+===============================================================================
+
+BOARD:
+  ESP32-S3 N16R8 / ESP32-S3 Dev Module
+
+ARDUINO IDE:
+  Board: ESP32S3 Dev Module
+  USB CDC On Boot: Enabled
+  USB Mode: Hardware CDC and JTAG
+  Serial Monitor: 115200 baud
+  Line ending: Newline
+
+POWER:
+  All LED +5V wires -> regulated external 5V
+  All LED grounds   -> external power-supply ground
+  ESP32 GND         -> same external ground
+
+DATA PIN ASSIGNMENTS:
+  Snare      -> GPIO18
+  Kick       -> GPIO17
+  Hi-Hat     -> GPIO16
+  Tom 1      -> GPIO15
+  Tom 2      -> GPIO7
+  Floor Tom  -> GPIO6
+  Crash      -> GPIO5
+  Ride       -> GPIO4
+
+PIXEL MEANING ON EACH 10-PIXEL STICK:
+  Pixel 0     -> left-limb endpoint
+  Pixels 1-8  -> voice color
+  Pixel 9     -> right-limb endpoint
+
+FRAME PROTOCOL:
+  FRAME_BEGIN
+  ANIMATION,SOLID,55
+  CUE,HIHAT,R
+  FRAME_END
+
+  FRAME_BEGIN
+  ANIMATION,FLASH,220
+  CUE,SNARE,L
+  FRAME_END
+
+  FRAME_BEGIN
+  ANIMATION,FADE_IN,250,180
+  CUE,KICK,R
+  CUE,HIHAT,R
+  FRAME_END
+
+ORIENTATION:
+  SYS,SET,ORIENTATION,SNARE,RIGHT
+  SYS,SET,ORIENTATION,SNARE,LEFT
+  SYS,GET,ORIENTATION,SNARE
+  SYS,GET,ORIENTATION,ALL
+  SYS,RESET,ORIENTATION,SNARE
+  SYS,RESET,ORIENTATION,ALL
+
+DIAGNOSTICS:
+  TEST,ALL
+    Cycles through all dongles using each voice's normal color.
+
+  TEST,SNARE
+  TEST,KICK
+  TEST,HIHAT
+  TEST,TOM1
+  TEST,TOM2
+  TEST,FLOORTOM
+  TEST,CRASH
+  TEST,RIDE
+    Holds the selected dongle in its normal voice color.
+
+  TEST,PIN,18
+    Tests whichever output is assigned to the requested GPIO.
+
+  TEST,COLOR,RED
+  TEST,COLOR,GREEN
+  TEST,COLOR,BLUE
+  TEST,COLOR,WHITE
+    Lights every output using the requested diagnostic color.
+
+  TEST,CHASE
+    Runs a pixel chase across every stick, one stick at a time.
+    This verifies data direction and pixel order.
+
+  TEST,CHASE,SNARE
+    Runs the chase on only the selected stick.
+
+  TEST,STOP
+    Stops diagnostics and returns to normal controller operation.
+
+BOOT BUTTON:
+  The ESP32 BOOT button, normally GPIO0, advances through individual outputs.
+  Each press selects the next dongle.
+  After RIDE, the next press stops the test.
+
+===============================================================================
+*/
+
+// -----------------------------------------------------------------------------
+// Physical configuration
+// -----------------------------------------------------------------------------
+
+constexpr uint16_t PIXELS_PER_STICK = 10;
+
+constexpr uint8_t LEFT_PIXEL = 0;
+constexpr uint8_t VOICE_FIRST_PIXEL = 1;
+constexpr uint8_t VOICE_PIXEL_COUNT = 8;
+constexpr uint8_t RIGHT_PIXEL = 9;
+
+constexpr uint8_t GLOBAL_BRIGHTNESS = 100;
+
+constexpr uint8_t SNARE_PIN = 18;
+constexpr uint8_t KICK_PIN = 17;
+constexpr uint8_t HIHAT_PIN = 16;
+constexpr uint8_t TOM1_PIN = 15;
+constexpr uint8_t TOM2_PIN = 7;
+constexpr uint8_t FLOORTOM_PIN = 6;
+constexpr uint8_t CRASH_PIN = 5;
+constexpr uint8_t RIDE_PIN = 4;
+
+// Typical ESP32-S3 BOOT button pin.
+constexpr uint8_t BOOT_BUTTON_PIN = 0;
+
+constexpr bool SNARE_CONNECTED = true;
+constexpr bool KICK_CONNECTED = true;
+constexpr bool HIHAT_CONNECTED = true;
+constexpr bool TOM1_CONNECTED = true;
+constexpr bool TOM2_CONNECTED = true;
+constexpr bool FLOORTOM_CONNECTED = true;
+constexpr bool CRASH_CONNECTED = true;
+constexpr bool RIDE_CONNECTED = true;
+
+// -----------------------------------------------------------------------------
+// Timing and brightness
+// -----------------------------------------------------------------------------
+
+constexpr unsigned long HIT_FLASH_MS = 120;
+constexpr unsigned long ERROR_FLASH_MS = 2000;
+constexpr unsigned long MISSING_BLINK_MS = 250;
+constexpr uint8_t MISSING_BLINK_COUNT = 4;
+
+constexpr uint8_t OPEN_HIHAT_MIN_LEVEL = 110;
+constexpr uint8_t OPEN_HIHAT_MAX_LEVEL = 255;
+constexpr unsigned long OPEN_HIHAT_PULSE_PERIOD_MS = 900;
+constexpr unsigned long OPEN_HIHAT_PULSE_UPDATE_MS = 20;
+
+constexpr unsigned long ANIMATION_UPDATE_MS = 10;
+constexpr uint8_t SOLID_RETRIGGER_START_LEVEL = 50;
+constexpr uint8_t FADE_IN_START_LEVEL = 45;
+
+constexpr uint8_t LIMB_GHOST = 25;
+constexpr uint8_t LIMB_NORMAL = 180;
+constexpr uint8_t LIMB_ACCENT = 255;
+
+constexpr unsigned long TEST_STEP_MS = 700;
+constexpr unsigned long TEST_GAP_MS = 120;
+constexpr unsigned long TEST_CHASE_PIXEL_MS = 120;
+
+constexpr unsigned long BUTTON_DEBOUNCE_MS = 50;
+
+// -----------------------------------------------------------------------------
+// Enumerations and state
+// -----------------------------------------------------------------------------
+
+enum class LedOrientation : uint8_t {
+  left = 0,
+  right = 1
+};
+
+constexpr LedOrientation DEFAULT_LED_ORIENTATION =
+    LedOrientation::right;
+
+enum OutputIndex : uint8_t {
+  OUTPUT_SNARE = 0,
+  OUTPUT_KICK,
+  OUTPUT_HIHAT,
+  OUTPUT_TOM1,
+  OUTPUT_TOM2,
+  OUTPUT_FLOORTOM,
+  OUTPUT_CRASH,
+  OUTPUT_RIDE,
+  OUTPUT_COUNT
+};
+
+enum class FrameAnimationType : uint8_t {
+  none,
+  solid,
+  flash,
+  fadeIn
+};
+
+enum class FrameAnimationPhase : uint8_t {
+  idle,
+  solidRetrigger,
+  solidHold,
+  flashDecay,
+  fadeInLead,
+  fadeInDecay
+};
+
+enum class OverlayMode : uint8_t {
+  none,
+  hit,
+  error,
+  missingOn,
+  missingOff
+};
+
+enum class StrokeIntensity : uint8_t {
+  none = 0,
+  ghost = 1,
+  normal = 2,
+  accent = 3
+};
+
+enum class DiagnosticMode : uint8_t {
+  none,
+  singleOutput,
+  allOutputs,
+  solidColor,
+  chaseAll,
+  chaseSingle
+};
+
+struct ParsedStrokeSequence {
+  StrokeIntensity left = StrokeIntensity::none;
+  StrokeIntensity right = StrokeIntensity::none;
+};
+
+struct PendingFrameAnimation {
+  FrameAnimationType type = FrameAnimationType::none;
+  unsigned long primaryDurationMs = 0;
+  unsigned long secondaryDurationMs = 0;
+  bool declared = false;
+};
+
+struct ActiveFrameAnimation {
+  FrameAnimationType type = FrameAnimationType::none;
+  FrameAnimationPhase phase = FrameAnimationPhase::idle;
+  bool active = false;
+  unsigned long phaseStartedAt = 0;
+  unsigned long phaseDurationMs = 0;
+  unsigned long secondaryDurationMs = 0;
+  unsigned long nextUpdateAt = 0;
+  uint8_t level = 255;
+};
+
+struct IndicatorState {
+  bool cueActive = false;
+  uint32_t cueColor = 0;
+  StrokeIntensity left = StrokeIntensity::none;
+  StrokeIntensity right = StrokeIntensity::none;
+  bool openHiHat = false;
+  uint8_t openHiHatPulseLevel = OPEN_HIHAT_MAX_LEVEL;
+  unsigned long nextOpenHiHatPulseAt = 0;
+
+  OverlayMode overlayMode = OverlayMode::none;
+  uint32_t overlayColor = 0;
+  unsigned long overlayUntil = 0;
+  uint8_t remainingBlinks = 0;
+};
+
+struct PendingCue {
+  bool active = false;
+  uint32_t color = 0;
+  StrokeIntensity left = StrokeIntensity::none;
+  StrokeIntensity right = StrokeIntensity::none;
+  bool openHiHat = false;
+};
+
+struct OutputDefinition {
+  const char* name;
+  uint8_t pin;
+  Adafruit_NeoPixel* strip;
+  bool connected;
+  uint32_t normalColor;
+  LedOrientation orientation;
+};
+
+struct DiagnosticState {
+  DiagnosticMode mode = DiagnosticMode::none;
+  int outputIndex = -1;
+  uint32_t color = 0;
+  uint8_t sequenceOutput = 0;
+  uint8_t chasePixel = 0;
+  bool gapPhase = false;
+  unsigned long nextUpdateAt = 0;
+};
+
+// -----------------------------------------------------------------------------
+// NeoPixel strips
+// -----------------------------------------------------------------------------
+
+Adafruit_NeoPixel snareStrip(
+    PIXELS_PER_STICK,
+    SNARE_PIN,
+    NEO_GRB + NEO_KHZ800);
+
+Adafruit_NeoPixel kickStrip(
+    PIXELS_PER_STICK,
+    KICK_PIN,
+    NEO_GRB + NEO_KHZ800);
+
+Adafruit_NeoPixel hihatStrip(
+    PIXELS_PER_STICK,
+    HIHAT_PIN,
+    NEO_GRB + NEO_KHZ800);
+
+Adafruit_NeoPixel tom1Strip(
+    PIXELS_PER_STICK,
+    TOM1_PIN,
+    NEO_GRB + NEO_KHZ800);
+
+Adafruit_NeoPixel tom2Strip(
+    PIXELS_PER_STICK,
+    TOM2_PIN,
+    NEO_GRB + NEO_KHZ800);
+
+Adafruit_NeoPixel floorTomStrip(
+    PIXELS_PER_STICK,
+    FLOORTOM_PIN,
+    NEO_GRB + NEO_KHZ800);
+
+Adafruit_NeoPixel crashStrip(
+    PIXELS_PER_STICK,
+    CRASH_PIN,
+    NEO_GRB + NEO_KHZ800);
+
+Adafruit_NeoPixel rideStrip(
+    PIXELS_PER_STICK,
+    RIDE_PIN,
+    NEO_GRB + NEO_KHZ800);
+
+// -----------------------------------------------------------------------------
+// Runtime data
+// -----------------------------------------------------------------------------
+
+OutputDefinition outputs[OUTPUT_COUNT] = {
+    {"SNARE", SNARE_PIN, &snareStrip, SNARE_CONNECTED, 0,
+     DEFAULT_LED_ORIENTATION},
+
+    {"KICK", KICK_PIN, &kickStrip, KICK_CONNECTED, 0,
+     DEFAULT_LED_ORIENTATION},
+
+    {"HIHAT", HIHAT_PIN, &hihatStrip, HIHAT_CONNECTED, 0,
+     DEFAULT_LED_ORIENTATION},
+
+    {"TOM1", TOM1_PIN, &tom1Strip, TOM1_CONNECTED, 0,
+     DEFAULT_LED_ORIENTATION},
+
+    {"TOM2", TOM2_PIN, &tom2Strip, TOM2_CONNECTED, 0,
+     DEFAULT_LED_ORIENTATION},
+
+    {"FLOORTOM", FLOORTOM_PIN, &floorTomStrip, FLOORTOM_CONNECTED, 0,
+     DEFAULT_LED_ORIENTATION},
+
+    {"CRASH", CRASH_PIN, &crashStrip, CRASH_CONNECTED, 0,
+     DEFAULT_LED_ORIENTATION},
+
+    {"RIDE", RIDE_PIN, &rideStrip, RIDE_CONNECTED, 0,
+     DEFAULT_LED_ORIENTATION}};
+
+IndicatorState indicators[OUTPUT_COUNT];
+PendingCue pendingCues[OUTPUT_COUNT];
+
+PendingFrameAnimation pendingAnimation;
+ActiveFrameAnimation activeAnimation;
+DiagnosticState diagnostic;
+
+Preferences preferences;
+
+String inputBuffer;
+bool frameOpen = false;
+
+bool lastButtonReading = HIGH;
+bool stableButtonState = HIGH;
+unsigned long buttonChangedAt = 0;
+int buttonTestOutput = -1;
+
+// -----------------------------------------------------------------------------
+// General helpers
+// -----------------------------------------------------------------------------
+
+bool timeReached(
+    unsigned long now,
+    unsigned long target) {
+  return static_cast<long>(now - target) >= 0;
+}
+
+uint32_t makeColor(
+    uint8_t red,
+    uint8_t green,
+    uint8_t blue) {
+  return Adafruit_NeoPixel::Color(red, green, blue);
+}
+
+uint32_t scaleColor(
+    uint32_t color,
+    uint8_t level) {
+  const uint8_t red = (color >> 16) & 0xFF;
+  const uint8_t green = (color >> 8) & 0xFF;
+  const uint8_t blue = color & 0xFF;
+
+  return makeColor(
+      (static_cast<uint16_t>(red) * level) / 255,
+      (static_cast<uint16_t>(green) * level) / 255,
+      (static_cast<uint16_t>(blue) * level) / 255);
+}
+
+void initializeColors() {
+  outputs[OUTPUT_SNARE].normalColor =
+      makeColor(160, 0, 255);
+
+  outputs[OUTPUT_KICK].normalColor =
+      makeColor(0, 0, 255);
+
+  outputs[OUTPUT_HIHAT].normalColor =
+      makeColor(255, 255, 0);
+
+  outputs[OUTPUT_TOM1].normalColor =
+      makeColor(0, 255, 0);
+
+  outputs[OUTPUT_TOM2].normalColor =
+      makeColor(0, 255, 255);
+
+  outputs[OUTPUT_FLOORTOM].normalColor =
+      makeColor(255, 0, 255);
+
+  outputs[OUTPUT_CRASH].normalColor =
+      makeColor(255, 100, 0);
+
+  outputs[OUTPUT_RIDE].normalColor =
+      makeColor(255, 255, 255);
+}
+
+uint8_t intensityBrightness(
+    StrokeIntensity intensity) {
+  switch (intensity) {
+    case StrokeIntensity::ghost:
+      return LIMB_GHOST;
+
+    case StrokeIntensity::normal:
+      return LIMB_NORMAL;
+
+    case StrokeIntensity::accent:
+      return LIMB_ACCENT;
+
+    case StrokeIntensity::none:
+    default:
+      return 0;
+  }
+}
+
+uint32_t endpointColor(
+    StrokeIntensity intensity,
+    uint8_t animationLevel = 255) {
+  const uint8_t brightness =
+      intensityBrightness(intensity);
+
+  const uint8_t scaled =
+      (static_cast<uint16_t>(brightness) *
+       animationLevel) /
+      255;
+
+  return makeColor(scaled, scaled, scaled);
+}
+
+uint8_t interpolateAnimationLevel(
+    uint8_t startLevel,
+    uint8_t endLevel,
+    unsigned long elapsed,
+    unsigned long duration) {
+  if (duration == 0 || elapsed >= duration) {
+    return endLevel;
+  }
+
+  const long difference =
+      static_cast<long>(endLevel) -
+      static_cast<long>(startLevel);
+
+  const long value =
+      static_cast<long>(startLevel) +
+      ((difference * static_cast<long>(elapsed)) /
+       static_cast<long>(duration));
+
+  return static_cast<uint8_t>(
+      constrain(value, 0L, 255L));
+}
+
+// -----------------------------------------------------------------------------
+// Orientation persistence
+// -----------------------------------------------------------------------------
+
+const char* orientationName(
+    LedOrientation orientation) {
+  return orientation == LedOrientation::right
+             ? "RIGHT"
+             : "LEFT";
+}
+
+String orientationPreferenceKey(
+    uint8_t outputIndex) {
+  return "orientation" + String(outputIndex);
+}
+
+void loadOrientations() {
+  preferences.begin("drumcabulary", false);
+
+  for (uint8_t i = 0; i < OUTPUT_COUNT; i++) {
+    const String key =
+        orientationPreferenceKey(i);
+
+    const uint8_t stored =
+        preferences.getUChar(
+            key.c_str(),
+            static_cast<uint8_t>(
+                DEFAULT_LED_ORIENTATION));
+
+    outputs[i].orientation =
+        stored ==
+                static_cast<uint8_t>(
+                    LedOrientation::left)
+            ? LedOrientation::left
+            : LedOrientation::right;
+  }
+}
+
+void saveOrientation(
+    uint8_t outputIndex,
+    LedOrientation orientation) {
+  if (outputIndex >= OUTPUT_COUNT) {
+    return;
+  }
+
+  outputs[outputIndex].orientation =
+      orientation;
+
+  const String key =
+      orientationPreferenceKey(outputIndex);
+
+  preferences.putUChar(
+      key.c_str(),
+      static_cast<uint8_t>(orientation));
+}
+
+void resetOrientation(
+    uint8_t outputIndex) {
+  if (outputIndex >= OUTPUT_COUNT) {
+    return;
+  }
+
+  outputs[outputIndex].orientation =
+      DEFAULT_LED_ORIENTATION;
+
+  const String key =
+      orientationPreferenceKey(outputIndex);
+
+  preferences.remove(key.c_str());
+}
+
+// -----------------------------------------------------------------------------
+// Low-level output
+// -----------------------------------------------------------------------------
+
+void initializeConnectedOutputs() {
+  for (uint8_t i = 0; i < OUTPUT_COUNT; i++) {
+    if (!outputs[i].connected) {
+      continue;
+    }
+
+    outputs[i].strip->begin();
+    outputs[i].strip->setBrightness(
+        GLOBAL_BRIGHTNESS);
+    outputs[i].strip->clear();
+    outputs[i].strip->show();
+  }
+}
+
+void showSolidColor(
+    uint8_t outputIndex,
+    uint32_t color) {
+  if (outputIndex >= OUTPUT_COUNT ||
+      !outputs[outputIndex].connected) {
+    return;
+  }
+
+  Adafruit_NeoPixel& strip =
+      *outputs[outputIndex].strip;
+
+  strip.fill(
+      color,
+      0,
+      PIXELS_PER_STICK);
+
+  strip.show();
+}
+
+void clearPhysicalOutput(
+    uint8_t outputIndex) {
+  showSolidColor(outputIndex, 0);
+}
+
+void clearEveryPhysicalOutput() {
+  for (uint8_t i = 0; i < OUTPUT_COUNT; i++) {
+    clearPhysicalOutput(i);
+  }
+}
+
+void showCue(
+    uint8_t outputIndex,
+    uint32_t voiceColor,
+    StrokeIntensity left,
+    StrokeIntensity right,
+    uint8_t voiceLevel,
+    uint8_t endpointLevel) {
+  if (outputIndex >= OUTPUT_COUNT ||
+      !outputs[outputIndex].connected) {
+    return;
+  }
+
+  Adafruit_NeoPixel& strip =
+      *outputs[outputIndex].strip;
+
+  strip.clear();
+
+  const bool diOnRight =
+      outputs[outputIndex].orientation ==
+      LedOrientation::right;
+
+  const uint8_t physicalLeftPixel =
+      diOnRight ? RIGHT_PIXEL : LEFT_PIXEL;
+
+  const uint8_t physicalRightPixel =
+      diOnRight ? LEFT_PIXEL : RIGHT_PIXEL;
+
+  strip.setPixelColor(
+      physicalLeftPixel,
+      endpointColor(left, endpointLevel));
+
+  strip.fill(
+      scaleColor(voiceColor, voiceLevel),
+      VOICE_FIRST_PIXEL,
+      VOICE_PIXEL_COUNT);
+
+  strip.setPixelColor(
+      physicalRightPixel,
+      endpointColor(right, endpointLevel));
+
+  strip.show();
+}
+
+// -----------------------------------------------------------------------------
+// State reset and lookup
+// -----------------------------------------------------------------------------
+
+int findOutputIndex(
+    const String& name) {
+  if (name == "OHH") {
+    return OUTPUT_HIHAT;
+  }
+
+  for (uint8_t i = 0; i < OUTPUT_COUNT; i++) {
+    if (name == outputs[i].name) {
+      return i;
+    }
+  }
+
+  return -1;
+}
+
+int findOutputIndexByPin(
+    uint8_t pin) {
+  for (uint8_t i = 0; i < OUTPUT_COUNT; i++) {
+    if (outputs[i].pin == pin) {
+      return i;
+    }
+  }
+
+  return -1;
+}
+
+bool isOpenHiHatVoice(
+    const String& name) {
+  return name == "OHH";
+}
+
+void resetIndicatorState(
+    uint8_t outputIndex) {
+  if (outputIndex < OUTPUT_COUNT) {
+    indicators[outputIndex] =
+        IndicatorState();
+  }
+}
+
+void resetPendingCue(
+    uint8_t outputIndex) {
+  if (outputIndex < OUTPUT_COUNT) {
+    pendingCues[outputIndex] =
+        PendingCue();
+  }
+}
+
+void resetPendingAnimation() {
+  pendingAnimation =
+      PendingFrameAnimation();
+}
+
+void resetActiveAnimation() {
+  activeAnimation =
+      ActiveFrameAnimation();
+}
+
+// -----------------------------------------------------------------------------
+// Normal rendering
+// -----------------------------------------------------------------------------
+
+void refreshOutput(
+    uint8_t outputIndex) {
+  if (diagnostic.mode !=
+      DiagnosticMode::none) {
+    return;
+  }
+
+  if (outputIndex >= OUTPUT_COUNT ||
+      !outputs[outputIndex].connected) {
+    return;
+  }
+
+  const IndicatorState& indicator =
+      indicators[outputIndex];
+
+  switch (indicator.overlayMode) {
+    case OverlayMode::hit:
+    case OverlayMode::error:
+    case OverlayMode::missingOn:
+      showSolidColor(
+          outputIndex,
+          indicator.overlayColor);
+      return;
+
+    case OverlayMode::missingOff:
+      showSolidColor(outputIndex, 0);
+      return;
+
+    case OverlayMode::none:
+      if (!indicator.cueActive) {
+        showSolidColor(outputIndex, 0);
+        return;
+      }
+
+      {
+        const bool animationControlsLevel =
+            activeAnimation.active &&
+            activeAnimation.type !=
+                FrameAnimationType::none;
+
+        const uint8_t endpointLevel =
+            animationControlsLevel
+                ? activeAnimation.level
+                : 255;
+
+        uint8_t voiceLevel = 255;
+
+        if (animationControlsLevel) {
+          voiceLevel =
+              activeAnimation.level;
+        } else if (indicator.openHiHat) {
+          voiceLevel =
+              indicator.openHiHatPulseLevel;
+        }
+
+        showCue(
+            outputIndex,
+            indicator.cueColor,
+            indicator.left,
+            indicator.right,
+            voiceLevel,
+            endpointLevel);
+      }
+
+      return;
+  }
+}
+
+void refreshAllConnectedOutputs() {
+  if (diagnostic.mode !=
+      DiagnosticMode::none) {
+    return;
+  }
+
+  for (uint8_t i = 0; i < OUTPUT_COUNT; i++) {
+    refreshOutput(i);
+  }
+}
+
+void clearDisplayedFrame() {
+  resetActiveAnimation();
+
+  for (uint8_t i = 0; i < OUTPUT_COUNT; i++) {
+    indicators[i].cueActive = false;
+    indicators[i].openHiHat = false;
+  }
+
+  refreshAllConnectedOutputs();
+}
+
+void clearAll() {
+  frameOpen = false;
+
+  resetPendingAnimation();
+  resetActiveAnimation();
+
+  for (uint8_t i = 0; i < OUTPUT_COUNT; i++) {
+    resetPendingCue(i);
+    resetIndicatorState(i);
+  }
+
+  if (diagnostic.mode ==
+      DiagnosticMode::none) {
+    clearEveryPhysicalOutput();
+  }
+
+  Serial.println("OK:CLEAR");
+}
+
+// -----------------------------------------------------------------------------
+// Sticking parser
+// -----------------------------------------------------------------------------
+
+void retainStrongerIntensity(
+    StrokeIntensity& current,
+    StrokeIntensity incoming) {
+  if (static_cast<uint8_t>(incoming) >
+      static_cast<uint8_t>(current)) {
+    current = incoming;
+  }
+}
+
+void addParsedStroke(
+    ParsedStrokeSequence& parsed,
+    char limb,
+    StrokeIntensity intensity) {
+  if (limb == 'L') {
+    retainStrongerIntensity(
+        parsed.left,
+        intensity);
+  } else if (limb == 'R') {
+    retainStrongerIntensity(
+        parsed.right,
+        intensity);
+  }
+}
+
+bool parseStrokeSequence(
+    String strokes,
+    ParsedStrokeSequence& parsed) {
+  strokes.trim();
+  strokes.toUpperCase();
+
+  parsed = ParsedStrokeSequence();
+
+  if (strokes.length() == 0) {
+    return true;
+  }
+
+  int index = 0;
+
+  while (index < strokes.length()) {
+    const char current =
+        strokes.charAt(index);
+
+    if (current == ' ' ||
+        current == '\t') {
+      index++;
+      continue;
+    }
+
+    if (current == '(') {
+      if (index + 2 >=
+          strokes.length()) {
+        return false;
+      }
+
+      const char limb =
+          strokes.charAt(index + 1);
+
+      const char close =
+          strokes.charAt(index + 2);
+
+      if ((limb != 'L' &&
+           limb != 'R') ||
+          close != ')') {
+        return false;
+      }
+
+      addParsedStroke(
+          parsed,
+          limb,
+          StrokeIntensity::ghost);
+
+      index += 3;
+      continue;
+    }
+
+    if (current == '^') {
+      if (index + 1 >=
+          strokes.length()) {
+        return false;
+      }
+
+      const char limb =
+          strokes.charAt(index + 1);
+
+      if (limb != 'L' &&
+          limb != 'R') {
+        return false;
+      }
+
+      addParsedStroke(
+          parsed,
+          limb,
+          StrokeIntensity::accent);
+
+      index += 2;
+      continue;
+    }
+
+    if (current == 'L' ||
+        current == 'R') {
+      addParsedStroke(
+          parsed,
+          current,
+          StrokeIntensity::normal);
+
+      index++;
+      continue;
+    }
+
+    return false;
+  }
+
+  return true;
+}
+
+bool hasResolvedLimb(
+    const ParsedStrokeSequence& parsed) {
+  return parsed.left !=
+             StrokeIntensity::none ||
+         parsed.right !=
+             StrokeIntensity::none;
+}
+
+// -----------------------------------------------------------------------------
+// Frame staging and animation
+// -----------------------------------------------------------------------------
+
+void beginFrame() {
+  if (diagnostic.mode !=
+      DiagnosticMode::none) {
+    Serial.println(
+        "ERROR:DIAGNOSTIC_ACTIVE");
+    return;
+  }
+
+  frameOpen = true;
+  resetPendingAnimation();
+
+  for (uint8_t i = 0; i < OUTPUT_COUNT; i++) {
+    resetPendingCue(i);
+  }
+
+  Serial.println("OK:FRAME_BEGIN");
+}
+
+bool stageVoiceCue(
+    uint8_t outputIndex,
+    const String& strokes,
+    bool openHiHat) {
+  ParsedStrokeSequence parsed;
+
+  if (!parseStrokeSequence(
+          strokes,
+          parsed)) {
+    Serial.print(
+        "ERROR:INVALID_STROKES:");
+    Serial.println(strokes);
+    return false;
+  }
+
+  if (!hasResolvedLimb(parsed)) {
+    Serial.print(
+        "ERROR:MISSING_LIMB:");
+    Serial.println(
+        outputs[outputIndex].name);
+    return false;
+  }
+
+  PendingCue& pending =
+      pendingCues[outputIndex];
+
+  pending.active = true;
+  pending.color =
+      outputs[outputIndex].normalColor;
+
+  pending.openHiHat =
+      pending.openHiHat ||
+      openHiHat;
+
+  retainStrongerIntensity(
+      pending.left,
+      parsed.left);
+
+  retainStrongerIntensity(
+      pending.right,
+      parsed.right);
+
+  return true;
+}
+
+void startActiveAnimation(
+    FrameAnimationType type,
+    FrameAnimationPhase phase,
+    unsigned long durationMs,
+    uint8_t initialLevel) {
+  const unsigned long now =
+      millis();
+
+  activeAnimation.type = type;
+  activeAnimation.phase = phase;
+  activeAnimation.active = true;
+  activeAnimation.phaseStartedAt = now;
+  activeAnimation.phaseDurationMs =
+      durationMs;
+
+  activeAnimation.nextUpdateAt =
+      now + ANIMATION_UPDATE_MS;
+
+  activeAnimation.level =
+      initialLevel;
+}
+
+void transitionAnimationPhase(
+    FrameAnimationPhase phase,
+    unsigned long durationMs,
+    uint8_t initialLevel) {
+  activeAnimation.phase = phase;
+  activeAnimation.phaseStartedAt =
+      millis();
+
+  activeAnimation.phaseDurationMs =
+      durationMs;
+
+  activeAnimation.nextUpdateAt =
+      millis() + ANIMATION_UPDATE_MS;
+
+  activeAnimation.level =
+      initialLevel;
+
+  refreshAllConnectedOutputs();
+}
+
+void commitFrame() {
+  if (!frameOpen) {
+    Serial.println(
+        "ERROR:FRAME_END_WITHOUT_FRAME");
+    return;
+  }
+
+  if (!pendingAnimation.declared) {
+    Serial.println(
+        "ERROR:ANIMATION_REQUIRED");
+
+    frameOpen = false;
+    resetPendingAnimation();
+
+    for (uint8_t i = 0;
+         i < OUTPUT_COUNT;
+         i++) {
+      resetPendingCue(i);
+    }
+
+    return;
+  }
+
+  const unsigned long now =
+      millis();
+
+  resetActiveAnimation();
+
+  switch (pendingAnimation.type) {
+    case FrameAnimationType::solid:
+      if (pendingAnimation
+              .primaryDurationMs >
+          0) {
+        startActiveAnimation(
+            FrameAnimationType::solid,
+            FrameAnimationPhase::
+                solidRetrigger,
+            pendingAnimation
+                .primaryDurationMs,
+            SOLID_RETRIGGER_START_LEVEL);
+      } else {
+        startActiveAnimation(
+            FrameAnimationType::solid,
+            FrameAnimationPhase::
+                solidHold,
+            0,
+            255);
+      }
+      break;
+
+    case FrameAnimationType::flash:
+      startActiveAnimation(
+          FrameAnimationType::flash,
+          FrameAnimationPhase::
+              flashDecay,
+          pendingAnimation
+              .primaryDurationMs,
+          255);
+      break;
+
+    case FrameAnimationType::fadeIn:
+      startActiveAnimation(
+          FrameAnimationType::fadeIn,
+          FrameAnimationPhase::
+              fadeInLead,
+          pendingAnimation
+              .primaryDurationMs,
+          FADE_IN_START_LEVEL);
+      break;
+
+    case FrameAnimationType::none:
+      Serial.println(
+          "ERROR:INVALID_ANIMATION");
+      return;
+  }
+
+  activeAnimation.secondaryDurationMs =
+      pendingAnimation
+          .secondaryDurationMs;
+
+  for (uint8_t i = 0;
+       i < OUTPUT_COUNT;
+       i++) {
+    resetIndicatorState(i);
+
+    if (!pendingCues[i].active) {
+      continue;
+    }
+
+    indicators[i].cueActive = true;
+    indicators[i].cueColor =
+        pendingCues[i].color;
+
+    indicators[i].left =
+        pendingCues[i].left;
+
+    indicators[i].right =
+        pendingCues[i].right;
+
+    indicators[i].openHiHat =
+        pendingCues[i].openHiHat;
+
+    indicators[i].openHiHatPulseLevel =
+        OPEN_HIHAT_MAX_LEVEL;
+
+    indicators[i].nextOpenHiHatPulseAt =
+        now +
+        OPEN_HIHAT_PULSE_UPDATE_MS;
+  }
+
+  frameOpen = false;
+
+  refreshAllConnectedOutputs();
+
+  Serial.println("OK:FRAME_END");
+
+  resetPendingAnimation();
+}
+
+// -----------------------------------------------------------------------------
+// Feedback
+// -----------------------------------------------------------------------------
+
+void flashHit(
+    uint8_t outputIndex) {
+  if (outputIndex >= OUTPUT_COUNT) {
+    return;
+  }
+
+  IndicatorState& indicator =
+      indicators[outputIndex];
+
+  indicator.overlayMode =
+      OverlayMode::hit;
+
+  indicator.overlayColor =
+      outputs[outputIndex]
+          .normalColor;
+
+  indicator.overlayUntil =
+      millis() +
+      HIT_FLASH_MS;
+
+  refreshOutput(outputIndex);
+}
+
+void flashError(
+    uint8_t outputIndex) {
+  if (outputIndex >= OUTPUT_COUNT) {
+    return;
+  }
+
+  IndicatorState& indicator =
+      indicators[outputIndex];
+
+  indicator.overlayMode =
+      OverlayMode::error;
+
+  indicator.overlayColor =
+      makeColor(255, 0, 0);
+
+  indicator.overlayUntil =
+      millis() +
+      ERROR_FLASH_MS;
+
+  refreshOutput(outputIndex);
+}
+
+void blinkMissing(
+    uint8_t outputIndex) {
+  if (outputIndex >= OUTPUT_COUNT) {
+    return;
+  }
+
+  IndicatorState& indicator =
+      indicators[outputIndex];
+
+  indicator.overlayMode =
+      OverlayMode::missingOn;
+
+  indicator.overlayColor =
+      makeColor(255, 0, 0);
+
+  indicator.overlayUntil =
+      millis() +
+      MISSING_BLINK_MS;
+
+  indicator.remainingBlinks =
+      MISSING_BLINK_COUNT;
+
+  refreshOutput(outputIndex);
+}
+
+// -----------------------------------------------------------------------------
+// Diagnostics
+// -----------------------------------------------------------------------------
+
+void stopDiagnostic() {
+  diagnostic = DiagnosticState();
+  buttonTestOutput = -1;
+
+  clearEveryPhysicalOutput();
+
+  Serial.println("OK:TEST:STOP");
+}
+
+void startSingleOutputTest(
+    uint8_t outputIndex) {
+  if (outputIndex >= OUTPUT_COUNT ||
+      !outputs[outputIndex].connected) {
+    Serial.println(
+        "ERROR:INVALID_TEST_OUTPUT");
+    return;
+  }
+
+  diagnostic = DiagnosticState();
+  diagnostic.mode =
+      DiagnosticMode::singleOutput;
+
+  diagnostic.outputIndex =
+      outputIndex;
+
+  clearEveryPhysicalOutput();
+
+  showSolidColor(
+      outputIndex,
+      outputs[outputIndex]
+          .normalColor);
+
+  Serial.print("OK:TEST:");
+  Serial.print(
+      outputs[outputIndex].name);
+  Serial.print(":GPIO");
+  Serial.println(
+      outputs[outputIndex].pin);
+}
+
+void startAllOutputTest() {
+  diagnostic = DiagnosticState();
+  diagnostic.mode =
+      DiagnosticMode::allOutputs;
+
+  diagnostic.sequenceOutput = 0;
+  diagnostic.gapPhase = false;
+  diagnostic.nextUpdateAt = 0;
+
+  clearEveryPhysicalOutput();
+
+  Serial.println("OK:TEST:ALL");
+}
+
+void startSolidColorTest(
+    uint32_t color,
+    const String& colorName) {
+  diagnostic = DiagnosticState();
+  diagnostic.mode =
+      DiagnosticMode::solidColor;
+
+  diagnostic.color = color;
+
+  for (uint8_t i = 0;
+       i < OUTPUT_COUNT;
+       i++) {
+    if (outputs[i].connected) {
+      showSolidColor(i, color);
+    }
+  }
+
+  Serial.print("OK:TEST:COLOR:");
+  Serial.println(colorName);
+}
+
+void startChaseTest(
+    int outputIndex) {
+  diagnostic = DiagnosticState();
+
+  diagnostic.mode =
+      outputIndex < 0
+          ? DiagnosticMode::chaseAll
+          : DiagnosticMode::chaseSingle;
+
+  diagnostic.outputIndex =
+      outputIndex;
+
+  diagnostic.sequenceOutput =
+      outputIndex < 0
+          ? 0
+          : static_cast<uint8_t>(
+                outputIndex);
+
+  diagnostic.chasePixel = 0;
+  diagnostic.nextUpdateAt = 0;
+
+  clearEveryPhysicalOutput();
+
+  if (outputIndex < 0) {
+    Serial.println(
+        "OK:TEST:CHASE:ALL");
+  } else {
+    Serial.print(
+        "OK:TEST:CHASE:");
+    Serial.println(
+        outputs[outputIndex].name);
+  }
+}
+
+void updateAllOutputTest() {
+  if (diagnostic.mode !=
+      DiagnosticMode::allOutputs) {
+    return;
+  }
+
+  const unsigned long now =
+      millis();
+
+  if (!timeReached(
+          now,
+          diagnostic.nextUpdateAt)) {
+    return;
+  }
+
+  clearEveryPhysicalOutput();
+
+  if (diagnostic.gapPhase) {
+    diagnostic.gapPhase = false;
+
+    diagnostic.sequenceOutput =
+        (diagnostic.sequenceOutput + 1) %
+        OUTPUT_COUNT;
+
+    diagnostic.nextUpdateAt =
+        now + TEST_STEP_MS;
+
+    showSolidColor(
+        diagnostic.sequenceOutput,
+        outputs[diagnostic.sequenceOutput]
+            .normalColor);
+
+    Serial.print("TESTING:");
+    Serial.print(
+        outputs[diagnostic.sequenceOutput]
+            .name);
+
+    Serial.print(":GPIO");
+    Serial.println(
+        outputs[diagnostic.sequenceOutput]
+            .pin);
+
+    return;
+  }
+
+  showSolidColor(
+      diagnostic.sequenceOutput,
+      outputs[diagnostic.sequenceOutput]
+          .normalColor);
+
+  Serial.print("TESTING:");
+  Serial.print(
+      outputs[diagnostic.sequenceOutput]
+          .name);
+
+  Serial.print(":GPIO");
+  Serial.println(
+      outputs[diagnostic.sequenceOutput]
+          .pin);
+
+  diagnostic.gapPhase = true;
+  diagnostic.nextUpdateAt =
+      now + TEST_GAP_MS;
+}
+
+void showChasePixel(
+    uint8_t outputIndex,
+    uint8_t pixelIndex) {
+  if (outputIndex >= OUTPUT_COUNT ||
+      !outputs[outputIndex].connected) {
+    return;
+  }
+
+  Adafruit_NeoPixel& strip =
+      *outputs[outputIndex].strip;
+
+  strip.clear();
+
+  strip.setPixelColor(
+      pixelIndex,
+      makeColor(255, 255, 255));
+
+  strip.show();
+}
+
+void updateChaseTest() {
+  if (diagnostic.mode !=
+          DiagnosticMode::chaseAll &&
+      diagnostic.mode !=
+          DiagnosticMode::chaseSingle) {
+    return;
+  }
+
+  const unsigned long now =
+      millis();
+
+  if (!timeReached(
+          now,
+          diagnostic.nextUpdateAt)) {
+    return;
+  }
+
+  clearEveryPhysicalOutput();
+
+  showChasePixel(
+      diagnostic.sequenceOutput,
+      diagnostic.chasePixel);
+
+  Serial.print("CHASE:");
+  Serial.print(
+      outputs[diagnostic.sequenceOutput]
+          .name);
+
+  Serial.print(":PIXEL");
+  Serial.println(
+      diagnostic.chasePixel);
+
+  diagnostic.chasePixel++;
+
+  if (diagnostic.chasePixel >=
+      PIXELS_PER_STICK) {
+    diagnostic.chasePixel = 0;
+
+    if (diagnostic.mode ==
+        DiagnosticMode::chaseAll) {
+      diagnostic.sequenceOutput =
+          (diagnostic.sequenceOutput + 1) %
+          OUTPUT_COUNT;
+    }
+  }
+
+  diagnostic.nextUpdateAt =
+      now + TEST_CHASE_PIXEL_MS;
+}
+
+bool parseDiagnosticColor(
+    const String& name,
+    uint32_t& color) {
+  if (name == "RED") {
+    color = makeColor(255, 0, 0);
+    return true;
+  }
+
+  if (name == "GREEN") {
+    color = makeColor(0, 255, 0);
+    return true;
+  }
+
+  if (name == "BLUE") {
+    color = makeColor(0, 0, 255);
+    return true;
+  }
+
+  if (name == "WHITE") {
+    color = makeColor(255, 255, 255);
+    return true;
+  }
+
+  return false;
+}
+
+void handleTestCommand(
+    const String& command) {
+  String fields[4];
+  uint8_t fieldCount = 0;
+  int start = 0;
+
+  while (fieldCount < 4) {
+    const int comma =
+        command.indexOf(',', start);
+
+    if (comma < 0) {
+      fields[fieldCount++] =
+          command.substring(start);
+      break;
+    }
+
+    fields[fieldCount++] =
+        command.substring(start, comma);
+
+    start = comma + 1;
+  }
+
+  for (uint8_t i = 0;
+       i < fieldCount;
+       i++) {
+    fields[i].trim();
+    fields[i].toUpperCase();
+  }
+
+  if (fieldCount < 2 ||
+      fields[0] != "TEST") {
+    Serial.print(
+        "ERROR:INVALID_TEST_COMMAND:");
+    Serial.println(command);
+    return;
+  }
+
+  if (fields[1] == "STOP") {
+    stopDiagnostic();
+    return;
+  }
+
+  if (fields[1] == "ALL") {
+    startAllOutputTest();
+    return;
+  }
+
+  if (fields[1] == "PIN") {
+    if (fieldCount != 3) {
+      Serial.print(
+          "ERROR:INVALID_TEST_PIN:");
+      Serial.println(command);
+      return;
+    }
+
+    const int pin =
+        fields[2].toInt();
+
+    const int outputIndex =
+        findOutputIndexByPin(
+            static_cast<uint8_t>(pin));
+
+    if (outputIndex < 0) {
+      Serial.print(
+          "ERROR:UNASSIGNED_PIN:");
+      Serial.println(pin);
+      return;
+    }
+
+    startSingleOutputTest(
+        static_cast<uint8_t>(
+            outputIndex));
+
+    return;
+  }
+
+  if (fields[1] == "COLOR") {
+    if (fieldCount != 3) {
+      Serial.print(
+          "ERROR:INVALID_TEST_COLOR:");
+      Serial.println(command);
+      return;
+    }
+
+    uint32_t color = 0;
+
+    if (!parseDiagnosticColor(
+            fields[2],
+            color)) {
+      Serial.print(
+          "ERROR:UNKNOWN_TEST_COLOR:");
+      Serial.println(fields[2]);
+      return;
+    }
+
+    startSolidColorTest(
+        color,
+        fields[2]);
+
+    return;
+  }
+
+  if (fields[1] == "CHASE") {
+    if (fieldCount == 2) {
+      startChaseTest(-1);
+      return;
+    }
+
+    if (fieldCount == 3) {
+      const int outputIndex =
+          findOutputIndex(
+              fields[2]);
+
+      if (outputIndex < 0) {
+        Serial.print(
+            "ERROR:UNKNOWN_VOICE:");
+        Serial.println(fields[2]);
+        return;
+      }
+
+      startChaseTest(outputIndex);
+      return;
+    }
+  }
+
+  const int outputIndex =
+      findOutputIndex(fields[1]);
+
+  if (outputIndex >= 0) {
+    startSingleOutputTest(
+        static_cast<uint8_t>(
+            outputIndex));
+
+    return;
+  }
+
+  Serial.print(
+      "ERROR:UNKNOWN_TEST_COMMAND:");
+  Serial.println(command);
+}
+
+void handleBootButton() {
+  const bool reading =
+      digitalRead(BOOT_BUTTON_PIN);
+
+  if (reading !=
+      lastButtonReading) {
+    lastButtonReading = reading;
+    buttonChangedAt = millis();
+  }
+
+  if (!timeReached(
+          millis(),
+          buttonChangedAt +
+              BUTTON_DEBOUNCE_MS)) {
+    return;
+  }
+
+  if (reading ==
+      stableButtonState) {
+    return;
+  }
+
+  stableButtonState = reading;
+
+  if (stableButtonState != LOW) {
+    return;
+  }
+
+  buttonTestOutput++;
+
+  if (buttonTestOutput >=
+      OUTPUT_COUNT) {
+    stopDiagnostic();
+    return;
+  }
+
+  startSingleOutputTest(
+      static_cast<uint8_t>(
+          buttonTestOutput));
+}
+
+// -----------------------------------------------------------------------------
+// System orientation commands
+// -----------------------------------------------------------------------------
+
+bool parseOrientationValue(
+    String value,
+    LedOrientation& orientation) {
+  value.trim();
+  value.toUpperCase();
+
+  if (value == "LEFT") {
+    orientation =
+        LedOrientation::left;
+    return true;
+  }
+
+  if (value == "RIGHT") {
+    orientation =
+        LedOrientation::right;
+    return true;
+  }
+
+  return false;
+}
+
+void printOrientation(
+    uint8_t outputIndex) {
+  if (outputIndex >= OUTPUT_COUNT) {
+    return;
+  }
+
+  Serial.print("ORIENTATION:");
+  Serial.print(
+      outputs[outputIndex].name);
+
+  Serial.print(":");
+  Serial.println(
+      orientationName(
+          outputs[outputIndex]
+              .orientation));
+}
+
+void printAllOrientations() {
+  for (uint8_t i = 0;
+       i < OUTPUT_COUNT;
+       i++) {
+    printOrientation(i);
+  }
+}
+
+void handleSystemCommand(
+    const String& command) {
+  String fields[6];
+  uint8_t fieldCount = 0;
+  int start = 0;
+
+  while (fieldCount < 6) {
+    const int comma =
+        command.indexOf(',', start);
+
+    if (comma < 0) {
+      fields[fieldCount++] =
+          command.substring(start);
+      break;
+    }
+
+    fields[fieldCount++] =
+        command.substring(start, comma);
+
+    start = comma + 1;
+  }
+
+  for (uint8_t i = 0;
+       i < fieldCount;
+       i++) {
+    fields[i].trim();
+    fields[i].toUpperCase();
+  }
+
+  if (fieldCount < 4 ||
+      fields[0] != "SYS" ||
+      fields[2] !=
+          "ORIENTATION") {
+    Serial.print(
+        "ERROR:INVALID_SYS_COMMAND:");
+    Serial.println(command);
+    return;
+  }
+
+  const String& action =
+      fields[1];
+
+  const String& target =
+      fields[3];
+
+  if (action == "GET") {
+    if (target == "ALL") {
+      printAllOrientations();
+      return;
+    }
+
+    const int foundIndex =
+        findOutputIndex(target);
+
+    if (foundIndex < 0) {
+      Serial.print(
+          "ERROR:UNKNOWN_VOICE:");
+      Serial.println(target);
+      return;
+    }
+
+    printOrientation(
+        static_cast<uint8_t>(
+            foundIndex));
+
+    return;
+  }
+
+  if (action == "SET") {
+    if (fieldCount != 5 ||
+        target == "ALL") {
+      Serial.println(
+          "ERROR:INVALID_ORIENTATION_SET");
+      return;
+    }
+
+    const int foundIndex =
+        findOutputIndex(target);
+
+    if (foundIndex < 0) {
+      Serial.print(
+          "ERROR:UNKNOWN_VOICE:");
+      Serial.println(target);
+      return;
+    }
+
+    LedOrientation orientation;
+
+    if (!parseOrientationValue(
+            fields[4],
+            orientation)) {
+      Serial.print(
+          "ERROR:INVALID_ORIENTATION:");
+      Serial.println(fields[4]);
+      return;
+    }
+
+    saveOrientation(
+        static_cast<uint8_t>(
+            foundIndex),
+        orientation);
+
+    Serial.print(
+        "OK:ORIENTATION:");
+    Serial.print(target);
+    Serial.print(":");
+    Serial.println(
+        orientationName(
+            orientation));
+
+    return;
+  }
+
+  if (action == "RESET") {
+    if (target == "ALL") {
+      for (uint8_t i = 0;
+           i < OUTPUT_COUNT;
+           i++) {
+        resetOrientation(i);
+      }
+
+      Serial.println(
+          "OK:ORIENTATION_RESET:ALL");
+
+      printAllOrientations();
+      return;
+    }
+
+    const int foundIndex =
+        findOutputIndex(target);
+
+    if (foundIndex < 0) {
+      Serial.print(
+          "ERROR:UNKNOWN_VOICE:");
+      Serial.println(target);
+      return;
+    }
+
+    resetOrientation(
+        static_cast<uint8_t>(
+            foundIndex));
+
+    Serial.print(
+        "OK:ORIENTATION_RESET:");
+    Serial.println(target);
+
+    return;
+  }
+
+  Serial.print(
+      "ERROR:UNKNOWN_SYS_ACTION:");
+  Serial.println(action);
+}
+
+// -----------------------------------------------------------------------------
+// Animation command parsing
+// -----------------------------------------------------------------------------
+
+bool parsePositiveUnsignedLong(
+    const String& value,
+    unsigned long& parsed) {
+  if (value.length() == 0) {
+    return false;
+  }
+
+  for (uint16_t i = 0;
+       i < value.length();
+       i++) {
+    if (!isDigit(
+            value.charAt(i))) {
+      return false;
+    }
+  }
+
+  parsed = value.toInt();
+
+  return parsed > 0;
+}
+
+bool parseNonNegativeUnsignedLong(
+    const String& value,
+    unsigned long& parsed) {
+  if (value.length() == 0) {
+    return false;
+  }
+
+  for (uint16_t i = 0;
+       i < value.length();
+       i++) {
+    if (!isDigit(
+            value.charAt(i))) {
+      return false;
+    }
+  }
+
+  parsed = value.toInt();
+
+  return true;
+}
+
+void handleAnimationCommand(
+    const String& command) {
+  if (!frameOpen) {
+    Serial.println(
+        "ERROR:ANIMATION_OUTSIDE_FRAME");
+    return;
+  }
+
+  if (pendingAnimation.declared) {
+    Serial.println(
+        "ERROR:ANIMATION_ALREADY_DECLARED");
+    return;
+  }
+
+  String fields[4];
+  uint8_t fieldCount = 0;
+  int start = 0;
+
+  while (fieldCount < 4) {
+    const int comma =
+        command.indexOf(',', start);
+
+    if (comma < 0) {
+      fields[fieldCount++] =
+          command.substring(start);
+      break;
+    }
+
+    fields[fieldCount++] =
+        command.substring(start, comma);
+
+    start = comma + 1;
+  }
+
+  for (uint8_t i = 0;
+       i < fieldCount;
+       i++) {
+    fields[i].trim();
+    fields[i].toUpperCase();
+  }
+
+  if (fields[1] == "SOLID") {
+    unsigned long retriggerMs = 0;
+
+    if (fieldCount == 3 &&
+        !parseNonNegativeUnsignedLong(
+            fields[2],
+            retriggerMs)) {
+      Serial.println(
+          "ERROR:INVALID_SOLID_ANIMATION");
+      return;
+    }
+
+    pendingAnimation.type =
+        FrameAnimationType::solid;
+
+    pendingAnimation.primaryDurationMs =
+        retriggerMs;
+
+    pendingAnimation.declared = true;
+
+    Serial.print(
+        "OK:ANIMATION:SOLID:");
+    Serial.println(retriggerMs);
+    return;
+  }
+
+  if (fields[1] == "FLASH") {
+    unsigned long decayMs = 0;
+
+    if (fieldCount != 3 ||
+        !parsePositiveUnsignedLong(
+            fields[2],
+            decayMs)) {
+      Serial.println(
+          "ERROR:INVALID_FLASH_ANIMATION");
+      return;
+    }
+
+    pendingAnimation.type =
+        FrameAnimationType::flash;
+
+    pendingAnimation.primaryDurationMs =
+        decayMs;
+
+    pendingAnimation.declared = true;
+
+    Serial.print(
+        "OK:ANIMATION:FLASH:");
+    Serial.println(decayMs);
+    return;
+  }
+
+  if (fields[1] == "FADE_IN") {
+    unsigned long leadMs = 0;
+    unsigned long decayMs = 0;
+
+    if (fieldCount != 4 ||
+        !parsePositiveUnsignedLong(
+            fields[2],
+            leadMs) ||
+        !parsePositiveUnsignedLong(
+            fields[3],
+            decayMs)) {
+      Serial.println(
+          "ERROR:INVALID_FADE_IN_ANIMATION");
+      return;
+    }
+
+    pendingAnimation.type =
+        FrameAnimationType::fadeIn;
+
+    pendingAnimation.primaryDurationMs =
+        leadMs;
+
+    pendingAnimation.secondaryDurationMs =
+        decayMs;
+
+    pendingAnimation.declared = true;
+
+    Serial.print(
+        "OK:ANIMATION:FADE_IN:");
+    Serial.print(leadMs);
+    Serial.print(":");
+    Serial.println(decayMs);
+    return;
+  }
+
+  Serial.print(
+      "ERROR:UNKNOWN_ANIMATION:");
+  Serial.println(fields[1]);
+}
+
+// -----------------------------------------------------------------------------
+// Voice command parsing
+// -----------------------------------------------------------------------------
+
+bool parseStructuredCommand(
+    const String& command,
+    String& action,
+    String& voiceName,
+    String& strokes) {
+  const int firstComma =
+      command.indexOf(',');
+
+  if (firstComma < 0) {
+    return false;
+  }
+
+  const int secondComma =
+      command.indexOf(
+          ',',
+          firstComma + 1);
+
+  action =
+      command.substring(
+          0,
+          firstComma);
+
+  if (secondComma < 0) {
+    voiceName =
+        command.substring(
+            firstComma + 1);
+
+    strokes = "";
+  } else {
+    voiceName =
+        command.substring(
+            firstComma + 1,
+            secondComma);
+
+    strokes =
+        command.substring(
+            secondComma + 1);
+  }
+
+  action.trim();
+  voiceName.trim();
+  strokes.trim();
+
+  return action.length() > 0 &&
+         voiceName.length() > 0;
+}
+
+void handleStructuredCommand(
+    const String& action,
+    const String& voiceName,
+    const String& strokes) {
+  const int foundIndex =
+      findOutputIndex(voiceName);
+
+  if (foundIndex < 0) {
+    Serial.print(
+        "ERROR:UNKNOWN_VOICE:");
+    Serial.println(voiceName);
+    return;
+  }
+
+  const uint8_t outputIndex =
+      static_cast<uint8_t>(
+          foundIndex);
+
+  if (action == "CUE") {
+    if (!frameOpen) {
+      Serial.println(
+          "ERROR:CUE_WITHOUT_FRAME");
+      return;
+    }
+
+    if (stageVoiceCue(
+            outputIndex,
+            strokes,
+            isOpenHiHatVoice(
+                voiceName))) {
+      Serial.print("OK:CUE:");
+      Serial.println(voiceName);
+    }
+
+    return;
+  }
+
+  ParsedStrokeSequence parsed;
+
+  if (!parseStrokeSequence(
+          strokes,
+          parsed)) {
+    Serial.print(
+        "ERROR:INVALID_STROKES:");
+    Serial.println(strokes);
+    return;
+  }
+
+  if (action == "ERROR") {
+    flashError(outputIndex);
+
+    Serial.print("OK:ERROR:");
+    Serial.println(voiceName);
+    return;
+  }
+
+  if (action == "MISSING") {
+    blinkMissing(outputIndex);
+
+    Serial.print("OK:MISSING:");
+    Serial.println(voiceName);
+    return;
+  }
+
+  Serial.print(
+      "ERROR:UNKNOWN_ACTION:");
+  Serial.println(action);
+}
+
+void handleDirectVoiceCommand(
+    const String& command) {
+  const int foundIndex =
+      findOutputIndex(command);
+
+  if (foundIndex < 0) {
+    Serial.print(
+        "ERROR:UNKNOWN_COMMAND:");
+    Serial.println(command);
+    return;
+  }
+
+  flashHit(
+      static_cast<uint8_t>(
+          foundIndex));
+
+  Serial.print("OK:HIT:");
+  Serial.println(command);
+}
+
+// -----------------------------------------------------------------------------
+// Main command handler
+// -----------------------------------------------------------------------------
+
+void handleCommand(
+    String command) {
+  command.trim();
+  command.toUpperCase();
+
+  if (command.length() == 0) {
+    return;
+  }
+
+  Serial.print("RX:[");
+  Serial.print(command);
+  Serial.println("]");
+
+  if (command.startsWith("TEST,")) {
+    handleTestCommand(command);
+    return;
+  }
+
+  if (diagnostic.mode !=
+      DiagnosticMode::none) {
+    Serial.println(
+        "ERROR:DIAGNOSTIC_ACTIVE_USE_TEST_STOP");
+    return;
+  }
+
+  if (command == "CLEAR" ||
+      command == "OFF") {
+    clearAll();
+    return;
+  }
+
+  if (command == "FRAME_BEGIN") {
+    beginFrame();
+    return;
+  }
+
+  if (command == "FRAME_END") {
+    commitFrame();
+    return;
+  }
+
+  if (command.startsWith(
+          "ANIMATION,")) {
+    handleAnimationCommand(command);
+    return;
+  }
+
+  if (command.startsWith("SYS,")) {
+    handleSystemCommand(command);
+    return;
+  }
+
+  if (command.indexOf(',') < 0) {
+    handleDirectVoiceCommand(
+        command);
+    return;
+  }
+
+  String action;
+  String voiceName;
+  String strokes;
+
+  if (!parseStructuredCommand(
+          command,
+          action,
+          voiceName,
+          strokes)) {
+    Serial.print(
+        "ERROR:INVALID_COMMAND:");
+    Serial.println(command);
+    return;
+  }
+
+  handleStructuredCommand(
+      action,
+      voiceName,
+      strokes);
+}
+
+void readSerialCommands() {
+  while (Serial.available() > 0) {
+    const char incoming =
+        static_cast<char>(
+            Serial.read());
+
+    if (incoming == '\n') {
+      handleCommand(inputBuffer);
+      inputBuffer = "";
+    } else if (incoming != '\r') {
+      inputBuffer += incoming;
+
+      if (inputBuffer.length() >
+          128) {
+        inputBuffer = "";
+
+        Serial.println(
+            "ERROR:INPUT_TOO_LONG");
+      }
+    }
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Runtime animation updates
+// -----------------------------------------------------------------------------
+
+void updateFrameAnimation() {
+  if (!activeAnimation.active ||
+      diagnostic.mode !=
+          DiagnosticMode::none) {
+    return;
+  }
+
+  const unsigned long now =
+      millis();
+
+  if (!timeReached(
+          now,
+          activeAnimation
+              .nextUpdateAt)) {
+    return;
+  }
+
+  activeAnimation.nextUpdateAt =
+      now + ANIMATION_UPDATE_MS;
+
+  const unsigned long elapsed =
+      now -
+      activeAnimation.phaseStartedAt;
+
+  switch (activeAnimation.phase) {
+    case FrameAnimationPhase::
+        solidRetrigger:
+      if (elapsed >=
+          activeAnimation
+              .phaseDurationMs) {
+        activeAnimation.phase =
+            FrameAnimationPhase::
+                solidHold;
+
+        activeAnimation.level = 255;
+
+        refreshAllConnectedOutputs();
+        return;
+      }
+
+      activeAnimation.level =
+          interpolateAnimationLevel(
+              SOLID_RETRIGGER_START_LEVEL,
+              255,
+              elapsed,
+              activeAnimation
+                  .phaseDurationMs);
+
+      refreshAllConnectedOutputs();
+      return;
+
+    case FrameAnimationPhase::
+        solidHold:
+      return;
+
+    case FrameAnimationPhase::
+        flashDecay:
+      if (elapsed >=
+          activeAnimation
+              .phaseDurationMs) {
+        clearDisplayedFrame();
+        return;
+      }
+
+      activeAnimation.level =
+          interpolateAnimationLevel(
+              255,
+              0,
+              elapsed,
+              activeAnimation
+                  .phaseDurationMs);
+
+      refreshAllConnectedOutputs();
+      return;
+
+    case FrameAnimationPhase::
+        fadeInLead:
+      if (elapsed >=
+          activeAnimation
+              .phaseDurationMs) {
+        transitionAnimationPhase(
+            FrameAnimationPhase::
+                fadeInDecay,
+            activeAnimation
+                .secondaryDurationMs,
+            255);
+
+        return;
+      }
+
+      activeAnimation.level =
+          interpolateAnimationLevel(
+              FADE_IN_START_LEVEL,
+              255,
+              elapsed,
+              activeAnimation
+                  .phaseDurationMs);
+
+      refreshAllConnectedOutputs();
+      return;
+
+    case FrameAnimationPhase::
+        fadeInDecay:
+      if (elapsed >=
+          activeAnimation
+              .phaseDurationMs) {
+        clearDisplayedFrame();
+        return;
+      }
+
+      activeAnimation.level =
+          interpolateAnimationLevel(
+              255,
+              0,
+              elapsed,
+              activeAnimation
+                  .phaseDurationMs);
+
+      refreshAllConnectedOutputs();
+      return;
+
+    case FrameAnimationPhase::idle:
+      return;
+  }
+}
+
+void updateOpenHiHatPulse() {
+  if (diagnostic.mode !=
+      DiagnosticMode::none) {
+    return;
+  }
+
+  const unsigned long now =
+      millis();
+
+  IndicatorState& indicator =
+      indicators[OUTPUT_HIHAT];
+
+  if (!outputs[OUTPUT_HIHAT]
+           .connected ||
+      !indicator.cueActive ||
+      !indicator.openHiHat ||
+      indicator.overlayMode !=
+          OverlayMode::none ||
+      activeAnimation.phase !=
+          FrameAnimationPhase::
+              solidHold) {
+    return;
+  }
+
+  if (!timeReached(
+          now,
+          indicator
+              .nextOpenHiHatPulseAt)) {
+    return;
+  }
+
+  const unsigned long position =
+      now %
+      OPEN_HIHAT_PULSE_PERIOD_MS;
+
+  const unsigned long halfPeriod =
+      OPEN_HIHAT_PULSE_PERIOD_MS /
+      2;
+
+  uint16_t triangle;
+
+  if (position < halfPeriod) {
+    triangle =
+        (position * 255UL) /
+        halfPeriod;
+  } else {
+    triangle =
+        ((OPEN_HIHAT_PULSE_PERIOD_MS -
+          position) *
+         255UL) /
+        halfPeriod;
+  }
+
+  const uint16_t range =
+      OPEN_HIHAT_MAX_LEVEL -
+      OPEN_HIHAT_MIN_LEVEL;
+
+  indicator.openHiHatPulseLevel =
+      OPEN_HIHAT_MIN_LEVEL +
+      ((range * triangle) / 255);
+
+  indicator.nextOpenHiHatPulseAt =
+      now +
+      OPEN_HIHAT_PULSE_UPDATE_MS;
+
+  refreshOutput(OUTPUT_HIHAT);
+}
+
+void updateOverlays() {
+  if (diagnostic.mode !=
+      DiagnosticMode::none) {
+    return;
+  }
+
+  const unsigned long now =
+      millis();
+
+  for (uint8_t i = 0;
+       i < OUTPUT_COUNT;
+       i++) {
+    if (!outputs[i].connected) {
+      continue;
+    }
+
+    IndicatorState& indicator =
+        indicators[i];
+
+    if (indicator.overlayMode ==
+        OverlayMode::none) {
+      continue;
+    }
+
+    if (!timeReached(
+            now,
+            indicator.overlayUntil)) {
+      continue;
+    }
+
+    switch (indicator.overlayMode) {
+      case OverlayMode::hit:
+      case OverlayMode::error:
+        indicator.overlayMode =
+            OverlayMode::none;
+
+        refreshOutput(i);
+        break;
+
+      case OverlayMode::missingOn:
+        indicator.overlayMode =
+            OverlayMode::missingOff;
+
+        indicator.overlayUntil =
+            now +
+            MISSING_BLINK_MS;
+
+        refreshOutput(i);
+        break;
+
+      case OverlayMode::missingOff:
+        if (indicator.remainingBlinks >
+            1) {
+          indicator.remainingBlinks--;
+
+          indicator.overlayMode =
+              OverlayMode::missingOn;
+
+          indicator.overlayUntil =
+              now +
+              MISSING_BLINK_MS;
+        } else {
+          indicator.remainingBlinks = 0;
+
+          indicator.overlayMode =
+              OverlayMode::none;
+        }
+
+        refreshOutput(i);
+        break;
+
+      case OverlayMode::none:
+        break;
+    }
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Startup
+// -----------------------------------------------------------------------------
+
+void runStartupTest() {
+  const uint32_t startupGreen =
+      makeColor(0, 255, 0);
+
+  clearEveryPhysicalOutput();
+
+  delay(100);
+
+  for (uint8_t i = 0;
+       i < OUTPUT_COUNT;
+       i++) {
+    if (!outputs[i].connected) {
+      continue;
+    }
+
+    showSolidColor(
+        i,
+        startupGreen);
+
+    delay(250);
+
+    showSolidColor(i, 0);
+
+    delay(75);
+  }
+}
+
+void printHelp() {
+  Serial.println();
+  Serial.println(
+      "DRUMCABULARY ESP32-S3 CONTROLLER");
+
+  Serial.println(
+      "PINS: SNARE=18 KICK=17 HIHAT=16 TOM1=15 TOM2=7 FLOOR=6 CRASH=5 RIDE=4");
+
+  Serial.println(
+      "TEST COMMANDS:");
+
+  Serial.println(
+      "TEST,ALL");
+
+  Serial.println(
+      "TEST,SNARE | TEST,KICK | TEST,HIHAT | TEST,TOM1");
+
+  Serial.println(
+      "TEST,TOM2 | TEST,FLOORTOM | TEST,CRASH | TEST,RIDE");
+
+  Serial.println(
+      "TEST,PIN,18");
+
+  Serial.println(
+      "TEST,COLOR,RED|GREEN|BLUE|WHITE");
+
+  Serial.println(
+      "TEST,CHASE");
+
+  Serial.println(
+      "TEST,CHASE,SNARE");
+
+  Serial.println(
+      "TEST,STOP");
+
+  Serial.println(
+      "BOOT BUTTON CYCLES INDIVIDUAL DONGLES");
+
+  Serial.println("READY");
+}
+
+void setup() {
+  Serial.begin(115200);
+
+  delay(500);
+
+  pinMode(
+      BOOT_BUTTON_PIN,
+      INPUT_PULLUP);
+
+  initializeColors();
+  initializeConnectedOutputs();
+  loadOrientations();
+
+  for (uint8_t i = 0;
+       i < OUTPUT_COUNT;
+       i++) {
+    resetIndicatorState(i);
+    resetPendingCue(i);
+  }
+
+  runStartupTest();
+
+  printAllOrientations();
+  printHelp();
+}
+
+void loop() {
+  readSerialCommands();
+  handleBootButton();
+
+  updateAllOutputTest();
+  updateChaseTest();
+
+  updateOverlays();
+  updateFrameAnimation();
+  updateOpenHiHatPulse();
+}
