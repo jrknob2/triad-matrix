@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Drumcabulary Engraving Lab</title>
+<link rel="stylesheet" href="engraving_lab.css">
+</head>
+<body>
+<header><h1>Engraving Lab</h1><p>Development diagnostics · existing VexFlow renderer · no canonical event mapping</p></header>
+<main>
+<form id="controls">
+<label>Reference case<select id="case"></select></label>
+<label>Staff/system width<input id="width" type="number" min="280" max="2000" step="20" value="900"></label>
+<label>Stem mode<select id="stem"><option value="single">Single</option><option value="mapped">Mapped</option></select></label>
+<label><input id="sticking" type="checkbox" checked> Show sticking</label>
+<label><input id="measures" type="checkbox"> Preserve measures</label>
+<button type="submit">Render / Refresh</button><button id="reset" type="button">Reset defaults</button>
+<button id="download" type="button" disabled>Save SVG</button>
+</form>
+<h2 id="title"></h2><p id="description"></p><p id="status" role="status"></p>
+<div id="preview" aria-label="Rendered notation preview"></div>
+<div class="panels"><section><h2>Inspect event</h2>
+<label>Source note index<select id="event"><option>Select a rendered event</option></select></label>
+<p>Click a note or use the event selector. Tab/Enter also selects SVG events.</p>
+<pre id="inspection">No event selected.</pre></section>
+<section><h2>Diagnostics</h2><pre id="diagnostics"></pre></section></div>
+<details><summary>Reference input and expected properties</summary><pre id="source"></pre></details>
+</main>
+<script src="../vendor/vexflow.js"></script>
+<script type="module" src="engraving_lab.js"></script>
+</body></html>

@@ -4,7 +4,9 @@
   "scripts": {
     "build:sheet-notation-app": "node web/sheet_notation/build_app_renderer_bundle.mjs",
     "demo:sheet-notation": "node web/sheet_notation/server.mjs",
-    "test:sheet-notation": "node --test test/sheet_notation/*.test.mjs"
+    "test:sheet-notation": "node --test test/sheet_notation/*.test.mjs",
+    "test:engraving-lab": "node --test test/sheet_notation/engraving_lab.test.mjs",
+    "test:engraving-browser": "node scripts/check-engraving-browser.mjs"
   },
   "devDependencies": {
     "vexflow": "^4.2.3"

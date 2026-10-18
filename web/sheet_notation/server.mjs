@@ -37,5 +37,5 @@ const server = http.createServer(async (request, response) => {
 });
 
 server.listen(port, '127.0.0.1', () => {
-  console.log(`Sheet notation demo: http://127.0.0.1:${port}/demo.html`);
+  console.log(`Sheet notation demo: http://127.0.0.1:${server.address().port}/demo.html`);
 });

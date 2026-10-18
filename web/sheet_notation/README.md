@@ -151,3 +151,12 @@ renderDrumNotationSvg(documentJson, { stemMode: 'mapped' });
 
 `mapped` mode uses `voice_mapping.js` stem directions and can create separate
 up/down visual groupings.
+
+## Interactive Engraving Lab (development only)
+
+With the same `npm run demo:sheet-notation` server, open
+[http://127.0.0.1:8087/lab/engraving_lab.html](http://127.0.0.1:8087/lab/engraving_lab.html).
+The lab calls the existing renderer with deterministic reference documents,
+selectable live SVG geometry, width controls and manual SVG export.
+See [the lab guide](../../docs/32_INTERACTIVE_ENGRAVING_LAB.md) for VS Code launch,
+reference cases, unsupported behavior and automated browser/structural checks.

@@ -1,0 +1,11 @@
+:root { font-family:system-ui,sans-serif; color:#222; background:#f5f5f3; }
+body { margin:0; } header, main { padding:20px; } header { background:#202727; color:white; }
+h1 { margin:0; } h2 { font-size:1.1rem; } form { display:flex; flex-wrap:wrap; align-items:end; gap:16px; }
+label { display:grid; gap:5px; font-size:.9rem; } label:has(input[type=checkbox]) { display:flex; align-items:center; }
+select,input,button { padding:8px; font:inherit; } #case { max-width:320px; } #width { width:100px; }
+button { cursor:pointer; } #preview { overflow:auto; background:white; border:1px solid #aaa; min-height:160px; padding:12px; }
+#preview svg { display:block; } [data-drum-note-index] { cursor:pointer; }
+[data-drum-note-index]:focus { outline:2px solid #b65a00; }
+.lab-highlight { fill:#ffb200; fill-opacity:.2; stroke:#b65a00; pointer-events:none; }
+.panels { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:24px; }
+pre { white-space:pre-wrap; overflow-wrap:anywhere; font-size:.85rem; } #status { font-weight:600; }
