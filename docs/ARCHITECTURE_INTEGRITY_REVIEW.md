@@ -243,3 +243,51 @@ Migration risks:
   if repair semantics cannot be safely distinguished from legacy records.
 
 No corrections, migrations, or new repository tests were implemented in this pass.
+
+## Pass 1 implementation: notation preservation invariant
+
+The investigation above records the pre-fix revision. Pass 1 changes only the
+controller save boundary and adds focused regression coverage.
+
+`PracticeItemV1.pattern` is authoritative authored musical content.
+`PatternSequenceV1`, token symbols, and `canonicalText` are derived compatibility
+representations; they cannot reconstruct voice-first notation faithfully.
+
+At `AppController.savePracticeItemEdits`:
+
+- Explicit `pattern` text takes precedence, as in the current editor save flow.
+- If text is omitted and the sequence is unchanged (or omitted), preserve the
+  existing pattern exactly. Metadata edits must not regenerate musical content
+  or cause an incidental structural change/timing reset.
+- A changed sequence without replacement text may regenerate text only for
+  legacy-only patterns containing the legacy symbols and space/hyphen separators.
+- A changed sequence alone cannot replace rich notation. The method rejects that
+  ambiguous operation before changing state; the caller must provide authored text.
+
+The UI already validates with `DrumSheetPatternParser` and supplies text plus a
+compatibility projection. Storage continues to write both fields independently;
+reload retains authored text. This pass changes neither the schema nor the
+meaning of legacy tokens, notation rendering, or playback timing.
+
+Coverage in `test/notation_preservation_test.dart` verifies exact text preservation
+for simultaneous voices, expanded strokes, accents, ghosts, structured multi-voice
+sticking, interior spaces, title/description/tags/competency changes, launch tempo,
+snapshot reload and subsequent saves. It also covers rejected ambiguous rich
+sequence edits and permitted legacy sequence edits. Reload tests use the existing
+fake snapshot store, not a native Isar database: real JSON/Isar round-trip coverage
+remains a limitation. Existing inconsistent records, explicit mismatched text/token
+pairs, text-only structural edits, and previously lost authored content are not
+repaired by this pass.
+
+Pass 1 validation:
+
+- Before the fix, all six rich-notation metadata preservation cases failed
+  (for example, `[HH K]` became `K`, and `[S:LRLR]` became `LRLR`). The ambiguous
+  sequence-edit rejection test also failed because the old API accepted it.
+- After the fix, all eight new tests passed. The combined controller, parser,
+  selection, formatter, scheduler, audio, LED and preservation run passed
+  **100 Flutter tests**. The JavaScript notation suite passed **61 tests**.
+- `dart analyze lib/state/app_controller.dart test/notation_preservation_test.dart`
+  reported no issues. No unrelated failures occurred in the final validation.
+- No schema migration, rendering, or playback changes were made. Pass 2 was not
+  started.

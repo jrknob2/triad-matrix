@@ -1956,11 +1956,26 @@ class AppController extends ChangeNotifier {
           noteValueOverrides ?? existingItem.noteValueOverrides,
         );
     final PatternSequenceV1 nextSequence = sequence ?? existingItem.sequence;
-    final String nextPattern = pattern ?? nextSequence.canonicalText;
     final bool sequenceChanged = !listEquals(
       nextSequence.tokens,
       existingItem.tokens,
     );
+    // Authored notation owns musical content; tokens are a lossy compatibility
+    // projection. Only an explicit legacy sequence edit may regenerate text.
+    if (pattern == null &&
+        sequenceChanged &&
+        !RegExp(
+          r'^[RLKFX_ -]*$',
+          caseSensitive: false,
+        ).hasMatch(existingItem.pattern)) {
+      throw ArgumentError(
+        'Provide authored pattern text when changing the sequence of rich notation.',
+        'pattern',
+      );
+    }
+    final String nextPattern =
+        pattern ??
+        (sequenceChanged ? nextSequence.canonicalText : existingItem.pattern);
     final bool patternChanged = nextPattern != existingItem.pattern;
     final bool structureChanged =
         patternChanged ||
